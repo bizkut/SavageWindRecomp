@@ -245,3 +245,10 @@ one mutex per package stream serialises reads). For comparison, plain files on t
 517 MiB/s sequential, 94 MiB/s random 64 KiB; from the unelevated title: 133 MiB/s, 41 MiB/s. Not yet measured
 inside the title process, and not yet with the game's read pattern (needs M2). The 6.25 s open and the
 4-thread serialisation are the costs to reduce first.
+
+## 2026-10-28 — Base XCI identified on the PC (host only; the XCI is not copied to the console)
+
+Completed XCI (31,943,819,264 bytes, size stable) with the 1.9.0 update NSP through `savagewind-exefs`: CNMT
+selection accepts it as base `01007EF00011E000` with matching update, and the 5 ExeFS files are SHA-256-identical to
+the base NSP + update NSP result (so `main` carries the 1.9.0 build id). The XCI alone is rejected with
+`wrong_version: Add the Breath of the Wild 1.9.0 update.` The XCI's RomFS was not read through the backend.

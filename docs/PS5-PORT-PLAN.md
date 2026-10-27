@@ -374,7 +374,8 @@ intermediate/final symlinks, hard links and cross-root operations are rejected.
 ### M10 — Game data read from the user's packages (D11)
 Package library (shared with the PC ExeFS tool), direct-read `romfs_image` backend with DLC, TV preflight/error
 screen, policy decision above. **Done when:** on the host, every RomFS file read through the backend from base NSP +
-update NSP and from base XCI + update NSP matches manual extraction (all 41,067 SHA-256s); on .41 the backend opens
+update NSP matches manual extraction (all 41,062 RomFS SHA-256s), and a base XCI + update NSP is identified as the
+same game (same 1.9.0 ExeFS; XCI used on the PC only, never copied to the console); on .41 the backend opens
 the packages and a sampled set of files (including the largest packs) matches the host hashes, with open time and
 read throughput recorded against the extracted-folder figures; and the game boots to the title screen from the
 packages (needs M2/M3). Update-only, wrong-title, wrong-version, missing/corrupt-content and missing-key cases show
