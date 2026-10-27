@@ -147,8 +147,21 @@ only: they fill the same host state `runtime/hle/input.c`, `bindings.c` and `mot
 Switch-controller mapping, rebinding and settings stay the single mapping. Do not wire PS5 input to the game's HID
 services directly; that would create a second mapping to maintain.
 
-- DualSense: drain `scePadRead(..., 64)` oldest-first; motion records → `motion.c`'s gyro/accelerometer; rumble;
-  prompts use PlayStation icons;
+- Native DualSense is the chosen gamepad backend (user preference), independent of any SDL2 libraries used elsewhere.
+  Use `../ps5-native-gamepad-input-research/include/ps5_pad.hpp` and `CONTROLLER-DATA.md` as the ABI/lifecycle reference.
+  Open for the signed-in user, with exactly one owner of each pad handle. Drain `scePadRead(handle, records, 64)`
+  oldest-first and publish the final valid sample as current; do not also call `scePadReadState` in the same cycle.
+- Explicitly configure motion with `scePadSetMotionSensorState`, tilt-correction/deadband controls and orientation
+  reset as illustrated in `examples/05-motion-touch.cpp`; check each result instead of assuming sensor availability.
+  Process sensor time from each sample's microsecond timestamp, not rendering/frame-generation cadence.
+- Choose one orientation source: the supplied pad quaternion, normalized and coordinate-converted, OR raw gyro/accel
+  fused by the existing motion algorithm. Never feed the supplied orientation through raw-sensor fusion again.
+  Preserve BOTW six-axis output conventions. Research documents gyro rad/s and acceleration G, but physical axis,
+  sign and response validation is still required on PS5; do not guess the conversion.
+- On disconnect, interception or connection-generation change, neutralize buttons/triggers/sticks (raw stick center
+  128), use identity orientation (`w=1`), and clear sample timing, calibration and cached motion history. Stop rumble
+  and restore feedback state on close. Verify damage, weapon-hit and explosion vibration separately; prompts use
+  PlayStation icons. Physical aim, vertical orientation, tilt-shrine and reconnect tests gate motion support.
 - USB mouse: relative deltas → mouse camera, buttons → bindings; no cursor capture concept needed;
 - USB keyboard: scancodes → existing default bindings; reopen on hot-plug (poll open state each second);
 - ImGui menus driven by pad navigation plus keyboard/mouse.
