@@ -1,0 +1,144 @@
+diff --git a/src/NcaProcess.h b/src/NcaProcess.h
+--- a/src/NcaProcess.h
++++ b/src/NcaProcess.h
+@@ -24,6 +24,7 @@ class NcaProcess
+     void setKeyCfg(const KeyBag &keycfg);
+     void setVerifyMode(bool verify);
+     void setBaseNcaPath(const tc::Optional<tc::io::Path> &nca_path);
++    void setBaseNcaStream(const std::shared_ptr<tc::io::IStream> &stream);
+ 
+     // fs specific
+     void setShowFsTree(bool show_fs_tree);
+@@ -33,6 +34,7 @@ class NcaProcess
+ 
+     // post process() get FS out
+     const std::shared_ptr<tc::io::IFileSystem> &getFileSystem() const;
++    std::shared_ptr<tc::io::IStream> getPartitionReader(size_t index) const;
+ 
+   private:
+     const std::string kNpdmExefsPath = "/main.npdm";
+@@ -46,6 +47,7 @@ class NcaProcess
+ 
+     bool mVerify;
+     tc::Optional<tc::io::Path> mBaseNcaPath;
++    std::shared_ptr<tc::io::IStream> mBaseNcaStream;
+ 
+     // fs processing
+     std::shared_ptr<tc::io::IFileSystem> mFileSystem;
+diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
+--- a/src/NcaProcess.cpp
++++ b/src/NcaProcess.cpp
+@@ -62,6 +62,11 @@ void nstool::NcaProcess::setBaseNcaPath(const tc::Optional<tc::io::Path> &nca_pa
+     mBaseNcaPath = nca_path;
+ }
+ 
++void nstool::NcaProcess::setBaseNcaStream(const std::shared_ptr<tc::io::IStream> &stream)
++{
++    mBaseNcaStream = stream;
++}
++
+ void nstool::NcaProcess::setKeyCfg(const KeyBag &keycfg)
+ {
+     mKeyCfg = keycfg;
+@@ -92,6 +97,11 @@ const std::shared_ptr<tc::io::IFileSystem> &nstool::NcaProcess::getFileSystem() const
+     return mFileSystem;
+ }
+ 
++std::shared_ptr<tc::io::IStream> nstool::NcaProcess::getPartitionReader(size_t index) const
++{
++    return index < mPartitions.size() ? mPartitions[index].reader : nullptr;
++}
++
+ void nstool::NcaProcess::importHeader()
+ {
+     if (mFile == nullptr)
+@@ -262,13 +267,15 @@ void nstool::NcaProcess::generateNcaBodyEncryptionKeys()
+ nstool::NcaProcess nstool::NcaProcess::readBaseNCA()
+ {
+     // open base nca stream
+-    if (mBaseNcaPath.isNull())
++    std::shared_ptr<tc::io::IStream> base_stream = mBaseNcaStream;
++    if (!base_stream && mBaseNcaPath.isNull())
+     {
+         throw tc::Exception(mModuleName, "Base NCA not supplied. Necessary for update NCA.");
+     }
+ 
+-    std::shared_ptr<tc::io::IStream> base_stream = std::make_shared<tc::io::FileStream>(
+-        tc::io::FileStream(mBaseNcaPath.get(), tc::io::FileMode::Open, tc::io::FileAccess::Read));
++    if (!base_stream)
++        base_stream = std::make_shared<tc::io::FileStream>(
++            tc::io::FileStream(mBaseNcaPath.get(), tc::io::FileMode::Open, tc::io::FileAccess::Read));
+ 
+     // process base nca with output suppressed
+     NcaProcess obj;
+@@ -867,10 +872,10 @@ void nstool::NcaProcess::processPartitions()
+ 
+     tc::io::VirtualFileSystem::FileSystemSnapshot fs_snapshot = pie::hac::CombinedFsSnapshotGenerator(mount_points);
+ 
+-    std::shared_ptr<tc::io::IFileSystem> nca_fs =
++    mFileSystem =
+         std::make_shared<tc::io::VirtualFileSystem>(tc::io::VirtualFileSystem(fs_snapshot));
+ 
+-    mFsProcess.setInputFileSystem(nca_fs);
++    mFsProcess.setInputFileSystem(mFileSystem);
+     mFsProcess.setFsFormatName("ContentArchive");
+     mFsProcess.setFsRootLabel(getContentTypeForMountStr(mHdr.getContentType()));
+     mFsProcess.process();
+diff --git a/src/KeyBag.h b/src/KeyBag.h
+--- a/src/KeyBag.h
++++ b/src/KeyBag.h
+@@ -82,6 +82,8 @@ class KeyBagInitializer : public KeyBag
+         const std::vector<tc::io::Path> &tik_path_list,
+         const tc::Optional<tc::io::Path> &cert_path);
+ 
++    void importTicketStream(const std::shared_ptr<tc::io::IStream> &stream);
++
+   private:
+     KeyBagInitializer();
+ 
+diff --git a/src/KeyBag.cpp b/src/KeyBag.cpp
+--- a/src/KeyBag.cpp
++++ b/src/KeyBag.cpp
+@@ -694,6 +694,13 @@ void nstool::KeyBagInitializer::importTicket(const tc::io::Path &tik_path)
+         return;
+     }
+ 
++    importTicketStream(tik_stream);
++}
++
++void nstool::KeyBagInitializer::importTicketStream(const std::shared_ptr<tc::io::IStream> &tik_stream)
++{
++    Report &r = get_report();
++    const tc::io::Path tik_path("embedded ticket");
+     // check size
+     size_t tik_raw_size = tc::io::IOUtil::castInt64ToSize(tik_stream->length());
+ 
+diff --git a/src/GameCardProcess.h b/src/GameCardProcess.h
+--- a/src/GameCardProcess.h
++++ b/src/GameCardProcess.h
+@@ -25,6 +25,7 @@ class GameCardProcess
+     // fs specific
+     void setShowFsTree(bool show_fs_tree);
+     void setExtractJobs(const std::vector<nstool::ExtractJob> extract_jobs);
++    const std::shared_ptr<tc::io::IFileSystem> &getFileSystem() const { return mFileSystem; }
+ 
+   private:
+     const std::string kXciMountPointName = "gamecard";
+diff --git a/deps/libpietendo/src/hac/ContentInfo.cpp b/deps/libpietendo/src/hac/ContentInfo.cpp
+--- a/deps/libpietendo/src/hac/ContentInfo.cpp
++++ b/deps/libpietendo/src/hac/ContentInfo.cpp
+@@ -18,12 +18,13 @@ void pie::hac::ContentInfo::operator=(const ContentInfo &other)
+     mContentId = other.mContentId;
+     mSize = other.mSize;
+     mType = other.mType;
++    mIdOffset = other.mIdOffset;
+ }
+ 
+ bool pie::hac::ContentInfo::operator==(const ContentInfo &other) const
+ {
+     return (mHash == other.mHash) && (mContentId == other.mContentId) && (mSize == other.mSize) &&
+-           (mType == other.mType);
++           (mType == other.mType) && (mIdOffset == other.mIdOffset);
+ }
+ 
+ bool pie::hac::ContentInfo::operator!=(const ContentInfo &other) const

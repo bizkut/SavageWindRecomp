@@ -4,7 +4,6 @@
 
 #include "platform.h"  // (Windows: pread)
 #include "romfs_build.h"
-#include "rt.h"
 
 #include <fcntl.h>
 #include <pthread.h>
@@ -16,6 +15,13 @@
 
 #ifndef O_BINARY
 #define O_BINARY 0
+#endif
+
+#ifdef ROMFS_PACKAGE
+extern void *savagewind_package_open(const char *, const char *const *, size_t, unsigned, char *, size_t);
+extern uint64_t savagewind_package_size(void *);
+extern ssize_t savagewind_package_pread(void *, void *, size_t, uint64_t);
+extern void savagewind_package_close(void *);
 #endif
 
 // Files kept open (macOS allows 256 open files by default, and the overlay keeps its own open: runtime/services/fs.c)
@@ -33,6 +39,9 @@ struct RomfsImage {
     pthread_mutex_t lock;
     OpenFile open[OPEN_FILES];
     uint64_t tick;
+#ifdef ROMFS_PACKAGE
+    void *package;
+#endif
 };
 
 RomfsImage *romfs_image_open(const char *dir, char *why, size_t why_size) {
@@ -57,6 +66,25 @@ RomfsImage *romfs_image_open(const char *dir, char *why, size_t why_size) {
     romfs_image_close(img);
     return NULL;
 }
+
+#ifdef ROMFS_PACKAGE
+RomfsImage *romfs_image_open_package(const char *keys, const char *const *packages, size_t count,
+                                     unsigned addon, char *why, size_t why_size) {
+    void *package = savagewind_package_open(keys, packages, count, addon, why, why_size);
+    if (!package) return NULL;
+    RomfsImage *img = calloc(1, sizeof *img);
+    if (!img) {
+        savagewind_package_close(package);
+        return NULL;
+    }
+    img->bin_fd = -1;
+    img->package = package;
+    img->size = savagewind_package_size(package);
+    pthread_mutex_init(&img->lock, NULL);
+    for (int k = 0; k < OPEN_FILES; k++) img->open[k].fd = -1;
+    return img;
+}
+#endif
 
 uint64_t romfs_image_size(const RomfsImage *img) { return img->size; }
 
@@ -94,6 +122,15 @@ static bool read_file(RomfsImage *img, int i, uint8_t *dst, uint64_t n, uint64_t
 }
 
 ssize_t romfs_image_pread(RomfsImage *img, void *dst_, uint64_t n, uint64_t off) {
+#ifdef ROMFS_PACKAGE
+    if (img->package) {
+        uint64_t available = off < img->size ? img->size - off : 0;
+        size_t take = n < available ? (size_t)n : (size_t)available;
+        if (take && savagewind_package_pread(img->package, dst_, take, off) != (ssize_t)take) return -1;
+        memset((uint8_t *)dst_ + take, 0, n - take);
+        return (ssize_t)n;
+    }
+#endif
     if (img->bin_fd >= 0) return pread(img->bin_fd, dst_, n, (off_t)off);
     const RomfsLayout *l = &img->layout;
     uint8_t *dst = dst_;
@@ -117,7 +154,7 @@ ssize_t romfs_image_pread(RomfsImage *img, void *dst_, uint64_t n, uint64_t off)
         uint64_t a = off > f->start ? off : f->start, b = end < f->start + f->size ? end : f->start + f->size;
         if (a >= b) continue;
         if (!read_file(img, i, dst + (a - off), b - a, a - f->start)) {
-            LOG("[romfs] can't read %s\n", f->path);
+            fprintf(stderr, "[romfs] can't read %s\n", f->path);
             return -1;
         }
     }
@@ -126,6 +163,9 @@ ssize_t romfs_image_pread(RomfsImage *img, void *dst_, uint64_t n, uint64_t off)
 
 void romfs_image_close(RomfsImage *img) {
     if (!img) return;
+#ifdef ROMFS_PACKAGE
+    if (img->package) savagewind_package_close(img->package);
+#endif
     for (int k = 0; k < OPEN_FILES; k++)
         if (img->open[k].fd >= 0) close(img->open[k].fd);
     if (img->bin_fd >= 0) close(img->bin_fd);

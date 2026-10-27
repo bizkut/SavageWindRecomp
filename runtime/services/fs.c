@@ -17,6 +17,10 @@
 #include "../ipc.h"
 #include "../language.h"
 #include "../romfs_image.h"
+#ifdef ROMFS_PACKAGE
+#include "../paths.h"
+#include <strings.h>
+#endif
 #ifdef __PROSPERO__
 #include "../storage_ps5.h"
 #endif
@@ -826,18 +830,63 @@ static void storage(Service *s, IpcReq *req, IpcResp *resp) {
     }
 }
 
+#ifdef ROMFS_PACKAGE
+// M2 must initialize the data root before the filesystem service is opened.
+static RomfsImage *open_package_image(unsigned index, char *why, size_t why_size) {
+    char dir[1100], keys[1200];
+    snprintf(dir, sizeof dir, "%s/import", rt_data_root());
+    snprintf(keys, sizeof keys, "%s/prod.keys", dir);
+    DIR *d = opendir(dir);
+    if (!d) {
+        snprintf(why, why_size, "cannot open package directory");
+        return NULL;
+    }
+    char **paths = NULL;
+    size_t count = 0;
+    bool failed = false;
+    struct dirent *entry;
+    while ((entry = readdir(d))) {
+        const char *ext = strrchr(entry->d_name, '.');
+        if (!ext || (strcasecmp(ext, ".nsp") && strcasecmp(ext, ".xci") &&
+                     strcasecmp(ext, ".nsz") && strcasecmp(ext, ".xcz"))) continue;
+        char **next = realloc(paths, (count + 1) * sizeof *paths);
+        if (!next) { failed = true; break; }
+        paths = next;
+        size_t len = strlen(dir) + strlen(entry->d_name) + 2;
+        paths[count] = malloc(len);
+        if (!paths[count]) { failed = true; break; }
+        snprintf(paths[count++], len, "%s/%s", dir, entry->d_name);
+    }
+    closedir(d);
+    RomfsImage *image = NULL;
+    if (failed) snprintf(why, why_size, "out of memory listing packages");
+    else image = romfs_image_open_package(keys, (const char *const *)paths, count, index, why, why_size);
+    for (size_t i = 0; i < count; ++i) free(paths[i]);
+    free(paths);
+    return image;
+}
+#endif
+
 // Opens image k from the folder dir (indexed and patched the first time); NULL when it can't be read.
 static Service *open_image(int k, const char *dir, const char *name) {
     RomImage *m = &images[k];
     if (!m->img) {
         char why[256] = "";
         uint64_t t0 = plat_now_ns();
+#ifdef ROMFS_PACKAGE
+        m->img = open_package_image((unsigned)k, why, sizeof why);
+#else
         m->img = romfs_image_open(dir, why, sizeof why);
+#endif
         if (!m->img) {
+#ifdef ROMFS_PACKAGE
+            LOG("[fs] cannot read packages in %s/import: %s\n", rt_data_root(), why);
+#else
             LOG("[fs] cannot read %s: %s\n", dir, why);
+#endif
             return NULL;
         }
-        LOG("[fs] romfs image %s: %llu MB, laid out in %.2f s\n", dir, (unsigned long long)(romfs_image_size(m->img) >> 20),
+        LOG("[fs] romfs image %s: %llu MB, opened in %.2f s\n", name, (unsigned long long)(romfs_image_size(m->img) >> 20),
             (plat_now_ns() - t0) / 1e9);
         m->ov_sub = k ? "aoc/0010/" : "";  // (the add-on content's place in a mod's folder, as on the Wii U)
         R = m;
@@ -852,7 +901,11 @@ static Service *open_image(int k, const char *dir, const char *name) {
 
 static Service *open_romfs_storage(void) {
     Service *s = open_image(0, g_romfs_dir, "IStorage(romfs)");  // extracted/romfs
+#ifdef ROMFS_PACKAGE
+    if (!s) FATAL("cannot read game packages in %s/import\n", rt_data_root());
+#else
     if (!s) FATAL("cannot read the game data in %s (set up the game files on the start screen)\n", g_romfs_dir);
+#endif
     return s;
 }
 
@@ -870,11 +923,21 @@ static void aoc_dir(int index, char *out, size_t n) {
 uint64_t fs_aoc_base_id(void) { return (g_program_id & ~0xFFFull) + 0x1000; }
 
 bool fs_aoc_present(int index) {
+#ifdef ROMFS_PACKAGE
+    if (index < 1 || index > AOC_MAX) return false;
+    if (images[index].img) return true;
+    char why[256] = "";
+    RomfsImage *image = open_package_image((unsigned)index, why, sizeof why);
+    if (!image) return false;
+    romfs_image_close(image);
+    return true;
+#else
     if (index < 1 || index > AOC_MAX || !g_romfs_dir) return false;
     char dir[1100];
     aoc_dir(index, dir, sizeof dir);
     struct stat sb;
     return stat(dir, &sb) == 0 && S_ISDIR(sb.st_mode);
+#endif
 }
 
 static Service *open_aoc_storage(int index) {

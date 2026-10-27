@@ -1,0 +1,9 @@
+<118>[SceShellCore] FMEM   8.5/  31.9 elfldr.elf
+<118>[SceShellCore] FMEM   8.5/  31.9 elfldr.elf
+savagewind-package-probe: open seconds=6.251 image_bytes=15132662100
+savagewind-package-probe: samples passed=220 failed=0
+savagewind-package-probe: sequential bytes=147229198 seconds=1.125 MiB_s=124.82
+savagewind-package-probe: random threads=1 reads=2000 mean_ms=0.692 MiB_s=90.13
+savagewind-package-probe: random threads=4 reads=8000 mean_ms=3.081 MiB_s=81.07
+savagewind-package-probe: done: pass=221 fail=0
+<118>[SceShellCore] FMEM   8.5/  31.9 elfldr.elf

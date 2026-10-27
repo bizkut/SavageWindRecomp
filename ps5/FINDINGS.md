@@ -200,3 +200,48 @@ larger than the 16 MiB protocol limit.
 The runtime save/settings/Vulkan-cache callsites now select this backend only on PS5; RomFS/DLC reads remain direct.
 This is storage-component qualification, not a boot of the full PS5 game runtime: PS5 platform/input/audio/renderer
 integration is still pending, as is native log redirection.
+
+## 2026-10-27 — NSP import payload and TV screen on .41 (ps5/evidence/import, runs 1–3)
+
+Title `ps5/title/import_ui.c` (diagnostic build `-DIMPORT_UI_AUTOTEST`, which presses Cross itself and says so in
+klog) with the embedded `savagewind-import.elf`; inputs on the console: base NSP + 1.9.0 update NSP + `prod.keys` in
+`/data/savagewind/import/`.
+
+- run1: the first send loop failed before elfldr had the ELF (`elfldr_read: No such process`). Rewritten after
+  ps5-wow's `wine_launch` (MSG_DONTWAIT sends under poll, write side shut after the last byte).
+- run2: ELF delivered (3,608,840 bytes); the payload ran as root (created `.import-lock`) but left silently through an
+  unlogged early exit. Every exit path now logs to klog.
+- run3: full path to RomFS extraction: checking_packages → checking_keys → awaiting_confirm → extracting_exefs →
+  extracting_romfs; cancel by `cancel` file → `cancelled`, keys and packages untouched. **Measured extraction rate
+  15 MiB/s** (6.0 of 14.1 GiB written after ~6.5 min; ~17 min for the whole RomFS), well under the 36 MiB/s raw
+  root-payload write rate.
+
+Decision (user, 2026-10-27): no RomFS extraction on the console. The runtime reads RomFS from the packages directly
+(decrypt + update patch per read); ExeFS is extracted on the PC, where the game code is generated and linked.
+
+## 2026-10-28 — 1.9.0 game code generated on the PC and compiled for the PS5
+
+ExeFS extracted on the PC from base NSP + 1.9.0 update NSP (both tickets, `prod.keys`; package-library tool):
+`main` f6f0b20b…, `main.npdm` 38a7484e…, `rtld` 49308064…, `sdk` 1d187f29…, `subsdk0` 767c35bc… (SHA-256 prefixes);
+`main` build id matches `cd57b23fa4bbad65`. `tools/gen.py all build/exefs-1.9.0 generated-ps5 --hle
+runtime/hle/hle_symbols.txt --simd c`: main 559 chunks, subsdk0 179, sdk 254; 83 s on one core, 2.2 GB peak RSS,
+606 MB of C. `ps5/tools/build-gamecode.sh` compiles the 996 files with the Prospero clang 18 (desktop GENFLAGS,
+`-march=x86-64-v3 -fPIC`) in 324 s on 24 threads into `libgamecode.a` (428 MB; **219.6 MB of code**, within the
+256 MiB `.text` S3 loaded). Its only external needs are 40 runtime symbols (`rt_*`, `hle_longjmp`, `fnprof_*`) plus
+`memset`/`setjmp`. Not linked or run yet: that needs the M2 runtime target; S6 (CPU headroom) uses it.
+
+## 2026-10-28 — RomFS read directly from the packages (.41, ps5/evidence/import/package-probe-run1)
+
+`ps5/importer/package_core.*`/`package_stream.cpp` (nstool2 + `nstool-streams.patch`) serve the merged 1.9.0 RomFS
+from base NSP + update NSP: decrypt, update patch (BKTR) and IVFC data-block checks per read; at open, CNMT
+selection, NCA identity/size and filesystem-header hashes (no whole-NCA hash per launch, no NCA signature check).
+Host: all **41,062/41,062** RomFS files byte-identical to the stock-nstool extraction; ExeFS from the PC tool is the
+same 5 files as that extraction.
+
+Console probe `savagewind-package-probe.elf` (root elfldr payload, same core) on .41, reading the packages in
+`/data/savagewind/import`: open **6.25 s**; 220/220 sampled files (20 largest + 200 seeded random) match the host
+hashes; sequential **125 MiB/s**; random 64 KiB 0.69 ms / **90 MiB/s** (1 thread), 3.08 ms / 81 MiB/s (4 threads:
+one mutex per package stream serialises reads). For comparison, plain files on the same console from a root payload:
+517 MiB/s sequential, 94 MiB/s random 64 KiB; from the unelevated title: 133 MiB/s, 41 MiB/s. Not yet measured
+inside the title process, and not yet with the game's read pattern (needs M2). The 6.25 s open and the
+4-thread serialisation are the costs to reduce first.

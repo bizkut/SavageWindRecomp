@@ -1,7 +1,8 @@
 # Savage Wind on PS5: port plan
 
-Status: planned, not started (2026-10-27). Nothing in this file has run on a console yet; every number below is
-either a cited measurement from another project or an explicit target.
+Status 2026-10-28: M0 spikes S1–S5 go on the console (S6 pending a timed run of generated code); M9 storage broker
+measured on .41; 1.9.0 game code generated on the PC and compiled for the PS5 (`ps5/FINDINGS.md`). Gameplay runtime
+(M2 onward) not started. Console measurements are cited in `ps5/FINDINGS.md`; other numbers are explicit targets.
 
 ## Goal
 
@@ -38,6 +39,43 @@ from this port): Savage Wind `origin/test` `6572c35483`, PR #194 `35efe256e4`, P
 PS5_PayloadSDK `fdb2763789`, PS5_Vulkan `2cf7597741`, PS5_Mesa `f10c4bac9b`, pacbrew-repo `2e3eaf9c5f`,
 ps5-wow `bdb6e38f26`, PS5_MihawkGen `c57232a9f1`, PS5_vkQuake `19b90239a3`. `ps5/deps.lock` records these and the
 build refuses a mismatch.
+
+### Upstream PRs and issues (triage 2026-10-27)
+
+Open upstream PRs/issues on `Revivedx/SavageWindRecomp` that affect this port. Read from the PR descriptions and issue
+threads; diffs were not applied or measured here. Our `ps5` branch contains `origin/test` `6572c35483` (latest).
+Policy (D1): take a PR by upstream merge into `test` when possible; cherry-pick only at the milestone named, and only
+with a PS5 A/B receipt. No PR is assumed beneficial on the PS5 until measured there.
+
+| PR | Change | Notes for PS5 | When |
+|---|---|---|---|
+| #154 | Render-target view-format lists, keeps DCC on AMD | Measured on RADV iGPUs; enabled by default only on iGPUs, so the PS5 (discrete-like RDNA2) needs an explicit enable and A/B. | M6 |
+| #155 | Image barriers between passes instead of a full barrier | Avoids a per-pass L2 flush on RADV. Overlaps #189 in `runtime/nvn/vulkan/exec.c`. | M6 |
+| #153 | NaN-aware min/max/saturate, ~18 % fewer shader instructions | Measured on Radeon 660M/RADV; compatible with #154/#155. Changes shader translation, so shader caches (D6) are invalidated. | M6 |
+| #189 | Recorder thread for driver calls, barrier before the window pass | Changes submission/present order: re-check VideoOut/VRR pacing (D4, M7). Overlaps #155, #128, #111, #83. | M6, after #155 |
+| #214 | One-off readback waits only for its own submission | Hitch fix in `exec.c`; tested on Windows/RTX only. | M6 |
+| #83 | Retire command records when the game overwrites their lists (#74) | Command-memory lifetime; matters for the PS5 memory budget. | M2/M3 |
+| #190 | Quick selectors without black entry frames at high FPS limits (#173) | We run a 60 fps base with FG to 120; check both FG on/off. | M7 |
+| #128 | Descriptor sets kept across submissions | Draft; no measurable gain on RADV/RTX per its author. Only if M6 shows descriptor CPU cost. | M6 (conditional) |
+| #194, #195 | Motion vectors/TAA, FSR 3.1 | See table above and M8; #195 conflicts with `test` in `runtime/hle/framepace.c`. | M8 |
+
+Not for the PS5: #215 and #200 (Windows stack commit / CPU affinity), #197 (Intel iGPU sparse heap; its sparse path
+crashes on AMD), #111 (NVIDIA DLSS), #212 (Mali/aarch64), #213 (Windows generator logging), #33/#40 (CI/layout).
+
+| Issue | Status upstream | PS5 action |
+|---|---|---|
+| #144 arrows fall faster above 30 fps | Fixed; fix `85597d6` is in our branch. | Verify at the 60 fps base (M6). |
+| #164 gyro flips past vertical | Fixed by `85597d6`, in our branch. | Covered by D8 gyro tests (M4). |
+| #98 ultrawide loading screens | Fixed by `85597d6`, in our branch. | None (16:9 TV). |
+| #161 cucco jump above ~90 fps | Open, cause unknown. | Base stays 60 fps; recheck if a higher base is ever offered. |
+| #173 black flicker on weapon selector | Open; fix is PR #190. | M7. |
+| #129 pixelated particle halos without FSR | Thread says fixed on `test` by PR #138; that commit was not found in our history. | Verify before M3 sign-off. |
+| #95 dim HDR | Thread says fixed on `test` (HDR10 presentation); commit not found in our history. | HDR is out of scope until M3 runs SDR; recheck then. |
+| #59, #182, #219 AMD texture/geometry artifacts | Open, no root cause (#182: disabling anisotropic filtering helps one symptom). | Watch on RADV in M3; capture before/after AF if seen. |
+| #146 missing rumble | Partly fixed (PR #178, damage rumble); weapon-hit/bomb rumble open. | D8 rumble test lists which events rumble. |
+| #136, #220 gyro devices | Controller-backend specific (Steam Input, GameSir). | None; DualSense goes through scePad (D8). |
+| #204 `sr failed: -2` at `exec.c:310` | Open, validation-layer report on Vega 8. | Watch in M3 with validation. |
+| #188 white screen after intro | Thread: oversized DLC map files exceed size-table limits; the RasterizerDiscard log is harmless. | Relevant to imported DLC (D11): test DLC on/off in M11. |
 
 ## Decisions
 
@@ -81,21 +119,29 @@ cross-compiles that C for the PS5's x86-64 Zen 2 CPU and links it with the open-
 This is a one-time operation per game build id. Generated C and PS5 objects are cached on the user's PC; a Savage
 Wind update with the same supported game version only relinks the eboot instead of regenerating/recompiling it.
 
-1. The user supplies ExeFS and a complete merged RomFS, manually or through the NSP payload (D11).
-2. The PC helper generates C from ExeFS, cross-compiles it for the PS5 target, and caches the generated C/objects.
+1. The user keeps their packages (base NSP or XCI + 1.9.0 update NSP, optional DLC) and `prod.keys` in
+   **`/data/savagewind/import/`** on the console, and has the same packages on the PC.
+2. The PC helper extracts only ExeFS from the packages (`main`, `main.npdm`, `rtld`, `sdk`, `subsdk0`; tens of MB),
+   checks `main`'s build id, generates C (`tools/gen.py all`), cross-compiles it for the PS5
+   (`ps5/tools/build-gamecode.sh`) and caches the generated C/objects.
 3. It links those objects with the shipped runtime into the user's signed `eboot.bin` and uploads it to
    `/data/homebrew/<TITLE_ID>/`.
-4. The merged RomFS remains as **`/data/savagewind/game/romfs/`**; current `runtime/romfs_image.c` reads that folder
-   in place with a persistent descriptor cache. `romfs.bin` is a legacy fallback and is not produced by this port.
+4. **No RomFS extraction** (decided 2026-10-27 after console run 3 measured on-console extraction at 15 MiB/s,
+   ~17 min for 14.1 GiB): the runtime reads the merged RomFS from the packages directly. A third
+   `runtime/romfs_image.c` backend decrypts and applies the update's patch per read; DLC images likewise
+   (`aoc<N>`). Setup on the console is therefore a package scan, not a copy, and needs no second 15 GiB.
 5. At startup the title checks its linked game-code build id against `runtime/game_versions.h` and validates the
-   RomFS version/file count.
+   packages' CNMT title/version and the RomFS version/file count.
+
+Consequence: the title, not a one-shot payload, now decrypts at every launch with the user's keys, and
+`prod.keys` stays on the console. This widens the D11 policy decision below.
 
 **Data outside the title folder.** Everything that is the user's, or costly to rebuild, lives under `/data/savagewind/`
 (decided 2026-10-27), so installing a new title build — which replaces `/data/homebrew/<TITLE_ID>/` — never erases it:
 
 ```
 /data/savagewind/
-  game/      romfs/ (merged base + update), aoc*/ (DLC)
+  import/    the user's NSP/XCI packages and prod.keys (read in place by the game)
   save/      saves
   cache/     SPIR-V and VkPipelineCache
   savagewind.ini
@@ -173,63 +219,47 @@ in `runtime/services/audio.c`. Movies keep FFmpeg from pacbrew.
 MihawkGen is distributed under GPL-3.0-or-later with all notices (MihawkGen `THIRD_PARTY_NOTICES.txt`, Mesa, AMD
 FidelityFX). Keep MihawkGen and other GPL code out of the desktop build so its licence is unchanged.
 
-**D11. Drop-in NSP/XCI import: one-shot nstool payload** (requested 2026-10-27). The user uploads their packages
-and their own `prod.keys` (optional `title.keys`) to `/data/savagewind/import/`. Supported input combinations:
+**D11. Game data from the user's NSP/XCI packages, read in place** (requested 2026-10-27; revised the same day). The
+user uploads their packages and their own `prod.keys` (optional `title.keys`) to `/data/savagewind/import/`.
+Supported input combinations:
 
 | Inputs | Acceptance |
 |---|---|
-| Base XCI + 1.9.0 update NSP | Locate the base Program NCA in the XCI secure partition and merge the matching update. |
-| Base NSP + 1.9.0 update NSP | Locate matching base/update Program NCAs and merge them, loading both embedded tickets. |
+| Base XCI + 1.9.0 update NSP | Locate the base Program NCA in the XCI secure partition and apply the matching update. |
+| Base NSP + 1.9.0 update NSP | Locate matching base/update Program NCAs and apply the update, loading both embedded tickets. |
 | One NSP labelled 1.9.0 | Accept only if its contents provide a complete usable 1.9.0 game, including all required base content. |
 
 A lone update-only NSP is incomplete: display "Base game missing. Add the Breath of the Wild base NSP or XCI."
-An XCI may also contain updates; inspect its internal content inventory rather than assuming every XCI is base-only.
-The title starts an embedded `savagewind-import.elf` through local elfldr; the payload runs as root, exits after
-the import, and never owns VideoOut. XCI is part of the planned importer, but requires its own extraction qualification.
+An XCI may also contain updates and DLC; inspect its internal content inventory rather than assuming it is base-only.
 
-- Tool: `../nstool2` (MIT, pinned at `7e0a49b61a`), cross-built into the payload. It reads NSP/PFS0, NCA and tickets,
-  and applies an update to its base: `--basenca <base program NCA>` extracts the update Program NCA against the base,
-  producing the 1.9.0 ExeFS and merged RomFS.
-- Outputs: `/data/savagewind/game/romfs/` (+ `aoc*/` DLC directories) and a temporary
-  `/data/savagewind/import/work/exefs/`. The PC helper fetches only ExeFS, generates and links the user's
-  `eboot.bin` (D5), uploads it to the title folder, then removes the temporary ExeFS. No monolithic `romfs.bin` or
-  second 15 GiB copy is made.
+- Library: `../nstool2` (MIT, pinned at `7e0a49b61a`) plus a patch in this repo (`ps5/importer/nstool-streams.patch`):
+  base NCA streamed from inside its container (never copied), tickets from streams, XCI filesystem, and two upstream
+  fixes (`NcaProcess::getFileSystem` returned null; `ContentInfo` copy dropped `id_offset`).
+- **PC:** extract ExeFS only and build the eboot (D5). **Console:** the runtime opens the packages, selects the
+  contents by CNMT and serves `romfs_image_pread` from the decrypted, update-patched RomFS stream; DLC as `aoc<N>`
+  (index = AOC data id − (program id & ~0xFFF) − 0x1000). Nothing is written under `game/`.
 - Validate real contents, never package filenames. Parse CNMT type/title/version/content records and require base
   application `01007EF00011E000`, matching update `01007EF00011E800` v1114112, and a Patch application ID referring
-  to that base. Resolve referenced NCA IDs, sizes and hashes; reject missing/ambiguous content. Test decryption for
-  both base and update before a full merge, loading both tickets or matching user-supplied title-key mappings.
-- Validate extracted output independently: `main` must be NSO and match the supported 1.9.0 build-ID prefix
-  `cd57b23fa4bbad65` in `runtime/game_versions.h`; RomFS `System/Version.txt` must say `1.9.0`, with at least the
-  existing 95%-of-41,062-file threshold. Metadata alone is not proof of complete content or bootability. Stage under
-  `import/work/`; keep existing working game data unchanged until extraction and validation succeed.
-- Keys: parsed in the payload's memory only, never logged, cached or shipped. `prod.keys` is deleted after a
-  successful import by default; NSP deletion is a separate user choice. No key, title key or key-derivation constant
-  is committed to this repository.
-- Root payload does not imply unlimited disk speed. Existing payload measurements are ~13–35 MiB/s depending on
-  write size; measure this importer with large sequential writes on .41. It avoids the title's per-launch write
-  budget, but SSD/pwrite cost can still dominate.
-- The launcher replaces NSP/XCI "unusable package" with Import. `.nsz` and `.xcz` remain unsupported. If local elfldr
-  is absent, show "Import service unavailable. Load the console payload loader and retry." Never silently fall back.
+  to that base. Resolve referenced NCA IDs and sizes; reject missing/ambiguous content; load both tickets or matching
+  user-supplied title-key mappings. At open, the RomFS `System/Version.txt` must say `1.9.0` with at least 95% of
+  41,062 files. Whole-NCA hashing is a one-time check, not a per-launch cost.
+- Keys: parsed in memory only, never logged, cached or shipped; no key, title key or key-derivation constant is
+  committed. `prod.keys` must stay on the console because the title decrypts at every launch.
+- `.nsz` and `.xcz` remain unsupported and are rejected by name and content.
 
-**TV setup/progress screen.** The native title UI stays responsive while the root payload works. First show the
-detected game, base/update sources, actual version and missing prerequisites; start extraction only after this
-preflight passes. The payload publishes bounded, versioned progress/status records under
-`/data/savagewind/import/` by temp-file + atomic rename. Include an import session ID so stale records cannot be
-mistaken for the current run. The UI polls those records; no per-file log flood or second display owner.
+**Retired: one-shot extraction payload.** `ps5/importer` (root elfldr payload extracting merged RomFS to
+`game/romfs/`) and its TV progress title `ps5/title/import_ui.c` work end to end (host: 41,067/41,067 files
+byte-identical to stock nstool; console run 3 on .41: preflight, confirm, ExeFS, RomFS, cancel), but extraction ran at
+15 MiB/s (~17 min). It is kept only until the direct-read backend has qualified on the console, then removed; its
+package-selection code moves into the shared package library.
 
-Stages: **Checking packages → Checking keys → Extracting ExeFS → Merging/extracting RomFS → Verifying → Ready for
-PC code build**. Show bytes processed/total and percentage when the total is known; use an indeterminate indicator
-during scans rather than fake percentages. Show file counts for final verification. "Ready for PC code build" is
-not "Ready to play": the PC helper still must generate/link and upload the user-specific eboot.
-
-Failure messages name the file and corrective action: wrong game; base missing; update missing/wrong version;
-missing key or ticket; decryption failure (not automatically blamed on keys); missing/corrupt NCA; unsupported
-format; insufficient free space; payload failed/disconnected. Never show key values. Keep the error on screen until
-acknowledged. Retry revalidates inputs; cancel is cooperative between bounded chunks, never kills a process halfway
-through publishing the accepted game. Preserve the existing installation and remove only session-owned staging.
-- **Policy change to decide:** `docs/SAVAGE-WIND.md` says Savage Wind never decrypts anything. This payload decrypts
-  with the user's keys, changing that rule and the project's legal position. It remains behind a build option until
-  the maintainers approve and rewrite that policy.
+**TV screen.** The title shows the detected game, base/update/DLC sources, actual version and missing prerequisites
+before starting, and keeps a specific error on screen until acknowledged: wrong game; base missing; update
+missing/wrong version; missing key or ticket; decryption failure (not automatically blamed on keys); missing/corrupt
+NCA; unsupported format. Never show key values.
+- **Policy change to decide:** `docs/SAVAGE-WIND.md` says Savage Wind never decrypts anything. Reading packages
+  decrypts with the user's keys in the title at every launch, changing that rule and the project's legal position.
+  It remains behind a build option until the maintainers approve and rewrite that policy.
 
 **D12. `/data/savagewind` access: direct reads, root payload for writes.** No Lapy dependency and no title credential
 mutation. ShadowMountPlus is a prerequisite: on .41 it lets the title read `/data/savagewind`, and direct `pread`
@@ -341,14 +371,14 @@ Path-restricted payload, versioned client, direct RomFS reads and brokered atomi
 remain unchanged; unavailable/old broker and missing ShadowMountPlus each produce a clear error; path traversal,
 intermediate/final symlinks, hard links and cross-root operations are rejected.
 
-### M10 — NSP/XCI import payload and TV setup screen (D11)
-nstool2 cross-built at its pin into a one-shot root payload, native TV UI progress/errors, PC helper handoff and
-policy decision above. **Done when:** base XCI + update NSP, base NSP + update NSP, and a complete single-package
-1.9.0 input each produce the same correct merged ExeFS/RomFS as manual extraction (file hashes). Update-only,
-wrong-title, wrong-version, missing/corrupt-content, missing-key, insufficient-space and missing-elfldr cases show
-specific actionable errors on the TV without modifying the existing game. Verify real progress, responsive UI,
-stale-session rejection, cancel/retry, interruption recovery and the PC-built eboot handoff. No key material appears
-in logs/status records; unsupported compressed containers are rejected explicitly.
+### M10 — Game data read from the user's packages (D11)
+Package library (shared with the PC ExeFS tool), direct-read `romfs_image` backend with DLC, TV preflight/error
+screen, policy decision above. **Done when:** on the host, every RomFS file read through the backend from base NSP +
+update NSP and from base XCI + update NSP matches manual extraction (all 41,067 SHA-256s); on .41 the backend opens
+the packages and a sampled set of files (including the largest packs) matches the host hashes, with open time and
+read throughput recorded against the extracted-folder figures; and the game boots to the title screen from the
+packages (needs M2/M3). Update-only, wrong-title, wrong-version, missing/corrupt-content and missing-key cases show
+specific errors on the TV. No key material appears in logs; unsupported compressed containers are rejected.
 
 ### M11 — Release
 Settings persistence, save/load, DLC, 1-hour soak, README for the setup/import flow, notices (D10), release ZIP.

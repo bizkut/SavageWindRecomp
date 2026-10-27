@@ -40,3 +40,6 @@ docs/RAMAS.md
 /.deps/
 /ps5/dist/
 /ps5/runtime/libc.prx
+
+# PS5 title host test binary
+ps5/title/host_test

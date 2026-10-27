@@ -15,6 +15,11 @@ typedef struct RomfsImage RomfsImage;
 // The image of the folder dir (extracted/romfs), or, with no folder there, dir.bin (the image file older versions
 // built). NULL = neither could be read (why: a short message).
 RomfsImage *romfs_image_open(const char *dir, char *why, size_t why_size);
+#ifdef ROMFS_PACKAGE
+// Open the merged game (addon=0) or an AOC image (addon=1..8).
+RomfsImage *romfs_image_open_package(const char *keys, const char *const *packages, size_t count,
+                                     unsigned addon, char *why, size_t why_size);
+#endif
 uint64_t romfs_image_size(const RomfsImage *img);
 // n bytes of the image at off, past its end zeros; any thread. n, or -1 when a file couldn't be read (logged).
 ssize_t romfs_image_pread(RomfsImage *img, void *dst, uint64_t n, uint64_t off);

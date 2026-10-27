@@ -152,6 +152,17 @@ SPIRV_ID := $(shell cat runtime/nvn/vulkan/spirv.c | (shasum -a 256 2>/dev/null 
 
 RT_OBJ   := $(patsubst runtime/%.c,$(B)/rt/%.o,$(RT_SRC))
 RTFLAGS  := -O2 -g -fno-strict-aliasing -Wall -Wno-unused-function -Iruntime -Iruntime/nvn -isystem third_party -isystem third_party/stb $(DEPINC) $(OSFLAGS)
+ROMFS_PACKAGE ?= 0
+ifeq ($(ROMFS_PACKAGE),1)
+PACKAGE_BUILD := build/ps5/importer/host
+PACKAGE_LIB := $(PACKAGE_BUILD)/build/libsavagewind-package.a
+PACKAGE_DEPS := $(foreach dep,pietendo toolchain fmt lz4 mbedtls,$(PACKAGE_BUILD)/source/deps/lib$(dep)/bin/linux/lib$(dep).a)
+RT_OBJ := $(filter-out $(B)/rt/romfs_image.o $(B)/rt/services/fs.o,$(RT_OBJ)) \
+          $(B)/rt-package/romfs_image.o $(B)/rt-package/services/fs.o
+$(PACKAGE_LIB): ps5/importer/package_core.cpp ps5/importer/package_core.h ps5/importer/package_stream.cpp \
+                ps5/importer/nstool-streams.patch ps5/importer/CMakeLists.txt ps5/importer/Makefile
+	$(MAKE) -C ps5/importer package
+endif
 CXXFLAGS := -O2 -g -std=c++17 -I$(IMGUI) -I$(IMGUI)/backends -Iruntime -Iruntime/nvn -isystem third_party -Ithird_party/stb $(DEPINC)
 
 .DEFAULT_GOAL := all
@@ -198,6 +209,10 @@ $(B)/rt/%.o: runtime/%.c $(RT_HDRS)
 	@mkdir -p $(dir $@)
 	$(CC) $(RTFLAGS) -c $< -o $@
 
+$(B)/rt-package/%.o: runtime/%.c $(RT_HDRS)
+	@mkdir -p $(dir $@)
+	$(CC) $(RTFLAGS) -DROMFS_PACKAGE -c $< -o $@
+
 # SMAA (third_party/smaa, MIT): the reference shader as a C string for runtime/nvn/smaa_data.c (both backends build
 # their passes from it); the non-ASCII bytes in its comments become '?', and its CRLF line ends plain LF (a CR left in
 # the string literals ends them early on macOS clang)
@@ -218,9 +233,9 @@ $(B)/rt/%.o: runtime/%.m $(RT_HDRS)
 # linked to a temp file, then renamed over: a copy of the game still running keeps its (old) file - relinking in
 # place gets running copies killed by macOS (code signature of the changed pages). The temp file keeps the real name
 # (in a folder of its own): on Windows the import library records the name the game code library loads it by.
-$(EXE): $(RT_OBJ) $(BACKEND_OBJ) $(UI_OBJ) $(IMGUI_OBJ)
+$(EXE): $(RT_OBJ) $(BACKEND_OBJ) $(UI_OBJ) $(IMGUI_OBJ) $(PACKAGE_LIB)
 	@mkdir -p $(dir $@)link
-	$(CXX) -o $(dir $@)link/$(notdir $@) $^ $(LDFLAGS)
+	$(CXX) -o $(dir $@)link/$(notdir $@) $^ $(PACKAGE_DEPS) $(LDFLAGS)
 	mv -f $(dir $@)link/$(notdir $@) $@
 
 # its id file (<library>.id) says what it was built from without loading it (runtime/gamelib.c)
@@ -256,7 +271,7 @@ gen:  # every module of the exefs, at the addresses tools/layout.py gives them
 gen-objs: $(GEN_OBJ)
 
 # Runtime objects only (no generated code, no link): quick compile check
-runtime-objs: $(RT_OBJ) $(BACKEND_OBJ) $(UI_OBJ)
+runtime-objs: $(RT_OBJ) $(BACKEND_OBJ) $(UI_OBJ) $(PACKAGE_LIB)
 
 $(B)/rt/platform/windows_rc.o: runtime/platform/windows.rc runtime/platform/windows.manifest docs/icon/icon.ico
 	@mkdir -p $(dir $@)
