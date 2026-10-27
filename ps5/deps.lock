@@ -1,0 +1,5 @@
+# Savage Wind PS5: pinned inputs (docs/PS5-PORT-PLAN.md). Consumed read-only; ps5/tools/*.sh refuse a mismatch.
+# name                path (relative to the repository root)          revision
+payload-sdk           ../forever/PS5_PayloadSDK                        fdb2763789a50a4fcc9a98dcae13f5e336c6a1ee
+payload-sdk-release   ../forever/.downloads/ps5-payload-sdk.zip        sha256:8cfbc7cd5811e719eb4f0c47eea668d3dc7b40bc8ab11c4a5031d40c23ec02da
+title-tooling         ../PS5_vkQuake (tooling/, copied to ps5/tooling) 3de45e5099758a0247b39b0510da89d2f7331637

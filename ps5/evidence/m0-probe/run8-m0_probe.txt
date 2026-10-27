@@ -1,0 +1,52 @@
+Savage Wind PS5 M0 probe, /app0/m0_probe.txt
+S3 .text block 256 MiB: entry(20)=21 tail(20)=22 (load time: launch to this line in the run's klog)
+S3 PASS: code at both ends of the large .text runs
+S1 page size: getpagesize=16384 sysconf=16384
+S1 mmap fixed rw 12 GiB at 0x7000000000 -> ffffffffffffffff errno=12
+S1 mmap fixed none -> ffffffffffffffff errno=12
+S1 FAIL: guest window reserved at its fixed address
+S1 survey fixed 16 MiB at 0x100000000 -> ok errno=0
+S1 survey fixed 16 MiB at 0x900000000 -> ok errno=0
+S1 survey fixed 16 MiB at 0x1100000000 -> ok errno=0
+S1 survey fixed 16 MiB at 0x1900000000 -> ok errno=0
+S1 survey fixed 16 MiB at 0x2100000000 -> ok errno=0
+S1 survey fixed 16 MiB at 0x2900000000 -> ok errno=0
+S1 survey fixed 16 MiB at 0x3100000000 -> ok errno=0
+S1 survey fixed 16 MiB at 0x3900000000 -> ok errno=0
+S1 survey fixed 16 MiB at 0x4100000000 -> ok errno=0
+S1 survey fixed 16 MiB at 0x4900000000 -> ok errno=0
+S1 survey fixed 16 MiB at 0x5100000000 -> ok errno=0
+S1 survey fixed 16 MiB at 0x5900000000 -> ok errno=0
+S1 survey fixed 16 MiB at 0x6100000000 -> ok errno=0
+S1 survey fixed 16 MiB at 0x6900000000 -> ok errno=0
+S1 survey fixed 16 MiB at 0x7100000000 -> ok errno=0
+S1 survey fixed 16 MiB at 0x7900000000 -> ok errno=0
+S1 survey: no PROT_NONE region of 1 GiB or more, errno=12
+S1 memory: flexible available 186 MiB of 448 MiB configured; direct 12288 MiB, largest free 12286 MiB
+S1 reserve virtual range 0x7000000000 +12 GiB fixed -> rc=0 at 7000000000
+S1 PASS: guest window reserved (addresses only) at its fixed address
+S1 direct commit module image 256 MiB at 0x7100000000: alloc=0 map=0 at 7100000000 touched=16384 0.5 ms
+S1 direct commit HLE heap 64 MiB at 0x7092000000: alloc=0 map=0 at 7092000000 touched=4096 0.1 ms
+S1 direct commit guest heap 3072 MiB at 0x7240000000: alloc=0 map=0 at 7240000000 touched=196608 5.9 ms
+S1 PASS: module image, HLE heap and 3 GiB guest heap backed by direct memory at their addresses
+S1 sceKernelMprotect 16 KiB rc=0, 4 KiB rc=0
+S1 PASS: 16 KiB protection inside the window
+S1 reset: zeroing 256 MiB took 7.1 ms
+S2 thread 0: rc=35
+S2 0/48 threads on 256 MiB stacks ran and joined in 8.5 ms
+S2 FAIL: guest threads on 256 MiB stacks
+S2 survey stacksize 128 MiB: rc=0
+S2 survey own 256 MiB stack mmap -> ffffffffffffffff errno=12
+S2 sigaction rc=0, guard page 20001c000
+S2 faults=1 value=42
+S2 PASS: write fault caught and resumed
+S2 lazy: reserve 48 x 256 MiB stack addresses -> rc=0 at 210000000
+S2 lazy: 48/48 threads joined, 48 ran on the given stack, 0 fault-time 1 MiB maps, failure=0
+S2 FAIL: guest threads on lazily committed 256 MiB stacks
+S2 lazy: query bottom of stack 0: rc=0 210000000-21ff00000 prot=0
+S2 lazy: read reserved, unmapped byte -> 0 (maps 0 -> 
+S2 lazy: ... 1)
+S6 dependent int loop: global 0.866 ns/iter, __thread 0.867 ns/iter (emulated TLS on PS5) [827357840561519684 827357840561519684]
+S6 dependent float loop: 1.447 ns/iter [5.23799e+08]
+S6 memcpy 256 MiB x4: 13.37 GB/s [4]
+done: 3 failed check(s)

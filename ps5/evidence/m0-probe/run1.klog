@@ -1,0 +1,319 @@
+# launch PPSA99560: err launch PPSA99560 foreground user 516448058, login user 516448058, attempts: lncUtilApp/foreground(user 516448058)=0x80940031, lncUtilApp/login(user 516448058)=0x80940031, syste
+<118>[SceLncService] launchApp(PPSA99560)
+<118>[SceLncService] W:\Build\J03675035\vsh\shell\shell_core\lnc_service\lnc_app_info.cpp(163) query: LNC_ISOK::0x80940031
+<118>[SceLncService] W:\Build\J03675035\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(497) launchApp: LNC_ISOK::0x80940031
+<118>#LOGIN MGR# : \morpheus_mgr.cpp(1029) : IsMk3FromUSB : ERROR : [IsMk3FromUSB] sceHmdInternalCheckDeviceModelMk3(): 0x81110004
+<118>#LOGIN MGR# : \morpheus_mgr.cpp(541) : GetHmdConnectionStatus : ERROR : sceHmdInternalGetPUVersion : -2129592316(0x81110004)
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [Render.NPXS40002 : AppScene] -> [WaitLaunchScreen : WaitLaunchScreen]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellUI] I/PSM.UI : SceneQ : Loaded[0.01msec] : SplashScreen.PPSA99560 : SplashScreen
+<118>[SceShellUI] I/PSM.UI : SceneQ : Loaded[0.00msec] : LaunchFlow.PPSA99560 : LaunchFlow
+<118>[SceShellUI] I/PSM.UI : SceneQ : Loaded[0.00msec] : WaitLaunchScreen : WaitLaunchScreen
+<118>[SceShellUI] I/BGLayer : SetBackgroundTransition (Ellapsed 116979msec since last call) ID=11 TransitionType=CustomImageFade Degree=CrossFade NextImageUri= NextBlurImageUri= NextFallbackImageUri= OverlayImageUri=  BasematType=None Retry=False UseImageViewerSequence=False Resize2K=False
+<118>[SceShellUI] I/BGLayer : Fallback Transition ID=11
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: WaitLaunchScreen : WaitLaunchScreen
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [WaitLaunchScreen : WaitLaunchScreen] -> [TitleNotFoundScreen : TitleNotFoundScreen]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.01msec] : WaitLaunchScreen : WaitLaunchScreen
+<118>[SceShellUI] I/PSM.UI : SceneQ : Loaded[0.01msec] : TitleNotFoundScreen : TitleNotFoundScreen
+<118>[SceShellUI] W/PSM.UI : ** NOTICE: LoadSync : Noname : BodyFactoryDialog
+<118>ThemeOverrideType: InheritProperties from supposedParent(Type:Sce.Vsh.ShellUI.BigAppCompanion.TitleNotFoundScreen, Name:TitleNotFoundScreen) to (Type:Sce.Vsh.ErrorDialog.ErrorDialog+BodyFactoryDialog, Name:Noname)
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [TitleNotFoundScreen : TitleNotFoundScreen] -> [Noname : BodyFactoryDialog]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellUI] I/BGLayer : SetBackgroundTransition (Retry SetBackgroundTransition ID=12 TransitionType=CustomImageFade Degree=CrossFade NextImageUri= NextBlurImageUri= NextFallbackImageUri= OverlayImageUri=  BasematType=None Retry=True UseImageViewerSequence=False Resize2K=False
+<118>[SceShellUI] I/BGLayer : cancelBackgroundTransition ID=11
+<118>[SceShellUI] I/BGLayer : Fallback Transition ID=12
+<118>[SceShellCore] VM Stats: RSS 1172.4 0.0, kernel 401.5 0.0, wire count 465.5 0.0, swap out 0.0, page table CPU 5930/8192 GPU 123/8192
+<118>[SceShellCore] FMEM   1.8/   4.3   0.0/   0.0 NPXS40095 SceSysAvControl.elf
+<118>[SceShellCore] FMEM  15.1/ 107.5   0.0/   0.0 NPXS45091 SceSysCore.elf
+<118>[SceShellCore] FMEM  35.8/  63.9   0.0/   0.0 NPXS40096 orbis_audiod.elf
+<118>[SceShellCore] FMEM   8.4/  34.5   0.0/   0.0 NPXS40135 AgcCompositor.elf
+<118>[SceShellCore] FMEM  79.1/ 730.1   0.0/   0.0 NPXS40082 SceShellCore
+<118>[SceShellCore] FMEM 584.3/5716.1   0.0/   0.0 NPXS40087 SceShellUI
+<118>[SceShellCore] FMEM   5.2/  23.5   0.0/   0.0 NPXS40100 SceAvCapture
+<118>[SceShellCore] FMEM  16.6/  89.2   0.0/   0.0 NPXS40102 SceRemotePlay
+<118>[SceShellCore] FMEM   3.2/  34.9   0.0/   0.0 NPXS40091 SceUpdatePupUtil
+<118>[SceShellCore] FMEM  10.7/  48.4   0.0/   0.0 NPXS40142 SceGameLiveStreaming
+<118>[SceShellCore] FMEM  42.4/ 109.7   0.0/   0.0 NPXS40109 ScePartyDaemon
+<118>[SceShellCore] FMEM   6.8/  46.1   0.0/   0.0 NPXS40039 SceMediaCoreServer
+<118>[SceShellCore] FMEM   7.5/  34.8   0.0/   0.0 NPXS40153 ScePsNowClientDaemon
+<118>[SceShellCore] FMEM   4.4/  20.6   0.0/   0.0 NPXS40112 SceSpZeroConf
+<118>[SceShellCore] FMEM   3.8/  20.3   0.0/   0.0 NPXS40101 SceSocialScreenMgr
+<118>[SceShellCore] FMEM  21.0/  85.8   0.0/   0.0 NPXS40094 SceVoiceAndAgent
+<118>[SceShellCore] FMEM   5.9/  30.8   0.0/   0.0 NPXS40028 SceRedisServer
+<118>[SceShellCore] FMEM  52.7/ 764.4   0.0/   0.0 NPXS40000 SceJSCd
+<118>[SceShellCore] FMEM  14.9/ 170.3   0.0/   0.0 NPXS40109 webrtc_daemon.self
+<118>[SceShellCore] FMEM  12.4/  47.0   0.0/   0.0 NPXS40085 SceSystemLogger2
+<118>[SceShellCore] FMEM   4.3/  27.7   0.0/   0.0 NPXS40173 SceVrTrackerDaemon
+<118>[SceShellCore] FMEM  11.4/ 153.7   0.0/   0.0 NPXS40210 SceDiscordDaemon
+<118>[SceShellCore] FMEM   2.7/  13.7   0.0/   0.0 NPXS45093 fs_cleaner.elf
+<118>[SceShellCore] FMEM  24.9/ 491.0   0.0/   0.0 NPXS40039 SceVideoCore2K
+<118>[SceShellCore] FMEM  20.1/  34.4   0.0/   0.0 elfldr.elf
+<118>[SceShellCore] FMEM   9.4/  33.6   0.0/   0.0 pldmgr.elf
+<118>[SceShellCore] FMEM  56.7/ 130.3   0.0/   0.0 NPXS40087 SceNKUIProcess
+<118>[SceShellCore] FMEM  54.8/ 129.0   0.0/   0.0 NPXS40087 SceNKNetworkProcess
+<118>[SceShellCore] FMEM   3.9/  17.9   0.0/   0.0 ftpsrv.elf
+<118>[SceShellCore] FMEM   3.2/  16.6   0.0/   0.0 klogsrv.elf
+<118>[SceShellCore] FMEM   7.0/  20.8   0.0/   0.0 kstuff.elf
+<118>[SceShellCore] FMEM   3.4/  16.8   0.0/   0.0 nanodns.elf
+<118>[SceShellCore] FMEM   6.2/  20.3   0.0/   0.0 ps5upload.elf
+<118>[SceShellCore] FMEM   6.1/  20.5   0.0/   0.0 websrv.elf
+<118>[SceShellCore] FMEM   3.8/  17.4   0.0/   0.0 payload.elf
+<118>[SceShellCore] FMEM  22.6/  37.4   0.0/   0.0 shadowmountplus.elf
+<118>[SceLncService] launchApp(PPSA99560)
+<118>[SceLncService] W:\Build\J03675035\vsh\shell\shell_core\lnc_service\lnc_app_info.cpp(163) query: LNC_ISOK::0x80940031
+<118>[SceLncService] W:\Build\J03675035\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(497) launchApp: LNC_ISOK::0x80940031
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [Noname : BodyFactoryDialog] -> [SplashScreen.PPSA99560 : SplashScreen]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: Noname : BodyFactoryDialog
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: TitleNotFoundScreen : TitleNotFoundScreen
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [SplashScreen.PPSA99560 : SplashScreen] -> [WaitLaunchScreen : WaitLaunchScreen]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.04msec] : Noname : BodyFactoryDialog
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.00msec] : TitleNotFoundScreen : TitleNotFoundScreen
+<118>[SceShellUI] I/PSM.UI : SceneQ : Loaded[0.00msec] : WaitLaunchScreen : WaitLaunchScreen
+<118>[SceShellUI] W/PSM.UI : Illegal Visibility state change requested : Node[WaitLaunchScreen : WaitLaunchScreen] : curr[Initial], new[Shown]
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: WaitLaunchScreen : WaitLaunchScreen
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [WaitLaunchScreen : WaitLaunchScreen] -> [TitleNotFoundScreen : TitleNotFoundScreen]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.00msec] : WaitLaunchScreen : WaitLaunchScreen
+<118>[SceShellUI] I/PSM.UI : SceneQ : Loaded[0.00msec] : TitleNotFoundScreen : TitleNotFoundScreen
+<118>[SceShellUI] W/PSM.UI : ** NOTICE: LoadSync : Noname : BodyFactoryDialog
+<118>ThemeOverrideType: InheritProperties from supposedParent(Type:Sce.Vsh.ShellUI.BigAppCompanion.TitleNotFoundScreen, Name:TitleNotFoundScreen) to (Type:Sce.Vsh.ErrorDialog.ErrorDialog+BodyFactoryDialog, Name:Noname)
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [TitleNotFoundScreen : TitleNotFoundScreen] -> [Noname : BodyFactoryDialog]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellCore] VM Stats: RSS 1174.5 0.0, kernel 401.6 0.0, wire count 465.6 0.0, swap out 0.0, page table CPU 5932/8192 GPU 123/8192
+<118>[SceShellCore] FMEM   1.8/   4.3   0.0/   0.0 NPXS40095 SceSysAvControl.elf
+<118>[SceShellCore] FMEM  15.1/ 107.5   0.0/   0.0 NPXS45091 SceSysCore.elf
+<118>[SceShellCore] FMEM  35.8/  63.9   0.0/   0.0 NPXS40096 orbis_audiod.elf
+<118>[SceShellCore] FMEM   8.4/  34.5   0.0/   0.0 NPXS40135 AgcCompositor.elf
+<118>[SceShellCore] FMEM  79.1/ 730.1   0.0/   0.0 NPXS40082 SceShellCore
+<118>[SceShellCore] FMEM 586.4/5720.1   0.0/   0.0 NPXS40087 SceShellUI
+<118>[SceShellCore] FMEM   5.2/  23.5   0.0/   0.0 NPXS40100 SceAvCapture
+<118>[SceShellCore] FMEM  16.6/  89.2   0.0/   0.0 NPXS40102 SceRemotePlay
+<118>[SceShellCore] FMEM   3.2/  34.9   0.0/   0.0 NPXS40091 SceUpdatePupUtil
+<118>[SceShellCore] FMEM  10.7/  48.4   0.0/   0.0 NPXS40142 SceGameLiveStreaming
+<118>[SceShellCore] FMEM  42.4/ 109.7   0.0/   0.0 NPXS40109 ScePartyDaemon
+<118>[SceShellCore] FMEM   6.8/  46.1   0.0/   0.0 NPXS40039 SceMediaCoreServer
+<118>[SceShellCore] FMEM   7.5/  34.8   0.0/   0.0 NPXS40153 ScePsNowClientDaemon
+<118>[SceShellCore] FMEM   4.4/  20.6   0.0/   0.0 NPXS40112 SceSpZeroConf
+<118>[SceShellCore] FMEM   3.8/  20.3   0.0/   0.0 NPXS40101 SceSocialScreenMgr
+<118>[SceShellCore] FMEM  21.0/  85.8   0.0/   0.0 NPXS40094 SceVoiceAndAgent
+<118>[SceShellCore] FMEM   5.9/  30.8   0.0/   0.0 NPXS40028 SceRedisServer
+<118>[SceShellCore] FMEM  52.7/ 764.4   0.0/   0.0 NPXS40000 SceJSCd
+<118>[SceShellCore] FMEM  14.9/ 170.3   0.0/   0.0 NPXS40109 webrtc_daemon.self
+<118>[SceShellCore] FMEM  12.4/  47.0   0.0/   0.0 NPXS40085 SceSystemLogger2
+<118>[SceShellCore] FMEM   4.3/  27.7   0.0/   0.0 NPXS40173 SceVrTrackerDaemon
+<118>[SceShellCore] FMEM  11.4/ 153.7   0.0/   0.0 NPXS40210 SceDiscordDaemon
+<118>[SceShellCore] FMEM   2.7/  13.7   0.0/   0.0 NPXS45093 fs_cleaner.elf
+<118>[SceShellCore] FMEM  24.9/ 491.0   0.0/   0.0 NPXS40039 SceVideoCore2K
+<118>[SceShellCore] FMEM  20.1/  34.4   0.0/   0.0 elfldr.elf
+<118>[SceShellCore] FMEM   9.4/  33.6   0.0/   0.0 pldmgr.elf
+<118>[SceShellCore] FMEM  56.7/ 130.3   0.0/   0.0 NPXS40087 SceNKUIProcess
+<118>[SceShellCore] FMEM  54.8/ 129.0   0.0/   0.0 NPXS40087 SceNKNetworkProcess
+<118>[SceShellCore] FMEM   3.9/  17.9   0.0/   0.0 ftpsrv.elf
+<118>[SceShellCore] FMEM   3.2/  16.6   0.0/   0.0 klogsrv.elf
+<118>[SceShellCore] FMEM   7.0/  20.8   0.0/   0.0 kstuff.elf
+<118>[SceShellCore] FMEM   3.4/  16.8   0.0/   0.0 nanodns.elf
+<118>[SceShellCore] FMEM   6.2/  20.3   0.0/   0.0 ps5upload.elf
+<118>[SceShellCore] FMEM   6.1/  20.5   0.0/   0.0 websrv.elf
+<118>[SceShellCore] FMEM   3.8/  17.4   0.0/   0.0 payload.elf
+<118>[SceShellCore] FMEM  22.6/  37.4   0.0/   0.0 shadowmountplus.elf
+<118>[SceLncService] launchApp(PPSA99560)
+<118>[SceLncService] W:\Build\J03675035\vsh\shell\shell_core\lnc_service\lnc_app_info.cpp(163) query: LNC_ISOK::0x80940031
+<118>[SceLncService] W:\Build\J03675035\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(497) launchApp: LNC_ISOK::0x80940031
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [Noname : BodyFactoryDialog] -> [SplashScreen.PPSA99560 : SplashScreen]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: Noname : BodyFactoryDialog
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: TitleNotFoundScreen : TitleNotFoundScreen
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [SplashScreen.PPSA99560 : SplashScreen] -> [WaitLaunchScreen : WaitLaunchScreen]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.00msec] : Noname : BodyFactoryDialog
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.00msec] : TitleNotFoundScreen : TitleNotFoundScreen
+<118>[SceShellUI] I/PSM.UI : SceneQ : Loaded[0.00msec] : WaitLaunchScreen : WaitLaunchScreen
+<118>[SceShellUI] W/PSM.UI : Illegal Visibility state change requested : Node[WaitLaunchScreen : WaitLaunchScreen] : curr[Initial], new[Shown]
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: WaitLaunchScreen : WaitLaunchScreen
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [WaitLaunchScreen : WaitLaunchScreen] -> [TitleNotFoundScreen : TitleNotFoundScreen]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.00msec] : WaitLaunchScreen : WaitLaunchScreen
+<118>[SceShellUI] I/PSM.UI : SceneQ : Loaded[0.00msec] : TitleNotFoundScreen : TitleNotFoundScreen
+<118>[SceShellUI] W/PSM.UI : ** NOTICE: LoadSync : Noname : BodyFactoryDialog
+<118>ThemeOverrideType: InheritProperties from supposedParent(Type:Sce.Vsh.ShellUI.BigAppCompanion.TitleNotFoundScreen, Name:TitleNotFoundScreen) to (Type:Sce.Vsh.ErrorDialog.ErrorDialog+BodyFactoryDialog, Name:Noname)
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [TitleNotFoundScreen : TitleNotFoundScreen] -> [Noname : BodyFactoryDialog]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellCore] VM Stats: RSS 1176.6 0.0, kernel 401.6 0.0, wire count 465.6 0.0, swap out 0.0, page table CPU 5934/8192 GPU 123/8192
+<118>[SceShellCore] FMEM   1.8/   4.3   0.0/   0.0 NPXS40095 SceSysAvControl.elf
+<118>[SceShellCore] FMEM  15.1/ 107.5   0.0/   0.0 NPXS45091 SceSysCore.elf
+<118>[SceShellCore] FMEM  35.8/  63.9   0.0/   0.0 NPXS40096 orbis_audiod.elf
+<118>[SceShellCore] FMEM   8.4/  34.5   0.0/   0.0 NPXS40135 AgcCompositor.elf
+<118>[SceShellCore] FMEM  79.2/ 730.1   0.0/   0.0 NPXS40082 SceShellCore
+<118>[SceShellCore] FMEM 588.5/5724.1   0.0/   0.0 NPXS40087 SceShellUI
+<118>[SceShellCore] FMEM   5.2/  23.5   0.0/   0.0 NPXS40100 SceAvCapture
+<118>[SceShellCore] FMEM  16.6/  89.2   0.0/   0.0 NPXS40102 SceRemotePlay
+<118>[SceShellCore] FMEM   3.2/  34.9   0.0/   0.0 NPXS40091 SceUpdatePupUtil
+<118>[SceShellCore] FMEM  10.7/  48.4   0.0/   0.0 NPXS40142 SceGameLiveStreaming
+<118>[SceShellCore] FMEM  42.4/ 109.7   0.0/   0.0 NPXS40109 ScePartyDaemon
+<118>[SceShellCore] FMEM   6.8/  46.1   0.0/   0.0 NPXS40039 SceMediaCoreServer
+<118>[SceShellCore] FMEM   7.5/  34.8   0.0/   0.0 NPXS40153 ScePsNowClientDaemon
+<118>[SceShellCore] FMEM   4.4/  20.6   0.0/   0.0 NPXS40112 SceSpZeroConf
+<118>[SceShellCore] FMEM   3.8/  20.3   0.0/   0.0 NPXS40101 SceSocialScreenMgr
+<118>[SceShellCore] FMEM  21.0/  85.8   0.0/   0.0 NPXS40094 SceVoiceAndAgent
+<118>[SceShellCore] FMEM   5.9/  30.8   0.0/   0.0 NPXS40028 SceRedisServer
+<118>[SceShellCore] FMEM  52.7/ 764.4   0.0/   0.0 NPXS40000 SceJSCd
+<118>[SceShellCore] FMEM  14.9/ 170.3   0.0/   0.0 NPXS40109 webrtc_daemon.self
+<118>[SceShellCore] FMEM  12.4/  47.0   0.0/   0.0 NPXS40085 SceSystemLogger2
+<118>[SceShellCore] FMEM   4.3/  27.7   0.0/   0.0 NPXS40173 SceVrTrackerDaemon
+<118>[SceShellCore] FMEM  11.4/ 153.7   0.0/   0.0 NPXS40210 SceDiscordDaemon
+<118>[SceShellCore] FMEM   2.7/  13.7   0.0/   0.0 NPXS45093 fs_cleaner.elf
+<118>[SceShellCore] FMEM  24.9/ 491.0   0.0/   0.0 NPXS40039 SceVideoCore2K
+<118>[SceShellCore] FMEM  20.1/  34.4   0.0/   0.0 elfldr.elf
+<118>[SceShellCore] FMEM   9.4/  33.6   0.0/   0.0 pldmgr.elf
+<118>[SceShellCore] FMEM  56.7/ 130.3   0.0/   0.0 NPXS40087 SceNKUIProcess
+<118>[SceShellCore] FMEM  54.8/ 129.0   0.0/   0.0 NPXS40087 SceNKNetworkProcess
+<118>[SceShellCore] FMEM   3.9/  17.9   0.0/   0.0 ftpsrv.elf
+<118>[SceShellCore] FMEM   3.2/  16.6   0.0/   0.0 klogsrv.elf
+<118>[SceShellCore] FMEM   7.0/  20.8   0.0/   0.0 kstuff.elf
+<118>[SceShellCore] FMEM   3.4/  16.8   0.0/   0.0 nanodns.elf
+<118>[SceShellCore] FMEM   6.2/  20.3   0.0/   0.0 ps5upload.elf
+<118>[SceShellCore] FMEM   6.1/  20.5   0.0/   0.0 websrv.elf
+<118>[SceShellCore] FMEM   3.8/  17.4   0.0/   0.0 payload.elf
+<118>[SceShellCore] FMEM  22.6/  37.4   0.0/   0.0 shadowmountplus.elf
+<118>[SceLncService] launchApp(PPSA99560)
+<118>[SceLncService] W:\Build\J03675035\vsh\shell\shell_core\lnc_service\lnc_app_info.cpp(163) query: LNC_ISOK::0x80940031
+<118>[SceLncService] W:\Build\J03675035\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(497) launchApp: LNC_ISOK::0x80940031
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [Noname : BodyFactoryDialog] -> [SplashScreen.PPSA99560 : SplashScreen]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: Noname : BodyFactoryDialog
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: TitleNotFoundScreen : TitleNotFoundScreen
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [SplashScreen.PPSA99560 : SplashScreen] -> [WaitLaunchScreen : WaitLaunchScreen]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.00msec] : Noname : BodyFactoryDialog
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.00msec] : TitleNotFoundScreen : TitleNotFoundScreen
+<118>[SceShellUI] I/PSM.UI : SceneQ : Loaded[0.00msec] : WaitLaunchScreen : WaitLaunchScreen
+<118>[SceShellUI] W/PSM.UI : Illegal Visibility state change requested : Node[WaitLaunchScreen : WaitLaunchScreen] : curr[Initial], new[Shown]
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: WaitLaunchScreen : WaitLaunchScreen
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [WaitLaunchScreen : WaitLaunchScreen] -> [TitleNotFoundScreen : TitleNotFoundScreen]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.00msec] : WaitLaunchScreen : WaitLaunchScreen
+<118>[SceShellUI] I/PSM.UI : SceneQ : Loaded[0.00msec] : TitleNotFoundScreen : TitleNotFoundScreen
+<118>[SceShellCore] Libc Heap Status: free 39%, in-use 4465.0 KB, trend +1.1 KB/min, peak 6890.2 KB, when 229 [sec]
+<118>[SceShellUI] W/PSM.UI : ** NOTICE: LoadSync : Noname : BodyFactoryDialog
+<118>ThemeOverrideType: InheritProperties from supposedParent(Type:Sce.Vsh.ShellUI.BigAppCompanion.TitleNotFoundScreen, Name:TitleNotFoundScreen) to (Type:Sce.Vsh.ErrorDialog.ErrorDialog+BodyFactoryDialog, Name:Noname)
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [TitleNotFoundScreen : TitleNotFoundScreen] -> [Noname : BodyFactoryDialog]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellCore] VM Stats: RSS 1178.8 0.0, kernel 401.6 0.0, wire count 465.7 0.0, swap out 0.0, page table CPU 5936/8192 GPU 123/8192
+<118>[SceShellCore] FMEM   1.8/   4.3   0.0/   0.0 NPXS40095 SceSysAvControl.elf
+<118>[SceShellCore] FMEM  15.1/ 107.5   0.0/   0.0 NPXS45091 SceSysCore.elf
+<118>[SceShellCore] FMEM  35.8/  63.9   0.0/   0.0 NPXS40096 orbis_audiod.elf
+<118>[SceShellCore] FMEM   8.4/  34.5   0.0/   0.0 NPXS40135 AgcCompositor.elf
+<118>[SceShellCore] FMEM  79.2/ 730.2   0.0/   0.0 NPXS40082 SceShellCore
+<118>[SceShellCore] FMEM 590.6/5728.1   0.0/   0.0 NPXS40087 SceShellUI
+<118>[SceShellCore] FMEM   5.2/  23.5   0.0/   0.0 NPXS40100 SceAvCapture
+<118>[SceShellCore] FMEM  16.6/  89.2   0.0/   0.0 NPXS40102 SceRemotePlay
+<118>[SceShellCore] FMEM   3.2/  34.9   0.0/   0.0 NPXS40091 SceUpdatePupUtil
+<118>[SceShellCore] FMEM  10.7/  48.4   0.0/   0.0 NPXS40142 SceGameLiveStreaming
+<118>[SceShellCore] FMEM  42.4/ 109.7   0.0/   0.0 NPXS40109 ScePartyDaemon
+<118>[SceShellCore] FMEM   6.8/  46.1   0.0/   0.0 NPXS40039 SceMediaCoreServer
+<118>[SceShellCore] FMEM   7.5/  34.8   0.0/   0.0 NPXS40153 ScePsNowClientDaemon
+<118>[SceShellCore] FMEM   4.4/  20.6   0.0/   0.0 NPXS40112 SceSpZeroConf
+<118>[SceShellCore] FMEM   3.8/  20.3   0.0/   0.0 NPXS40101 SceSocialScreenMgr
+<118>[SceShellCore] FMEM  21.0/  85.8   0.0/   0.0 NPXS40094 SceVoiceAndAgent
+<118>[SceShellCore] FMEM   5.9/  30.8   0.0/   0.0 NPXS40028 SceRedisServer
+<118>[SceShellCore] FMEM  52.7/ 764.4   0.0/   0.0 NPXS40000 SceJSCd
+<118>[SceShellCore] FMEM  14.9/ 170.3   0.0/   0.0 NPXS40109 webrtc_daemon.self
+<118>[SceShellCore] FMEM  12.4/  47.0   0.0/   0.0 NPXS40085 SceSystemLogger2
+<118>[SceShellCore] FMEM   4.3/  27.7   0.0/   0.0 NPXS40173 SceVrTrackerDaemon
+<118>[SceShellCore] FMEM  11.4/ 153.7   0.0/   0.0 NPXS40210 SceDiscordDaemon
+<118>[SceShellCore] FMEM   2.7/  13.7   0.0/   0.0 NPXS45093 fs_cleaner.elf
+<118>[SceShellCore] FMEM  24.9/ 491.0   0.0/   0.0 NPXS40039 SceVideoCore2K
+<118>[SceShellCore] FMEM  20.1/  34.4   0.0/   0.0 elfldr.elf
+<118>[SceShellCore] FMEM   9.4/  33.6   0.0/   0.0 pldmgr.elf
+<118>[SceShellCore] FMEM  56.7/ 130.3   0.0/   0.0 NPXS40087 SceNKUIProcess
+<118>[SceShellCore] FMEM  54.8/ 129.0   0.0/   0.0 NPXS40087 SceNKNetworkProcess
+<118>[SceShellCore] FMEM   3.9/  17.9   0.0/   0.0 ftpsrv.elf
+<118>[SceShellCore] FMEM   3.2/  16.6   0.0/   0.0 klogsrv.elf
+<118>[SceShellCore] FMEM   7.0/  20.8   0.0/   0.0 kstuff.elf
+<118>[SceShellCore] FMEM   3.4/  16.8   0.0/   0.0 nanodns.elf
+<118>[SceShellCore] FMEM   6.2/  20.3   0.0/   0.0 ps5upload.elf
+<118>[SceShellCore] FMEM   6.1/  20.5   0.0/   0.0 websrv.elf
+<118>[SceShellCore] FMEM   3.8/  17.4   0.0/   0.0 payload.elf
+<118>[SceShellCore] FMEM  22.6/  37.4   0.0/   0.0 shadowmountplus.elf
+<118>DBG AutoMounter(_getEventDetail 562):
+<118>	NoChg.
+<118>[SceSystemStateMgr] Power Mode Change: NAVIGATION_ACTIVE_0
+<118>[AvControl] Waiting for the pstate event 
+<118>[Syscore Umd] Set memory pstate (hasRunningGame=0, hasRunningMiniApp=0, isSplashDisplayed=0
+<118>[SceShellUI] I/BGLayer : SetBackgroundTransition (Ellapsed 19264msec since last call) ID=13 TransitionType=CustomImageFade Degree=CrossFade NextImageUri=/user/app/PPSA99225/sce_sys/pic0.dds?ts=1792938884 NextBlurImageUri= NextFallbackImageUri= OverlayImageUri=  BasematType=None Retry=False UseImageViewerSequence=False Resize2K=False
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [Noname : BodyFactoryDialog] -> [Render.NPXS40002 : AppScene]
+<118>SetDeviceIndexBehavior: mode=SpecificUser, param=0x1ec85f3a
+<118>#LOGIN MGR# : \morpheus_mgr.cpp(1029) : IsMk3FromUSB : ERROR : [IsMk3FromUSB] sceHmdInternalCheckDeviceModelMk3(): 0x81110004
+<118>#LOGIN MGR# : \morpheus_mgr.cpp(541) : GetHmdConnectionStatus : ERROR : sceHmdInternalGetPUVersion : -2129592316(0x81110004)
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: SplashScreen.PPSA99560 : SplashScreen
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: Noname : BodyFactoryDialog
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: TitleNotFoundScreen : TitleNotFoundScreen
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: LaunchFlow.PPSA99560 : LaunchFlow
+<118>[SceShellUI] I/PSM.UI : **** Ignored unload request because of unload is already enqueued : TitleNotFoundScreen
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.00msec] : SplashScreen.PPSA99560 : SplashScreen
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.00msec] : Noname : BodyFactoryDialog
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.00msec] : TitleNotFoundScreen : TitleNotFoundScreen
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.00msec] : LaunchFlow.PPSA99560 : LaunchFlow
+<118>[AvControl] Waiting for the pstate event : done
+<118>[SceSystemStateMgr] CPU                                     HLT GC     GFX  F    U   ID       FAN BAPM
+<118>[SceSystemStateMgr]  800  800  800  800 3200 3200 3200 3200   1   gen2  900 1200 875 00840f60   0 off
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(464) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(258) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(84) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(90) Notified error:(0x8041013d)
+<118>[SceShellUI] W/RNPS.rnps-home.NPXS40002 : JS thread was busy for 69.8415982356528 milliseconds
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(464) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(258) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(84) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(90) Notified error:(0x8041013d)
+<118>[SceShellUI] W/RNPS.rnps-home.NPXS40002 : JS thread was busy for 51.2920987042307 milliseconds
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(464) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(258) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(84) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(90) Notified error:(0x8041013d)
+<118>[SceShellUI] W/RNPS.rnps-home.NPXS40002 : JS thread was busy for 67.9176982842619 milliseconds
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(464) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(258) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(84) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(90) Notified error:(0x8041013d)
+<118>[SceShellUI] W/RNPS.rnps-home.NPXS40002 : JS thread was busy for 47.9186987894645 milliseconds
+<118>[SceShellCore] VM Stats: RSS 1179.7 0.0, kernel 401.7 0.0, wire count 465.7 0.0, swap out 0.0, page table CPU 5942/8192 GPU 126/8192
+<118>[SceShellCore] FMEM   1.8/   4.3   0.0/   0.0 NPXS40095 SceSysAvControl.elf
+<118>[SceShellCore] FMEM  15.1/ 107.5   0.0/   0.0 NPXS45091 SceSysCore.elf
+<118>[SceShellCore] FMEM  35.8/  63.9   0.0/   0.0 NPXS40096 orbis_audiod.elf
+<118>[SceShellCore] FMEM   8.4/  34.5   0.0/   0.0 NPXS40135 AgcCompositor.elf
+<118>[SceShellCore] FMEM  79.2/ 730.2   0.0/   0.0 NPXS40082 SceShellCore
+<118>[SceShellCore] FMEM 591.5/5728.8   0.0/   0.0 NPXS40087 SceShellUI
+<118>[SceShellCore] FMEM   5.2/  23.5   0.0/   0.0 NPXS40100 SceAvCapture
+<118>[SceShellCore] FMEM  16.6/  89.2   0.0/   0.0 NPXS40102 SceRemotePlay
+<118>[SceShellCore] FMEM   3.2/  34.9   0.0/   0.0 NPXS40091 SceUpdatePupUtil
+<118>[SceShellCore] FMEM  10.7/  48.4   0.0/   0.0 NPXS40142 SceGameLiveStreaming
+<118>[SceShellCore] FMEM  42.4/ 109.7   0.0/   0.0 NPXS40109 ScePartyDaemon
+<118>[SceShellCore] FMEM   6.8/  46.1   0.0/   0.0 NPXS40039 SceMediaCoreServer
+<118>[SceShellCore] FMEM   7.5/  34.8   0.0/   0.0 NPXS40153 ScePsNowClientDaemon
+<118>[SceShellCore] FMEM   4.4/  20.6   0.0/   0.0 NPXS40112 SceSpZeroConf
+<118>[SceShellCore] FMEM   3.8/  20.3   0.0/   0.0 NPXS40101 SceSocialScreenMgr
+<118>[SceShellCore] FMEM  21.0/  85.8   0.0/   0.0 NPXS40094 SceVoiceAndAgent
+<118>[SceShellCore] FMEM   5.9/  30.8   0.0/   0.0 NPXS40028 SceRedisServer
+<118>[SceShellCore] FMEM  52.7/ 764.4   0.0/   0.0 NPXS40000 SceJSCd
+<118>[SceShellCore] FMEM  14.9/ 170.3   0.0/   0.0 NPXS40109 webrtc_daemon.self
+<118>[SceShellCore] FMEM  12.4/  47.0   0.0/   0.0 NPXS40085 SceSystemLogger2
+<118>[SceShellCore] FMEM   4.3/  27.7   0.0/   0.0 NPXS40173 SceVrTrackerDaemon
+<118>[SceShellCore] FMEM  11.4/ 153.7   0.0/   0.0 NPXS40210 SceDiscordDaemon
+<118>[SceShellCore] FMEM   2.7/  13.7   0.0/   0.0 NPXS45093 fs_cleaner.elf
+<118>[SceShellCore] FMEM  24.9/ 491.0   0.0/   0.0 NPXS40039 SceVideoCore2K
+<118>[SceShellCore] FMEM  20.1/  34.4   0.0/   0.0 elfldr.elf
+<118>[SceShellCore] FMEM   9.4/  33.6   0.0/   0.0 pldmgr.elf
+<118>[SceShellCore] FMEM  56.7/ 130.3   0.0/   0.0 NPXS40087 SceNKUIProcess
+<118>[SceShellCore] FMEM  54.8/ 129.0   0.0/   0.0 NPXS40087 SceNKNetworkProcess
+<118>[SceShellCore] FMEM   3.9/  17.9   0.0/   0.0 ftpsrv.elf
+<118>[SceShellCore] FMEM   3.2/  16.6   0.0/   0.0 klogsrv.elf
+<118>[SceShellCore] FMEM   7.0/  20.8   0.0/   0.0 kstuff.elf
+<118>[SceShellCore] FMEM   3.4/  16.8   0.0/   0.0 nanodns.elf
+<118>[SceShellCore] FMEM   6.2/  20.3   0.0/   0.0 ps5upload.elf
+<118>[SceShellCore] FMEM   6.1/  20.5   0.0/   0.0 websrv.elf
+<118>[SceShellCore] FMEM   3.8/  17.4   0.0/   0.0 payload.elf
+<118>[SceShellCore] FMEM  22.6/  37.4   0.0/   0.0 shadowmountplus.elf
