@@ -81,20 +81,21 @@ cross-compiles that C for the PS5's x86-64 Zen 2 CPU and links it with the open-
 This is a one-time operation per game build id. Generated C and PS5 objects are cached on the user's PC; a Savage
 Wind update with the same supported game version only relinks the eboot instead of regenerating/recompiling it.
 
-1. User runs the existing desktop setup (Linux/Windows) on their own ExeFS/RomFS; it already produces the generated
-   C and `romfs.bin`.
-2. New target `make ps5-gamecode` cross-compiles that C for the PS5 target and links it with the shipped runtime
-   objects into that user's `eboot.bin`, signed as the title build does.
-3. User copies `romfs.bin` (+ DLC) into **`/data/savagewind/game/`** and the linked `eboot.bin` into the title folder
-   `/data/homebrew/<TITLE_ID>/` over FTP/USB.
-4. The title checks its linked game code's build id against `runtime/game_versions.h` and `romfs.bin` at start.
+1. The user supplies ExeFS and a complete merged RomFS, manually or through the NSP payload (D11).
+2. The PC helper generates C from ExeFS, cross-compiles it for the PS5 target, and caches the generated C/objects.
+3. It links those objects with the shipped runtime into the user's signed `eboot.bin` and uploads it to
+   `/data/homebrew/<TITLE_ID>/`.
+4. The merged RomFS remains as **`/data/savagewind/game/romfs/`**; current `runtime/romfs_image.c` reads that folder
+   in place with a persistent descriptor cache. `romfs.bin` is a legacy fallback and is not produced by this port.
+5. At startup the title checks its linked game-code build id against `runtime/game_versions.h` and validates the
+   RomFS version/file count.
 
 **Data outside the title folder.** Everything that is the user's, or costly to rebuild, lives under `/data/savagewind/`
 (decided 2026-10-27), so installing a new title build — which replaces `/data/homebrew/<TITLE_ID>/` — never erases it:
 
 ```
 /data/savagewind/
-  game/      romfs.bin, DLC (the user's extracted data)
+  game/      romfs/ (merged base + update), aoc*/ (DLC)
   save/      saves
   cache/     SPIR-V and VkPipelineCache
   savagewind.ini
@@ -164,13 +165,13 @@ FidelityFX). Keep MihawkGen and other GPL code out of the desktop build so its l
 `/data/savagewind/import/`. The title starts an embedded `savagewind-import.elf` through local elfldr; the payload
 runs as root, exits after the import, and is never resident.
 
-- Tool: `../nstool` (MIT, pinned at `cfb826ca6c`), cross-built into the payload. It reads NSP/PFS0, NCA and tickets,
-  and applies an update to its base: nstool's `--basenca <base program NCA>` path extracts the update Program NCA
-  against the base, producing the 1.9.0 ExeFS and merged RomFS.
-- Outputs: `/data/savagewind/game/romfs.bin` (+ DLC) and a temporary
+- Tool: `../nstool2` (MIT, pinned at `7e0a49b61a`), cross-built into the payload. It reads NSP/PFS0, NCA and tickets,
+  and applies an update to its base: `--basenca <base program NCA>` extracts the update Program NCA against the base,
+  producing the 1.9.0 ExeFS and merged RomFS.
+- Outputs: `/data/savagewind/game/romfs/` (+ `aoc*/` DLC directories) and a temporary
   `/data/savagewind/import/work/exefs/`. The PC helper fetches only ExeFS, generates and links the user's
-  `eboot.bin` (D5), uploads it to the title folder, then removes the temporary ExeFS. Extraction on the console does
-  not remove the PC build step.
+  `eboot.bin` (D5), uploads it to the title folder, then removes the temporary ExeFS. No monolithic `romfs.bin` or
+  second 15 GiB copy is made.
 - Checks before accepting output: title id is BOTW's, update is v1114112 (1.9.0), merged ExeFS `main` build id is in
   `runtime/game_versions.h`, and the merged RomFS passes the existing 95 % file-count check. Output is first written
   under `import/work/`, verified, then atomically renamed into `game/`.
@@ -260,8 +261,8 @@ the SIGSYS-on-exit crash vkQuake recorded (`PS5_vkQuake/docs/FINDINGS.md`).
 `runtime/platform/ps5.c`, paths (`/data/savagewind/` for game data, saves, cache, `savagewind.ini`), SDL shim,
 `__cpuid_count`-based CPU checks (vkQuake finding: `__get_cpuid(7)` returns zeroes), PS5 build of the runtime
 objects. Fix `runtime/gamelib.c`'s CPU check to a fixed `x86-64-v3` on PS5.
-**Done when:** runtime starts, reserves guest memory, loads the user's game module and `romfs.bin`, and reaches
-the game's first NVN call (no rendering yet).
+**Done when:** runtime starts, reserves guest memory, runs its linked game code, opens
+`/data/savagewind/game/romfs/`, and reaches the game's first NVN call (no rendering yet).
 
 ### M3 — Rendering on VideoOut
 RADV link, display-plane surface, swapchain at 3840×2160, FIFO, 119.88 Hz request; shaderc + caches (D6);

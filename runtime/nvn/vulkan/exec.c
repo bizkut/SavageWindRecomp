@@ -19,6 +19,10 @@
 #include "../output_scale.h"
 #include "framegen.h"
 #include "../../game_sites.h"
+#ifdef __PROSPERO__
+#include "../../storage_ps5.h"
+#include <errno.h>
+#endif
 
 static uint64_t stat_build_waits;  // draws that waited for their pipeline (draw_must_happen)
 static uint64_t stat_draws, stat_skipped, stat_passes, stat_dispatches, stat_wait_ns, stat_flushes, stat_feedback_copies;
@@ -4043,6 +4047,21 @@ void vk_pso_flush(void) {
     if (pso_npend && pso_seed) {
         char path[512];
         vk_cache_path(path, sizeof path, "vk_pipelines.list");
+#ifdef __PROSPERO__
+        uint64_t size = 0;
+        int r = rt_storage_stat(path, &size);
+        if (r == -ENOENT) {
+            PsoHeader h;
+            pso_header(&h);
+            r = rt_storage_replace(path, &h, sizeof h);
+        } else if (r == 0 && size == 0) {
+            PsoHeader h;
+            pso_header(&h);
+            r = rt_storage_replace(path, &h, sizeof h);
+        }
+        if (r == 0 && rt_storage_append(path, pso_pend, (size_t)pso_npend * sizeof *pso_pend) == 0)
+            pso_npend = 0;
+#else
         FILE *f = fopen(path, "ab");
         if (f) {
             fseek(f, 0, SEEK_END);
@@ -4056,6 +4075,7 @@ void vk_pso_flush(void) {
             if (fclose(f)) ok = false;
             if (ok) pso_npend = 0;  // (else tried again next time; a part written is dropped by its check when read)
         }
+#endif
     }
     pthread_mutex_unlock(&pso_lock);
 }
@@ -4100,6 +4120,16 @@ static void pso_load(void) {
         fclose(f);
     }
     if (rewrite) {  // (the good records only, or just the header)
+#ifdef __PROSPERO__
+        size_t bytes = sizeof want + (size_t)pso_nrecs * sizeof *pso_recs;
+        char *data = malloc(bytes);
+        if (data) {
+            memcpy(data, &want, sizeof want);
+            if (pso_nrecs) memcpy(data + sizeof want, pso_recs, bytes - sizeof want);
+            rt_storage_replace(path, data, bytes);
+            free(data);
+        }
+#else
         char tmp[540];
         snprintf(tmp, sizeof tmp, "%s.%d.tmp", path, (int)getpid());
         FILE *o = fopen(tmp, "wb");
@@ -4107,6 +4137,7 @@ static void pso_load(void) {
                   fwrite(pso_recs, sizeof *pso_recs, (size_t)pso_nrecs, o) == (size_t)pso_nrecs;
         if (o && fclose(o)) ok = false;
         if (!ok || !vk_replace_file(tmp, path)) remove(tmp);
+#endif
     }
     if (why) LOG("[pso] pipeline list: starts empty (%s: %s)\n", path, why);
     else LOG("[pso] pipeline list: %d pipelines (%d damaged and %d repeated records dropped)\n", pso_nrecs, bad, dup);

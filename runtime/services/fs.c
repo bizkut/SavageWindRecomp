@@ -17,6 +17,9 @@
 #include "../ipc.h"
 #include "../language.h"
 #include "../romfs_image.h"
+#ifdef __PROSPERO__
+#include "../storage_ps5.h"
+#endif
 
 #define FS_PATH_NOT_FOUND MAKE_RESULT(2, 1)
 #define FS_PATH_EXISTS MAKE_RESULT(2, 2)
@@ -898,6 +901,10 @@ static const char *in_path(IpcReq *req, int i) {
 
 static void host_path(HostFs *fs, const char *p, char *out, size_t n) {
     snprintf(out, n, "%s%s%s", fs->root, p[0] == '/' ? "" : "/", p);
+#ifdef __PROSPERO__
+    size_t len = strlen(out);
+    while (len && out[len - 1] == '/') out[--len] = 0;
+#endif
 }
 
 static uint32_t errno_result(void) {
@@ -934,13 +941,24 @@ static void file(Service *s, IpcReq *req, IpcResp *resp) {
         IpcBuf *a = in_buf(req, 0);
         if (strstr(f->path, "savedata"))
             LOG("[save] write %s off %lld size %lld <- guest %llx\n", f->path, (long long)off, (long long)size, (unsigned long long)a->addr);
+#ifdef __PROSPERO__
+        ssize_t written = off < 0 || size < 0 ? -EINVAL : rt_storage_write(f->path, (void *)(uintptr_t)a->addr, (size_t)size, (uint64_t)off);
+        if (written != size) { errno = written < 0 ? (int)-written : EIO; resp->result = errno_result(); }
+#else
         if (pwrite(f->fd, (void *)(uintptr_t)a->addr, (size_t)size, off) < 0) resp->result = errno_result();
+#endif
         free(f->patched);  // (the game saved: its own data from now on)
         f->patched = NULL;
         break;
     }
+#ifdef __PROSPERO__
+    case 2: { int r = rt_storage_fsync(f->path); if (r < 0) { errno = -r; resp->result = errno_result(); } break; }
+    case 3: { int64_t size = IN(int64_t, 0); int r = size < 0 ? -EINVAL : rt_storage_truncate(f->path, (uint64_t)size);
+              if (r < 0) { errno = -r; resp->result = errno_result(); } break; }
+#else
     case 2: fsync(f->fd); break;
     case 3: if (ftruncate(f->fd, IN(int64_t, 0))) resp->result = errno_result(); break;
+#endif
     case 4: {
         struct stat sb;
         fstat(f->fd, &sb);
@@ -1004,16 +1022,31 @@ static void directory(Service *s, IpcReq *req, IpcResp *resp) {
 
 static int rm_rf(const char *p, bool keep_root) {
     DIR *d = opendir(p);
+#ifdef __PROSPERO__
+    if (!d) { int r = rt_storage_unlink(p); if (r < 0) { errno = -r; return -1; } return 0; }
+#else
     if (!d) return unlink(p);
+#endif
     struct dirent *e;
     while ((e = readdir(d))) {
         if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, "..")) continue;
         char c[2048];
         snprintf(c, sizeof c, "%s/%s", p, e->d_name);
+#ifdef __PROSPERO__
+        if (rm_rf(c, false)) { int e = errno; closedir(d); errno = e; return -1; }
+#else
         rm_rf(c, false);
+#endif
     }
     closedir(d);
+#ifdef __PROSPERO__
+    if (keep_root) return 0;
+    int r = rt_storage_rmdir(p);
+    if (r < 0) { errno = -r; return -1; }
+    return 0;
+#else
     return keep_root ? 0 : rmdir(p);
+#endif
 }
 
 static void filesystem(Service *s, IpcReq *req, IpcResp *resp) {
@@ -1021,6 +1054,23 @@ static void filesystem(Service *s, IpcReq *req, IpcResp *resp) {
     char p[2048], p2[2048];
     host_path(fs, in_path(req, 0), p, sizeof p);
     switch (req->cmd) {
+#ifdef __PROSPERO__
+    case 0: {  // CreateFile(option, size)
+        int64_t size = IN(int64_t, 8);
+        int r = size < 0 ? -EINVAL : rt_storage_create_exclusive(p);
+        if (r == 0) r = rt_storage_truncate(p, (uint64_t)size);
+        if (r < 0) { errno = -r; resp->result = errno_result(); }
+        break;
+    }
+    case 1: case 2: case 3: case 5: case 6: {
+        if (req->cmd == 5 || req->cmd == 6) host_path(fs, in_path(req, 1), p2, sizeof p2);
+        int r = req->cmd == 1 ? rt_storage_unlink(p) : req->cmd == 2 ? rt_storage_mkdir(p) :
+                req->cmd == 3 ? rt_storage_rmdir(p) : rt_storage_rename(p, p2);
+        if (r < 0) { errno = -r; resp->result = errno_result(); }
+        break;
+    }
+    case 4: if (rm_rf(p, false)) resp->result = errno_result(); break;
+#else
     case 0: {  // CreateFile(option, size)
         int fd = open(p, O_CREAT | O_EXCL | O_RDWR, 0644);
         if (fd < 0) { resp->result = errno_result(); break; }
@@ -1036,6 +1086,7 @@ static void filesystem(Service *s, IpcReq *req, IpcResp *resp) {
         host_path(fs, in_path(req, 1), p2, sizeof p2);
         if (rename(p, p2)) resp->result = errno_result();
         break;
+#endif
     case 7: {  // GetEntryType
         struct stat sb;
         if (stat(p, &sb)) { resp->result = FS_PATH_NOT_FOUND; break; }
@@ -1045,7 +1096,12 @@ static void filesystem(Service *s, IpcReq *req, IpcResp *resp) {
     }
     case 8: {  // OpenFile(mode)
         uint32_t mode = IN(uint32_t, 0);
+#ifdef __PROSPERO__
+        (void)mode;
+        int fd = open(p, O_RDONLY);
+#else
         int fd = open(p, (mode & 2) ? O_RDWR : O_RDONLY);
+#endif
         if (fd < 0) { resp->result = errno_result(); break; }
         HostFile *f = calloc(1, sizeof *f);
         f->fd = fd;
@@ -1077,7 +1133,11 @@ static void filesystem(Service *s, IpcReq *req, IpcResp *resp) {
     }
     case 10: break;  // Commit
     case 11: case 12: OUT(int64_t, 0) = 0x40000000; resp_size(resp, 8); break;
+#ifdef __PROSPERO__
+    case 13: if (rm_rf(p, true)) resp->result = errno_result(); break;
+#else
     case 13: rm_rf(p, true); break;
+#endif
     case 14: memset(resp->data, 0, 0x20); resp_size(resp, 0x20); break;
     default: LOG("[fs] IFileSystem cmd %u (ok)\n", req->cmd);
     }
@@ -1087,11 +1147,16 @@ static Service *open_host_fs(const char *sub) {
     HostFs *fs = calloc(1, sizeof *fs);
     if (getenv("SAVAGEWIND_SAVE_DIR")) g_save_dir = getenv("SAVAGEWIND_SAVE_DIR");  // test runs use a scratch copy
     snprintf(fs->root, sizeof fs->root, "%s/%s", g_save_dir, sub);
+#ifdef __PROSPERO__
+    int r = rt_storage_mkdirs(fs->root);
+    if (r < 0) LOG("[fs] cannot create save directory %s: %d\n", fs->root, -r);
+#else
     char cmd[1200];
     snprintf(cmd, sizeof cmd, "%s", fs->root);
     for (char *q = cmd + 1; *q; q++)
         if (*q == '/') { *q = 0; mkdir(cmd, 0755); *q = '/'; }
     mkdir(cmd, 0755);
+#endif
     LOG("[fs] mounted host directory %s\n", fs->root);
     return service_new("IFileSystem", filesystem, fs);
 }

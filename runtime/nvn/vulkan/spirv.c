@@ -8,6 +8,10 @@
 #include <sys/stat.h>
 
 #include "shaders.h"
+#ifdef __PROSPERO__
+#include "../../storage_ps5.h"
+#define mkdir(path, mode) rt_storage_mkdirs(path)
+#endif
 
 #ifndef SPIRV_ID
 #define SPIRV_ID __DATE__ " " __TIME__  // (built without the Makefile's hash: valid for this build only)
@@ -88,11 +92,16 @@ static void cache_store(uint64_t h, const uint32_t *spv, size_t nwords) {
     uint32_t w = (uint32_t)nwords;
     memcpy(z + 4, &w, 4);
     bool ok = compress2(z + 8, &zn, (const Bytef *)spv, (uLong)(nwords * 4), 1) == Z_OK;  // (fast: stores happen at draws too)
+#ifdef __PROSPERO__
+    if (ok) rt_storage_replace(path, z, 8 + zn);
+    free(z);
+#else
     FILE *f = ok ? fopen(tmp, "wb") : NULL;
     ok = f && fwrite(z, 1, 8 + zn, f) == 8 + zn;
     if (f && fclose(f)) ok = false;
     free(z);
     if (f && (!ok || rename(tmp, path) != 0)) remove(tmp);  // (another thread may have stored it first)
+#endif
 }
 
 // Vertex shaders: every float add/sub/mul/div/fma gets NoContraction, so no compiler fuses or splits them. Depth

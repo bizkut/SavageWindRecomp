@@ -150,3 +150,53 @@ preflight passed, but the standard client falsely reported success because Shado
 the daemon itself refused that request with `cred_refs=3`/EBUSY, the exact race documented by MihawkOS. That
 test-only resident daemon remains in memory on .41 until the next console reboot; it has no boot hook and no retained
 files.
+
+## 2026-10-27 — NSP inputs, keys, nstool2 and ProsperoEden
+
+User inputs under `/home/bizkut/Downloads/Wind`: base `01007EF00011E000` v0 (Program NCA 14,474,805,248 bytes) and
+update `01007EF00011E800` v1114112 / 1.9.0 (Program NCA 988,376,064 bytes), each with a generic AES-CBC ticket.
+No key bytes were printed or retained in evidence.
+
+With the supplied firmware-19 `prod.keys` and embedded base ticket, both nstool pins fully decrypt the base Program
+NCA and enumerate its ExeFS (`main`, `main.npdm`, `rtld`, `sdk`, `subsdk0`) and RomFS. The update NCA header also
+decrypts and identifies SDK 21.4.1/key generation 3, but its partitions report `AES-CTR Key was not determined`.
+The update ticket's Rights ID matches the NCA; the supplied `title.keys` has no mapping for it. Firmware-19
+`prod.keys` is new enough and carries the named generation-3 derivation slots, so the remaining prerequisite is a
+correct update title-key mapping or a fresh update NSP/ticket from the user's console. Full temporary NCA/ticket
+copies were deleted after the check.
+
+`../nstool2` at `7e0a49b61a` and all pinned submodules cross-compile successfully for the PS5 through
+`ps5/tools/build-nstool2.sh`. The one-shot importer orchestration/extraction cannot be qualified until the update
+title key is corrected.
+
+ProsperoEden is not a bulk-extractor reference: its local metadata bridge opens NSP/XCI through upstream Eden and
+extracts only control RomFS title/icon data. It has no complete ExeFS/RomFS export or base/update output path.
+Current Savage Wind reads the merged `romfs/` directory directly (`runtime/romfs_image.c`); the importer therefore
+outputs `/data/savagewind/game/romfs/`, not legacy `romfs.bin`.
+
+### Correction: both embedded tickets are required for patch merging
+
+The preceding missing-update-key diagnosis is superseded. The failed `--basenca` command loaded only the update
+ticket; nstool also opens the base NCA, which needs its own ticket. With both `--tik base.tik --tik update.tik`
+and the supplied `prod.keys`, nstool2 successfully enumerates the merged update ExeFS and RomFS, including
+`main.npdm` and `System/Version.txt`, without AES-CTR-key or base-RomFS errors. No replacement keys/NSPs are needed.
+The absence of a matching `title.keys` entry is harmless when both embedded tickets are loaded.
+
+## 2026-10-27 — App-start permissions and runtime storage, broker v4
+
+`runtime/paths.c::rt_paths_init` now requests root-broker permission repair on every PS5 app startup, before
+changing to `/data/savagewind`. Ownership is preserved, real directories become 0777 and regular files 0666.
+Traversal is bounded and stays on the root filesystem device; symlinks, hard links and special files are not repaired.
+Broker startup repairs root accessibility before publishing its token, including when the root began at 0700.
+
+Host behavior/security tests pass for v4 repair, exclusive creation, append, truncate, flush, rename (including
+directories), bounded directory listing and removal. Console `.41` smoke evidence:
+`ps5/evidence/io-probe/storage-runtime3.klog`. A root payload created 0700 parent/nested dirs and a 0600 file;
+app startup reported `scanned=11 changed=3 skipped=0 failed=0`, then verified 0777/0777/0666. An outside-root
+sentinel remained 0600 (verified through FTP) and all fixtures were removed afterwards. The same runtime backend
+passed random-offset save writes, truncate, fsync, rename/delete, settings replacement and an atomic cache replacement
+larger than the 16 MiB protocol limit.
+
+The runtime save/settings/Vulkan-cache callsites now select this backend only on PS5; RomFS/DLC reads remain direct.
+This is storage-component qualification, not a boot of the full PS5 game runtime: PS5 platform/input/audio/renderer
+integration is still pending, as is native log redirection.

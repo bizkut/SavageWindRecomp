@@ -16,6 +16,9 @@
 #include "imageload.h"
 #include "paths.h"
 #include "platform.h"
+#ifdef __PROSPERO__
+#include "../ps5/storagebroker/client.h"
+#endif
 
 static char g_root[1024], g_start[1024], g_exe_dir[1024];
 
@@ -87,6 +90,17 @@ void rt_paths_init(void) {
         if (s) *s = 0;
     }
     char root[1024];
+#ifdef __PROSPERO__
+    snprintf(root, sizeof root, "%s", SB_ROOT);
+    struct sb_client broker = {-1, 0};
+    struct sb_repair_stats stats = {0};
+    int repair = sb_connect(&broker);
+    if (repair == 0) repair = sb_repair(&broker, &stats);
+    sb_close(&broker);
+    fprintf(stderr, "[paths] permission repair: result=%d scanned=%u changed=%u skipped=%u failed=%u\n",
+            repair, stats.scanned, stats.changed, stats.skipped, stats.failed);
+    if (repair < 0) fail("Savage Wind could not repair data folder permissions through the storage broker.");
+#else
     const char *env = getenv("SAVAGEWIND_DATA_ROOT");
     if (env && *env) snprintf(root, sizeof root, "%s", env);
     else if (is_dir("extracted")) snprintf(root, sizeof root, "%s", g_start), g_dev = true;  // dev / portable: as before
@@ -103,9 +117,15 @@ void rt_paths_init(void) {
         snprintf(root, sizeof root, "%s/Library/Application Support/" RT_BUNDLE_ID, home && *home ? home : "/tmp");
 #endif
     }
-    mkdirs(root);
+#endif
     char msg[1400];
-    if (!is_dir(root) || !writable(root) || chdir(root) != 0) {
+#ifndef __PROSPERO__
+    mkdirs(root);
+    bool can_write = is_dir(root) && writable(root);
+#else
+    bool can_write = true;  // the authenticated broker performs all persistent writes
+#endif
+    if (!is_dir(root) || !can_write || chdir(root) != 0) {
 #ifdef _WIN32
         snprintf(msg, sizeof msg, "Savage Wind can't write to its folder:\n%s\n\nIt keeps game files, saves and settings "
                  "next to the program. Move the \"Savage Wind\" folder somewhere you can write to (e.g. Documents or "

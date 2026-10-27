@@ -29,6 +29,9 @@
 #include "../shader_archive.h"
 #include "shaders.h"
 #include "vk.h"
+#ifdef __PROSPERO__
+#include "../../storage_ps5.h"
+#endif
 
 bool shader_precompile_available(void) { return true; }
 
@@ -401,6 +404,13 @@ bool shader_precompile_run(ShaderPrecompile *p, const char *romfs) {
     p->seconds = (SDL_GetTicksNS() - t0) / 1e9;
     char path[512];
     status_path(path, sizeof path);
+#ifdef __PROSPERO__
+    time_t now = time(NULL);
+    char date[32], content[160];
+    strftime(date, sizeof date, "%Y-%m-%d", localtime(&now));
+    int n = snprintf(content, sizeof content, "%s\n%d %s\n", vk_shader_version(), p->shaders, date);
+    if (n >= 0 && (size_t)n < sizeof content) rt_storage_replace(path, content, (size_t)n);
+#else
     FILE *f = fopen(path, "w");
     if (f) {
         time_t now = time(NULL);
@@ -409,6 +419,7 @@ bool shader_precompile_run(ShaderPrecompile *p, const char *romfs) {
         fprintf(f, "%s\n%d %s\n", vk_shader_version(), p->shaders, date);
         fclose(f);
     }
+#endif
     atomic_store(&p->state, SP_DONE);
     return true;
 }

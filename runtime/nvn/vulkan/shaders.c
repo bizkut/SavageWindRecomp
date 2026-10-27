@@ -6,11 +6,18 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#ifdef __PROSPERO__
+#include <errno.h>
+#endif
 #include <unistd.h>
 #include <zlib.h>
 
 #include "../shader_archive.h"
 #include "shaders.h"
+#ifdef __PROSPERO__
+#include "../../storage_ps5.h"
+#define mkdir(path, mode) rt_storage_mkdirs(path)
+#endif
 
 // What the translated shaders depend on besides their binaries: the translator's sources (maxwell_translator_id)
 // and the GLSL -> SPIR-V step's (vk_spirv_id). Caches built from translated shaders (cache/xlate, the pipeline cache,
@@ -165,12 +172,29 @@ static void xlate_store(uint64_t h, const XlateHeader *hd, const ShaderInfo *si)
     ShaderInfo copy = *si;
     copy.msl = NULL;
     uint32_t zn32 = (uint32_t)zn;
+#ifdef __PROSPERO__
+    if (ok) {
+        size_t total = sizeof *hd + sizeof copy + sizeof zn32 + zn;
+        uint8_t *data = malloc(total);
+        if (data) {
+            size_t off = 0;
+            memcpy(data + off, hd, sizeof *hd); off += sizeof *hd;
+            memcpy(data + off, &copy, sizeof copy); off += sizeof copy;
+            memcpy(data + off, &zn32, sizeof zn32); off += sizeof zn32;
+            memcpy(data + off, z, zn);
+            rt_storage_replace(path, data, total);
+            free(data);
+        }
+    }
+    free(z);
+#else
     FILE *f = ok ? fopen(tmp, "wb") : NULL;
     ok = f && fwrite(hd, sizeof *hd, 1, f) == 1 && fwrite(&copy, sizeof copy, 1, f) == 1 && fwrite(&zn32, 4, 1, f) == 1 &&
          fwrite(z, 1, zn, f) == zn;
     if (f && fclose(f)) ok = false;
     free(z);
     if (f && (!ok || rename(tmp, path) != 0)) remove(tmp);  // (another thread may have stored it first)
+#endif
 }
 
 // A cache folder's name for an id (TRANSLATOR_ID / SPIRV_ID are 16 hex digits; built without the Makefile, a date)
@@ -204,7 +228,11 @@ static void *cleanup_thread(void *arg) {
             snprintf(path, sizeof path, "%s/%s", dir, e->d_name);
             struct stat st;
             if (stat(path, &st)) continue;
+#ifdef __PROSPERO__
+            if (S_ISDIR(st.st_mode) ? rt_storage_remove_tree(path) == 0 : rt_storage_unlink(path) == 0) removed++;
+#else
             if (S_ISDIR(st.st_mode) ? plat_remove_tree(path) : !remove(path)) removed++;
+#endif
         }
         closedir(d);
     }
@@ -338,6 +366,16 @@ static void keylog_load(void) {  // (keylog_lock held)
     }
     fclose(f);
     if (ok && !bad && !dup) return;
+#ifdef __PROSPERO__
+    size_t bytes = sizeof want + (size_t)keylog_nall * sizeof *keylog_all;
+    char *data = malloc(bytes);
+    if (data) {
+        memcpy(data, &want, sizeof want);
+        if (keylog_nall) memcpy(data + sizeof want, keylog_all, bytes - sizeof want);
+        rt_storage_replace(path, data, bytes);
+        free(data);
+    }
+#else
     char tmp[540];  // (another format, damaged or repeated records: written again, the good records only)
     snprintf(tmp, sizeof tmp, "%s.%d.tmp", path, (int)getpid());
     FILE *o = fopen(tmp, "wb");
@@ -345,6 +383,7 @@ static void keylog_load(void) {  // (keylog_lock held)
              fwrite(keylog_all, sizeof *keylog_all, (size_t)keylog_nall, o) == (size_t)keylog_nall;
     if (o && fclose(o)) w = false;
     if (!w || !vk_replace_file(tmp, path)) remove(tmp);
+#endif
     LOG("[shader] key log: %d records%s (%d damaged, %d repeated dropped)\n", keylog_nall, ok ? "" : ", older format: started over",
         bad, dup);
 }
@@ -371,6 +410,17 @@ void vk_keylog_flush(void) {
     if (keylog_npend) {
         char path[512];
         vk_cache_path(path, sizeof path, "vk_shader_keys.list");
+#ifdef __PROSPERO__
+        uint64_t size = 0;
+        int result = rt_storage_stat(path, &size);
+        if (result == -ENOENT || (result == 0 && size == 0)) {
+            KeyLogHeader h;
+            keylog_header(&h);
+            result = rt_storage_replace(path, &h, sizeof h);
+        }
+        if (result == 0 && rt_storage_append(path, keylog_pend, (size_t)keylog_npend * sizeof *keylog_pend) == 0)
+            keylog_npend = 0;
+#else
         FILE *f = fopen(path, "ab");
         if (f) {
             fseek(f, 0, SEEK_END);
@@ -384,6 +434,7 @@ void vk_keylog_flush(void) {
             if (fclose(f)) ok = false;
             if (ok) keylog_npend = 0;
         }
+#endif
     }
     pthread_mutex_unlock(&keylog_lock);
 }

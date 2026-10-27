@@ -8,6 +8,10 @@
 #include "hle.h"
 #include "input_bind.h"
 #include "language.h"
+#ifdef __PROSPERO__
+#include "storage_ps5.h"
+#include <ps5platform/libc.h>
+#endif
 
 #define SETTINGS_FILE settings_file()
 
@@ -190,7 +194,13 @@ void settings_load(void) {
 }
 
 void settings_save(void) {
+#ifdef __PROSPERO__
+    char *contents = NULL;
+    size_t contents_size = 0;
+    FILE *f = ps5_open_memstream(&contents, &contents_size);
+#else
     FILE *f = fopen(SETTINGS_FILE, "w");
+#endif
     if (!f) { LOG("[settings] cannot write %s\n", SETTINGS_FILE); return; }
     fprintf(f, "# Savage Wind settings (edited from the in-game menu: F1, Esc, or Minus+Plus on a controller)\n");
     fprintf(f, "settings_version = %d\n", SETTINGS_VERSION);
@@ -245,5 +255,11 @@ void settings_save(void) {
     fprintf(f, "voice_language = %s\n", vl > 0 && vl < g_nvoice_languages ? g_voice_languages[vl].folder : "text");
     fprintf(f, "menu_tip_seen = %d\n", g_settings.menu_tip_seen);
     bind_settings_save(f);
+#ifdef __PROSPERO__
+    if (fclose(f) || rt_storage_replace(SETTINGS_FILE, contents, contents_size) < 0)
+        LOG("[settings] cannot write %s\n", SETTINGS_FILE);
+    free(contents);
+#else
     fclose(f);
+#endif
 }

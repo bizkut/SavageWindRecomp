@@ -19,6 +19,9 @@
 #include "vk.h"
 #include "../output_scale.h"
 #include "../renderer.h"
+#ifdef __PROSPERO__
+#include "../../storage_ps5.h"
+#endif
 
 #ifdef _WIN32  // (kernel32; windows.h itself clashes with names used here)
 __declspec(dllimport) int __stdcall MoveFileExA(const char *from, const char *to, unsigned long flags);
@@ -697,10 +700,14 @@ static bool pc_write(VkPipelineCache c, const char *name, size_t *size) {
         h.size = sz;
         h.hash = data_hash(buf + sizeof h, sz);
         memcpy(buf, &h, sizeof h);
+#ifdef __PROSPERO__
+        ok = rt_storage_replace(path, buf, sizeof h + sz) == 0;
+#else
         FILE *f = fopen(tmp, "wb");
         ok = f && fwrite(buf, 1, sizeof h + sz, f) == sizeof h + sz;
         if (f && fclose(f)) ok = false;
         if (!ok || !vk_replace_file(tmp, path)) { ok = false; remove(tmp); }
+#endif
     }
     free(buf);
     *size = sz;
