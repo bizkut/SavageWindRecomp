@@ -160,10 +160,19 @@ in `runtime/services/audio.c`. Movies keep FFmpeg from pacbrew.
 MihawkGen is distributed under GPL-3.0-or-later with all notices (MihawkGen `THIRD_PARTY_NOTICES.txt`, Mesa, AMD
 FidelityFX). Keep MihawkGen and other GPL code out of the desktop build so its licence is unchanged.
 
-**D11. Drop-in `.nsp` import: one-shot nstool payload** (requested 2026-10-27). The user uploads the base game
-`.nsp`, the 1.9.0 update `.nsp`, optional DLC `.nsp`, and their own `prod.keys` to
-`/data/savagewind/import/`. The title starts an embedded `savagewind-import.elf` through local elfldr; the payload
-runs as root, exits after the import, and is never resident.
+**D11. Drop-in NSP/XCI import: one-shot nstool payload** (requested 2026-10-27). The user uploads their packages
+and their own `prod.keys` (optional `title.keys`) to `/data/savagewind/import/`. Supported input combinations:
+
+| Inputs | Acceptance |
+|---|---|
+| Base XCI + 1.9.0 update NSP | Locate the base Program NCA in the XCI secure partition and merge the matching update. |
+| Base NSP + 1.9.0 update NSP | Locate matching base/update Program NCAs and merge them, loading both embedded tickets. |
+| One NSP labelled 1.9.0 | Accept only if its contents provide a complete usable 1.9.0 game, including all required base content. |
+
+A lone update-only NSP is incomplete: display "Base game missing. Add the Breath of the Wild base NSP or XCI."
+An XCI may also contain updates; inspect its internal content inventory rather than assuming every XCI is base-only.
+The title starts an embedded `savagewind-import.elf` through local elfldr; the payload runs as root, exits after
+the import, and never owns VideoOut. XCI is part of the planned importer, but requires its own extraction qualification.
 
 - Tool: `../nstool2` (MIT, pinned at `7e0a49b61a`), cross-built into the payload. It reads NSP/PFS0, NCA and tickets,
   and applies an update to its base: `--basenca <base program NCA>` extracts the update Program NCA against the base,
@@ -172,18 +181,39 @@ runs as root, exits after the import, and is never resident.
   `/data/savagewind/import/work/exefs/`. The PC helper fetches only ExeFS, generates and links the user's
   `eboot.bin` (D5), uploads it to the title folder, then removes the temporary ExeFS. No monolithic `romfs.bin` or
   second 15 GiB copy is made.
-- Checks before accepting output: title id is BOTW's, update is v1114112 (1.9.0), merged ExeFS `main` build id is in
-  `runtime/game_versions.h`, and the merged RomFS passes the existing 95 % file-count check. Output is first written
-  under `import/work/`, verified, then atomically renamed into `game/`.
+- Validate real contents, never package filenames. Parse CNMT type/title/version/content records and require base
+  application `01007EF00011E000`, matching update `01007EF00011E800` v1114112, and a Patch application ID referring
+  to that base. Resolve referenced NCA IDs, sizes and hashes; reject missing/ambiguous content. Test decryption for
+  both base and update before a full merge, loading both tickets or matching user-supplied title-key mappings.
+- Validate extracted output independently: `main` must be NSO and match the supported 1.9.0 build-ID prefix
+  `cd57b23fa4bbad65` in `runtime/game_versions.h`; RomFS `System/Version.txt` must say `1.9.0`, with at least the
+  existing 95%-of-41,062-file threshold. Metadata alone is not proof of complete content or bootability. Stage under
+  `import/work/`; keep existing working game data unchanged until extraction and validation succeed.
 - Keys: parsed in the payload's memory only, never logged, cached or shipped. `prod.keys` is deleted after a
   successful import by default; NSP deletion is a separate user choice. No key, title key or key-derivation constant
   is committed to this repository.
 - Root payload does not imply unlimited disk speed. Existing payload measurements are ~13–35 MiB/s depending on
   write size; measure this importer with large sequential writes on .41. It avoids the title's per-launch write
   budget, but SSD/pwrite cost can still dominate.
-- The launcher replaces `.nsp`'s current "unusable package" result with Import. If local elfldr is absent, it states
-  that the console payload service must be loaded; it never silently falls back. `.xci`/`.nsz`/`.xcz` remain
-  unsupported until independently tested.
+- The launcher replaces NSP/XCI "unusable package" with Import. `.nsz` and `.xcz` remain unsupported. If local elfldr
+  is absent, show "Import service unavailable. Load the console payload loader and retry." Never silently fall back.
+
+**TV setup/progress screen.** The native title UI stays responsive while the root payload works. First show the
+detected game, base/update sources, actual version and missing prerequisites; start extraction only after this
+preflight passes. The payload publishes bounded, versioned progress/status records under
+`/data/savagewind/import/` by temp-file + atomic rename. Include an import session ID so stale records cannot be
+mistaken for the current run. The UI polls those records; no per-file log flood or second display owner.
+
+Stages: **Checking packages → Checking keys → Extracting ExeFS → Merging/extracting RomFS → Verifying → Ready for
+PC code build**. Show bytes processed/total and percentage when the total is known; use an indeterminate indicator
+during scans rather than fake percentages. Show file counts for final verification. "Ready for PC code build" is
+not "Ready to play": the PC helper still must generate/link and upload the user-specific eboot.
+
+Failure messages name the file and corrective action: wrong game; base missing; update missing/wrong version;
+missing key or ticket; decryption failure (not automatically blamed on keys); missing/corrupt NCA; unsupported
+format; insufficient free space; payload failed/disconnected. Never show key values. Keep the error on screen until
+acknowledged. Retry revalidates inputs; cancel is cooperative between bounded chunks, never kills a process halfway
+through publishing the accepted game. Preserve the existing installation and remove only session-owned staging.
 - **Policy change to decide:** `docs/SAVAGE-WIND.md` says Savage Wind never decrypts anything. This payload decrypts
   with the user's keys, changing that rule and the project's legal position. It remains behind a build option until
   the maintainers approve and rewrite that policy.
@@ -298,11 +328,14 @@ Path-restricted payload, versioned client, direct RomFS reads and brokered atomi
 remain unchanged; unavailable/old broker and missing ShadowMountPlus each produce a clear error; path traversal,
 intermediate/final symlinks, hard links and cross-root operations are rejected.
 
-### M10 — `.nsp` import payload (D11)
-nstool cross-built at its pin into a one-shot root payload, title UI launch, PC helper handoff, checks and policy
-decision above. **Done when:** base + 1.9.0 update NSPs and user keys produce merged ExeFS/RomFS matching a known-good
-manual extraction by file hashes; the PC helper builds the resulting eboot; wrong keys, missing update, wrong title,
-interrupted extraction and missing elfldr each stop safely; no key material appears in logs or retained work files.
+### M10 — NSP/XCI import payload and TV setup screen (D11)
+nstool2 cross-built at its pin into a one-shot root payload, native TV UI progress/errors, PC helper handoff and
+policy decision above. **Done when:** base XCI + update NSP, base NSP + update NSP, and a complete single-package
+1.9.0 input each produce the same correct merged ExeFS/RomFS as manual extraction (file hashes). Update-only,
+wrong-title, wrong-version, missing/corrupt-content, missing-key, insufficient-space and missing-elfldr cases show
+specific actionable errors on the TV without modifying the existing game. Verify real progress, responsive UI,
+stale-session rejection, cancel/retry, interruption recovery and the PC-built eboot handoff. No key material appears
+in logs/status records; unsupported compressed containers are rejected explicitly.
 
 ### M11 — Release
 Settings persistence, save/load, DLC, 1-hour soak, README for the setup/import flow, notices (D10), release ZIP.
