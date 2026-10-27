@@ -153,6 +153,29 @@ in `runtime/services/audio.c`. Movies keep FFmpeg from pacbrew.
 MihawkGen is distributed under GPL-3.0-or-later with all notices (MihawkGen `THIRD_PARTY_NOTICES.txt`, Mesa, AMD
 FidelityFX). Keep MihawkGen and other GPL code out of the desktop build so its licence is unchanged.
 
+**D11. Drop-in `.nsp` import with nstool** (requested 2026-10-27). The user drops the base game `.nsp` and the 1.9.0
+update `.nsp` (and DLC `.nsp`) next to their own `prod.keys`, and setup produces the ExeFS and the merged RomFS the
+existing pipeline already takes (`runtime/ui/launcher.mm` `find_game` → copy → `romfs.bin` → game-code build).
+
+- Tool: `../nstool` (MIT, pinned at `cfb826ca6c`), built as a library/host tool into the PC setup. It reads NSP/PFS0,
+  NCA, tickets, and applies an update to its base: `--basenca <base program NCA>` on the update's program NCA gives
+  the 1.9.0 ExeFS and the merged RomFS in one pass (nstool README "patch NCA").
+- Where: the PC setup (Linux/Windows), because the game code must be generated and linked on the PC anyway (D5).
+  Its outputs are the user's `eboot.bin` and `romfs.bin` (+ DLC) for `/data/savagewind/game/`. Extraction on the
+  console is not planned: it would still need the PC for the game code.
+- Checks before extracting: title id is BOTW's, the update is v1114112 (1.9.0), the merged ExeFS `main` build id is
+  in `runtime/game_versions.h`, RomFS file count passes the existing 95 % check. A missing key, wrong title or wrong
+  version stops with one sentence naming what is missing.
+- Keys: read from a file the user selects (or `~/.switch/prod.keys`), held in memory only, never copied, logged,
+  cached or shipped; no key, title key or key-derivation constant is in this repository. Extracted data stays under
+  the user's setup folder and is deleted after `romfs.bin` is built unless they ask to keep it.
+- `launcher.mm` stops treating `.nsp` as unusable (`find_game`) and offers the import instead; `.xci`/`.nsz`/`.xcz`
+  keep the current message until tested.
+- **Policy change to decide:** `docs/SAVAGE-WIND.md` ("Reglas legales") says Savage Wind never decrypts anything and
+  takes only already-extracted files. A built-in importer decrypts with the user's keys, which changes that rule and
+  the project's legal position; it needs the maintainers' agreement and a rewrite of that section before it ships,
+  and it touches the desktop build too, not only the PS5 port. Until then it is developed behind a build option.
+
 ## Frame budget at 4K / 120
 
 Real frames at 60 fps, one generated frame each → 119.88 Hz. Per real frame:
@@ -240,6 +263,13 @@ MihawkGen neural vs `mvwarp`/`mvsplat`, and choose defaults by measured image qu
 
 ### M9 — Release
 Settings persistence, save/load, DLC, 1-hour soak, README for the PC-side setup (D5), notices (D10), release ZIP.
+
+### M10 — `.nsp` import (D11)
+nstool vendored at its pin, importer in the PC setup, launcher path for `.nsp`, the checks above, and the policy
+decision recorded. **Done when:** base + 1.9.0 update `.nsp` with the user's keys produce an ExeFS/RomFS whose
+`main` build id and RomFS count match a known-good manual extraction byte-for-byte (file hashes), on Linux and
+Windows; wrong keys, a missing update and a wrong title each stop with their own message; no key material appears in
+logs or output folders.
 
 ## Risks
 
