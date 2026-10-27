@@ -1,0 +1,7 @@
+ac_compute_device_uuid's output is based on invalid pci bus info.
+wsi/videoout: 119.88 Hz not supported (0); presenting at 59.94 Hz
+wsi/videoout: surface formats hdr_capable=0 (attribute=0x0 source=/app0/sce_sys/param.json read=ok) count=2: B8G8R8A8_UNORM/SRGB_NONLINEAR B8G8R8A8_SRGB/SRGB_NONLINEAR
+wsi/videoout: create swapchain imageFormat=44 imageColorSpace=0 presentMode=2 extent=3840x2160 minImageCount=3
+wsi/videoout: scanout attribute mode=register set=0 token=0x8000000000000000 result=0x00000000 status_before=0x00000000 dynamic_range=1 refresh=0x0000000000000003 flags=0x0000000000000000 status_after=0x00000000 dynamic_range=1 refresh=0x0000000000000003 flags=0x0000000000000000
+wsi/videoout: 3840x2160 framebuffers registered as set 0, buffers 0-4 pixel_format=0x8000000000000000
+radv/ps5 submissions: window count=602 kwords=333 claim_ms=1.0 copy_ms=0.8 flush_ms=0.7 agc_ms=4.0 suspend_ms=4.7

@@ -36,7 +36,8 @@ link_recipe() {
     done
 
     link_flags=(--wrap=pthread_create --wrap=pthread_join --wrap=pthread_detach --wrap=fclose --wrap=fflush)
-    local name
+    # With RADV: Mesa's weak entry points stay unresolved-weak rather than dynamic (PS5_vkQuake tools/build-title.sh)
+    [[ -z $archive ]] || link_flags+=(--no-dynamic-linker -z nodynamic-undefined-weak)
     for name in malloc calloc realloc free posix_memalign aligned_alloc memalign \
             malloc_usable_size reallocf reallocarray getline getdelim; do
         link_flags+=("--wrap=$name")

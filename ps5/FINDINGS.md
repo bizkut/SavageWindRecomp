@@ -47,3 +47,26 @@ comparison is generated game code on a desktop Zen 3/4, still to do.
 **Open:** every run's klog shows `SceSysCore.elf ... exited on signal 12` as the title closes through
 `sceSystemServiceLoadExec("exit")`. PS5_vkQuake recorded SIGSYS on the title's own exit path; this one is a system
 process. Not yet known whether it happens for other titles on this console.
+
+## 2026-10-27 — S4 Vulkan on RADV (ps5/evidence/s4-vulkan, runs 1–2)
+
+Probe `ps5/probe/s4_vulkan.c`, RADV archive pinned in `ps5/deps.lock` (PS5_Mesa f10c4bac9b + Forever patches 0001–0003).
+
+**Go for the renderer.** "PlayStation 5 GPU (RADV NAVI21)", device API 1.4.354. Every feature `runtime/nvn/vulkan/device.c`
+requires is present (1.3 dynamicRendering, synchronization2, demote/terminate, maintenance4; 1.2 timelineSemaphore,
+shaderInt8, mirror-clamp, 8-bit access, scalarBlockLayout; 1.1 16-bit storage) and so is every copied core feature
+(BC, anisotropy, int64, depth clamp, wide lines, clip distance, storage-image extended formats for PR #194's TAA).
+Optional extensions present: custom border color, attribute divisor, external memory host, maintenance5, feedback loop
+layout, dynamic rendering local read, graphics pipeline library, present id/wait, device fault. Absent:
+`VK_KHR_unified_image_layouts` (device.c already treats it as optional). Formats: D32S8 yes, D24S8 no (device.c's depth
+mapping must use D32S8), BC7 yes, ASTC no (BOTW's ASTC textures need the existing CPU/GPU decode path). Heaps: 4 GiB +
+8 GiB device-local. Device creation with the full set succeeds.
+
+**Display:** one VideoOut display, 3840x2160; display-plane surface, B8G8R8A8 UNORM/SRGB, FIFO/mailbox/immediate;
+a 3-image 4K FIFO swapchain presents at 59.94 Hz steadily (16.683 ms, run1).
+
+**120 Hz: not granted on this run.** The WSI read our param.json (attribute3 0x40040) and asked VideoOut:
+`wsi/videoout: 119.88 Hz not supported (0); presenting at 59.94 Hz` (run2 stderr). `sceVideoOutIsOutputSupported`
+returned 0, i.e. the console/TV output at the time offered no 120 Hz mode; this is the console's answer, not the
+title's metadata (the WSI only asks because 0x40 is set). To check: console Screen and Video → 120 Hz output
+Automatic, VRR on, TV on a 120 Hz-capable HDMI input, then re-run.
