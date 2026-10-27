@@ -77,3 +77,6 @@ From here on the test console is **10.0.1.41**. Same eboot as run2. All S4 check
 3840x2160 at 119880 and 59940 mHz; the WSI logs `119.88 Hz selected with title VRR metadata` (attribute3 0x40040
 taken as authoritative); a 3-image 4K FIFO swapchain presented 720 frames at a settled **119.88 Hz (8.342 ms/frame),
 worst interval 8.46 ms**. The .39 refusal (run2) was that console's output setup, not the title.
+The console's AvControl confirms VRR: `HFR:o ... VRR:TypeA`, `119.88Hz request is converted to VRR 119.88Hz`,
+`VRR(peg:120 range:48 - 120)` while the title runs, back to `peg:60 range:48 - 60` after it exits (klog lines
+284–359). TV-side confirmation still to be read off the screen by the user.
