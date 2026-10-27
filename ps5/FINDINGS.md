@@ -252,3 +252,26 @@ Completed XCI (31,943,819,264 bytes, size stable) with the 1.9.0 update NSP thro
 selection accepts it as base `01007EF00011E000` with matching update, and the 5 ExeFS files are SHA-256-identical to
 the base NSP + update NSP result (so `main` carries the 1.9.0 build id). The XCI alone is rejected with
 `wrong_version: Add the Breath of the Wild 1.9.0 update.` The XCI's RomFS was not read through the backend.
+
+## 2026-10-28 — Package-backed ExeFS host check
+
+The package library exposes read-only ExeFS streams from the merged Program NCA. The host package test opened `main`
+and `main.npdm`, checked the NSO build ID and NPDM magic, compared an offset read against the original header, and
+rejected a traversal name and a missing file. With the user's base and update NSPs, the same run matched
+**41,062/41,062** RomFS files; package open was 1.117 s. This is a host check, not evidence that the title can open
+the packages or reach game code on a console.
+
+## 2026-10-28 — Package RomFS reads inside the unelevated title (.41, ps5/evidence/import/package-probe-title-run3)
+
+Same probe as the payload run, built into a PPSA90212 title (`ps5/tools/build-package-probe-title.sh`). Run 1 and 2
+failed: the title libc answers `stat("")` with EINVAL (not ENOENT), so `std::filesystem::exists` on the unset
+`title.keys` path threw; fixed with non-throwing checks. Run 3: open **2.55 s**; 220/220 samples match; sequential
+**68.7 MiB/s**; random 64 KiB 1.49 ms / **41.9 MiB/s** (1 thread), 5.88 ms / **42.5 MiB/s** (4 threads).
+
+| Reads in the title | Sequential | Random 64 KiB, 1 thread | 4 threads |
+|---|---:|---:|---:|
+| Plain files (io-probe run1) | 133 MiB/s | 41 MiB/s | 124–171 MiB/s |
+| Packages (this run) | 68.7 MiB/s | 41.9 MiB/s | 42.5 MiB/s |
+
+Single-thread random reads equal plain files; the title's own I/O is the limit there. Sequential is half, and four
+threads do not scale because one mutex serialises each package stream: per-thread streams are the next change.

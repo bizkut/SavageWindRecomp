@@ -1,8 +1,8 @@
 # Savage Wind on PS5: port plan
 
 Status 2026-10-28: M0 spikes S1–S5 go on the console (S6 pending a timed run of generated code); M9 storage broker
-measured on .41; 1.9.0 game code generated on the PC and compiled for the PS5 (`ps5/FINDINGS.md`). Gameplay runtime
-(M2 onward) not started. Console measurements are cited in `ps5/FINDINGS.md`; other numbers are explicit targets.
+measured on .41; the 1.9.0 generated game code and an M2 title link on the PC (`ps5/FINDINGS.md`). M2 has not yet
+been qualified on the console. Console measurements are cited in `ps5/FINDINGS.md`; other numbers are explicit targets.
 
 ## Goal
 
@@ -334,8 +334,8 @@ the SIGSYS-on-exit crash vkQuake recorded (`PS5_vkQuake/docs/FINDINGS.md`).
 `runtime/platform/ps5.c`, paths (`/data/savagewind/` for game data, saves, cache, `savagewind.ini`), SDL shim,
 `__cpuid_count`-based CPU checks (vkQuake finding: `__get_cpuid(7)` returns zeroes), PS5 build of the runtime
 objects. Fix `runtime/gamelib.c`'s CPU check to a fixed `x86-64-v3` on PS5.
-**Done when:** runtime starts, reserves guest memory, runs its linked game code, opens
-`/data/savagewind/game/romfs/`, and reaches the game's first NVN call (no rendering yet).
+**Done when:** runtime starts, reserves guest memory, runs its linked game code, opens the game's ExeFS and RomFS
+from the packages in `/data/savagewind/import/` (D11), and reaches the game's first NVN call (no rendering yet).
 
 ### M3 — Rendering on VideoOut
 RADV link, display-plane surface, swapchain at 3840×2160, FIFO, 119.88 Hz request; shaderc + caches (D6);

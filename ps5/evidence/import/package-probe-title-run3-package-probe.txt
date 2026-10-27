@@ -1,0 +1,12 @@
+savagewind-package-probe: access errno=0 detail=/data/savagewind/import stat=0 stat_errno=0 mode=40777 size=65536 open=12
+savagewind-package-probe: access errno=0 detail=/data/savagewind/import/prod.keys stat=0 stat_errno=0 mode=100666 size=16025 open=12
+savagewind-package-probe: access errno=0 detail=/data/savagewind/import/E [[redacted]][v1114112][UPD1.9.0][US].nsp stat=0 stat_errno=0 mode=100666 size=991994208 open=12
+savagewind-package-probe: access errno=0 detail=/data/savagewind/import/The Legend of Zelda Breath of the Wild[[redacted]][US][v0].nsp stat=0 stat_errno=0 mode=100666 size=14476288345 open=12
+savagewind-package-probe: package scan count=2
+savagewind-package-probe: opening package keys/CNMT/NCA/RomFS
+savagewind-package-probe: open seconds=2.552 image_bytes=15132662100
+savagewind-package-probe: samples passed=220 failed=0
+savagewind-package-probe: sequential bytes=147229198 seconds=2.044 MiB_s=68.69
+savagewind-package-probe: random threads=1 reads=2000 mean_ms=1.489 MiB_s=41.94
+savagewind-package-probe: random threads=4 reads=8000 mean_ms=5.882 MiB_s=42.49
+savagewind-package-probe: done: pass=221 fail=0

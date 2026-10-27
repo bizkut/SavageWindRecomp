@@ -39,12 +39,27 @@ void PackageCore::scan_packages() {
         }
     }
 void PackageCore::load_keys(const fs::path &prod, const fs::path &title) {
-        if (!fs::exists(prod))
-            fail("keys_missing", "Add prod.keys to the import directory.");
+        // Non-throwing checks: the PS5 title libc answers stat("") with EINVAL (not ENOENT), which the throwing
+        // fs::exists overload turns into an exception; an empty path means "not supplied".
+        std::error_code ec;
+        if (prod.empty()) fail("keys_missing", "Add prod.keys to the import directory.");
+        bool have_prod = fs::exists(prod, ec);
+        if (ec && ec != std::errc::no_such_file_or_directory) {
+            errno = ec.value();
+            fail("io_error", "Unable to inspect prod.keys.");
+        }
+        if (!have_prod) fail("keys_missing", "Add prod.keys to the import directory.");
         try {
             tc::Optional<tc::io::Path> kp{tc::io::Path(prod.string())}, tp;
-            if (fs::exists(title))
-                tp = tc::io::Path(title.string());
+            if (!title.empty()) {
+                ec.clear();
+                bool have_title = fs::exists(title, ec);
+                if (ec && ec != std::errc::no_such_file_or_directory) {
+                    errno = ec.value();
+                    fail("io_error", "Unable to inspect title.keys.");
+                }
+                if (have_title) tp = tc::io::Path(title.string());
+            }
             keys = std::make_shared<nstool::KeyBagInitializer>(
                 false, kp, tp, std::vector<tc::io::Path>{}, tc::Optional<tc::io::Path>());
         } catch (const tc::Exception &) {
@@ -188,9 +203,31 @@ void PackageCore::find_meta() {
             }
     }
 void PackageCore::open_inputs(const char *keys_path, const char *const *paths, size_t count) {
-        packages.reserve(count);
-        for (size_t i = 0; i < count; ++i)
-            open_package(fs::path(paths[i]));
-        load_keys(fs::path(keys_path), fs::path());
-        find_meta();
-    }
+    if (!keys_path || !*keys_path) fail("keys_missing", "Add prod.keys to the import directory.");
+    if (count && !paths) fail("content_missing", "No package paths supplied.");
+    for (size_t i = 0; i < count; ++i)
+        if (!paths[i] || !*paths[i]) fail("content_missing", "Empty package path.");
+    auto run_step = [&](const char *step, const char *detail, auto &&action) {
+        diagnostic(st.session.c_str(), step, 0, "begin", detail);
+        try {
+            action();
+        } catch (const Failure &e) {
+            diagnostic(st.session.c_str(), step, e.error, e.code.c_str(), e.message.c_str());
+            throw;
+        } catch (const std::exception &e) {
+            diagnostic(st.session.c_str(), step, errno, "exception", e.what());
+            throw;
+        } catch (...) {
+            diagnostic(st.session.c_str(), step, errno, "exception", "non-standard exception");
+            throw;
+        }
+    };
+    packages.reserve(count);
+    for (size_t i = 0; i < count; ++i)
+        run_step("open-package", paths[i], [&] { open_package(fs::path(paths[i])); });
+    run_step("parse-keys", "", [&] {
+        fs::path prod(keys_path);
+        load_keys(prod, prod.parent_path() / "title.keys");
+    });
+    run_step("scan-cnmt", "", [&] { find_meta(); });
+}
