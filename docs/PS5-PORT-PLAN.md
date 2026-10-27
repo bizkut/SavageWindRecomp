@@ -79,8 +79,27 @@ spawns one. Flow:
    C and `romfs.bin`.
 2. New target `make ps5-gamecode` cross-compiles that C for the PS5 target and links it with the shipped runtime
    objects into that user's `eboot.bin`, signed as the title build does.
-3. User copies `eboot.bin` + `romfs.bin` (+ DLC) into `/data/homebrew/<TITLE_ID>/` over FTP/USB.
+3. User copies `romfs.bin` (+ DLC) into **`/data/savagewind/game/`** and the linked `eboot.bin` into the title folder
+   `/data/homebrew/<TITLE_ID>/` over FTP/USB.
 4. The title checks its linked game code's build id against `runtime/game_versions.h` and `romfs.bin` at start.
+
+**Data outside the title folder.** Everything that is the user's, or costly to rebuild, lives under `/data/savagewind/`
+(decided 2026-10-27), so installing a new title build — which replaces `/data/homebrew/<TITLE_ID>/` — never erases it:
+
+```
+/data/savagewind/
+  game/      romfs.bin, DLC (the user's extracted data)
+  save/      saves
+  cache/     SPIR-V and VkPipelineCache
+  savagewind.ini
+  logs/
+```
+
+The title folder holds only what a build ships: eboot, `sce_module/`, `sce_sys/`, MihawkGen's `network.fgw`. Because
+the game code is linked into the eboot (D5 step 2), a title update means relinking it on the PC; the update package
+therefore ships the runtime objects and the PC-side link step, and the title refuses to start with a clear message
+when its eboot carries no game code. Files the title creates under `/data` are owned by the title's uid; it sets
+directories 0777 and files 0666 so FTP can read and replace them (ps5-homebrew-title-ftp-transaction finding).
 
 Loading: a title cannot load its own modules at runtime (PS5_vkQuake/PS5_Vulkan measurement), and a 256 MiB `.text`
 loads and runs in the eboot (S3, `ps5/FINDINGS.md`), so the game code is linked into a per-user `eboot.bin` on the PC
@@ -91,7 +110,7 @@ loads and runs in the eboot (S3, `ps5/FINDINGS.md`), so the game code is linked 
 glslang + SPIRV-Tools + shaderc for Prospero from pinned upstream sources in this repo's `ps5/deps/` (not in
 `../forever/pacbrew-repo`); vkQuake's `src/locale_shims.c` already supplies the `_l` locale functions glslang
 needs. RADV's ACO compiles pipelines on-device (as in Forever). Persist Savage Wind's
-SPIR-V cache and a `VkPipelineCache` under `/data/homebrew/<TITLE_ID>/cache/`; first-start precompile via the existing
+SPIR-V cache and a `VkPipelineCache` under `/data/savagewind/cache/`; first-start precompile via the existing
 `runtime/nvn/precompile.c`.
 
 **D7. Frame generation: MihawkGen neural, 2×.** Plug into the seam `test` already has: `vk_fg_generate`
@@ -185,7 +204,7 @@ the SIGSYS-on-exit crash vkQuake recorded (`PS5_vkQuake/docs/FINDINGS.md`).
 **Done when:** launch → identity in klog → clean exit, three runs.
 
 ### M2 — Platform layer
-`runtime/platform/ps5.c`, paths (`/data/homebrew/<ID>/` for data, saves, cache, `savagewind.ini`), SDL shim,
+`runtime/platform/ps5.c`, paths (`/data/savagewind/` for game data, saves, cache, `savagewind.ini`), SDL shim,
 `__cpuid_count`-based CPU checks (vkQuake finding: `__get_cpuid(7)` returns zeroes), PS5 build of the runtime
 objects. Fix `runtime/gamelib.c`'s CPU check to a fixed `x86-64-v3` on PS5.
 **Done when:** runtime starts, reserves guest memory, loads the user's game module and `romfs.bin`, and reaches
