@@ -1,0 +1,81 @@
+Savage Wind PS5 S4 Vulkan probe
+vkCreateInstance(1.3, surface + display) = 0
+S4 PASS: instance
+gpu: PlayStation 5 GPU (RADV NAVI21) api 1.4.354 driver 0x6802000 maxImageDimension2D 16384 maxColorAttachments 8
+S4 PASS: device API >= 1.3 (device.c skips older)
+heap 0: 4096 MiB flags 0
+heap 1: 8192 MiB flags 0x1
+device extensions: 220
+  VK_KHR_swapchain                             yes
+  VK_EXT_custom_border_color                   yes
+  VK_EXT_vertex_attribute_divisor              yes
+  VK_EXT_external_memory_host                  yes
+  VK_KHR_maintenance5                          yes
+  VK_EXT_attachment_feedback_loop_layout       yes
+  VK_KHR_dynamic_rendering_local_read          yes
+  VK_KHR_unified_image_layouts                 no
+  VK_EXT_graphics_pipeline_library             yes
+  VK_KHR_pipeline_library                      yes
+  VK_KHR_present_id                            yes
+  VK_KHR_present_wait                          yes
+  VK_EXT_device_fault                          yes
+  VK_EXT_device_address_binding_report         yes
+S4 PASS: VK_KHR_swapchain
+  1.3 dynamicRendering                             yes (required)
+  1.3 synchronization2                             yes (required)
+  1.3 shaderDemoteToHelperInvocation               yes (required)
+  1.3 shaderTerminateInvocation                    yes (required)
+  1.3 maintenance4                                 yes (required)
+  1.2 timelineSemaphore                            yes (required)
+  1.2 shaderInt8                                   yes (required)
+  1.2 samplerMirrorClampToEdge                     yes (required)
+  1.2 uniformAndStorageBuffer8BitAccess            yes (required)
+  1.2 storageBuffer8BitAccess                      yes (required)
+  1.2 scalarBlockLayout                            yes (required)
+  1.1 storageBuffer16BitAccess                     yes (required)
+  independentBlend                                 yes
+  dualSrcBlend                                     yes
+  fillModeNonSolid                                 yes
+  samplerAnisotropy                                yes
+  textureCompressionBC                             yes
+  shaderInt64                                      yes
+  depthBiasClamp                                   yes
+  depthClamp                                       yes
+  occlusionQueryPrecise                            yes
+  largePoints                                      yes
+  wideLines                                        yes
+  imageCubeArray                                   yes
+  sampleRateShading                                yes
+  fragmentStoresAndAtomics                         yes
+  vertexPipelineStoresAndAtomics                   yes
+  robustBufferAccess                               yes
+  shaderClipDistance                               yes
+  shaderStorageImageExtendedFormats (PR #194 TAA)  yes
+S4 PASS: every feature device.c requires
+  format D32S8      optimal 0x1d601
+  format D24S8      optimal 0
+  format BC7        optimal 0x1d401
+  format ASTC4x4    optimal 0
+  format RGBA16F    optimal 0x1dd83
+  format R11G11B10F optimal 0x1dd83
+queue families 2, graphics+compute family 0
+vkCreateDevice(all supported core features + 1.1/1.2/1.3 set) = 0 in 0.1 ms
+S4 PASS: device with Savage Wind's feature set
+displays: 1 (0) PS5 VideoOut 3840x2160
+  mode 0: 3840x2160 @ 119880 mHz
+  mode 1: 3840x2160 @ 59940 mHz
+S4 PASS: a 3840x2160 display mode
+S4 PASS: a 119.88 Hz mode offered
+planes 1; vkCreateDisplayPlaneSurfaceKHR(mode 0) = 0
+S4 PASS: display plane surface
+surface: support 1, images 2-5, extent 3840x2160, 2 formats (first 44/0), 3 present modes
+  format 44 colorspace 0
+  format 50 colorspace 0
+  present mode 2
+  present mode 1
+  present mode 0
+vkCreateSwapchainKHR(3840x2160, 3 images, FIFO) = 0
+S4 PASS: 4K FIFO swapchain
+presented 720 frames; settled rate 119.88 Hz (8.342 ms/frame), worst interval 8.46 ms
+S4 PASS: FIFO presents at ~119.88 Hz
+done: 0 failed check(s)

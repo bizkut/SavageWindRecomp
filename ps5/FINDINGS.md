@@ -70,3 +70,10 @@ a 3-image 4K FIFO swapchain presents at 59.94 Hz steadily (16.683 ms, run1).
 returned 0, i.e. the console/TV output at the time offered no 120 Hz mode; this is the console's answer, not the
 title's metadata (the WSI only asks because 0x40 is set). To check: console Screen and Video → 120 Hz output
 Automatic, VRR on, TV on a 120 Hz-capable HDMI input, then re-run.
+
+## 2026-10-27 — S4 on console 10.0.1.41 (run3-41): 4K at 119.88 Hz
+
+From here on the test console is **10.0.1.41**. Same eboot as run2. All S4 checks pass (0 failed): VideoOut offers
+3840x2160 at 119880 and 59940 mHz; the WSI logs `119.88 Hz selected with title VRR metadata` (attribute3 0x40040
+taken as authoritative); a 3-image 4K FIFO swapchain presented 720 frames at a settled **119.88 Hz (8.342 ms/frame),
+worst interval 8.46 ms**. The .39 refusal (run2) was that console's output setup, not the title.
