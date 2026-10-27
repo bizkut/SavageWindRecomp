@@ -1,0 +1,556 @@
+
+<118>[Syscore App] Suspend App : 0xc016 PPSA90212
+<118>[Syscore App] Suspend process : 0x67
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [AppScreen : ApplicationScreenScene] -> [SplashScreen : SplashScreenScene]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 3711s: 2us, p:0:1, 3730:1939, 25088:0969, m:0, d:0x0, 0x1110
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [18936]( 38)  : Enqueue(id[110], t[1], user[0] state[STOP]) queue.size[1]
+<118>[ResArbitrator][App      ]ChangeState             [18937]( 43)  : replace id[110] state:['RUNNING'->'STOP']
+<118>[ResArbitrator][IpcServer]Callback                [18937]( 78)  : S->C Callback Set(id[110] type[RESULT] result[true] state[STOP])
+<118>[ResArbitrator][QUEUE    ]Remove                  [18937]( 69)  : Remove:(id[110] state[STOP] type[1]) queue.size[0]
+<118>[ResArbitrator][App      ]Dump                    [18937](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18937](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0xc016]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x208904780)] userData[0x0] pid[0x43]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -3: Id[180] state[RUNNING] vcn[ 20] acp[270] mem[  0] prio[5(5)] from[IPMI(0x208904680)] userData[0x200abeae8] pid[0x3c]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -4: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x39]
+<118>[ResArbitrator][App      ]Dump                    [18937](819)  : -- No kicking Apps *************************
+<118>[ResArbitrator][IpcServer]GetCallbackDataInt      [18936](334)  : C->S Callback Get(id[110] type[RESULT] result[true] state[STOP] cb[53cfa460])
+### gc_acq_cwsr_suspend_internal : all acqs are suspended in thread group boundary.
+### gc_gfx_queue_status : in_frame=0 rptr=0x00000000 wptr=0x00000000 IBlist(rptr=0x0000 wptr=0x0000 i_wptr=0x0000)
+### gc_suspend_phase0_g2 : pid=103 done.
+[BAPM] universal mode exit
+<118>[Syscore App] Suspend process : 0x67 => 0
+<118>[AvControl] AudioOut: shared (pid=0xffffffff)
+<118>[AvControl] VideoOut: shared (pid=0xffffffff appId=0xffffffff)
+<118>[AvControl] -- app[0](appid=0xc016 attr=0xaa0057)(GAME RUNNING)(HDR:x HFR:o VR:x VRR:TypeA) SpecialModeInBg(none) HDCP23(none) supInfo(0x0)
+<118>[AppMgr Trace]: AppId=0xc016 suspended
+<118>[AvControl] onAppSuspend(appid=0xc016)
+<118>[AvControl] app[0](appId=0xc016):suspend
+<118>[AvControl] -- app[0](appid=0xc016 attr=0xaa0257)(GAME SUSPEND)(HDR:x HFR:o VR:x VRR:TypeA) SpecialModeInBg(none) HDCP23(none) supInfo(0x0)
+<118>[AvControl] layout:HDMI
+<118>[AvControl] notify stop-scanin (idx:-1) dwb0(unusable) dwb1(usable) dwb2(usable) cause(hdmi)
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 1)
+[si] stop  pipe[0] 3711s: 2us, p:0:1, 3734:1548, 25092:0774, m:0, d:0x0, 0x1110
+<118>[AvControl] ** v:130200020000000002/a:00 **
+<118>[AvControl] ** set_default_metadata ** -1 
+<118>[AvControl] ** mute(0) ** 
+[dce-proc:3923 Info]<49>p:0:1, m:0, d:0x0, b:0x1110, ft:0x1, fl:0x16161610
+<118>[AvControl] ** set_mode(0) ** -1/-1 
+<118>[AvControl]  video: port:HDMI 3840_2160P_5994 RGB444 full RGB2100_PQ 36bpp 16:9 allm-game o--tm-sf2 
+<118>[AvControl]  audio: port:HDMI src:I2S 48k 2.0 24bit fmt:LPCM LPCM once sp:TV -
+<118>[SceShellUI] I/PSM.UI : VideoOutStatus : res=(3840,2160) freq=59.94006, vrfreq=119.8801, default=True, gen1vr=False, gen2vr=False, gen2nonvr=False
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3816.7 KB, trend +0.2 KB/min, peak 7758.7 KB, when 3699 [sec]
+<118>[AvControl] ** unmute(0) ** 
+<118>[AvControl] notify ready-scanin(idx:-1) port0(res: 0xc ref:0x3(0-0) col:0xd sup:0xa0) port1(res:0xb ref:0x3 col:0x14 sup:0x20) vrType(0)
+<118>[AvControl] App Event[POST_SUSPEND]: elapse 1474[ms] 
+<118>[Syscore App] Suspend App : 0xc016 PPSA90212 => SCE_OK
+<118>[Syscore App]  ExpandCpuSetMode : enable
+<118>[SceLncService] sceApplicationSuspend(0x0000c016) returned
+<118>[SceLncService] Completed suspending PPSA90212 (1546 msec)
+<118>[SceLncService] 0003705232 (time trace)
+<118>[SceSystemStateMgr] Power Mode Change: NAVIGATION_INACTIVE
+<118>[AvControl] Waiting for the pstate event 
+<118>[Syscore Umd] Set memory pstate (hasRunningGame=0, hasRunningMiniApp=0, isSplashDisplayed=0
+<118>[AvControl] Waiting for the pstate event : done
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 1 tapPoint = 0x3)
+[si] start pipe[0] 3713s:154us, p:0:1, 77:0363, 25182:0182, m:0, d:0x0, 0x1110
+<118>[SceSystemStateMgr] CPU                                     HLT GC   GFX  F    U   ID       FAN BAPM
+<118>[SceSystemStateMgr]  800  800  800  800 3200 3200 3200 3200   0 gen2  450  250 225 00840f60   0 off
+[NPDRM] del UP9000-PPSA90212_00-SAVAGEWIND000000
+<118>[SceLncUtil] blockAppSuspend: name={SceSaveData}, appId={0x00000006}, refCount={1}
+<118>[SceLncUtil] unblockAppSuspend: name={SceSaveData}, appId={0x00000006}, refCount={0}
+<118>MSG AutoMounter(int32_t AppIdManager::getPidWithIndex(SceApplicationId, int, pid_t *) 174):
+<118>	appId(0xc016) with index(0) is not registered.
+<118>MSG AutoMounter(int32_t AutoMount::UsbMass::fakeEjection(SceApplicationId) 715):
+<118>	getPidWithIndex(0xc016, 0) returned 0x80f40002.
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [187e2]( 38)  : Enqueue(id[0], t[1], user[0] state[SUSPENDING]) queue.size[1]
+<118>[ResArbitrator][TestId   ]lncEventCallback        [187e2]( 72)  : Target BigAppId[0xc016] APP_SUSPENDED
+<118>[NoticeScreenSkip] remaining time: -472 sec
+<118>[ResArbitrator][App      ]GetExecutable           [18937](136)  : Target id[0] budgets{vcn[  0] acp[ 0] mem[  0]} prio[2(2)]
+<118>[ResArbitrator][App      ]ChangeState             [18937]( 43)  : replace id[0] state:['RUNNING'->'SUSPENDING']
+<118>[ResArbitrator][App      ]SetVCNBudget            [18937](614)  : vcnType is TYPE_UNKNOWN.vcn budget not set.
+<118>[ResArbitrator][RA_main  ]cbResult                [18937](350)  : Callback id[0] type[RESULT] result[true] state[SUSPENDING]
+<118>[ResArbitrator][TestId   ]raCallback              [18937](128)  : BigApp[0xc016] Changed state"SUSPENDING"
+<118>[ResArbitrator][QUEUE    ]Remove                  [18937]( 69)  : Remove:(id[0] state[SUSPENDING] type[1]) queue.size[0]
+<118>[ResArbitrator][App      ]Dump                    [18937](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18937](510)  : -1: Id[  0] state[SUSPENDING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0xc016]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x208904780)] userData[0x0] pid[0x43]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -3: Id[180] state[RUNNING] vcn[ 20] acp[270] mem[  0] prio[5(5)] from[IPMI(0x208904680)] userData[0x200abeae8] pid[0x3c]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -4: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x39]
+<118>[ResArbitrator][App      ]Dump                    [18937](819)  : -- No kicking Apps *************************
+<118>[SceLncService] unlockSuspendBlock: appId={0x0000c016}
+<118>[SceLncService] focused app has been suspended. change focus appId={0x0000c016} -> nextAppId={0x00000007}
+<118>[AvControl] AudioOut: shared (pid=0x3a)
+<118>[AvControl] VideoOut: shared (pid=0x3a appId=0x7)
+<118>[AvControl] video owner is switched to system(pid=0x3a) 
+<118>[TTS Arbitrator][INF]  FG App was changed. c016 -> 7
+<118>[SceShellUI] I/BGLayer : SetBackgroundTransition (Ellapsed 61536msec since last call) ID=41 TransitionType=CustomImageFade Degree=CrossFade NextImageUri= NextBlurImageUri= NextFallbackImageUri= OverlayImageUri=  BasematType=None Retry=False UseImageViewerSequence=False Resize2K=False
+<118>[SceShellUI] I/BGLayer : SetBackgroundTransition (Ellapsed 0msec since last call) ID=42 TransitionType=CustomImageFade Degree=CrossFade NextImageUri=/system_ex/vsh_asset/bg_hub_default.dds NextBlurImageUri= NextFallbackImageUri= OverlayImageUri=  BasematType=None Retry=False UseImageViewerSequence=False Resize2K=False
+<118>[SceShellUI] I/BGLayer : cancelBackgroundTransition ID=41
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [SplashScreen : SplashScreenScene] -> [Render.NPXS40002 : AppScene]
+<118>SetDeviceIndexBehavior: mode=SpecificUser, param=0x1cff8b33
+<118>[SceShellUI] I/PSM.UI : [FirstClear] : ClearFrameBuffer=False
+<118>[SceLncService] SetControllerFocus(0x00000007)
+<118>[SceLncService] SetAppFocus(): SetControllerFocus(-1)
+<118>* updateVibrationTriggerEffectWeak:L7804 getVibrationTriggerEffectWeakWhileEmbeddedMicInUse return MBUS_ERROR_NO_PROCESS_INFO. pid = 0xffffffff
+<118>[SceLncService] SetControllerFocus(0x00000007)
+<118>[ProfileCacheManager] JobUpdate.Run(0x1CFF8B33, Normal)
+<118>[ProfileCacheManager] JobUpdate.Finish(0x1CFF8B33)
+<118>[SceLncService] KillApp() appId={0x0000c016} is requested from 0x00000000
+gc: warning: gs1.gui_active not idle upon setting ddid (en=0), wait for idle succeeded (ct=1).
+### gc_gfx_queue_status : in_frame=0 rptr=0x00000008 wptr=0x00000008 IBlist(rptr=0x0000 wptr=0x0000 i_wptr=0x0000)
+### HP3D(pipe1) GnmCompositor. proc gen:2 vmid:4
+ +++ num clients 1
+<118>[Syscore App] EVFILT_PROC NOTE_EXIT received : pid=0x67
+<118>[Syscore App] process delete event : pid=0x67
+<118>[AppMgr Trace]: pid=0x67, deleted.
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[AppMgr] All processes exited
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[AvControl] onAppKill(appid=0xc016)
+<118>[AvControl] current video owner app is removed (appid=0xc016)
+<118>[AvControl] App Event[PRE_END]: elapse 0[ms] 
+<118>[AppMgr Trace]: AppId=0xc016  deleted
+<118>[Syscore App]  _appIpcDeleteBudgetCallBack(), budget=e001
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[AppMgr] checkAppTerminated invalid app.
+<118>[Syscore App]  ExpandCpuSetMode : enable
+<118>[SceLncService] onAppExit() appId={0x0000c016}
+<118>[SceLncService] start unmountAllForShellCoreInternal()
+<118>[SceLncService] end unmountAllForShellCoreInternal()
+<118>[SceLncService] KillApp() appId={0x0000c016}, withSuspend={1}, forceKill={0} killReason={0}
+<118>[libSceSaveData] wait 0 msec for session killed
+<118>[SceLncUtil] blockAppSuspend: name={SceNpUds}, appId={0x00000006}, refCount={1}
+<118>[SceLncUtil] blockAppSuspend: name={SceSaveData}, appId={0x00000006}, refCount={2}
+<118>[SceLncUtil] unblockAppSuspend: name={SceSaveData}, appId={0x00000006}, refCount={1}
+<118>[ResArbitrator][TestId   ]lncEventCallback        [187e2]( 87)  : CRASH KILL_END event->appId[0xc016] event->pid[0xffffffff] 
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [187e2]( 38)  : Enqueue(id[0], t[1], user[0] state[STOP]) queue.size[1]
+<118>[SceLncUtil] unblockAppSuspend: name={SceNpUds}, appId={0x00000006}, refCount={0}
+<118>[ResArbitrator][App      ]ChangeState             [18937]( 43)  : replace id[0] state:['SUSPENDING'->'STOP']
+<118>[ResArbitrator][RA_main  ]cbResult                [18937](350)  : Callback id[0] type[RESULT] result[true] state[STOP]
+<118>[ResArbitrator][TestId   ]raCallback              [18937](128)  : BigApp[0xc016] Changed state"STOP"
+<118>[ResArbitrator][QUEUE    ]Remove                  [18937]( 69)  : Remove:(id[0] state[STOP] type[1]) queue.size[0]
+<118>[ResArbitrator][App      ]Dump                    [18937](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -1: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x208904780)] userData[0x0] pid[0x43]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -2: Id[180] state[RUNNING] vcn[ 20] acp[270] mem[  0] prio[5(5)] from[IPMI(0x208904680)] userData[0x200abeae8] pid[0x3c]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -3: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x39]
+<118>[ResArbitrator][App      ]Dump                    [18937](819)  : -- No kicking Apps *************************
+<118>[SceRnpsAppMgr] UnblockAllAppInstall(): PPSA90212(appId=0x0000c016)
+<118>[SceLncService] Cleaning /av_contents/content_tmp
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_mapfile.cpp(1517) finalize: LNC_RTRACE::0xffffffff
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(959) killApp: LNC_ISOK::0x80940004
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_util_ipc_server.cpp(389) Run: LNC_ISOK::0x80940004
+<118>[SceLncService] ProcessTerm()
+<118>[sceProcessStarter] ProcessTerm() big/mini app title_id = [PPSA90212] root_dir = [****/sandbox/PPSA90212_000]
+<118>[sceProcessStarter] UnMountDownloadData() mount_path = [************/download/PPSA90212] dl_num = [0]
+<118>[SceLncService] ProcessTerm() returned
+<118>[SceLncService] EndAppMount(0x0000c016)
+[KERNEL] INFO: end_app_mount 0000c016
+[KERNEL] INFO: deleting bigapp: category 0x00000000, container 1
+[KERNEL] INFO: budget_appid_clear(c016, 4)=3
+<118>[SceLncService] EndAppMount(0x0000c016) returned (39 msec)
+<118>[SceShareFactoryUtilServer] W:\Build\J02159366\vsh\shell\shell_core\share_factory_util\share_factory_util_server.cpp(444) handleLncEvent: SFU_CHECK::0x81630001 (it != m_appList.end() value is false)
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend -16.0 KB/min, peak 7758.7 KB, when 3730 [sec]
+<118>[SceShellCore] VM Stats: RSS 860.9, kernel 371.2, wire count 476.4, swap out 297.1, page table CPU 2861/8192 GPU 171/8192
+<118>[SceShellCore] FMEM   1.1/   4.1 NPXS40095 SceSysAvControl.elf
+<118>[SceShellCore] FMEM  11.2/  96.7 NPXS45091 SceSysCore.elf
+<118>[SceShellCore] FMEM  24.3/  53.8 NPXS40096 orbis_audiod.elf
+<118>[SceShellCore] FMEM   4.5/  27.2 NPXS40135 AgcCompositor.elf
+<118>[SceShellCore] FMEM  42.4/ 605.8 NPXS40082 SceShellCore
+<118>[SceShellCore] FMEM 457.9/1263.8 NPXS40087 SceShellUI
+<118>[SceShellCore] FMEM   9.6/  28.9 NPXS40100 SceAvCapture
+<118>[SceShellCore] FMEM  25.8/  77.8 NPXS40102 SceRemotePlay
+<118>[SceShellCore] FMEM   6.9/  46.5 NPXS40142 SceGameLiveStreaming
+<118>[SceShellCore] FMEM  17.2/ 105.6 NPXS40109 ScePartyDaemon
+<118>[SceShellCore] FMEM   4.0/  37.9 NPXS40039 SceMediaCoreServer
+<118>[SceShellCore] FMEM   6.3/  34.1 NPXS40153 ScePsNowClientDaemon
+<118>[SceShellCore] FMEM   3.3/  20.0 NPXS40112 SceSpZeroConf
+<118>[SceShellCore] FMEM   3.1/  19.9 NPXS40101 SceSocialScreenMgr
+<118>[SceShellCore] FMEM   9.1/  82.0 NPXS40094 SceVoiceAndAgent
+<118>[SceShellCore] FMEM   4.5/  30.7 NPXS40028 SceRedisServer
+<118>[SceShellCore] FMEM  67.5/ 221.2 NPXS40000 SceJSCd
+<118>[SceShellCore] FMEM   9.9/  44.9 NPXS40085 SceSystemLogger2
+<118>[SceShellCore] FMEM  10.4/ 170.1 NPXS40109 webrtc_daemon.self
+<118>[SceShellCore] FMEM   3.0/  24.7 NPXS40173 SceVrTrackerDaemon
+<118>[SceShellCore] FMEM   1.7/  13.2 NPXS45093 fs_cleaner.elf
+<118>[SceShellCore] FMEM  26.3/ 114.2 NPXS40087 SceNKUIProcess
+<118>[SceShellCore] FMEM  30.6/ 116.5 NPXS40087 SceNKNetworkProcess
+<118>[SceShellCore] FMEM  18.8/  31.9 elfldr.elf
+<118>[SceShellCore] FMEM   9.5/  32.1 pldmgr.elf
+<118>[SceShellCore] FMEM   6.8/  20.2 kstuff.elf
+<118>[SceShellCore] FMEM   3.0/  16.1 klogsrv.elf
+<118>[SceShellCore] FMEM   3.2/  16.3 nanodns.elf
+<118>[SceShellCore] FMEM   3.8/  16.9 payload.elf
+<118>[SceShellCore] FMEM   6.0/  19.7 ps5upload.elf
+<118>[SceShellCore] FMEM  23.1/  36.6 shadowmountplus.elf
+<118>[SceShellCore] FMEM   3.3/  17.4 ftpsrv.elf
+<118>[SceShellCore] FMEM   3.0/  16.1 payload.elf
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={3782} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [RevokeList]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/hid_config/np/v00/hid_config.env}
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={3782} isFirstTime={1}
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={3782} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [PlayGo]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/playgo/np/v00/playgo.env}
+<118>[SceHidConfigService] DownloadFile : [M2SsdDevicelist]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/m2ssddevicelist/np/v00/m2-ssd-devicelist.env}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceWorkaroundCtl] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={3827} isFirstTime={1}
+<118>[SceWorkaroundCtl] start DownloadFile
+<118>[SceWorkaroundCtl] ifModifiedSince={Tue, 21 Apr 2026 02:49:43 +0000}
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.1 KB, trend +0.3 KB/min, peak 7758.7 KB, when 3828 [sec]
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\http_client.cpp(141) Get: WC_ISOK::0x8041013d
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\workaround_ctl_manager.cpp(289) DownloadFile: WC_ISOK::0x8041013d
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\workaround_ctl_manager.cpp(452) Run: WC_CONTINUE::0x8041013d
+<118>[SceWorkaroundCtl] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 3859 [sec]
+<118>[AppDb][AppBrowse] DisplayPeriodPollingThread()[327]: EmsPushContentRetriever::DisplayPeriodPollingThread() - sceRtcGetCurrentAdNetworkTick(): ret=[0x80b50001]
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(458) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(252) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(84) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(90) Notified error:(0x8041013d)
+<118>[SceShellUI] I/PSM.UI : UI system timer elapsed 01:06:00
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.2 KB, trend +0.4 KB/min, peak 7758.7 KB, when 3968 [sec]
+<118>MSG AutoMounter(void (anonymous namespace)::updateDiscKeyPeriodically() 173):
+<118>	discType(0) is not target.
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 3999 [sec]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.2 KB, trend +0.4 KB/min, peak 7758.7 KB, when 4030 [sec]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 4061 [sec]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.2 KB, trend +0.4 KB/min, peak 7758.7 KB, when 4092 [sec]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 4123 [sec]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.2 KB, trend +0.4 KB/min, peak 7758.7 KB, when 4155 [sec]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 4186 [sec]
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={4202} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [RevokeList]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/hid_config/np/v00/hid_config.env}
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={4202} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={4202} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [PlayGo]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/playgo/np/v00/playgo.env}
+<118>[SceHidConfigService] DownloadFile : [M2SsdDevicelist]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/m2ssddevicelist/np/v00/m2-ssd-devicelist.env}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[AppDb][AppBrowse] DisplayPeriodPollingThread()[327]: EmsPushContentRetriever::DisplayPeriodPollingThread() - sceRtcGetCurrentAdNetworkTick(): ret=[0x80b50001]
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(458) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(252) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(84) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(90) Notified error:(0x8041013d)
+<118>[SceWorkaroundCtl] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={4248} isFirstTime={1}
+<118>[SceWorkaroundCtl] start DownloadFile
+<118>[SceWorkaroundCtl] ifModifiedSince={Tue, 21 Apr 2026 02:49:43 +0000}
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\http_client.cpp(141) Get: WC_ISOK::0x8041013d
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\workaround_ctl_manager.cpp(289) DownloadFile: WC_ISOK::0x8041013d
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\workaround_ctl_manager.cpp(452) Run: WC_CONTINUE::0x8041013d
+<118>[SceWorkaroundCtl] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceShellUI] I/PSM.UI : UI system timer elapsed 01:11:00
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.2 KB, trend +0.4 KB/min, peak 7758.7 KB, when 4341 [sec]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 4372 [sec]
+<118>[SceSystemStateMgr] No user input for 1860 seconds
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.2 KB, trend +0.4 KB/min, peak 7758.7 KB, when 4465 [sec]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 4496 [sec]
+<118>[AppDb][AppBrowse] DisplayPeriodPollingThread()[327]: EmsPushContentRetriever::DisplayPeriodPollingThread() - sceRtcGetCurrentAdNetworkTick(): ret=[0x80b50001]
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(458) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(252) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(84) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(90) Notified error:(0x8041013d)
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.2 KB, trend +0.4 KB/min, peak 7758.7 KB, when 4528 [sec]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 4559 [sec]
+<118>[SceShellUI] I/PSM.UI : UI system timer elapsed 01:16:00
+<118>[SceShellCore] Start Screen Saver
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={4622} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [RevokeList]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/hid_config/np/v00/hid_config.env}
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={4622} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [PlayGo]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/playgo/np/v00/playgo.env}
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={4622} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [M2SsdDevicelist]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/m2ssddevicelist/np/v00/m2-ssd-devicelist.env}
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.5 KB, trend +0.8 KB/min, peak 7758.7 KB, when 4623 [sec]
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 4654 [sec]
+<118>[SceWorkaroundCtl] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={4668} isFirstTime={1}
+<118>[SceWorkaroundCtl] start DownloadFile
+<118>[SceWorkaroundCtl] ifModifiedSince={Tue, 21 Apr 2026 02:49:43 +0000}
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\http_client.cpp(141) Get: WC_ISOK::0x8041013d
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\workaround_ctl_manager.cpp(289) DownloadFile: WC_ISOK::0x8041013d
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\workaround_ctl_manager.cpp(452) Run: WC_CONTINUE::0x8041013d
+<118>[SceWorkaroundCtl] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.2 KB, trend +0.4 KB/min, peak 7758.7 KB, when 4775 [sec]
+<118>[AppDb][AppBrowse] DisplayPeriodPollingThread()[327]: EmsPushContentRetriever::DisplayPeriodPollingThread() - sceRtcGetCurrentAdNetworkTick(): ret=[0x80b50001]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 4806 [sec]
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(458) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(252) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(84) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(90) Notified error:(0x8041013d)
+<118>[SceShellUI] I/PSM.UI : UI system timer elapsed 01:21:00
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={5043} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [RevokeList]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/hid_config/np/v00/hid_config.env}
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={5043} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [M2SsdDevicelist]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/m2ssddevicelist/np/v00/m2-ssd-devicelist.env}
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={5043} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [PlayGo]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/playgo/np/v00/playgo.env}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.0 KB, trend +0.3 KB/min, peak 7758.7 KB, when 5044 [sec]
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 5075 [sec]
+<118>[SceWorkaroundCtl] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={5088} isFirstTime={1}
+<118>[SceWorkaroundCtl] start DownloadFile
+<118>[SceWorkaroundCtl] ifModifiedSince={Tue, 21 Apr 2026 02:49:43 +0000}
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\http_client.cpp(141) Get: WC_ISOK::0x8041013d
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\workaround_ctl_manager.cpp(289) DownloadFile: WC_ISOK::0x8041013d
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\workaround_ctl_manager.cpp(452) Run: WC_CONTINUE::0x8041013d
+<118>[SceWorkaroundCtl] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[AppDb][AppBrowse] DisplayPeriodPollingThread()[327]: EmsPushContentRetriever::DisplayPeriodPollingThread() - sceRtcGetCurrentAdNetworkTick(): ret=[0x80b50001]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3806.2 KB, trend +5.5 KB/min, peak 7758.7 KB, when 5109 [sec]
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(458) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(252) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(84) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(90) Notified error:(0x8041013d)
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 5140 [sec]
+<118>[SceShellUI] I/PSM.UI : UI system timer elapsed 01:26:00
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.2 KB, trend +0.4 KB/min, peak 7758.7 KB, when 5208 [sec]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 5239 [sec]
+<118>[AppDb][AppBrowse] DisplayPeriodPollingThread()[327]: EmsPushContentRetriever::DisplayPeriodPollingThread() - sceRtcGetCurrentAdNetworkTick(): ret=[0x80b50001]
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(458) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(252) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(84) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(90) Notified error:(0x8041013d)
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.2 KB, trend +0.4 KB/min, peak 7758.7 KB, when 5453 [sec]
+<118>[SceShellUI] I/PSM.UI : UI system timer elapsed 01:31:00
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={5463} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [M2SsdDevicelist]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/m2ssddevicelist/np/v00/m2-ssd-devicelist.env}
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={5463} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [PlayGo]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/playgo/np/v00/playgo.env}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={5465} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [RevokeList]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/hid_config/np/v00/hid_config.env}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 5484 [sec]
+<104> EXEC /system/vsh/app/NPXS40112/eboot.bin [unspecified], vm#0, dmem#0 abi=native category=unknown <5515022 msec>
+<118>[SceWorkaroundCtl] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={5508} isFirstTime={1}
+<118>[SceWorkaroundCtl] start DownloadFile
+<118>[SceWorkaroundCtl] ifModifiedSince={Tue, 21 Apr 2026 02:49:43 +0000}
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\http_client.cpp(141) Get: WC_ISOK::0x8041013d
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\workaround_ctl_manager.cpp(289) DownloadFile: WC_ISOK::0x8041013d
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\workaround_ctl_manager.cpp(452) Run: WC_CONTINUE::0x8041013d
+<118>[SceWorkaroundCtl] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceShellCore] VM Stats: RSS 801.3, kernel 370.6, wire count 475.0, swap out 326.7, page table CPU 2870/8192 GPU 171/8192
+<118>[SceShellCore] FMEM   1.1/   4.1 NPXS40095 SceSysAvControl.elf
+<118>[SceShellCore] FMEM  10.9/  96.7 NPXS45091 SceSysCore.elf
+<118>[SceShellCore] FMEM  23.7/  53.8 NPXS40096 orbis_audiod.elf
+<118>[SceShellCore] FMEM   4.2/  27.2 NPXS40135 AgcCompositor.elf
+<118>[SceShellCore] FMEM  41.1/ 605.7 NPXS40082 SceShellCore
+<118>[SceShellCore] FMEM 428.5/1263.8 NPXS40087 SceShellUI
+<118>[SceShellCore] FMEM   9.7/  28.9 NPXS40100 SceAvCapture
+<118>[SceShellCore] FMEM  25.5/  77.8 NPXS40102 SceRemotePlay
+<118>[SceShellCore] FMEM   6.9/  46.5 NPXS40142 SceGameLiveStreaming
+<118>[SceShellCore] FMEM  16.9/ 105.6 NPXS40109 ScePartyDaemon
+<118>[SceShellCore] FMEM   4.0/  37.9 NPXS40039 SceMediaCoreServer
+<118>[SceShellCore] FMEM   6.1/  34.1 NPXS40153 ScePsNowClientDaemon
+<118>[SceShellCore] FMEM   3.3/  20.0 NPXS40112 SceSpZeroConf
+<118>[SceShellCore] FMEM   3.0/  19.9 NPXS40101 SceSocialScreenMgr
+<118>[SceShellCore] FMEM   9.0/  82.0 NPXS40094 SceVoiceAndAgent
+<118>[SceShellCore] FMEM   4.2/  30.7 NPXS40028 SceRedisServer
+<118>[SceShellCore] FMEM  65.2/ 221.2 NPXS40000 SceJSCd
+<118>[SceShellCore] FMEM   9.8/  44.9 NPXS40085 SceSystemLogger2
+<118>[SceShellCore] FMEM  10.5/ 170.1 NPXS40109 webrtc_daemon.self
+<118>[SceShellCore] FMEM   2.8/  24.7 NPXS40173 SceVrTrackerDaemon
+<118>[SceShellCore] FMEM   1.7/  13.2 NPXS45093 fs_cleaner.elf
+<118>[SceShellCore] FMEM  12.9/ 114.2 NPXS40087 SceNKUIProcess
+<118>[SceShellCore] FMEM  16.2/ 116.5 NPXS40087 SceNKNetworkProcess
+<118>[SceShellCore] FMEM  18.8/  31.9 elfldr.elf
+<118>[SceShellCore] FMEM   9.5/  32.1 pldmgr.elf
+<118>[SceShellCore] FMEM   6.8/  20.2 kstuff.elf
+<118>[SceShellCore] FMEM   2.9/  16.1 klogsrv.elf
+<118>[SceShellCore] FMEM   3.1/  16.3 nanodns.elf
+<118>[SceShellCore] FMEM   3.8/  16.9 payload.elf
+<118>[SceShellCore] FMEM   6.0/  19.7 ps5upload.elf
+<118>[SceShellCore] FMEM  23.1/  36.6 shadowmountplus.elf
+<118>[SceShellCore] FMEM   3.4/  18.7 ftpsrv.elf
+<118>[SceShellCore] FMEM   3.0/  16.1 payload.elf
+<118>[SceShellCore] FMEM   4.0/  17.1 payload.elf
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.2 KB, trend +0.4 KB/min, peak 7758.7 KB, when 5576 [sec]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 5607 [sec]
+# process pid=104, payload.elf calls exit() exit_value=0.
+<118>[SceShellCore] VM Stats: RSS 797.6, kernel 370.8, wire count 476.0, swap out 326.8, page table CPU 2862/8192 GPU 171/8192
+<118>[SceShellCore] FMEM   1.1/   4.1 NPXS40095 SceSysAvControl.elf
+<118>[SceShellCore] FMEM  10.9/  96.7 NPXS45091 SceSysCore.elf
+<118>[SceShellCore] FMEM  23.7/  53.8 NPXS40096 orbis_audiod.elf
+<118>[SceShellCore] FMEM   4.2/  27.2 NPXS40135 AgcCompositor.elf
+<118>[SceShellCore] FMEM  41.1/ 605.7 NPXS40082 SceShellCore
+<118>[SceShellCore] FMEM 428.3/1263.8 NPXS40087 SceShellUI
+<118>[SceShellCore] FMEM   9.7/  28.9 NPXS40100 SceAvCapture
+<118>[SceShellCore] FMEM  25.5/  77.8 NPXS40102 SceRemotePlay
+<118>[SceShellCore] FMEM   6.9/  46.5 NPXS40142 SceGameLiveStreaming
+<118>[SceShellCore] FMEM  16.9/ 105.6 NPXS40109 ScePartyDaemon
+<118>[SceShellCore] FMEM   4.0/  37.9 NPXS40039 SceMediaCoreServer
+<118>[SceShellCore] FMEM   6.1/  34.1 NPXS40153 ScePsNowClientDaemon
+<118>[SceShellCore] FMEM   3.3/  20.0 NPXS40112 SceSpZeroConf
+<118>[SceShellCore] FMEM   3.0/  19.9 NPXS40101 SceSocialScreenMgr
+<118>[SceShellCore] FMEM   9.0/  82.0 NPXS40094 SceVoiceAndAgent
+<118>[SceShellCore] FMEM   4.2/  30.7 NPXS40028 SceRedisServer
+<118>[SceShellCore] FMEM  65.8/ 221.2 NPXS40000 SceJSCd
+<118>[SceShellCore] FMEM   9.8/  44.9 NPXS40085 SceSystemLogger2
+<118>[SceShellCore] FMEM  10.5/ 170.1 NPXS40109 webrtc_daemon.self
+<118>[SceShellCore] FMEM   2.8/  24.7 NPXS40173 SceVrTrackerDaemon
+<118>[SceShellCore] FMEM   1.7/  13.2 NPXS45093 fs_cleaner.elf
+<118>[SceShellCore] FMEM  12.9/ 114.2 NPXS40087 SceNKUIProcess
+<118>[SceShellCore] FMEM  16.2/ 116.5 NPXS40087 SceNKNetworkProcess
+<118>[SceShellCore] FMEM  18.8/  31.9 elfldr.elf
+<118>[SceShellCore] FMEM   9.5/  32.1 pldmgr.elf
+<118>[SceShellCore] FMEM   6.8/  20.2 kstuff.elf
+<118>[SceShellCore] FMEM   2.9/  16.1 klogsrv.elf
+<118>[SceShellCore] FMEM   3.1/  16.3 nanodns.elf
+<118>[SceShellCore] FMEM   3.8/  16.9 payload.elf
+<118>[SceShellCore] FMEM   6.0/  19.7 ps5upload.elf
+<118>[SceShellCore] FMEM  23.1/  36.6 shadowmountplus.elf
+<118>[SceShellCore] FMEM   3.4/  18.7 ftpsrv.elf
+<118>[SceShellCore] FMEM   3.0/  16.1 payload.elf
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.2 KB, trend +0.4 KB/min, peak 7758.7 KB, when 5698 [sec]
+<118>[AppDb][AppBrowse] DisplayPeriodPollingThread()[327]: EmsPushContentRetriever::DisplayPeriodPollingThread() - sceRtcGetCurrentAdNetworkTick(): ret=[0x80b50001]
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(458) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(252) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(84) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(90) Notified error:(0x8041013d)
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 5729 [sec]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.2 KB, trend +0.4 KB/min, peak 7758.7 KB, when 5760 [sec]
+<118>[SceShellUI] I/PSM.UI : UI system timer elapsed 01:36:00
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 5791 [sec]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.2 KB, trend +0.4 KB/min, peak 7758.7 KB, when 5824 [sec]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 5855 [sec]
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={5883} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [PlayGo]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/playgo/np/v00/playgo.env}
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={5883} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [M2SsdDevicelist]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/m2ssddevicelist/np/v00/m2-ssd-devicelist.env}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={5885} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [RevokeList]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/hid_config/np/v00/hid_config.env}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceWorkaroundCtl] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={5928} isFirstTime={1}
+<118>[SceWorkaroundCtl] start DownloadFile
+<118>[SceWorkaroundCtl] ifModifiedSince={Tue, 21 Apr 2026 02:49:43 +0000}
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.1 KB, trend +0.3 KB/min, peak 7758.7 KB, when 5929 [sec]
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\http_client.cpp(141) Get: WC_ISOK::0x8041013d
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\workaround_ctl_manager.cpp(289) DownloadFile: WC_ISOK::0x8041013d
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\workaround_ctl_manager.cpp(452) Run: WC_CONTINUE::0x8041013d
+<118>[SceWorkaroundCtl] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 5960 [sec]
+<118>[AppDb][AppBrowse] DisplayPeriodPollingThread()[327]: EmsPushContentRetriever::DisplayPeriodPollingThread() - sceRtcGetCurrentAdNetworkTick(): ret=[0x80b50001]
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3801.2 KB, trend +0.4 KB/min, peak 7758.7 KB, when 6010 [sec]
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(458) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(252) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(84) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(90) Notified error:(0x8041013d)
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3800.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 6041 [sec]
+<118>[SceShellUI] I/PSM.UI : UI system timer elapsed 01:41:00

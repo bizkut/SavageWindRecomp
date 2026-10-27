@@ -115,3 +115,38 @@ Probe `ps5/probe/io_probe.c`. With ShadowMountPlus on .41 the title, without any
 What it means for Savage Wind: `romfs.bin` arrives over FTP (not title writes), so the write budget only touches
 saves, settings and shader/pipeline caches. Reads are the open question: 1.5 ms per random 64 KiB read is slow for
 streaming; next step is the same probe Lapy-elevated, and a read-only run with an unspent write budget.
+
+## 2026-10-27 — Root payload and storage broker on .41
+
+This supersedes the preceding entry's proposed Lapy follow-up.
+
+**Direct root-payload baseline** (`ps5/evidence/io-probe/payload-direct.txt` and `payload-direct.klog`): the same
+3 GiB workload as the unelevated title, but as an elfldr payload. Sequential 1 MiB writes stay at 35–36 MiB/s
+through all 3,072 MiB (no 20 → 2 MiB/s title-budget collapse); sequential reads are 517 MiB/s buffered / 552 MiB/s
+O_DIRECT; random 64 KiB 94/81 MiB/s, four readers 197/302 MiB/s; 4 KiB 6.0/10.3 MiB/s. Two hundred
+create/write/close 64 KiB files take 11.0 ms each, worst 18 ms. Root bypasses the cumulative title budget but does
+not make pwrite free.
+
+**Savage Wind broker v2** (`ps5/storagebroker`, port 9142; console evidence
+`ps5/evidence/io-probe/broker-run3-storagebroker-bench.txt` and `broker-run3.klog`): a normal PPSA90212 title sent
+synchronous 1 MiB writes over loopback to the root payload. It held **27 MiB/s across all 3 GiB**, with no collapse
+after 2 GiB; slowest request 66 ms. Two hundred durable atomic 64 KiB replacements (same-directory temp + file
+fsync + rename + directory fsync) average 15.5 ms, worst 138 ms. Diagnostic broker reads are 548 MiB/s sequential,
+79 MiB/s random 64 KiB, 5.0 MiB/s random 4 KiB, 88 MiB/s with four connections; these open/close per request and
+are not the RomFS design. The runtime keeps direct persistent-fd reads.
+
+Console path checks reject parent traversal, absolute paths, dot/empty components and broker-owned names. PS5 title
+and payload syscalls refuse creating symlink/hard-link fixtures (EPERM/EOPNOTSUPP), so those guards were exercised
+by `make -C ps5/storagebroker host-test`: final and intermediate symlinks and multiply linked files are rejected,
+and create/pwrite/pread/stat/atomic-replace/unlink all pass (0 failures).
+
+The broker uses a unique magic/token and **port 9142**, never WoW's 9141, confines every operation below a
+pre-opened `/data/savagewind` fd via no-follow component walking, and gives FTP-compatible modes. ShadowMountPlus
+remains a prerequisite for direct RomFS reads and token access; the broker is the write path, not a replacement
+filesystem.
+
+A Lapy resident-daemon experiment was abandoned in favor of this payload broker. On firmware 5.50 its daemon
+preflight passed, but the standard client falsely reported success because ShadowMountPlus already exposed `/data`;
+the daemon itself refused that request with `cred_refs=3`/EBUSY, the exact race documented by MihawkOS. That
+test-only resident daemon remains in memory on .41 until the next console reboot; it has no boot hook and no retained
+files.

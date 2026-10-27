@@ -1,0 +1,29 @@
+Savage Wind PS5 storage broker benchmark
+security parent traversal             rc=-22
+security absolute path                rc=-22
+security dot component                rc=-22
+security empty component              rc=-22
+security broker token                 rc=-22
+security broker temporary             rc=-22
+security final symlink fixture missing errno=1
+security intermediate symlink fixture missing errno=1
+security hardlink fixture missing errno=1 nlink=0
+create: 0
+W  256 MiB: 26 MiB/s last 256 MiB, slowest request 66 ms
+W  512 MiB: 27 MiB/s last 256 MiB, slowest request 56 ms
+W  768 MiB: 27 MiB/s last 256 MiB, slowest request 48 ms
+W 1024 MiB: 27 MiB/s last 256 MiB, slowest request 47 ms
+W 1280 MiB: 27 MiB/s last 256 MiB, slowest request 47 ms
+W 1536 MiB: 27 MiB/s last 256 MiB, slowest request 50 ms
+W 1792 MiB: 27 MiB/s last 256 MiB, slowest request 47 ms
+W 2048 MiB: 27 MiB/s last 256 MiB, slowest request 50 ms
+W 2304 MiB: 27 MiB/s last 256 MiB, slowest request 51 ms
+W 2560 MiB: 27 MiB/s last 256 MiB, slowest request 55 ms
+W 2816 MiB: 27 MiB/s last 256 MiB, slowest request 49 ms
+W 3072 MiB: 27 MiB/s last 256 MiB, slowest request 44 ms
+W total 27 MiB/s
+stat: rc=0 size=3221225472
+R one connection: sequential 1 MiB 548 MiB/s; random 64 KiB 79 MiB/s (793 us/read); random 4 KiB 5.0 MiB/s (779 us/read)
+R 4 connections random 64 KiB: 88 MiB/s
+S 200 atomic 64 KiB replacements: 15.53 ms each, slowest 138 ms
+done: 0 failed check(s)

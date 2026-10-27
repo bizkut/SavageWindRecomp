@@ -75,6 +75,12 @@ list with "4K, 119.88 Hz if granted, else 59.94 Hz".
 generated C included (`docs/SAVAGE-WIND.md` "Reglas legales"). The PS5 has no compiler, and `runtime/gamebuild.c`
 spawns one. Flow:
 
+Here, **game code** means the user's Switch ExeFS executables (`main`, `sdk`, `subsdk0`, etc.), not RomFS assets.
+Savage Wind's existing generator disassembles their ARM64 instructions and writes equivalent C; the PS5 PC helper
+cross-compiles that C for the PS5's x86-64 Zen 2 CPU and links it with the open-source runtime into `eboot.bin`.
+This is a one-time operation per game build id. Generated C and PS5 objects are cached on the user's PC; a Savage
+Wind update with the same supported game version only relinks the eboot instead of regenerating/recompiling it.
+
 1. User runs the existing desktop setup (Linux/Windows) on their own ExeFS/RomFS; it already produces the generated
    C and `romfs.bin`.
 2. New target `make ps5-gamecode` cross-compiles that C for the PS5 target and links it with the shipped runtime
@@ -153,28 +159,52 @@ in `runtime/services/audio.c`. Movies keep FFmpeg from pacbrew.
 MihawkGen is distributed under GPL-3.0-or-later with all notices (MihawkGen `THIRD_PARTY_NOTICES.txt`, Mesa, AMD
 FidelityFX). Keep MihawkGen and other GPL code out of the desktop build so its licence is unchanged.
 
-**D11. Drop-in `.nsp` import with nstool** (requested 2026-10-27). The user drops the base game `.nsp` and the 1.9.0
-update `.nsp` (and DLC `.nsp`) next to their own `prod.keys`, and setup produces the ExeFS and the merged RomFS the
-existing pipeline already takes (`runtime/ui/launcher.mm` `find_game` → copy → `romfs.bin` → game-code build).
+**D11. Drop-in `.nsp` import: one-shot nstool payload** (requested 2026-10-27). The user uploads the base game
+`.nsp`, the 1.9.0 update `.nsp`, optional DLC `.nsp`, and their own `prod.keys` to
+`/data/savagewind/import/`. The title starts an embedded `savagewind-import.elf` through local elfldr; the payload
+runs as root, exits after the import, and is never resident.
 
-- Tool: `../nstool` (MIT, pinned at `cfb826ca6c`), built as a library/host tool into the PC setup. It reads NSP/PFS0,
-  NCA, tickets, and applies an update to its base: `--basenca <base program NCA>` on the update's program NCA gives
-  the 1.9.0 ExeFS and the merged RomFS in one pass (nstool README "patch NCA").
-- Where: the PC setup (Linux/Windows), because the game code must be generated and linked on the PC anyway (D5).
-  Its outputs are the user's `eboot.bin` and `romfs.bin` (+ DLC) for `/data/savagewind/game/`. Extraction on the
-  console is not planned: it would still need the PC for the game code.
-- Checks before extracting: title id is BOTW's, the update is v1114112 (1.9.0), the merged ExeFS `main` build id is
-  in `runtime/game_versions.h`, RomFS file count passes the existing 95 % check. A missing key, wrong title or wrong
-  version stops with one sentence naming what is missing.
-- Keys: read from a file the user selects (or `~/.switch/prod.keys`), held in memory only, never copied, logged,
-  cached or shipped; no key, title key or key-derivation constant is in this repository. Extracted data stays under
-  the user's setup folder and is deleted after `romfs.bin` is built unless they ask to keep it.
-- `launcher.mm` stops treating `.nsp` as unusable (`find_game`) and offers the import instead; `.xci`/`.nsz`/`.xcz`
-  keep the current message until tested.
-- **Policy change to decide:** `docs/SAVAGE-WIND.md` ("Reglas legales") says Savage Wind never decrypts anything and
-  takes only already-extracted files. A built-in importer decrypts with the user's keys, which changes that rule and
-  the project's legal position; it needs the maintainers' agreement and a rewrite of that section before it ships,
-  and it touches the desktop build too, not only the PS5 port. Until then it is developed behind a build option.
+- Tool: `../nstool` (MIT, pinned at `cfb826ca6c`), cross-built into the payload. It reads NSP/PFS0, NCA and tickets,
+  and applies an update to its base: nstool's `--basenca <base program NCA>` path extracts the update Program NCA
+  against the base, producing the 1.9.0 ExeFS and merged RomFS.
+- Outputs: `/data/savagewind/game/romfs.bin` (+ DLC) and a temporary
+  `/data/savagewind/import/work/exefs/`. The PC helper fetches only ExeFS, generates and links the user's
+  `eboot.bin` (D5), uploads it to the title folder, then removes the temporary ExeFS. Extraction on the console does
+  not remove the PC build step.
+- Checks before accepting output: title id is BOTW's, update is v1114112 (1.9.0), merged ExeFS `main` build id is in
+  `runtime/game_versions.h`, and the merged RomFS passes the existing 95 % file-count check. Output is first written
+  under `import/work/`, verified, then atomically renamed into `game/`.
+- Keys: parsed in the payload's memory only, never logged, cached or shipped. `prod.keys` is deleted after a
+  successful import by default; NSP deletion is a separate user choice. No key, title key or key-derivation constant
+  is committed to this repository.
+- Root payload does not imply unlimited disk speed. Existing payload measurements are ~13–35 MiB/s depending on
+  write size; measure this importer with large sequential writes on .41. It avoids the title's per-launch write
+  budget, but SSD/pwrite cost can still dominate.
+- The launcher replaces `.nsp`'s current "unusable package" result with Import. If local elfldr is absent, it states
+  that the console payload service must be loaded; it never silently falls back. `.xci`/`.nsz`/`.xcz` remain
+  unsupported until independently tested.
+- **Policy change to decide:** `docs/SAVAGE-WIND.md` says Savage Wind never decrypts anything. This payload decrypts
+  with the user's keys, changing that rule and the project's legal position. It remains behind a build option until
+  the maintainers approve and rewrite that policy.
+
+**D12. `/data/savagewind` access: direct reads, root payload for writes.** No Lapy dependency and no title credential
+mutation. ShadowMountPlus is a prerequisite: on .41 it lets the title read `/data/savagewind`, and direct `pread`
+measured 111–133 MiB/s sequential and 124–171 MiB/s for four concurrent random 64 KiB streams. Keep the hot RomFS
+path direct. A resident `savagewind-storage-broker.elf`, started once per boot through local elfldr, handles:
+
+- saves, settings, logs and shader/pipeline-cache writes, so the title never reaches its 20 → 2 MiB/s write budget;
+- only paths beneath a pre-opened `/data/savagewind` directory fd, rejecting `..`, absolute paths, symlinks, hard
+  links and unknown operations; atomic write = same-directory temp file + fsync + rename;
+- a versioned loopback protocol on Savage-Wind-only port 9142, per-connection threads and a small connection pool.
+  It cannot replace or stop WoW's unrelated broker on 9141. One Savage Wind broker owns its port; a newer embedded
+  copy may ask an older version to exit.
+
+The broker retains bounded `pread` for diagnostics, but it is not the runtime RomFS path: a request currently opens
+and closes the file, unlike `romfs_image.c`'s persistent descriptor. If direct `/data` access is absent, the title
+stops with one actionable message to load ShadowMountPlus; it does not route all gameplay reads through loopback.
+The broker's same 3 GiB write benchmark on .41 must show no cumulative 2 MiB/s collapse before acceptance. Root alone
+is not proof: direct root-payload measurements reached a steady 36 MiB/s, while Lapy-elevated title writes measured
+143 MiB/s in MihawkOS.
 
 ## Frame budget at 4K / 120
 
@@ -261,15 +291,20 @@ the three `test` conflicts. Re-qualify on PS5 at 1.9.0: their evidence is 1.8.2,
 (~0.7 ms/frame desktop), GPU cost, VRR/120 Hz pacing with FG, and image quality are all unmeasured here. Then A/B
 MihawkGen neural vs `mvwarp`/`mvsplat`, and choose defaults by measured image quality and GPU time.
 
-### M9 — Release
-Settings persistence, save/load, DLC, 1-hour soak, README for the PC-side setup (D5), notices (D10), release ZIP.
+### M9 — Root storage broker (D12)
+Path-restricted payload, versioned client, direct RomFS reads and brokered atomic writes. **Done when:** broker A/B on
+.41 covers a cumulative 3 GiB write and save/cache-like atomic replacements without a 2 MiB/s collapse; direct reads
+remain unchanged; unavailable/old broker and missing ShadowMountPlus each produce a clear error; path traversal,
+intermediate/final symlinks, hard links and cross-root operations are rejected.
 
-### M10 — `.nsp` import (D11)
-nstool vendored at its pin, importer in the PC setup, launcher path for `.nsp`, the checks above, and the policy
-decision recorded. **Done when:** base + 1.9.0 update `.nsp` with the user's keys produce an ExeFS/RomFS whose
-`main` build id and RomFS count match a known-good manual extraction byte-for-byte (file hashes), on Linux and
-Windows; wrong keys, a missing update and a wrong title each stop with their own message; no key material appears in
-logs or output folders.
+### M10 — `.nsp` import payload (D11)
+nstool cross-built at its pin into a one-shot root payload, title UI launch, PC helper handoff, checks and policy
+decision above. **Done when:** base + 1.9.0 update NSPs and user keys produce merged ExeFS/RomFS matching a known-good
+manual extraction by file hashes; the PC helper builds the resulting eboot; wrong keys, missing update, wrong title,
+interrupted extraction and missing elfldr each stop safely; no key material appears in logs or retained work files.
+
+### M11 — Release
+Settings persistence, save/load, DLC, 1-hour soak, README for the setup/import flow, notices (D10), release ZIP.
 
 ## Risks
 

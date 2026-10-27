@@ -156,7 +156,7 @@ int main(void) {
     unlink(g_path);
     say("done");
     if (g_log) fclose(g_log);
-#ifdef __PROSPERO__
+#if defined(__PROSPERO__) && !IO_PAYLOAD
     sceSystemServiceLoadExec("exit", NULL);
     for (;;) usleep(100000);
 #endif

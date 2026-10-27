@@ -1,0 +1,19 @@
+Savage Wind PS5 storage probe, /data/savagewind (log ok)
+W open /data/savagewind/io_probe.bin: fd=8 errno=0
+W  256 MiB: 35 MiB/s for the last 256 MiB, slowest 1 MiB write 43 ms
+W  512 MiB: 36 MiB/s for the last 256 MiB, slowest 1 MiB write 44 ms
+W  768 MiB: 36 MiB/s for the last 256 MiB, slowest 1 MiB write 42 ms
+W 1024 MiB: 36 MiB/s for the last 256 MiB, slowest 1 MiB write 48 ms
+W 1280 MiB: 36 MiB/s for the last 256 MiB, slowest 1 MiB write 42 ms
+W 1536 MiB: 36 MiB/s for the last 256 MiB, slowest 1 MiB write 45 ms
+W 1792 MiB: 36 MiB/s for the last 256 MiB, slowest 1 MiB write 46 ms
+W 2048 MiB: 36 MiB/s for the last 256 MiB, slowest 1 MiB write 41 ms
+W 2304 MiB: 36 MiB/s for the last 256 MiB, slowest 1 MiB write 41 ms
+W 2560 MiB: 35 MiB/s for the last 256 MiB, slowest 1 MiB write 44 ms
+W 2816 MiB: 36 MiB/s for the last 256 MiB, slowest 1 MiB write 40 ms
+W 3072 MiB: 36 MiB/s for the last 256 MiB, slowest 1 MiB write 49 ms
+W total 36 MiB/s, fsync 1 ms
+R buffered: sequential 1 MiB 517 MiB/s; random 64 KiB 94 MiB/s (664 us/read); random 4 KiB 6.0 MiB/s (652 us/read); 4 threads random 64 KiB 197 MiB/s
+R O_DIRECT: sequential 1 MiB 552 MiB/s; random 64 KiB 81 MiB/s (768 us/read); random 4 KiB 10.3 MiB/s (378 us/read); 4 threads random 64 KiB 302 MiB/s
+S 200 x create/write 64 KiB/close: 11.01 ms each, slowest 18 ms
+done
