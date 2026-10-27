@@ -35,3 +35,8 @@ tools/ghidra/gq.local.json
 
 # Internal work-branch log, local only
 docs/RAMAS.md
+
+# PS5 port: pinned toolchain cache, staged title, generated runtime module
+/.deps/
+/ps5/dist/
+/ps5/runtime/libc.prx
