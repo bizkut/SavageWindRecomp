@@ -1,0 +1,15 @@
+Savage Wind PS5 S5 shaderc probe
+shaderc_compiler_initialize: 200000fb00 in 0.0 ms
+vs: status 0, 1820 bytes, magic 0x7230203, 167.26 ms
+S5 PASS: vs compiles to SPIR-V
+fs: status 2, 0 bytes, magic 0, 0.91 ms, error: fs:11: error: 'constructor' : can't convert
+fs:11: error: ' temp float' : cannot construct with these arguments
+
+S5 FAIL: fs compiles to SPIR-V
+cs: status 0, 1284 bytes, magic 0x7230203, 0.92 ms
+S5 PASS: cs compiles to SPIR-V
+bad: status 2, 0 bytes, magic 0, 0.79 ms, error: bad:2: error: 'undeclared' : undeclared identifier
+
+S5 PASS: bad is rejected with a message
+50 fragment compiles: 0.74 ms each
+done: 1 failed check(s)

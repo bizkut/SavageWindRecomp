@@ -1,0 +1,15 @@
+Savage Wind PS5 S5 shaderc probe
+shaderc_compiler_initialize: 200000fb00 in 0.0 ms
+vs: status 0, 1820 bytes, magic 0x7230203, 167.67 ms
+S5 PASS: vs compiles to SPIR-V
+fs: status 0, 1628 bytes, magic 0x7230203, 1.01 ms
+S5 PASS: fs compiles to SPIR-V
+cs: status 0, 1284 bytes, magic 0x7230203, 0.91 ms
+S5 PASS: cs compiles to SPIR-V
+bad: status 2, 0 bytes, magic 0, 0.72 ms, error: bad:2: error: 'undeclared' : undeclared identifier
+
+S5 PASS: bad is rejected with a message
+50 fragment compiles: 0.91 ms each
+gpu: module 0, pipeline 0 (ACO compile 1.0 ms)
+S5 PASS: console-compiled compute shader ran on RADV, 0/256 results wrong
+done: 0 failed check(s)

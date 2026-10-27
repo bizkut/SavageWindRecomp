@@ -80,3 +80,21 @@ worst interval 8.46 ms**. The .39 refusal (run2) was that console's output setup
 The console's AvControl confirms VRR: `HFR:o ... VRR:TypeA`, `119.88Hz request is converted to VRR 119.88Hz`,
 `VRR(peg:120 range:48 - 120)` while the title runs, back to `peg:60 range:48 - 60` after it exits (klog lines
 284–359). TV-side confirmation still to be read off the screen by the user.
+
+## 2026-10-27 — S5 shaderc on the console (.41, ps5/evidence/s5-shaderc run4)
+
+`ps5/tools/build-shaderc.sh` cross-builds the desktop pin (shaderc v2026.3 + its DEPS glslang/SPIRV-Tools) with the
+SDK's prospero.cmake into one 27 MB static `libshaderc_combined.a`. Probe `ps5/probe/s5_shaderc.c`, with
+`runtime/nvn/vulkan/spirv.c`'s options (Vulkan 1.3 target, optimization zero):
+- vertex, fragment (scalar layout, 8/16-bit storage, demote) and compute shaders compile; a bad shader is rejected
+  with glslang's message;
+- all three SPIR-V files are **byte-identical** to the same shaderc pin built on the Linux host and pass `spirv-val`
+  (vulkan1.3);
+- first compile 167 ms (one-time glslang initialisation), then ~0.9 ms per fragment shader;
+- the console-compiled compute shader goes through RADV (ACO pipeline 1.0 ms), dispatches and gives 256/256
+  correct results.
+
+Run1 failed on a GLSL error in the probe's own shader (host glslangValidator gave the same error); run3's PC-side
+recheck exposed a use-after-free in the probe's verdict (read after `shaderc_result_release`), fixed before run4.
+
+**M0 status: S1–S5 go.** S6 (CPU headroom with real generated code) remains, and needs the game build.
