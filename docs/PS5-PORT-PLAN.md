@@ -1,8 +1,9 @@
 # Savage Wind on PS5: port plan
 
 Status 2026-10-28: M0 spikes S1–S5 go on the console (S6 pending a timed run of generated code); M9 storage broker
-measured on .41; the 1.9.0 generated game code and an M2 title link on the PC (`ps5/FINDINGS.md`). M2 has not yet
-been qualified on the console. Console measurements are cited in `ps5/FINDINGS.md`; other numbers are explicit targets.
+measured on .41; **M2 reached on .41**: the title runs the PC-generated 1.9.0 game code from the user's packages to
+its first NVN call (`ps5/FINDINGS.md`). Rendering (M3) onward not started. Console measurements are cited in
+`ps5/FINDINGS.md`; other numbers are explicit targets.
 
 ## Goal
 
