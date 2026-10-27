@@ -98,3 +98,20 @@ Run1 failed on a GLSL error in the probe's own shader (host glslangValidator gav
 recheck exposed a use-after-free in the probe's verdict (read after `shaderc_result_release`), fixed before run4.
 
 **M0 status: S1–S5 go.** S6 (CPU headroom with real generated code) remains, and needs the game build.
+
+## 2026-10-27 — Storage under /data/savagewind, unelevated title (.41, ps5/evidence/io-probe run1)
+
+Probe `ps5/probe/io_probe.c`. With ShadowMountPlus on .41 the title, without any elevation, creates and writes
+`/data/savagewind` (the directory now exists there, 0777).
+- **Writes are throttled as in ps5-wow:** 1 MiB sequential writes run at 20 MiB/s (slowest 65 ms) until ~2 GiB, then
+  12 → 5 → 2 MiB/s with single writes taking up to 1.9 s; 3 GiB took ~9 min. 64 KiB create/write/close files, done
+  after that: 20.7 ms each, slowest 0.7 s.
+- **Reads (3 GiB file):** sequential 1 MiB 133 MiB/s buffered, 111 MiB/s O_DIRECT; random 64 KiB 41 MiB/s
+  (1.5–1.6 ms per read), 4 threads 124–171 MiB/s; random 4 KiB 0.6–0.8 ms per read. Measured with the write budget
+  already exhausted; whether reads share it is not separated yet.
+- For comparison, PS5_MihawkOS measured a **Lapy-elevated** title writing `/data` at 143 MiB/s with no throttling over
+  1.2 GiB, and again after LoadExec (`PS5_MihawkOS/docs/SELF_INSTALL.md` phase 0, row 1). Reads were not measured there.
+
+What it means for Savage Wind: `romfs.bin` arrives over FTP (not title writes), so the write budget only touches
+saves, settings and shader/pipeline caches. Reads are the open question: 1.5 ms per random 64 KiB read is slow for
+streaming; next step is the same probe Lapy-elevated, and a read-only run with an unspent write budget.
