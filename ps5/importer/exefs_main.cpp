@@ -12,7 +12,7 @@ static const GameVersion versions[] = {GAME_VERSIONS(VERSION_ROW)};
 #undef VERSION_ROW
 
 int main(int argc, char **argv) {
-    if (argc < 6 || std::strcmp(argv[1], "--keys") || std::strcmp(argv[3], "--out")) {
+    if (argc < 6 || std::strcmp(argv[1], "--keys") || std::strcmp(argv[3], "--out") || !*argv[4]) {
         std::fputs("usage: savagewind-exefs --keys <prod.keys> --out <dir> <package>...\n", stderr);
         return 2;
     }

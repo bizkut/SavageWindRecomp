@@ -1,8 +1,8 @@
 // Where Savage Wind keeps its files (runtime/paths.c).
 //
 // Data root: everything the app writes or the user brings - extracted/ (game files), save/,
-// cache/ (shaders / pipelines), fonts/ (imported), savagewind.ini. rt_paths_init() picks it and makes it the
-// working directory, so the rest of the runtime opens those by their relative names. In order:
+// cache/ (shaders / pipelines), fonts/ (imported), savagewind.ini. On desktop rt_paths_init() picks it and makes it
+// the working directory; PS5 uses absolute host read paths and root-relative broker paths instead. Desktop order:
 //   1. SAVAGEWIND_DATA_ROOT (tests, scratch installs)
 //   2. dev / portable mode: the starting directory already has extracted/ (a source checkout: `./build/savagewind
 //      extracted`, the test scripts) - used as is
@@ -15,6 +15,7 @@
 #pragma once
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,6 +25,16 @@ extern "C" {
 
 void rt_paths_init(void);         // first thing in main(), after plat_init
 const char *rt_data_root(void);   // absolute
+// Convert a data-root-relative read path to an absolute host path. Absolute
+// paths (including Windows drive paths) are retained unchanged.
+static inline bool rt_data_path(const char *path, char *out, size_t size) {
+    if (!path || !*path || !out || !size) return false;
+    bool absolute = path[0] == '/' || path[0] == '\\' || (path[0] && path[1] == ':');
+    const char *root = rt_data_root();
+    int n = absolute || !root || !*root ? snprintf(out, size, "%s", path)
+                                         : snprintf(out, size, "%s/%s", root, path);
+    return n >= 0 && (size_t)n < size;
+}
 bool rt_dev_mode(void);           // dev / portable mode (rule 2 above): e.g. a source checkout
 
 // A shipped file: `name` next to the executable or in Contents/Resources, else `dev_rel` in the source tree (the

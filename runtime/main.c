@@ -171,17 +171,17 @@ static void boot(const char *root) {
 
     uint32_t stack_size = 0x100000;
     int prio = 44;
-    FILE *f = fopen(npdm_path, "rb");
-    if (f) {
-        static uint8_t npdm[0x10000];
-        size_t n = fread(npdm, 1, sizeof npdm, f);
-        if (n >= 0x80 && !memcmp(npdm, "META", 4)) {
+    size_t npdm_size = 0;
+    uint8_t *npdm = loader_read_file(npdm_path, &npdm_size, 0x10000);
+    if (npdm) {
+        if (npdm_size >= 0x80 && !memcmp(npdm, "META", 4)) {
             prio = npdm[0xE];
             stack_size = *(uint32_t *)(npdm + 0x1C);
             uint32_t aci = *(uint32_t *)(npdm + 0x70);  // ACI0: the program id at +0x10
-            if (aci + 0x18 <= n && !memcmp(npdm + aci, "ACI0", 4)) g_program_id = *(uint64_t *)(npdm + aci + 0x10);
+            if (aci + 0x18 <= npdm_size && !memcmp(npdm + aci, "ACI0", 4))
+                g_program_id = *(uint64_t *)(npdm + aci + 0x10);
         }
-        fclose(f);
+        free(npdm);
     }
     LOG("main thread: prio %d, stack 0x%x, program %016llx\n", prio, stack_size, (unsigned long long)g_program_id);
 

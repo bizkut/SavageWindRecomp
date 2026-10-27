@@ -8,6 +8,9 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
+#include <cerrno>
+#include <cctype>
+#include <fcntl.h>
 #include <dirent.h>
 #include <memory>
 #include <stdexcept>
@@ -15,10 +18,15 @@
 #include <strings.h>
 #include <sys/stat.h>
 #include <thread>
+#include <unistd.h>
 #include <vector>
 
 struct Sample { const char *path; const char *hash; uint64_t size; };
 #include "package_probe_samples.h"
+#ifndef PACKAGE_PROBE_TEMP
+#define PACKAGE_PROBE_TEMP "/data/savagewind/logs/package-probe.txt.tmp"
+#define PACKAGE_PROBE_RESULT "/data/savagewind/logs/package-probe.txt"
+#endif
 using Clock = std::chrono::steady_clock;
 static FILE *log_file;
 static void report(const char *format, ...) {
@@ -30,6 +38,42 @@ static void report(const char *format, ...) {
     std::snprintf(line, sizeof line, "savagewind-package-probe: %s\n", message);
     sceKernelDebugOutText(0, line);
     if (log_file) { std::fputs(line, log_file); std::fflush(log_file); }
+}
+
+// Exception messages and paths may contain key material; redact long hex runs.
+static void report_safe(const char *step, int error, const char *detail) {
+    char safe[512];
+    size_t out = 0;
+    const char *p = detail ? detail : "";
+    while (*p && out + 1 < sizeof safe) {
+        if (std::isxdigit(static_cast<unsigned char>(*p))) {
+            const char *end = p;
+            while (std::isxdigit(static_cast<unsigned char>(*end))) ++end;
+            if (end - p >= 16) {
+                const char *redacted = "[redacted]";
+                while (*redacted && out + 1 < sizeof safe) safe[out++] = *redacted++;
+                p = end;
+                continue;
+            }
+        }
+        unsigned char c = static_cast<unsigned char>(*p++);
+        safe[out++] = c >= 32 && c < 127 ? char(c) : ' ';
+    }
+    safe[out] = 0;
+    report("%s errno=%d detail=%s", step, error, safe);
+}
+static void probe_access(const char *path) {
+    struct stat st = {};
+    errno = 0;
+    int stat_rc = stat(path, &st), stat_errno = errno;
+    errno = 0;
+    int fd = open(path, O_RDONLY), open_errno = errno;
+    if (fd >= 0) close(fd);
+    char detail[768];
+    std::snprintf(detail, sizeof detail, "%s stat=%d stat_errno=%d mode=%o size=%lld open=%d",
+                  path, stat_rc, stat_errno, stat_rc ? 0 : unsigned(st.st_mode),
+                  stat_rc ? 0ll : (long long)st.st_size, fd);
+    report_safe("access", open_errno, detail);
 }
 static double elapsed(Clock::time_point start) {
     return std::chrono::duration<double>(Clock::now() - start).count();
@@ -131,13 +175,16 @@ static bool benchmark(RomfsImage *image, uint64_t offset, uint64_t size) {
 }
 int main() {
     mkdir("/data/savagewind/logs", 0777);
-    log_file = std::fopen("/data/savagewind/logs/package-probe.txt.tmp", "w");
+    log_file = std::fopen(PACKAGE_PROBE_TEMP, "w");
     unsigned passed = 0, failed = 0;
     if (!log_file) {
         report("unable to create result file");
         report("done: pass=0 fail=1");
         return 1;
     }
+    const char *step = "import directory";
+    probe_access("/data/savagewind/import");
+    probe_access("/data/savagewind/import/prod.keys");
     try {
         DIR *dir = opendir("/data/savagewind/import");
         if (!dir) throw std::runtime_error("cannot open import directory");
@@ -149,14 +196,19 @@ int main() {
         }
         closedir(dir);
         std::sort(names.begin(), names.end());
+        for (const auto &name : names) probe_access(name.c_str());
+        report("package scan count=%zu", names.size());
         std::vector<const char *> paths;
         for (auto &name : names) paths.push_back(name.c_str());
         char why[256] = {};
+        step = "package keys/CNMT/NCA/RomFS open";
+        report("opening package keys/CNMT/NCA/RomFS");
         auto start = Clock::now();
         RomfsImage *image = romfs_image_open_package("/data/savagewind/import/prod.keys", paths.data(), paths.size(), 0, why, sizeof why);
         double open_time = elapsed(start);
-        if (!image) throw std::runtime_error("package open failed");
+        if (!image) throw std::runtime_error(why[0] ? why : "package open failed");
         report("open seconds=%.3f image_bytes=%llu", open_time, (unsigned long long)romfs_image_size(image));
+        step = "RomFS tables";
         Tables tables;
         if (!tables.load(image)) { romfs_image_close(image); throw std::runtime_error("RomFS tables failed"); }
         uint64_t largest_offset = 0, largest_size = 0;
@@ -183,14 +235,18 @@ int main() {
         if (largest_size && benchmark(image, largest_offset, largest_size)) ++passed;
         else ++failed;
         romfs_image_close(image);
+    } catch (const std::exception &e) {
+        ++failed;
+        report_safe(step, errno, e.what());
     } catch (...) {
         ++failed;
-        report("probe failed: package, keys, RomFS, or runtime error");
+        report_safe(step, errno, "non-standard exception");
     }
     report("done: pass=%u fail=%u", passed, failed);
     bool ok = std::fclose(log_file) == 0;
     log_file = nullptr;
-    if (!ok || std::rename("/data/savagewind/logs/package-probe.txt.tmp", "/data/savagewind/logs/package-probe.txt") != 0) {
+    if (!ok || (std::strcmp(PACKAGE_PROBE_TEMP, PACKAGE_PROBE_RESULT) &&
+                std::rename(PACKAGE_PROBE_TEMP, PACKAGE_PROBE_RESULT) != 0)) {
         report("unable to publish result file");
         report("done: pass=%u fail=%u", passed, failed + 1);
         return 1;

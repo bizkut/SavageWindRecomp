@@ -8,7 +8,7 @@
 #ifdef __APPLE__
 extern const ServiceDef __start_services[] __asm__("section$start$__DATA$__services");
 extern const ServiceDef __stop_services[] __asm__("section$end$__DATA$__services");
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__PROSPERO__)
 extern const ServiceDef __start_services[], __stop_services[];  // (ELF: defined by the linker)
 #else
 // PE/COFF: .svc$a < .svc$m (entries, ipc.h) < .svc$z (the linker sorts by the text after '$')
@@ -36,6 +36,7 @@ Service *service_lookup(const char *name) {
     __asm__("" : "+r"(start), "+r"(stop));  // separate objects: keep the compiler from reasoning about them
     for (const ServiceDef *d = start; d < stop; d++)
         if (d->name && !strcmp(d->name, name)) return service_new(name, d->handler, NULL);
+    if (g_hle_strict) FATAL("unimplemented service %s\n", name);
     LOG("[ipc] no HLE implementation for service '%s', using logging stub\n", name);
     return service_new(name, stub_handler, NULL);
 }

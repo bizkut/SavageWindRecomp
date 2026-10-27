@@ -46,6 +46,14 @@ SECTIONS {
     . = ALIGN(CONSTANT(MAXPAGESIZE));
     .data.rel.ro : {
         *(.data.rel.ro .data.rel.ro.*)
+        . = ALIGN(16);
+        __start_hle_impls = .;
+        KEEP(*(hle_impls))
+        __stop_hle_impls = .;
+        . = ALIGN(16);
+        __start_services = .;
+        KEEP(*(services))
+        __stop_services = .;
     } : relro
     .got : { *(.got) } : relro
     .got.plt : { *(.got.plt) } : relro

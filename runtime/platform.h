@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <pthread.h>
 
 #ifdef _WIN32
 #include "platform/win_compat.h"
@@ -13,6 +14,11 @@
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#ifdef __PROSPERO__
+// Direct klog output, independent of the asynchronous stderr pipe.
+void ps5_logf(const char *format, ...);
 #endif
 
 // ---- guest address space
@@ -26,6 +32,21 @@ bool plat_reset_guest(uint64_t lo, uint64_t hi);
 enum { PLAT_PROT_NONE = 0, PLAT_PROT_READ = 1, PLAT_PROT_RW = 3 };
 int plat_protect(uint64_t addr, uint64_t size, int prot);  // 0 on success
 #define PLAT_PAGE 0x4000ull  // largest page size we deal with (macOS 16K; multiple of Windows' 4K)
+
+// Guest threads need a large host stack for translated guest recursion.
+#ifdef __PROSPERO__
+int plat_guest_thread_create(pthread_t *thread, void *(*entry)(void *), void *arg);
+#else
+static inline int plat_guest_thread_create(pthread_t *thread, void *(*entry)(void *), void *arg) {
+    pthread_attr_t attr;
+    int rc = pthread_attr_init(&attr);
+    if (rc) return rc;
+    rc = pthread_attr_setstacksize(&attr, 256ull << 20);
+    if (!rc) rc = pthread_create(thread, &attr, entry, arg);
+    pthread_attr_destroy(&attr);
+    return rc;
+}
+#endif
 
 // ---- time
 uint64_t plat_now_ns(void);                // monotonic

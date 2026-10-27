@@ -18,14 +18,19 @@ enum { R_ABS64 = 257, R_GLOB_DAT = 1025, R_JUMP_SLOT = 1026, R_RELATIVE = 1027 }
 typedef struct { uint32_t name; uint8_t info, other; uint16_t shndx; uint64_t value, size; } Elf64Sym;
 typedef struct { uint64_t off, info; int64_t addend; } Elf64Rela;
 
-static uint8_t *read_file(const char *path, size_t *len) {
+static uint8_t *(*file_reader)(const char *path, size_t *len, size_t max);
+void loader_set_file_reader(uint8_t *(*reader)(const char *path, size_t *len, size_t max)) { file_reader = reader; }
+
+uint8_t *loader_read_file(const char *path, size_t *len, size_t max) {
+    if (file_reader) return file_reader(path, len, max);
     FILE *f = fopen(path, "rb");
     if (!f) return NULL;
-    fseek(f, 0, SEEK_END);
-    *len = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    uint8_t *p = malloc(*len);
-    fread(p, 1, *len, f);
+    if (fseek(f, 0, SEEK_END)) { fclose(f); return NULL; }
+    long end = ftell(f);
+    if (end < 0 || (size_t)end > max || fseek(f, 0, SEEK_SET)) { fclose(f); return NULL; }
+    *len = (size_t)end;
+    uint8_t *p = malloc(*len ? *len : 1);
+    if (!p || fread(p, 1, *len, f) != *len) { free(p); fclose(f); return NULL; }
     fclose(f);
     return p;
 }
@@ -48,7 +53,7 @@ static uint64_t gnu_hash_nsyms(uint64_t h) {
 // the code was generated from: same build id, and so the same image size.
 static void load_nso(Module *m, const char *path, const GameLibModule *lm) {
     size_t len;
-    uint8_t *raw = read_file(path, &len);
+    uint8_t *raw = loader_read_file(path, &len, SIZE_MAX);
     if (!raw || len < 0x100 || memcmp(raw, "NSO0", 4)) FATAL("cannot load %s\n", path);
     char id[65];
     for (int i = 0; i < 32; i++) snprintf(id + 2 * i, 3, "%02x", raw[0x40 + i]);
@@ -252,9 +257,11 @@ void loader_load(const char *exefs) {
         char name[16];
         snprintf(name, sizeof name, "subsdk%d", i);
         snprintf(path, sizeof path, "%s/%s", exefs, name);
-        FILE *f = loader_module(name) ? NULL : fopen(path, "rb");
-        if (!f) continue;
-        fclose(f);
+        if (loader_module(name)) continue;
+        size_t len;
+        uint8_t *data = loader_read_file(path, &len, SIZE_MAX);
+        if (!data) continue;
+        free(data);
         if (!known) FATAL("%s is not in the game code: build it again\n", path);
         LOG("[loader] %s is not one of the game's modules (a mod?): left out\n", path);
     }

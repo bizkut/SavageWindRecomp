@@ -12,6 +12,7 @@
 #include <strings.h>
 
 #include "../hle.h"
+#include "../paths.h"
 
 typedef struct { uint64_t addr, size; } Font;
 static Font fonts[2];  // [0] Standard (every type), [1] NintendoExt when a dump provides it
@@ -20,7 +21,9 @@ static uint32_t be32(const uint8_t *p) { return (uint32_t)p[0] << 24 | p[1] << 1
 static void put32(uint8_t *p, uint32_t v) { p[0] = v >> 24; p[1] = v >> 16; p[2] = v >> 8; p[3] = v; }
 
 static uint8_t *read_file(const char *path, size_t *len) {
-    FILE *f = fopen(path, "rb");
+    char host_path[2048];
+    if (!rt_data_path(path, host_path, sizeof host_path)) return NULL;
+    FILE *f = fopen(host_path, "rb");
     if (!f) return NULL;
     fseek(f, 0, SEEK_END);
     *len = (size_t)ftell(f);

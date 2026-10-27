@@ -1,5 +1,6 @@
 #include "settings.h"
 
+#include <errno.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +8,7 @@
 
 #include "hle.h"
 #include "input_bind.h"
+#include "paths.h"
 #include "language.h"
 #ifdef __PROSPERO__
 #include "storage_ps5.h"
@@ -60,8 +62,13 @@ void settings_load(void) {
     static bool loaded;
     if (loaded) return;
     loaded = true;
-    FILE *f = fopen(SETTINGS_FILE, "r");
-    if (!f) return;
+    char read_path[2048];
+    if (!rt_data_path(SETTINGS_FILE, read_path, sizeof read_path)) {
+        LOG("[settings] data path is too long\n");
+        return;
+    }
+    FILE *f = fopen(read_path, "r");
+    if (!f) { LOG("[settings] cannot read %s: errno=%d\n", read_path, errno); return; }
     char line[256];
     bool tip_key = false;
     int version = 1;

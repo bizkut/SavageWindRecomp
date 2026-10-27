@@ -36,6 +36,9 @@ link_recipe() {
     done
 
     link_flags=(--wrap=pthread_create --wrap=pthread_join --wrap=pthread_detach --wrap=fclose --wrap=fflush)
+    # Resolve the platform backtrace against the SDK's static libunwind, not
+    # the broader libc import stub, whose title runtime lacks this export.
+    link_flags+=(--undefined=_Unwind_Backtrace)
     # With RADV: Mesa's weak entry points stay unresolved-weak rather than dynamic (PS5_vkQuake tools/build-title.sh)
     [[ -z $archive ]] || link_flags+=(--no-dynamic-linker -z nodynamic-undefined-weak)
     for name in malloc calloc realloc free posix_memalign aligned_alloc memalign \
@@ -51,7 +54,7 @@ link_recipe() {
             __runes_for_locale catopen catgets catclose backtrace backtrace_symbols_fd \
             __cxa_thread_atexit_impl arc4random arc4random_buf arc4random_uniform gmtime_r statvfs fstatvfs \
             futimens clock_nanosleep getaddrinfo freeaddrinfo if_nameindex if_freenameindex \
-            opendir fdopendir readdir rewinddir dirfd closedir nl_langinfo nl_langinfo_l getpwuid_r \
+            opendir fdopendir readdir rewinddir dirfd closedir getcwd nl_langinfo nl_langinfo_l getpwuid_r \
             posix_fallocate access openat unlinkat fchmodat fstatat mkdirat renameat memfd_create; do
         link_flags+=("--defsym=$name=ps5_$name")
     done

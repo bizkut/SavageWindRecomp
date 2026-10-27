@@ -275,3 +275,107 @@ failed: the title libc answers `stat("")` with EINVAL (not ENOENT), so `std::fil
 
 Single-thread random reads equal plain files; the title's own I/O is the limit there. Sequential is half, and four
 threads do not scale because one mutex serialises each package stream: per-thread streams are the next change.
+
+## 2026-10-28 — M2 title linked on the host
+
+`bash ps5/tools/build-game.sh` linked the user's 1.9.0 generated code into
+`ps5/dist/game/PPSA90212/eboot.bin`; the link map is `build/ps5/game/title.map`. The current eboot is 252,573,183
+bytes. This is a link result, not a console boot or proof that execution reaches NVN. The M2 build has no renderer,
+input, audio or movie backend; unavailable generated-code hooks fail loudly if reached.
+
+With the package-path fix and optional `title.keys` handling, the host package test again checked the ExeFS header and
+NPDM plus **41,062/41,062** RomFS files. The desktop `runtime-objs` target compiled with the local host dependencies.
+
+## 2026-10-28 — M2 run 1 and import audit
+
+`ps5/evidence/m2/run1.klog` shows startup and guest reservation, then a SIGSEGV at the first `getcwd` call in
+`rt_paths_init`. The SDK platform source documents that title libc's `getcwd` depends on `__getcwd`, unavailable
+to titles; the title recipe now binds `getcwd` to the platform's directory-walking `ps5_getcwd` and uses static
+libunwind for `_Unwind_Backtrace`. The rebuilt eboot is 252,575,519 bytes (SHA-256
+`d1bcfa363f00a87d75bd2ca84be78c479cb6c706b1aebd4bd3f057a8efdf6627`); this rebuild has not been run here.
+
+The title builder now checks imports against DT_NEEDED module stubs in converter provider order and the `libc.prx`
+API manifest when that module is the provider. System `libSceLibcInternal.sprx` is distinct from `libc.prx` and was
+present in run 1; its SDK stub is interface evidence, not a console test of every function's internal dependencies.
+The rebuilt title has no unresolved provider names under this static check; three host tests cover the check.
+
+## 2026-10-28 — M2 run 2 and working-directory independence
+
+`ps5/evidence/m2/run2.klog` shows guest reservation and successful broker permission repair, then a data-root
+initialisation failure. The old combined `stat`/`chdir` condition did not record which operation failed. The PS5
+title now reports their separate results and errno values, and its normal data reads use absolute data-root paths;
+broker writes remain root-relative. A host test exercised failed `chdir` with an accessible root and rejection of
+an inaccessible root. The rebuilt eboot SHA-256 is
+`75aea93dee27996766c0549f6b7cb06fe6fd44c788ddd7775bd680b017872e90`; this change needs a console run.
+
+## 2026-10-28 — M2 run 3 and termination diagnostics
+
+`ps5/evidence/m2/run3.klog` confirms `chdir` returns EPERM and the title proceeds with absolute data reads. It
+then stops after package selection's `open-program-nca` marker without a recorded signal or diagnostic. The cause
+is not established. The title's previous C++ allocation operator trapped on allocation failure without invoking
+`new_handler` or throwing `bad_alloc`; this is fixed and host-tested, but is not claimed as the observed cause.
+
+The next build adds direct-klog termination/exit instrumentation and heap, flexible/direct-memory and calling-thread
+stack snapshots at individual NCA stages. The rebuilt eboot SHA-256 is
+`3da8314636396c788a38279b7025cc035826dc1dc02fdd4fead572e71873d3f4`; it has not been console-tested here.
+
+## 2026-10-28 — M2 run 4 and package-open bisect
+
+`ps5/evidence/m2/run4.klog` reaches `nca-process`; the last snapshot reports a 16 MiB title heap, zero libc heap
+fallbacks, 211,812,352 bytes of available flexible memory and 8,984 bytes used on the 2 MiB main stack. No installed
+termination or allocation handler reported before the session stopped; this does not establish why it stopped.
+The runtime's guest fault handler is installed only in the guest thread after package startup, so it was not installed
+on this path.
+
+Two host-built variants add per-stage NCA tracing: a package-probe title with the M2 allocator, diagnostics and guest
+reservation (SHA-256 `c10b0182453a13d132a8173ea247dbb6c74e7e18190f10e411e6448dceb774e5`), and the M2 title with
+package opens on a dedicated 8 MiB worker (SHA-256
+`e17541d6c8b6a462c1e2fa3a9353d8a24d89f602f2373f7b3132d758b25aa320`). A host mock verified both open calls run
+on the worker with at least 8 MiB stack; these two variants still require console measurements.
+
+## 2026-10-28 — M2 run 5: package worker and game entry
+
+`ps5/evidence/m2/run5.klog` shows that moving package opening from the 2 MiB main stack to an 8 MiB worker permits
+the NCA processing and both RomFS/ExeFS opens to finish; the game enters linked code at `7002614ee0`. The worker is
+retained because the earlier main-stack path overflowed. Run 5 then aborts in strict service lookup. Its fatal
+service name was lost in the asynchronous stderr pipe, so this does not identify the missing service.
+
+The next build makes runtime `LOG`/`FATAL` direct synchronous klog writes and includes the existing `audren:u` and
+`audout:u` service implementations. M2 has no host audio device: the SDL boundary reports unavailable and the audio
+HLE uses its existing no-device timing path. The existing HID service and vibration-state implementation are linked;
+no host controller is connected. The rebuilt title SHA-256 is
+`0f749992125d25e5890169ed96677ac3a5a9b935dd437153fddbf00b506a1643`; it needs a console run.
+
+## 2026-10-28 — M2 run 7: VI HLE boundary
+
+`ps5/evidence/m2/run7.klog` reaches `nvdrv` and `vi:m`/`vi:s`/`vi:u` guest services through the desktop-compatible
+unknown-service path, then faults after the `vi:m` stub returns no display object. The desktop runtime's `nn::vi`
+HLE was absent from the M2 link. The next build links that HLE: its guest display, layer and native-window handles
+are software-side objects, not a PS5 VideoOut surface. M2 still stops at `nvnBootstrapLoader` before a renderer is
+created, and logs the requested NVN name. The rebuilt title SHA-256 is
+`05b3c8625f89f6fedc60450c7814fc0e46530a73e981fd0a07a60d1b62222777`; it requires console qualification.
+
+## 2026-10-28 — M2: the PS5 title runs the generated 1.9.0 game code to its first NVN call (.41, ps5/evidence/m2)
+
+`bash ps5/tools/build-game.sh`: runtime + `libgamecode.a` + package library statically linked into one 252.6 MB
+`eboot.bin`. Runs 8 and 9 (same eboot `05b3c862…`): startup → guest reserved `0x7000000000-0x7320000000` → broker
+permission repair → packages opened (RomFS 15,132,662,100 bytes in **2.83 s / 3.18 s**) → `entering linked game code
+at 7002614ee0` → services lm, apm, appletOE, aoc:u, ectx:aw, time:u, fsp-srv, nvdrv, vi:* → **`first NVN call:
+nvnBootstrapLoader requested=nvnDeviceInitialize`** → LoadExec exit. ExeFS and RomFS both come from the packages.
+
+What runs 1–7 found, each fixed before the next:
+- run1: `getcwd` in a title jumps to an unmapped address (SDK `directory.c` notes its internal import fails in
+  titles); bound to the SDK's `ps5_getcwd`. The title build now checks every dynamic import against the SDK stubs of
+  the modules it loads.
+- run2/3: `chdir` in a title fails with EPERM; the PS5 build uses absolute paths under the data root (writes stay
+  broker-relative).
+- run3/4: the process vanished with no dump inside nstool's `NcaProcess::process`: the 2 MiB main-thread stack
+  overflowed. Package opens run on a joined 8 MiB thread. (Also: the title C++ runtime's `operator new` trapped on
+  failure without `new_handler`/`bad_alloc`; fixed.)
+- run5/6: `LOG`/`FATAL` now go to klog synchronously; the PS5 main forced HLE strict mode, which desktop never
+  enables, so `ectx:aw` aborted. Removed: unknown services take the upstream logging stub as on desktop.
+- run7: `vi.c` (desktop nn::vi HLE) was not linked; added.
+
+Also measured: `stat("")` in a title returns EINVAL (not ENOENT), which makes throwing `std::filesystem` calls throw.
+Flexible memory free at startup: 212 MB of 448 MB (the eboot's own segments use the rest). Not yet in M2: rendering
+(M3), input devices (M4), audio output and movies (M5; the audio service HLE runs with no host device).

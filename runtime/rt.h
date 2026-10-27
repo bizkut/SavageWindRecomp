@@ -7,8 +7,13 @@
 #include "cpu.h"
 #include "platform.h"
 
+#ifdef __PROSPERO__
+#define LOG(...) ps5_logf(__VA_ARGS__)
+#define FATAL(...) (ps5_logf("FATAL: " __VA_ARGS__), rt_fatal_trace())
+#else
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #define FATAL(...) (fprintf(stderr, "FATAL: " __VA_ARGS__), rt_fatal_trace())
+#endif
 
 // ---- address space layout (guest addresses == host addresses)
 // macOS reserves 0x2_0000_0000-0x70_0000_0000, and guest addresses must fit in 39 bits, so the
@@ -44,6 +49,9 @@ typedef struct Module {
 extern Module g_modules[MAX_MODULES];  // in load order
 extern int g_nmodules;
 void loader_load(const char *exefs_dir);  // (again after a reboot: modules are reloaded into wiped memory)
+// Optional platform source for ExeFS bytes; NULL restores the ordinary filesystem reader.
+void loader_set_file_reader(uint8_t *(*reader)(const char *path, size_t *len, size_t max));
+uint8_t *loader_read_file(const char *path, size_t *len, size_t max);
 Module *loader_module(const char *name);  // NULL if the game has no such module
 uint64_t loader_find_symbol(const char *name);
 uint64_t loader_find_symbol_in(const char *module, const char *name);  // an export of that module only

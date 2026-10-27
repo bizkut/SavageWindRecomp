@@ -17,6 +17,7 @@ static int ntables;
 #define MAX_HLE 4096
 typedef struct { const char *name; HostFn fn; } HleSlot;
 static HleSlot hle_slots[MAX_HLE];
+bool g_hle_strict;
 static int hle_count;
 
 // Overrides of recompiled guest functions (by address)
@@ -29,7 +30,7 @@ typedef struct { const char *name; HostFn fn; } HleImpl;
 #ifdef __APPLE__
 extern const HleImpl __start_hle_impls[] __asm__("section$start$__DATA$__hle_impls");
 extern const HleImpl __stop_hle_impls[] __asm__("section$end$__DATA$__hle_impls");
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__PROSPERO__)
 extern const HleImpl __start_hle_impls[], __stop_hle_impls[];  // (ELF: defined by the linker)
 #else
 // PE/COFF: the linker sorts .hle$a < .hle$m (entries, hle.h) < .hle$z by the text after '$'.
@@ -70,6 +71,7 @@ static __thread uint64_t unimpl_pc;
 static int unimpl_counts[MAX_HLE];
 static void hle_unimplemented(Cpu *c) {
     int i = (int)((unimpl_pc - HLE_BASE) / 16);
+    if (g_hle_strict) FATAL("unimplemented HLE %s\n", hle_slots[i].name);
     if (unimpl_counts[i]++ < 3)
         LOG("[hle] UNIMPLEMENTED %s (x0=%llx x1=%llx lr=%llx) -> returning 0\n", hle_slots[i].name, c->x[0],
             c->x[1], c->x[30]);
@@ -219,14 +221,14 @@ static const char *host_sym(uint64_t pc, uint64_t *offset) {
 }
 
 void rt_fatal_trace(void) {
-    fprintf(stderr, "host backtrace (guest functions are f_<addr>):\n");
+    LOG("host backtrace (guest functions are f_<addr>):\n");
     plat_print_backtrace();
     Cpu *c = kernel_current_cpu();
     if (c) {
-        fprintf(stderr, "guest: sp=%llx lr=%llx\n", c->sp, c->x[30]);
+        LOG("guest: sp=%llx lr=%llx\n", c->sp, c->x[30]);
         for (int i = 0; i < 31; i += 4)
-            fprintf(stderr, "  x%-2d %016llx  x%-2d %016llx  x%-2d %016llx  x%-2d %016llx\n", i, c->x[i], i + 1,
-                    c->x[i + 1], i + 2, c->x[i + 2], i + 3, c->x[i + 3]);
+            LOG("  x%-2d %016llx  x%-2d %016llx  x%-2d %016llx  x%-2d %016llx\n", i, c->x[i], i + 1,
+                c->x[i + 1], i + 2, c->x[i + 2], i + 3, c->x[i + 3]);
     }
     plat_fatal_notice();
     // our crash handler also catches SIGABRT: without this abort() re-entered it forever (a 5 GB log)
@@ -375,9 +377,9 @@ bool rt_fault_watch(uint64_t fa, uint64_t pc) {
 void rt_fault_report(const char *what, uint64_t fa, uint64_t pc, uint64_t lr) {
     uint64_t po = 0, lo = 0;
     const char *ps = host_sym(pc, &po), *ls = host_sym(lr, &lo);
-    fprintf(stderr, "\n*** %s accessing %#llx\n    host pc %llx (%s+%llx)\n    host lr %llx (%s)\n", what,
-            (unsigned long long)fa, (unsigned long long)pc, ps ? ps : "?", (unsigned long long)po,
-            (unsigned long long)lr, ls ? ls : "?");
+    LOG("\n*** %s accessing %#llx\n    host pc %llx (%s+%llx)\n    host lr %llx (%s)\n", what,
+        (unsigned long long)fa, (unsigned long long)pc, ps ? ps : "?", (unsigned long long)po,
+        (unsigned long long)lr, ls ? ls : "?");
     rt_fatal_trace();
 }
 

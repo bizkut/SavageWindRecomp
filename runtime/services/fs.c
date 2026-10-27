@@ -16,9 +16,9 @@
 #include "../hle.h"
 #include "../ipc.h"
 #include "../language.h"
+#include "../paths.h"
 #include "../romfs_image.h"
 #ifdef ROMFS_PACKAGE
-#include "../paths.h"
 #include <strings.h>
 #endif
 #ifdef __PROSPERO__
@@ -85,7 +85,8 @@ RT_ON_RESET(fs_reset) {
 // The RomFS overlay folder (SAVAGEWIND_ROMFS_OVERLAY), or NULL
 static const char *overlay_dir(void) {
     const char *e = getenv("SAVAGEWIND_ROMFS_OVERLAY");
-    return e && *e ? e : NULL;
+    static __thread char path[2048];
+    return e && *e && rt_data_path(e, path, sizeof path) ? path : NULL;
 }
 
 // Host path of the overlay's replacement for RomFS file `path` (relative, e.g. "Actor/ActorInfo.product.sbyml"); an
@@ -970,6 +971,24 @@ static void host_path(HostFs *fs, const char *p, char *out, size_t n) {
 #endif
 }
 
+// Broker paths stay relative to the data root; direct filesystem reads use
+// an absolute host path and do not depend on the process working directory.
+static int data_stat(const char *path, struct stat *st) {
+    char host[4096];
+    if (!rt_data_path(path, host, sizeof host)) { errno = ENAMETOOLONG; return -1; }
+    return stat(host, st);
+}
+static int data_open(const char *path, int flags) {
+    char host[4096];
+    if (!rt_data_path(path, host, sizeof host)) { errno = ENAMETOOLONG; return -1; }
+    return open(host, flags);
+}
+static DIR *data_opendir(const char *path) {
+    char host[4096];
+    if (!rt_data_path(path, host, sizeof host)) { errno = ENAMETOOLONG; return NULL; }
+    return opendir(host);
+}
+
 static uint32_t errno_result(void) {
     if (errno == ENOENT || errno == ENOTDIR) return FS_PATH_NOT_FOUND;
     if (errno == EEXIST) return FS_PATH_EXISTS;
@@ -1047,7 +1066,7 @@ static void directory(Service *s, IpcReq *req, IpcResp *resp) {
             char full[2048];
             struct stat es;
             snprintf(full, sizeof full, "%s/%s", d->path, e->d_name);
-            bool isdir = !stat(full, &es) && S_ISDIR(es.st_mode);
+            bool isdir = !data_stat(full, &es) && S_ISDIR(es.st_mode);
 #else
             bool isdir = e->d_type == DT_DIR;
 #endif
@@ -1060,7 +1079,7 @@ static void directory(Service *s, IpcReq *req, IpcResp *resp) {
                 char p[2048];
                 struct stat sb;
                 snprintf(p, sizeof p, "%s/%s", d->path, e->d_name);
-                if (!stat(p, &sb)) *(int64_t *)(ent + 0x308) = sb.st_size;
+                if (!data_stat(p, &sb)) *(int64_t *)(ent + 0x308) = sb.st_size;
             }
             n++;
         }
@@ -1069,13 +1088,13 @@ static void directory(Service *s, IpcReq *req, IpcResp *resp) {
         break;
     }
     case 1: {  // GetEntryCount
-        long pos = telldir(d->d);
-        rewinddir(d->d);
+        DIR *scan = data_opendir(d->path);
+        if (!scan) { resp->result = errno_result(); break; }
         int64_t n = 0;
         struct dirent *e;
-        while ((e = readdir(d->d)))
+        while ((e = readdir(scan)))
             if (strcmp(e->d_name, ".") && strcmp(e->d_name, "..")) n++;
-        seekdir(d->d, pos);
+        closedir(scan);
         OUT(int64_t, 0) = n;
         resp_size(resp, 8);
         break;
@@ -1084,7 +1103,7 @@ static void directory(Service *s, IpcReq *req, IpcResp *resp) {
 }
 
 static int rm_rf(const char *p, bool keep_root) {
-    DIR *d = opendir(p);
+    DIR *d = data_opendir(p);
 #ifdef __PROSPERO__
     if (!d) { int r = rt_storage_unlink(p); if (r < 0) { errno = -r; return -1; } return 0; }
 #else
@@ -1152,7 +1171,7 @@ static void filesystem(Service *s, IpcReq *req, IpcResp *resp) {
 #endif
     case 7: {  // GetEntryType
         struct stat sb;
-        if (stat(p, &sb)) { resp->result = FS_PATH_NOT_FOUND; break; }
+        if (data_stat(p, &sb)) { resp->result = FS_PATH_NOT_FOUND; break; }
         OUT(uint32_t, 0) = S_ISDIR(sb.st_mode) ? 0 : 1;
         resp_size(resp, 4);
         break;
@@ -1161,9 +1180,9 @@ static void filesystem(Service *s, IpcReq *req, IpcResp *resp) {
         uint32_t mode = IN(uint32_t, 0);
 #ifdef __PROSPERO__
         (void)mode;
-        int fd = open(p, O_RDONLY);
+        int fd = data_open(p, O_RDONLY);
 #else
-        int fd = open(p, (mode & 2) ? O_RDWR : O_RDONLY);
+        int fd = data_open(p, (mode & 2) ? O_RDWR : O_RDONLY);
 #endif
         if (fd < 0) { resp->result = errno_result(); break; }
         HostFile *f = calloc(1, sizeof *f);
@@ -1185,7 +1204,7 @@ static void filesystem(Service *s, IpcReq *req, IpcResp *resp) {
         break;
     }
     case 9: {  // OpenDirectory(mode)
-        DIR *d = opendir(p);
+        DIR *d = data_opendir(p);
         if (!d) { resp->result = errno_result(); break; }
         HostDir *hd = calloc(1, sizeof *hd);
         hd->d = d;

@@ -289,11 +289,9 @@ static void scan_exefs(SaSet *set, const char *romfs) {
     char *end = strrchr(path, '/'), *bs = strrchr(path, '\\');
     if (bs > end) end = bs;
     snprintf(end ? end + 1 : path, sizeof path - (size_t)(end ? end + 1 - path : 0), "exefs/main");
-    int fd = open(path, O_RDONLY | O_BINARY);
-    if (fd < 0) return;
-    off_t n = lseek(fd, 0, SEEK_END);
-    uint8_t *raw = n > 0x100 && n < (256 << 20) ? malloc((size_t)n) : NULL;
-    if (raw && pread(fd, raw, (size_t)n, 0) == (ssize_t)n && !memcmp(raw, "NSO0", 4)) {
+    size_t n = 0;
+    uint8_t *raw = loader_read_file(path, &n, 256u << 20);
+    if (raw && n > 0x100 && !memcmp(raw, "NSO0", 4)) {
         uint32_t flags = rd32(raw + 0xC);
         int source = add_source(set, "exefs/main");
         for (int i = 1; i < 3; i++) {  // (read-only data, data)
@@ -310,7 +308,6 @@ static void scan_exefs(SaSet *set, const char *romfs) {
         }
     }
     free(raw);
-    close(fd);
 }
 
 bool shader_archive_scan(const char *romfs, SaSet *set, void (*progress)(float, void *), void *user, char *why, size_t wn) {

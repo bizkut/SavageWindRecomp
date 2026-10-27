@@ -72,6 +72,12 @@ RomfsImage *romfs_image_open_package(const char *keys, const char *const *packag
                                      unsigned addon, char *why, size_t why_size) {
     void *package = savagewind_package_open(keys, packages, count, addon, why, why_size);
     if (!package) return NULL;
+    uint64_t size = savagewind_package_size(package);
+    if (size == UINT64_MAX) {
+        if (why && why_size) snprintf(why, why_size, "cannot query package RomFS size");
+        savagewind_package_close(package);
+        return NULL;
+    }
     RomfsImage *img = calloc(1, sizeof *img);
     if (!img) {
         savagewind_package_close(package);
@@ -79,7 +85,7 @@ RomfsImage *romfs_image_open_package(const char *keys, const char *const *packag
     }
     img->bin_fd = -1;
     img->package = package;
-    img->size = savagewind_package_size(package);
+    img->size = size;
     pthread_mutex_init(&img->lock, NULL);
     for (int k = 0; k < OPEN_FILES; k++) img->open[k].fd = -1;
     return img;

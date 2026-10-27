@@ -3,8 +3,8 @@
  * Copyright (C) 2026 BlackBearReloaded
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * Bridges standard C++ allocation operators to the clean-room libc module
- * without introducing exceptions, RTTI, or the complete libc++ runtime.
+ * Bridges standard C++ allocation operators to the title's selected allocator.
+ * Throwing allocations honour the installed new handler and throw bad_alloc.
  */
 
 #include <cstddef>
@@ -34,9 +34,11 @@ namespace
     return posix_memalign(&address, alignment, size == 0 ? 1 : size) == 0 ? address : nullptr;
 }
 
-[[noreturn]] void allocation_failure() noexcept
+void allocation_failure()
 {
-    __builtin_trap();
+    const std::new_handler handler = std::get_new_handler();
+    if (!handler) throw std::bad_alloc();
+    handler();
 }
 } // namespace
 
@@ -49,9 +51,11 @@ ps5ObserveOwnedAllocation(const void *address) noexcept
 
 void *operator new(std::size_t size)
 {
-    if (void *address = allocate(size))
-        return address;
-    allocation_failure();
+    for (;;)
+    {
+        if (void *address = allocate(size)) return address;
+        allocation_failure();
+    }
 }
 
 void *operator new[](std::size_t size)
@@ -71,9 +75,11 @@ void *operator new[](std::size_t size, const std::nothrow_t &) noexcept
 
 void *operator new(std::size_t size, std::align_val_t alignment)
 {
-    if (void *address = allocate_aligned(size, static_cast<std::size_t>(alignment)))
-        return address;
-    allocation_failure();
+    for (;;)
+    {
+        if (void *address = allocate_aligned(size, static_cast<std::size_t>(alignment))) return address;
+        allocation_failure();
+    }
 }
 
 void *operator new[](std::size_t size, std::align_val_t alignment)

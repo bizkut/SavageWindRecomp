@@ -1,4 +1,16 @@
 #include "package_core.h"
+// Missing optional paths are normal; other lookup failures must not be
+// mistaken for absence during recovery or publication.
+static bool path_exists(const fs::path &path) {
+    if (path.empty()) return false;
+    std::error_code ec;
+    bool exists = fs::exists(path, ec);
+    if (ec && ec != std::errc::no_such_file_or_directory) {
+        errno = ec.value();
+        fail("io_error", "Unable to inspect import path.");
+    }
+    return exists;
+}
 struct Importer : PackageCore {
     fs::path root, work, staging;
     int lock = -1;
@@ -19,12 +31,12 @@ struct Importer : PackageCore {
                     previous.push_back(e.path());
             }
             auto live = parent / name;
-            if (!fs::exists(live) && previous.size() == 1)
+            if (!path_exists(live) && previous.size() == 1)
                 fs::rename(previous[0], live);
-            if (!fs::exists(live) && previous.size() > 1)
+            if (!path_exists(live) && previous.size() > 1)
                 fail("internal", "Multiple recovery copies need attention.");
             for (const auto &p : previous)
-                if (fs::exists(p))
+                if (path_exists(p))
                     fs::remove_all(p);
         };
         restore(root / "game", "romfs");
@@ -241,7 +253,7 @@ struct Importer : PackageCore {
             add(root / "game", "aoc" + std::to_string(i + 1), addons[i].content.pkg != nullptr);
         try {
             for (auto &m : moves) {
-                if (fs::exists(m.live)) {
+                if (path_exists(m.live)) {
                     fs::rename(m.live, m.previous);
                     m.moved = true;
                 }
@@ -252,7 +264,7 @@ struct Importer : PackageCore {
             }
             if (!fs::remove(dir / "prod.keys"))
                 fail("io_error", "Unable to remove prod.keys after import.");
-            if (fs::exists(dir / "title.keys") && !fs::remove(dir / "title.keys"))
+            if (path_exists(dir / "title.keys") && !fs::remove(dir / "title.keys"))
                 fail("io_error", "Unable to remove title.keys after import.");
         } catch (...) {
             for (auto i = moves.rbegin(); i != moves.rend(); ++i) {

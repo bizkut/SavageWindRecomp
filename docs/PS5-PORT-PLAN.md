@@ -337,6 +337,16 @@ objects. Fix `runtime/gamelib.c`'s CPU check to a fixed `x86-64-v3` on PS5.
 **Done when:** runtime starts, reserves guest memory, runs its linked game code, opens the game's ExeFS and RomFS
 from the packages in `/data/savagewind/import/` (D11), and reaches the game's first NVN call (no rendering yet).
 
+The M2 link uses desktop `hle/vi.c` for guest-side VI objects, but does not create a PS5 display surface. Its
+`nvnBootstrapLoader` handler logs the requested entry point and exits before the desktop NVN implementation runs.
+Relative to desktop `RT_SRC`, the PS5 entry, paths and static-game-library files replace `main.c`, `paths.c`,
+`gamelib.c` and the desktop platform; `gamebuild.c` is PC-only. `imageload.c` and `window_size.c` belong to the
+desktop launcher/window; `perfmon.c` and `sampler.c` are optional diagnostics. `hle/input.c`, `motion.c` and
+`bindings.c` await M4; `hle/movie.c` awaits M5; `hle/swkbd.c` needs the later UI. `hle/framepace.c` and the
+`runtime/nvn/` renderer, command, format, shader and translation files are post-bootstrap M3 work. These exclusions
+are a link boundary, not proof that every pre-bootstrap guest path avoids them. Explicit generated-code hooks for
+unavailable later subsystems log and fail if reached; missing HLE imports retain the desktop's fallback behavior.
+
 ### M3 — Rendering on VideoOut
 RADV link, display-plane surface, swapchain at 3840×2160, FIFO, 119.88 Hz request; shaderc + caches (D6);
 `sceAgcSuspendPoint` for rest mode (as `ps5-wow/ps5/title/main.c`).

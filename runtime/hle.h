@@ -8,13 +8,15 @@
 #include "rt.h"
 
 typedef struct { const char *name; HostFn fn; } HleImplEntry;
+// Strict mode rejects missing HLE implementations rather than returning success.
+extern bool g_hle_strict;
 
 // HLE_FUNC("mangled_symbol", c_function) binds a guest import to a host function.
 #define HLE_CAT2(a, b) a##b
 #define HLE_CAT(a, b) HLE_CAT2(a, b)
 #ifdef __APPLE__
 #define HLE_SECTION "__DATA,__hle_impls"
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__PROSPERO__)
 #define HLE_SECTION "hle_impls"  // ELF: the linker defines __start_ / __stop_ for C-identifier section names
 #else
 #define HLE_SECTION ".hle$m"  // between the .hle$a / .hle$z markers in runtime/dispatch.c
@@ -32,7 +34,7 @@ typedef struct { const char *name; HostFn fn; } HleImplEntry;
 typedef void (*ResetFn)(void);
 #ifdef __APPLE__
 #define RESET_SECTION "__DATA,__rt_reset"
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__PROSPERO__)
 #define RESET_SECTION "resets"
 #else
 #define RESET_SECTION ".rst$m"  // between the .rst$a / .rst$z markers in runtime/main.c

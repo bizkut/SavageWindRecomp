@@ -424,12 +424,9 @@ static KThread *thread_new(uint64_t entry, uint64_t arg, uint64_t stack_top, int
 }
 
 static void thread_start(KThread *t) {
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setstacksize(&attr, 256ull << 20);  // guest recursion runs on the host stack
     t->started = true;
-    pthread_create(&t->host, &attr, thread_main, t);
-    pthread_attr_destroy(&attr);
+    int rc = plat_guest_thread_create(&t->host, thread_main, t);
+    if (rc) FATAL("guest thread creation failed: %d\n", rc);
 }
 
 KThread *kernel_create_main_thread(uint64_t entry, uint64_t stack_size, int prio) {

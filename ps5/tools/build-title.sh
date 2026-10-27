@@ -65,7 +65,9 @@ for source in "$@"; do
     objects+=("$object")
 done
 for crt in app_crt app_cpp_runtime; do
-    cc -std=c++20 -O2 -Wall -Wextra -fno-exceptions -fno-rtti -ffunction-sections -fdata-sections \
+    exception_flag=-fno-exceptions
+    [[ $crt != app_cpp_runtime ]] || exception_flag=-fexceptions
+    cc -std=c++20 -O2 -Wall -Wextra "$exception_flag" -fno-rtti -ffunction-sections -fdata-sections \
         -c "$native/$crt.cpp" -o "$build/obj/$crt.o"
 done
 
@@ -86,6 +88,8 @@ link_recipe "$sdk" "$build" "${PS5_RADV_ARCHIVE:-}" || exit 2
     "${link_flags[@]}" -e _start -o "$build/llvm-pie.elf" \
     "$build/obj/app_crt.o" "$build/obj/app_cpp_runtime.o" "${objects[@]}" ${PS5_LINK_INPUTS:-} \
     "${link_inputs[@]}" "$agc" "$agc_driver" --as-needed "${link_stubs[@]}"
+python3 "$root/ps5/tools/check-title-imports.py" "$build/llvm-pie.elf" \
+    "$native/runtime/api-surface.txt" "$agc" "$agc_driver" "${link_stubs[@]}"
 "$tool" link --in "$build/llvm-pie.elf" --out "$build/eboot.elf" \
     --stub-dir "$sdk/target/lib" --stub "$agc" --stub "$agc_driver" \
     --module-sdk 0x02000009 --companion-sdk 0x08050001 --file-name eboot.elf

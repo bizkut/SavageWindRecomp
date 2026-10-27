@@ -28,7 +28,57 @@ diff --git a/src/NcaProcess.h b/src/NcaProcess.h
 diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
 --- a/src/NcaProcess.cpp
 +++ b/src/NcaProcess.cpp
-@@ -62,6 +62,11 @@ void nstool::NcaProcess::setBaseNcaPath(const tc::Optional<tc::io::Path> &nca_pa
+@@ -11,6 +11,18 @@
+ #include <pietendo/hac/PartitionFsSnapshotGenerator.h>
+ #include <pietendo/hac/RomFsSnapshotGenerator.h>
+ 
++#ifdef __PROSPERO__
++#include <ps5platform/klog.h>
++#include <cstdio>
++static void savage_nca_trace(const char *step, size_t index) {
++    char line[160];
++    std::snprintf(line, sizeof line, "savagewind-nca: step=%s partition=%zu\n", step, index);
++    sceKernelDebugOutText(0, line);
++}
++#else
++#define savage_nca_trace(step, index) ((void)0)
++#endif
++
+ nstool::NcaProcess::NcaProcess()
+     : mModuleName("nstool::NcaProcess"), mFile(), mOutputFile(), mCliOutputMode(), mKeyCfg(), mVerify(false),
+       mBaseNcaPath(), mFileSystem(), mFsProcess()
+@@ -19,14 +31,20 @@
+ 
+ void nstool::NcaProcess::process()
+ {
++    savage_nca_trace("header-begin", 0);
+     // import header
+     importHeader();
++    savage_nca_trace("header-done", 0);
++    savage_nca_trace("body-keys-begin", 0);
+ 
+     // determine keys
+     generateNcaBodyEncryptionKeys();
++    savage_nca_trace("body-keys-done", 0);
++    savage_nca_trace("partition-config-begin", 0);
+ 
+     // import/generate fs header data
+     generatePartitionConfiguration();
++    savage_nca_trace("partition-config-done", 0);
+ 
+     // validate signatures
+     if (mVerify)
+@@ -38,7 +56,9 @@
+     displayHeader();
+ 
+     // process partition
++    savage_nca_trace("mount-begin", 0);
+     processPartitions();
++    savage_nca_trace("mount-done", 0);
+ }
+ 
+ void nstool::NcaProcess::setInputFile(const std::shared_ptr<tc::io::IStream> &file)
+@@ -62,6 +82,11 @@
      mBaseNcaPath = nca_path;
  }
  
@@ -40,7 +90,7 @@ diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
  void nstool::NcaProcess::setKeyCfg(const KeyBag &keycfg)
  {
      mKeyCfg = keycfg;
-@@ -92,6 +97,11 @@ const std::shared_ptr<tc::io::IFileSystem> &nstool::NcaProcess::getFileSystem() const
+@@ -93,6 +118,11 @@
      return mFileSystem;
  }
  
@@ -52,7 +102,18 @@ diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
  void nstool::NcaProcess::importHeader()
  {
      if (mFile == nullptr)
-@@ -262,13 +267,15 @@ void nstool::NcaProcess::generateNcaBodyEncryptionKeys()
+@@ -120,8 +150,10 @@
+         throw tc::Exception(mModuleName, "Failed to decrypt NCA header. (nca_header_key could not be loaded)");
+     }
+ 
++    savage_nca_trace("header-decrypt-begin", 0);
+     pie::hac::ContentArchiveUtil::decryptContentArchiveHeader(
+         (byte_t *)&mHdrBlock, (byte_t *)&mHdrBlock, mKeyCfg.nca_header_key.get());
++    savage_nca_trace("header-decrypt-done", 0);
+ 
+     // generate header hash
+     tc::crypto::GenerateSha2256Hash(
+@@ -262,13 +294,15 @@
  nstool::NcaProcess nstool::NcaProcess::readBaseNCA()
  {
      // open base nca stream
@@ -71,7 +132,60 @@ diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
  
      // process base nca with output suppressed
      NcaProcess obj;
-@@ -867,10 +872,10 @@ void nstool::NcaProcess::processPartitions()
+@@ -286,6 +320,7 @@
+ {
+     for (size_t i = 0; i < mHdr.getPartitionEntryList().size(); i++)
+     {
++        savage_nca_trace("partition-begin", i);
+         // get reference to relevant structures
+         const pie::hac::ContentArchiveHeader::sPartitionEntry &partition = mHdr.getPartitionEntryList()[i];
+         pie::hac::sContentArchiveFsHeader &fs_header = mHdrBlock.fs_header[partition.header_index];
+@@ -385,7 +420,9 @@
+                     // IndirectStorage IStream construction being done after decryption but before hash layer processing
+                     // this might be relevant when processing compressed or sparse storage
+ 
++                    savage_nca_trace("base-open-begin", i);
+                     NcaProcess nca_base = readBaseNCA();
++                    savage_nca_trace("base-open-done", i);
+ 
+                     if (nca_base.mHdr.getProgramId() != mHdr.getProgramId())
+                     {
+@@ -409,8 +446,10 @@
+                     }
+ 
+                     // create decryption stream
++                    savage_nca_trace("bktr-open-begin", i);
+                     info.decrypt_reader = std::make_shared<pie::hac::BKTREncryptedStream>(pie::hac::BKTREncryptedStream(
+                         info.raw_reader, partition_key, partition_ctr, fs_header.patch_info, base_reader));
++                    savage_nca_trace("bktr-open-done", i);
+                 }
+                 else if (info.enc_type == pie::hac::nca::EncryptionType_AesXts)
+                 {
+@@ -429,6 +468,7 @@
+             }
+ 
+             // filter out unrecognised hash types, and hash based readers
++            savage_nca_trace("hash-setup-begin", i);
+             switch (info.hash_type)
+             {
+             case (pie::hac::nca::HashType_None):
+@@ -449,6 +489,7 @@
+                     fmt::format(
+                         "HashType({:s}): UNKNOWN", pie::hac::ContentArchiveUtil::getHashTypeAsString(info.hash_type)));
+             }
++            savage_nca_trace("hash-setup-done", i);
+ 
+             // filter out unrecognised format types
+             switch (info.format_type)
+@@ -826,6 +867,7 @@
+ 
+     for (size_t i = 0; i < mHdr.getPartitionEntryList().size(); i++)
+     {
++        savage_nca_trace("mount-partition", i);
+         uint32_t index = mHdr.getPartitionEntryList()[i].header_index;
+         struct sPartitionInfo &partition = mPartitions[index];
+ 
+@@ -867,10 +909,10 @@
  
      tc::io::VirtualFileSystem::FileSystemSnapshot fs_snapshot = pie::hac::CombinedFsSnapshotGenerator(mount_points);
  

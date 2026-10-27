@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "../../runtime/romfs_image.h"
+#include "package_exefs.h"
 #include <tc/crypto/Sha2256Generator.h>
 #include <algorithm>
 #include <array>
@@ -116,6 +117,36 @@ static void bench(const char *label, RomfsImage *image, double open_time) {
 int main(int argc, char **argv) {
     if (argc < 6) { std::fprintf(stderr, "usage: package-test <keys> <manifest> <folder> <package>...\n"); return 2; }
     try {
+        char invalid_why[256] = {};
+        if (romfs_image_open_package(nullptr, nullptr, 0, 0, invalid_why, sizeof invalid_why) ||
+            !std::strstr(invalid_why, "keys_missing"))
+            throw std::runtime_error("invalid package input did not return an error");
+        invalid_why[0] = 0;
+        if (savagewind_exefs_open(nullptr, nullptr, 0, invalid_why, sizeof invalid_why) ||
+            !std::strstr(invalid_why, "keys_missing"))
+            throw std::runtime_error("invalid ExeFS input did not return an error");
+        char exefs_why[256] = {};
+        void *exefs = savagewind_exefs_open(argv[1], const_cast<const char *const *>(argv + 4),
+                                           size_t(argc - 4), exefs_why, sizeof exefs_why);
+        if (!exefs) throw std::runtime_error(exefs_why);
+        void *main_file = savagewind_exefs_file_open(exefs, "main");
+        unsigned char nso[0x60], second[0x10];
+        if (!main_file || savagewind_exefs_file_size(main_file) < 0x100 ||
+            savagewind_exefs_file_pread(main_file, nso, sizeof nso, 0) != sizeof nso ||
+            std::memcmp(nso, "NSO0", 4) || hex(nso + 0x40, 8) != "cd57b23fa4bbad65" ||
+            savagewind_exefs_file_pread(main_file, second, sizeof second, 0x40) != sizeof second ||
+            std::memcmp(second, nso + 0x40, sizeof second))
+            throw std::runtime_error("package ExeFS main read failed");
+        savagewind_exefs_file_close(main_file);
+        void *npdm = savagewind_exefs_file_open(exefs, "main.npdm");
+        unsigned char meta[4];
+        if (!npdm || savagewind_exefs_file_pread(npdm, meta, sizeof meta, 0) != sizeof meta ||
+            std::memcmp(meta, "META", 4)) throw std::runtime_error("package ExeFS NPDM read failed");
+        savagewind_exefs_file_close(npdm);
+        if (savagewind_exefs_file_open(exefs, "../main") ||
+            savagewind_exefs_file_open(exefs, "nonexistent"))
+            throw std::runtime_error("package ExeFS accepted invalid or missing file");
+        savagewind_exefs_close(exefs);
         char why[256] = {};
         auto start = Clock::now();
         RomfsImage *image = romfs_image_open_package(argv[1], const_cast<const char *const *>(argv + 4), size_t(argc - 4), 0, why, sizeof why);
