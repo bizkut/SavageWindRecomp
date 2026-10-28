@@ -870,3 +870,12 @@ passes (RCAS + HUD drawn straight into the window): GPU 9.99 ms vs 10.34 with `f
 **Recorder now on by default on the PS5** (`VK_RECORDER_DEFAULT`; desktop unchanged); eboot `83284089…` confirms
 "recorder thread on" with no ini key: 98.8 %, render 9.22 ms. Presented 117.7 fps vs the 119.28 cap: the game averages
 58.8, not 59.64.
+
+## 2026-10-28 — Game code at -O2 (.41, ps5/evidence/m7/ab-O2-*.klog)
+
+Eboot `a2401ab0…` (`PS5_GAMECODE_OPT=-O2`, recorder on): FG on 99.1 % / 99.1 % on time, render 9.10 / 9.13 ms, p99
+17.04 / 17.09 ms (−O1: 98.6–99.0 %, 9.1 ms, p99 17.6–20.3); FG off 99.1 %, render 8.51. Within noise except a
+slightly lower p99; -O2 costs ~2.5× the PC compile time. Kept as a switch, -O1 stays the default.
+The game still averages 58.8 fps with FG on (3,530 frames per 60 s vs 3,578 at the 59.64 cap). The klog shows one
+~4 s stretch of 148 consecutive ~27 ms "command translation" frames (frames ~1340–1488, before the measured window)
+and 30 such hitches inside it.
