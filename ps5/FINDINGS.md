@@ -473,3 +473,11 @@ zeroed HID shared memory and aborted on result 0x58cca. Desktop's Npad HLE is no
 window: mostly **59.9 fps, max 17 ms** per 2 s window. The hitches line up with first-time shader compiles (898 over
 the run; 335 in the 7.7 s stall at frame 2720, plus 33 MB of uploads). That is the cold-cache case D6/M6 precompile
 targets. Not yet confirmed on the TV by a person.
+
+## 2026-10-28 — M4 steps 1–2 (.41, ps5/evidence/m4 run1–2)
+
+DualSense through scePad: user service, pad open and "DualSense added" logged; buttons and sticks confirmed working by
+the user over Chiaki-ng Remote Play with a keyboard mapped as the gamepad. Gyro/accelerometer and rumble (step 2,
+eboot `138c0748…`) are wired, but this setup only delivers Chiaki-ng's idle motion (constant 0 1 0 G, 5–6 samples/s)
+and no rumble target. **Deferred by the user:** physical-DualSense checks (gyro aim, flat-table axes, rumble,
+power-off/PS-button reconnect).

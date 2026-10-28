@@ -106,8 +106,9 @@ static long title_attribute3(void) {
 }
 
 // Which of two modes to take for a wanted extent (0 x 0: Auto, the largest): that extent when the display has it, else
-// the larger; at the same extent, the refresh rate nearest 119.88 Hz. Each surface (SDL_Vulkan_CreateSurface) reads
-// the display's modes again, so a surface made later can take another reported mode (a Video page choice, M4).
+// the larger; at the same extent, the refresh rate nearest 119.88 Hz. The wanted extent is Video > Resolution
+// (g_settings.window_w / window_h, savagewind.ini window_size; runtime/ps5/video_page.cpp), read when the surface is
+// made: a choice applies at the next start.
 static bool mode_better(const VkDisplayModeParametersKHR *a, const VkDisplayModeParametersKHR *b, WinSize want) {
     bool wa = a->visibleRegion.width == (uint32_t)want.w && a->visibleRegion.height == (uint32_t)want.h;
     bool wb = b->visibleRegion.width == (uint32_t)want.w && b->visibleRegion.height == (uint32_t)want.h;
@@ -118,7 +119,23 @@ static bool mode_better(const VkDisplayModeParametersKHR *a, const VkDisplayMode
     long da = labs((long)a->refreshRate - HIGH_REFRESH_MHZ), db = labs((long)b->refreshRate - HIGH_REFRESH_MHZ);
     return da < db;
 }
-static const WinSize k_auto = {0, 0};  // the extent asked for: Auto until the Video page offers sizes (M4)
+// The extents the display reports (distinct, largest first): Video > Resolution offers 1080p and 4K among them
+static WinSize g_reported[16];
+static atomic_int g_nreported;
+static void note_reported(const VkDisplayModeParametersKHR *m) {
+    WinSize s = {(int)m->visibleRegion.width, (int)m->visibleRegion.height};
+    int n = atomic_load(&g_nreported);
+    for (int i = 0; i < n; i++)
+        if (g_reported[i].w == s.w && g_reported[i].h == s.h) return;
+    if (n == 16) return;
+    int at = n;
+    while (at > 0 && (long long)g_reported[at - 1].w * g_reported[at - 1].h < (long long)s.w * s.h) {
+        g_reported[at] = g_reported[at - 1];
+        at--;
+    }
+    g_reported[at] = s;
+    atomic_store(&g_nreported, n + 1);
+}
 
 bool SDL_Vulkan_CreateSurface(SDL_Window *window, VkInstance instance, const VkAllocationCallbacks *allocator,
                               VkSurfaceKHR *surface) {
@@ -144,15 +161,23 @@ bool SDL_Vulkan_CreateSurface(SDL_Window *window, VkInstance instance, const VkA
     vkGetDisplayModePropertiesKHR(pd, dp.display, &nm, modes);
     ps5_logf("[ps5] VideoOut: display \"%s\" %ux%u, %u modes\n", dp.displayName ? dp.displayName : "?",
              dp.physicalResolution.width, dp.physicalResolution.height, nm);
+    WinSize want = {g_settings.window_w, g_settings.window_h};
+    bool want_reported = false;
     int best = -1;
     for (uint32_t i = 0; i < nm; i++) {
         const VkDisplayModeParametersKHR *m = &modes[i].parameters;
         ps5_logf("[ps5] VideoOut: mode %u: %ux%u at %.3f Hz\n", i, m->visibleRegion.width, m->visibleRegion.height,
                  m->refreshRate / 1000.0);
-        if (m->visibleRegion.width && m->visibleRegion.height &&
-            (best < 0 || mode_better(m, &modes[best].parameters, k_auto)))
-            best = (int)i;
+        if (!m->visibleRegion.width || !m->visibleRegion.height) continue;
+        note_reported(m);
+        want_reported |= m->visibleRegion.width == (uint32_t)want.w && m->visibleRegion.height == (uint32_t)want.h;
+        if (best < 0 || mode_better(m, &modes[best].parameters, want)) best = (int)i;
     }
+    if (want.w > 0 && want.h > 0)
+        ps5_logf("[ps5] Video > Resolution: %dx%d (savagewind.ini)%s\n", want.w, want.h,
+                 want_reported ? "" : ", not a mode this display reports: Auto");
+    else
+        ps5_logf("[ps5] Video > Resolution: Auto (the largest mode)\n");
     if (best < 0) {
         ps5_logf("[ps5] VideoOut: the display reports no mode\n");
         return false;
@@ -191,8 +216,12 @@ bool SDL_Vulkan_CreateSurface(SDL_Window *window, VkInstance instance, const VkA
 // ---- output modes (runtime/window_size.h): the display plane's one size, the chosen mode's (0 x 0 before)
 static WinSize display_size(void) { return (WinSize){g_mode.w, g_mode.h}; }
 const char *winsize_aspect(int w, int h) { return h > 0 && (long long)w * 9 == (long long)h * 16 ? "16:9" : NULL; }
+// The sizes offered: the extents the display reports, largest first (the surface's own until it is made)
 int winsize_list(WinSize *out, bool fullscreen) {
     (void)fullscreen;
+    int n = atomic_load(&g_nreported);
+    for (int i = 0; i < n; i++) out[i] = g_reported[i];
+    if (n) return n;
     out[0] = display_size();
     return 1;
 }
@@ -209,8 +238,8 @@ bool winsize_virtual(int *w, int *h) { (void)w; (void)h; return false; }
 void winsize_refresh(void *sdl_window) { (void)sdl_window; }
 void winsize_apply(void *sdl_window) {
     (void)sdl_window;
-    ps5_logf("[window] VideoOut display plane, fullscreen in the display's mode (Video > Window size and Fullscreen "
-             "do not apply)\n");
+    ps5_logf("[window] VideoOut display plane, fullscreen in the display's mode (Video > Resolution applies at the next "
+             "start)\n");
 }
 
 // ---- events: a quit request (game_options.mm Quit) and the input devices' events (runtime/ps5/input.c, read as the

@@ -27,6 +27,7 @@
 #include <SDL3/SDL.h>
 
 #include "i18n.h"
+#include "game_options.h"
 
 extern "C" {
 #include "../input_bind.h"
@@ -36,10 +37,11 @@ extern "C" {
 #include "../settings.h"
 #include "../window_size.h"
 void rt_request_reboot(int kind);           // runtime/main.c (1: start the game again)
-void menu_request_window_apply(void);       // menu.mm (fullscreen / window size, applied by the window loop)
 void menu_size_list_open(void);             // menu.mm (Window size's list, over the screen)
 bool renderer_gpu_rtx(void);                // vulkan/device.c, metal.m
 }
+
+using namespace opts;
 
 namespace {
 
@@ -80,27 +82,6 @@ struct Entry {           // the game's option entry (0x30)
     uint32_t desc, title, first_value, last_value, button_off, button_on, pad;
 };
 static_assert(sizeof(Entry) == 0x30);
-enum { KIND_TOGGLE = 0, KIND_CHOICE = 1, KIND_BUTTON = 2 };
-
-enum Page { P_MAIN, P_GAMEPLAY, P_VIDEO, P_AUDIO, P_CONTROLS, P_KEYS, P_STICKS, P_PAD, P_LANGUAGE, P_COUNT };
-enum Action { A_NONE, A_PAGE, A_BIND_KEY, A_BIND_PAD, A_RESET_KEYS, A_RESET_PAD, A_RESTART, A_QUIT, A_SIZE_LIST };
-
-struct Item {
-    int page;
-    int kind;
-    const char *title, *desc;
-    const char *button;                          // KIND_BUTTON: its text (NULL: label(item, -1))
-    int (*count)(const Item &);                  // KIND_CHOICE: number of values
-    const char *(*label)(const Item &, int v);   // KIND_CHOICE: value v's text
-    int (*get)(const Item &);
-    void (*set)(const Item &, int v);
-    int def;                                     // the default value ("reset to defaults")
-    int action, arg;                             // KIND_BUTTON
-    const char *(*desc_fn)(const Item &);        // a description made when shown (NULL: desc)
-    void (*reset)(const Item &);                 // "reset to defaults" when it isn't set(def)
-    bool (*value_off)(const Item &, int v);      // KIND_CHOICE: value v can't be picked yet (shown greyed)
-    bool wrap;                                   // KIND_CHOICE: a step past either end goes to the other one
-};
 
 std::vector<Item> g_items;
 std::vector<Entry> g_entries;
@@ -121,20 +102,8 @@ std::chrono::steady_clock::time_point g_hold_until;
 std::unordered_map<uint32_t, std::u16string> g_text;
 
 // ---- values
-const char *const k_perf[] = {"Off", "FPS", "Full"};
-// Upscaler: Off (the game's image scaled plainly), this OS's spatial upscaler, and the temporal ones still to come. A
-// value that can't be picked yet (Item.value_off) is shown greyed and never stored: g_shown keeps the row on it until
+// A value that can't be picked yet (Item.value_off) is shown greyed and never stored: g_shown keeps the row on it until
 // the page opens again. So are the upscaler's modes until the game renders below the window's size (output_scale.c).
-#ifdef __APPLE__
-const int k_ups_value[] = {UPSCALE_OFF, UPSCALE_METALFX};
-#else
-const int k_ups_value[] = {UPSCALE_OFF, UPSCALE_FSR1, UPSCALE_FSR3, UPSCALE_DLSS};
-#endif
-#ifdef __APPLE__
-const int UPS_DEFAULT = 1;  // (UPSCALE_DEFAULT: MetalFX)
-#else
-const int UPS_DEFAULT = 0;  // (UPSCALE_DEFAULT: Off, the window's resolution)
-#endif
 std::vector<int> g_shown;   // per item: the value shown instead of get(), one that can't be picked yet (-1: none)
 const char16_t GREY = 3;    // (the game's message colour for greyed values)
 const char *const k_modes[] = {"Ultra Quality", "Quality", "Balanced", "Performance"};
@@ -142,11 +111,6 @@ const char *const k_aa[] = {"Off", "SMAA"};
 const char *const k_aniso[] = {"Off", "2x", "4x", "8x", "16x"};  // (settings anisotropy 0..4)
 const char *const k_shadow[] = {"Console (896)", "High (2048)", "Ultra (4096)", "Extreme (8192)"};  // (SHADOW_*)
 const char *const k_icons[] = {"Automatic", "Keyboard", "Xbox", "PlayStation", "Nintendo"};  // (ICONS_*)
-constexpr int k_fps[] = FPS_CHOICES;  // frame rate (0: Off, no limit)
-const char *const k_vsync[VSYNC_COUNT] = {"On", "Fast", "Adaptive", "Off"};  // (settings.h VSYNC_*)
-const char *const k_hdr[HDR_COUNT] = {"Automatic", "On", "Off"};               // (settings.h HDR_*)
-constexpr int FPS_DEFAULT_INDEX = 2;
-static_assert(k_fps[FPS_DEFAULT_INDEX] == FPS_DEFAULT);
 constexpr int k_sens[] = {10, 25, 50, 75, 100, 125, 150, 200, 250, 300, 400, 500, 600, 800, 1000};  // mouse sensitivity, %
 constexpr int SENS_DEFAULT = 9;  // (300%: MOUSE_SENS_DEFAULT)
 static_assert(k_sens[SENS_DEFAULT] == 300);
@@ -165,77 +129,12 @@ static_assert(k_deadzone[DEADZONE_DEFAULT] == (int)(STICK_DEADZONE_DEFAULT * 100
 const char *const k_invert[] = {"Off", "Up and down", "Left and right", "Both"};  // (MOTION_INVERT_* bits)
 #define N(a) (int)(sizeof(a) / sizeof((a)[0]))
 
-int nearest(const int *v, int n, float x) {
-    int best = 0;
-    for (int i = 1; i < n; i++)
-        if (fabsf(v[i] - x) < fabsf(v[best] - x)) best = i;
-    return best;
-}
-
-std::string pct(int v) { return std::to_string(v) + "%"; }
-
-Item toggle(int page, const char *title, const char *desc, int (*get)(const Item &), void (*set)(const Item &, int),
-            int def) {
-    Item it = {};
-    it.page = page, it.kind = KIND_TOGGLE, it.title = title, it.desc = desc, it.get = get, it.set = set, it.def = def;
-    return it;
-}
-
-Item choice(int page, const char *title, const char *desc, int (*count)(const Item &),
-            const char *(*label)(const Item &, int), int (*get)(const Item &), void (*set)(const Item &, int), int def) {
-    Item it = toggle(page, title, desc, get, set, def);
-    it.kind = KIND_CHOICE, it.count = count, it.label = label;
-    return it;
-}
-
 // KIND_CHOICE: the values the game's row has. A wrapping choice has two more, 0 and count + 1, one past each end:
 // stepping onto one stores the value at the other end (value v is the game's v + 1)
 int game_count(const Item &it) { return it.kind != KIND_CHOICE ? 2 : it.count(it) + (it.wrap ? 2 : 0); }
 int game_value(const Item &it, int g) {
     int n = it.count(it);
     return it.wrap ? (g - 1 + n) % n : g;
-}
-
-Item button(int page, const char *title, const char *desc, const char *text, int action, int arg) {
-    Item it = {};
-    it.page = page, it.kind = KIND_BUTTON, it.title = title, it.desc = desc, it.button = text, it.action = action;
-    it.arg = arg;
-    return it;
-}
-
-// Window size: the sizes offered now (runtime/window_size.c; fullscreen can offer more)
-int winsize_items(WinSize *list) { return winsize_list(list, g_settings.fullscreen); }
-int winsize_index(WinSize s) {
-    WinSize list[WINSIZE_MAX];
-    int n = winsize_items(list);
-    for (int i = 0; i < n; i++)
-        if (list[i].w == s.w && list[i].h == s.h) return i;
-    return 0;
-}
-
-// A value that can't be picked yet: its name and why ("(coming soon)")
-const char *soon(const char *name, const char *why = "(coming soon)") {
-    static std::string s[8];
-    static int i;
-    std::string &o = s[i++ & 7];
-    o = std::string(tr(name)) + " " + tr(why);
-    return o.c_str();
-}
-
-const char *ups_label(const Item &, int x) {
-    int u = k_ups_value[x];
-    if (u == UPSCALE_OFF) return tr("Off");
-    if (u == UPSCALE_METALFX) return tr("MetalFX");
-    if (u == UPSCALE_FSR1) return tr("AMD FSR 1");
-    if (u == UPSCALE_FSR3) return soon("FSR 3");
-    return soon("DLSS", renderer_gpu_rtx() ? "(coming soon)" : "(NVIDIA RTX only)");
-}
-
-const char *fps_label(const Item &, int x) {
-    static char buf[32];
-    if (!k_fps[x]) return tr("Off");
-    snprintf(buf, sizeof buf, tr("%d FPS"), k_fps[x]);
-    return buf;
 }
 
 const char *bind_label(const Item &it, int) {
@@ -260,130 +159,8 @@ void build_items(void) {
     v.push_back(button(P_MAIN, "Quit game", "To the desktop, or back to the Savage Wind start screen.", "Quit",
                        A_QUIT, 0));
 
-    // Video (fullscreen and the window size are applied by the window loop: menu.mm)
-    v.push_back(toggle(P_VIDEO, "Fullscreen", "Fills the screen. Also F11 or Alt+Enter.",
-                       [](const Item &) { return (int)g_settings.fullscreen; },
-                       [](const Item &, int x) { g_settings.fullscreen = x; menu_request_window_apply(); }, 0));
-    // Window size: a button showing the size; A drops the sizes down as a list over it (menu.mm size_list_draw)
-    Item ws = button(P_VIDEO, "Window size", "", nullptr, A_SIZE_LIST, 0);
-    ws.label = [](const Item &, int) {
-        static char buf[64];
-        WinSize list[WINSIZE_MAX];
-        int n = winsize_items(list), x = winsize_index(winsize_effective(g_settings.fullscreen));
-        winsize_name(list[x < n ? x : 0], tr("native"), buf, sizeof buf);
-        return (const char *)buf;
-    };
-    ws.desc_fn = [](const Item &) {
-        static char buf[256];
-        WinSize d = winsize_desktop();
-        snprintf(buf, sizeof buf, tr("Window or fullscreen size. A: choose it from a list. Your display: %d x %d."), d.w,
-                 d.h);
-        return (const char *)buf;
-    };
-    ws.reset = [](const Item &) {  // (unset: 1280 x 720 in a window, the desktop in fullscreen)
-        g_settings.window_w = g_settings.window_h = 0;
-        menu_request_window_apply();
-    };
-    v.push_back(ws);
-    v.push_back(toggle(P_VIDEO, "Fill wide screens", "Shows more to the sides on screens wider than 16:9, instead of bars.",
-                       [](const Item &) { return (int)g_settings.wide_view; },
-                       [](const Item &, int x) { g_settings.wide_view = x; }, 1));
-    v.push_back(choice(P_VIDEO, "Field of view", "How much the camera shows in play. Cutscenes keep their own.",
-                       [](const Item &) { return N(k_fov); },
-                       [](const Item &, int x) {
-                           static std::string str;
-                           str = pct(k_fov[x]);
-                           return str.c_str();
-                       },
-                       [](const Item &) { return nearest(k_fov, N(k_fov), (float)g_settings.fov); },
-                       [](const Item &, int x) { g_settings.fov = k_fov[x]; }, FOV_DEFAULT_INDEX));
-    Item fps = choice(P_VIDEO, "Frame rate", "",
-                      [](const Item &) { return N(k_fps); }, fps_label,
-                      [](const Item &) {
-                          for (int i = 0; i < N(k_fps); i++)
-                              if (k_fps[i] == g_settings.fps_limit) return i;
-                          return FPS_DEFAULT_INDEX;
-                      },
-                      [](const Item &, int x) { g_settings.fps_limit = k_fps[x]; }, FPS_DEFAULT_INDEX);
-    fps.desc_fn = [](const Item &) {  // (one line)
-        static char buf[256];
-        int hz = (int)lroundf(winsize_refresh_rate());
-        if (hz > 0) snprintf(buf, sizeof buf, tr("Game speed stays the same at every rate. Your display: %d Hz."), hz);
-        else snprintf(buf, sizeof buf, "%s", tr("Game speed stays the same at every rate."));
-        return (const char *)buf;
-    };
-    v.push_back(fps);
-    // VSync (settings.h VSYNC_*; the present mode: runtime/nvn/vulkan/device.c), next to the frame rate it caps. (One
-    // line for all its values: the game reads a row's description when the cursor comes to it, not when it changes.)
-    v.push_back(choice(P_VIDEO, "VSync", "On suits G-SYNC and FreeSync. Fast: no tearing and no waiting.",
-                       [](const Item &) { return (int)VSYNC_COUNT; },
-                       [](const Item &, int x) { return tr(k_vsync[x]); },
-                       [](const Item &) { return g_settings.vsync; },
-                       [](const Item &, int x) { g_settings.vsync = x; }, VSYNC_DEFAULT));
-    // HDR (settings.h HDR_*: runtime/nvn/vulkan/device.c hdr_wanted)
-    v.push_back(choice(P_VIDEO, "HDR", "Automatic: in HDR while Windows HDR is on, as bright as in SDR. Off: always SDR.",
-                       [](const Item &) { return (int)HDR_COUNT; },
-                       [](const Item &, int x) { return tr(k_hdr[x]); },
-                       [](const Item &) { return g_settings.hdr; },
-                       [](const Item &, int x) { g_settings.hdr = x; }, HDR_AUTO));
-    v.push_back(choice(P_VIDEO, "Performance overlay", "Frame rate and system load in a corner. Also F10.",
-                       [](const Item &) { return N(k_perf); }, [](const Item &, int x) { return tr(k_perf[x]); },
-                       [](const Item &) { return g_settings.perf_overlay; },
-                       [](const Item &, int x) { g_settings.perf_overlay = x; }, PERF_OFF));
-    v.push_back(choice(P_VIDEO, "Upscaler", "Off: full resolution. AMD FSR 1: renders smaller, then upscales.",
-                       [](const Item &) { return N(k_ups_value); }, ups_label,
-                       [](const Item &) {
-                           for (int i = 0; i < N(k_ups_value); i++)
-                               if (k_ups_value[i] == g_settings.upscaler) return i;
-                           return 0;
-                       },
-                       [](const Item &, int x) { g_settings.upscaler = k_ups_value[x]; }, UPS_DEFAULT));
-    v.back().value_off = [](const Item &, int x) { return !upscaler_available(k_ups_value[x]); };
-    Item mode = choice(P_VIDEO, "Upscaler mode", "",
-                       [](const Item &) { return N(k_modes); },
-                       [](const Item &, int x) { return upscale_modes_available() ? tr(k_modes[x]) : soon(k_modes[x]); },
-                       [](const Item &) { return g_settings.upscale_quality; },
-                       [](const Item &, int x) { g_settings.upscale_quality = x; }, UPQ_QUALITY);
-    mode.value_off = [](const Item &, int) { return !upscale_modes_available(); };
-    mode.desc_fn = [](const Item &) {
-        // (one line: the game's description pane is one English line wide)
-        return upscale_modes_available() ? tr("Ultra Quality is the sharpest, Performance the fastest.")
-                                         : tr("Renders smaller, then upscales. Coming in a later version.");
-    };
-    v.push_back(mode);
-    v.push_back(choice(P_VIDEO, "Anti-aliasing", "Smooths jagged edges. Best at a lower resolution.",
-                       [](const Item &) { return N(k_aa); }, [](const Item &, int x) { return tr(k_aa[x]); },
-                       [](const Item &) { return g_settings.antialias; },
-                       [](const Item &, int x) { g_settings.antialias = x; }, AA_OFF));
-#ifndef __APPLE__
-    // Anisotropic filtering and sharpening (Vulkan: vulkan/textures.c sampler_aniso, vulkan/exec.c scene_post)
-    v.push_back(choice(P_VIDEO, "Anisotropic filtering", "Sharper ground and paths at a distance. Off: as on the console.",
-                       [](const Item &) { return N(k_aniso); },
-                       [](const Item &, int x) { return x ? k_aniso[x] : tr("Off"); },
-                       [](const Item &) { return g_settings.anisotropy; },
-                       [](const Item &, int x) { g_settings.anisotropy = x; }, 0));
-    v.push_back(choice(P_VIDEO, "Sharpening (AMD CAS)", "Sharpens the 3D image, not the HUD. Most useful with FSR 1.",
-                       [](const Item &) { return 11; },
-                       [](const Item &, int x) {
-                           static std::string s;
-                           s = x ? pct(x * 10) : std::string(tr("Off"));
-                           return s.c_str();
-                       },
-                       [](const Item &) { return g_settings.sharpening; },
-                       [](const Item &, int x) { g_settings.sharpening = x; }, 0));
-    // AMD FSR 3 frame generation (vulkan/framegen.cpp)
-    v.push_back(toggle(P_VIDEO, "Frame generation (AMD FSR 3)", "Twice the frames on screen. Adds a little delay.",
-                       [](const Item &) { return (int)g_settings.frame_gen; },
-                       [](const Item &, int x) { g_settings.frame_gen = x; }, 0));
-#endif
-    v.push_back(toggle(P_VIDEO, "Asynchronous shaders", "On: no stutter, but some effects appear late.",
-                       [](const Item &) { return (int)g_settings.async_shaders; },
-                       [](const Item &, int x) { g_settings.async_shaders = x; }, 0));
-    // shadow resolution (its own block)
-    v.push_back(choice(P_VIDEO, "Shadow resolution", "Sharper sun shadows. Higher costs more GPU time.",
-                       [](const Item &) { return N(k_shadow); }, [](const Item &, int x) { return tr(k_shadow[x]); },
-                       [](const Item &) { return g_settings.shadow_res; },
-                       [](const Item &, int x) { g_settings.shadow_res = x; }, SHADOW_CONSOLE));
+    // Video: the platform's page (runtime/ui/video_page.mm; the PS5's runtime/ps5/video_page.cpp)
+    video_page(v);
 
     // Audio
     v.push_back(choice(P_AUDIO, "Volume", "The game's volume. 100% is its own level.",
@@ -947,3 +724,177 @@ extern "C" void rt_quit_dialog_texts(uint64_t msg, uint64_t left, uint64_t right
 }
 
 extern "C" int rt_quit_dialog_back(void) { return g_quit_dialog != 0; }
+
+// ---- the row model (game_options.h) and the Video page's rows every platform has
+namespace opts {
+
+int nearest(const int *v, int n, float x) {
+    int best = 0;
+    for (int i = 1; i < n; i++)
+        if (fabsf(v[i] - x) < fabsf(v[best] - x)) best = i;
+    return best;
+}
+
+std::string pct(int v) { return std::to_string(v) + "%"; }
+
+Item toggle(int page, const char *title, const char *desc, int (*get)(const Item &), void (*set)(const Item &, int),
+            int def) {
+    Item it = {};
+    it.page = page, it.kind = KIND_TOGGLE, it.title = title, it.desc = desc, it.get = get, it.set = set, it.def = def;
+    return it;
+}
+
+Item choice(int page, const char *title, const char *desc, int (*count)(const Item &),
+            const char *(*label)(const Item &, int), int (*get)(const Item &), void (*set)(const Item &, int), int def) {
+    Item it = toggle(page, title, desc, get, set, def);
+    it.kind = KIND_CHOICE, it.count = count, it.label = label;
+    return it;
+}
+
+Item button(int page, const char *title, const char *desc, const char *text, int action, int arg) {
+    Item it = {};
+    it.page = page, it.kind = KIND_BUTTON, it.title = title, it.desc = desc, it.button = text, it.action = action;
+    it.arg = arg;
+    return it;
+}
+
+const char *soon(const char *name, const char *why) {
+    static std::string s[8];
+    static int i;
+    std::string &o = s[i++ & 7];
+    o = std::string(tr(name)) + " " + tr(why);
+    return o.c_str();
+}
+
+// A choice among Item.values: its count, and the choice holding the setting's value (else the default)
+static int values_count(const Item &it) { return it.nvalues; }
+static int values_index(const Item &it, int value) {
+    for (int i = 0; i < it.nvalues; i++)
+        if (it.values[i] == value) return i;
+    return it.def;
+}
+static int values_default(const int *values, int n, int value) {
+    for (int i = 0; i < n; i++)
+        if (values[i] == value) return i;
+    return 0;
+}
+
+Item video_wide_view() {
+    return toggle(P_VIDEO, "Fill wide screens", "Shows more to the sides on screens wider than 16:9, instead of bars.",
+                  [](const Item &) { return (int)g_settings.wide_view; },
+                  [](const Item &, int x) { g_settings.wide_view = x; }, 1);
+}
+
+Item video_field_of_view() {
+    return choice(P_VIDEO, "Field of view", "How much the camera shows in play. Cutscenes keep their own.",
+                  [](const Item &) { return N(k_fov); },
+                  [](const Item &, int x) {
+                      static std::string str;
+                      str = pct(k_fov[x]);
+                      return str.c_str();
+                  },
+                  [](const Item &) { return nearest(k_fov, N(k_fov), (float)g_settings.fov); },
+                  [](const Item &, int x) { g_settings.fov = k_fov[x]; }, FOV_DEFAULT_INDEX);
+}
+
+Item video_frame_rate(const int *rates, int n) {
+    Item fps = choice(P_VIDEO, "Frame rate", "", values_count,
+                      [](const Item &it, int x) {
+                          static char buf[32];
+                          if (!it.values[x]) return tr("Off");
+                          snprintf(buf, sizeof buf, tr("%d FPS"), it.values[x]);
+                          return (const char *)buf;
+                      },
+                      [](const Item &it) { return values_index(it, g_settings.fps_limit); },
+                      [](const Item &it, int x) { g_settings.fps_limit = it.values[x]; },
+                      values_default(rates, n, FPS_DEFAULT));
+    fps.values = rates, fps.nvalues = n;
+    fps.desc_fn = [](const Item &) {  // (one line)
+        static char buf[256];
+        int hz = (int)lroundf(winsize_refresh_rate());
+        if (hz > 0) snprintf(buf, sizeof buf, tr("Game speed stays the same at every rate. Your display: %d Hz."), hz);
+        else snprintf(buf, sizeof buf, "%s", tr("Game speed stays the same at every rate."));
+        return (const char *)buf;
+    };
+    return fps;
+}
+
+// Upscaler: Off (the game's image scaled plainly), the spatial upscaler, and the temporal ones still to come (shown
+// greyed: upscaler_available)
+Item video_upscaler(const int *upscalers, int n) {
+    Item it = choice(P_VIDEO, "Upscaler", "Off: full resolution. AMD FSR 1: renders smaller, then upscales.",
+                     values_count,
+                     [](const Item &it, int x) {
+                         int u = it.values[x];
+                         if (u == UPSCALE_OFF) return tr("Off");
+                         if (u == UPSCALE_METALFX) return tr("MetalFX");
+                         if (u == UPSCALE_FSR1) return tr("AMD FSR 1");
+                         if (u == UPSCALE_FSR3) return soon("FSR 3");
+                         return soon("DLSS", renderer_gpu_rtx() ? "(coming soon)" : "(NVIDIA RTX only)");
+                     },
+                     [](const Item &it) { return values_index(it, g_settings.upscaler); },
+                     [](const Item &it, int x) { g_settings.upscaler = it.values[x]; },
+                     values_default(upscalers, n, UPSCALE_DEFAULT));
+    it.values = upscalers, it.nvalues = n;
+    it.value_off = [](const Item &it, int x) { return !upscaler_available(it.values[x]); };
+    return it;
+}
+
+Item video_upscaler_mode() {
+    Item mode = choice(P_VIDEO, "Upscaler mode", "",
+                       [](const Item &) { return N(k_modes); },
+                       [](const Item &, int x) { return upscale_modes_available() ? tr(k_modes[x]) : soon(k_modes[x]); },
+                       [](const Item &) { return g_settings.upscale_quality; },
+                       [](const Item &, int x) { g_settings.upscale_quality = x; }, UPQ_QUALITY);
+    mode.value_off = [](const Item &, int) { return !upscale_modes_available(); };
+    mode.desc_fn = [](const Item &) {
+        // (one line: the game's description pane is one English line wide)
+        return upscale_modes_available() ? tr("Ultra Quality is the sharpest, Performance the fastest.")
+                                         : tr("Renders smaller, then upscales. Coming in a later version.");
+    };
+    return mode;
+}
+
+Item video_antialiasing() {
+    return choice(P_VIDEO, "Anti-aliasing", "Smooths jagged edges. Best at a lower resolution.",
+                  [](const Item &) { return N(k_aa); }, [](const Item &, int x) { return tr(k_aa[x]); },
+                  [](const Item &) { return g_settings.antialias; },
+                  [](const Item &, int x) { g_settings.antialias = x; }, AA_OFF);
+}
+
+// Anisotropic filtering and sharpening: the Vulkan renderer's (vulkan/textures.c sampler_aniso, vulkan/exec.c
+// scene_post)
+Item video_anisotropy() {
+    return choice(P_VIDEO, "Anisotropic filtering", "Sharper ground and paths at a distance. Off: as on the console.",
+                  [](const Item &) { return N(k_aniso); },
+                  [](const Item &, int x) { return x ? k_aniso[x] : tr("Off"); },
+                  [](const Item &) { return g_settings.anisotropy; },
+                  [](const Item &, int x) { g_settings.anisotropy = x; }, 0);
+}
+
+Item video_sharpening() {
+    return choice(P_VIDEO, "Sharpening (AMD CAS)", "Sharpens the 3D image, not the HUD. Most useful with FSR 1.",
+                  [](const Item &) { return 11; },
+                  [](const Item &, int x) {
+                      static std::string s;
+                      s = x ? pct(x * 10) : std::string(tr("Off"));
+                      return s.c_str();
+                  },
+                  [](const Item &) { return g_settings.sharpening; },
+                  [](const Item &, int x) { g_settings.sharpening = x; }, 0);
+}
+
+Item video_async_shaders() {
+    return toggle(P_VIDEO, "Asynchronous shaders", "On: no stutter, but some effects appear late.",
+                  [](const Item &) { return (int)g_settings.async_shaders; },
+                  [](const Item &, int x) { g_settings.async_shaders = x; }, 0);
+}
+
+Item video_shadows() {
+    return choice(P_VIDEO, "Shadow resolution", "Sharper sun shadows. Higher costs more GPU time.",
+                  [](const Item &) { return N(k_shadow); }, [](const Item &, int x) { return tr(k_shadow[x]); },
+                  [](const Item &) { return g_settings.shadow_res; },
+                  [](const Item &, int x) { g_settings.shadow_res = x; }, SHADOW_CONSOLE);
+}
+
+}  // namespace opts

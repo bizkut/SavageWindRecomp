@@ -35,10 +35,23 @@ int32_t scePadInit(void);
 int32_t scePadOpen(int32_t user_id, int32_t port_type, int32_t index, const void *params);
 int32_t scePadClose(int32_t handle);
 int32_t scePadRead(int32_t handle, void *records, int32_t capacity);
+int32_t scePadReadState(int32_t handle, void *record);  // (the motion line's once-a-second comparison only)
 int32_t scePadSetMotionSensorState(int32_t handle, bool enabled);
 int32_t scePadSetTiltCorrectionState(int32_t handle, bool enabled);
 int32_t scePadSetAngularVelocityDeadbandState(int32_t handle, bool enabled);
 int32_t scePadResetOrientation(int32_t handle);
+typedef struct {
+    float touch_pixel_density;
+    uint16_t touch_width, touch_height;
+    uint8_t dead_zone_left, dead_zone_right;
+    uint8_t connection_type;   // 0: a controller on this console; others: remote (Remote Play)
+    uint8_t connected_count;
+    int32_t connected;
+    int32_t device_class;      // 0: standard
+    uint8_t reserved[8];
+} PadInformation;
+_Static_assert(sizeof(PadInformation) == 28, "scePadGetControllerInformation");
+int32_t scePadGetControllerInformation(int32_t handle, PadInformation *info);
 typedef struct { uint8_t large_motor, small_motor; } PadVibration;
 int32_t scePadSetVibration(int32_t handle, const PadVibration *vibration);
 
@@ -106,6 +119,10 @@ static struct {
     bool motion;              // its motion sensors are on (scePadSetMotionSensorState took it)
     bool sensor_on[3];        // input.c turned them on (by SDL_SensorType)
     uint32_t motion_samples;  // records since motion_log_ns (the measured sample rate)
+    uint32_t polls, empty_reads, max_batch;  // ... and how they came: reads, reads with no record, the largest batch
+    uint64_t last_ts_us;      // the previous record's time, and the shortest / longest gap between records since
+    uint64_t min_gap_us, max_gap_us;
+    PadRecord newest;         // the newest usable record (the [motion] line)
     float motion_hz;
     uint64_t motion_log_ns;   // the next [motion] line
     int motion_lines;
@@ -185,6 +202,8 @@ static void pad_configure_motion(void) {
     g_pad.motion = rm >= 0;
     memset(g_pad.sensor_on, 0, sizeof g_pad.sensor_on);
     g_pad.motion_samples = 0, g_pad.motion_hz = 0, g_pad.motion_lines = 0;
+    g_pad.polls = g_pad.empty_reads = g_pad.max_batch = 0;
+    g_pad.last_ts_us = 0, g_pad.min_gap_us = UINT64_MAX, g_pad.max_gap_us = 0;
     g_pad.motion_log_ns = plat_now_ns() + 1000000000ull;
     LOG("[motion] DualSense sensors on %#x, tilt correction off %#x, angular-velocity deadband off %#x, orientation "
         "reset %#x: %s\n", (unsigned)rm, (unsigned)rt, (unsigned)rd, (unsigned)ro,
@@ -207,18 +226,31 @@ static void pad_motion(const PadRecord *r) {
     }
 }
 
-// The readings and the measured sample rate: each second for the first five seconds of a connection, then every ten
-static void motion_log(const PadRecord *r) {
+// The readings, the measured sample rate and how the records came (the reads since the last line, those that returned
+// nothing, the largest batch, the shortest and longest time between records): each second for the first five seconds
+// of a connection, then every ten
+// (Diagnostic: once per line, scePadReadState's latest record is compared with scePadRead's newest one: how much newer
+// it is, and its gyroscope. Input itself is read from scePadRead's records only.)
+static void motion_log(void) {
     uint64_t now = plat_now_ns();
     if (now < g_pad.motion_log_ns) return;
     uint64_t span = now - g_pad.motion_log_ns + (g_pad.motion_lines < 5 ? 1000000000ull : 10000000000ull);
     g_pad.motion_hz = (float)(g_pad.motion_samples * 1e9 / (double)span);
-    g_pad.motion_samples = 0;
     g_pad.motion_log_ns = now + (++g_pad.motion_lines < 5 ? 1000000000ull : 10000000000ull);
-    if (!g_pad.motion) return;
-    LOG("[motion] DualSense: accelerometer %.3f %.3f %.3f G, gyroscope %.3f %.3f %.3f rad/s, pad orientation %.3f %.3f "
-        "%.3f %.3f, %.0f samples/s\n", r->accel[0], r->accel[1], r->accel[2], r->gyro[0], r->gyro[1], r->gyro[2],
-        r->orientation[0], r->orientation[1], r->orientation[2], r->orientation[3], g_pad.motion_hz);
+    const PadRecord *r = &g_pad.newest;
+    PadRecord st;
+    memset(&st, 0, sizeof st);
+    int32_t rs = scePadReadState(g_pad.handle, &st);
+    LOG("[motion] DualSense: accelerometer %.4f %.4f %.4f G, gyroscope %.4f %.4f %.4f rad/s, pad orientation %.3f %.3f "
+        "%.3f %.3f, %.0f samples/s (%u reads, %u empty, largest batch %u, %.1f-%.1f ms apart)%s; latest state %#x: "
+        "%.1f ms newer, gyroscope %.4f %.4f %.4f\n", r->accel[0],
+        r->accel[1], r->accel[2], r->gyro[0], r->gyro[1], r->gyro[2], r->orientation[0], r->orientation[1],
+        r->orientation[2], r->orientation[3], g_pad.motion_hz, g_pad.polls, g_pad.empty_reads, g_pad.max_batch,
+        g_pad.min_gap_us == UINT64_MAX ? 0 : g_pad.min_gap_us / 1000.0, g_pad.max_gap_us / 1000.0,
+        g_pad.motion ? "" : " (motion off)", (unsigned)rs, ((double)st.timestamp_us - (double)r->timestamp_us) / 1000.0,
+        st.gyro[0], st.gyro[1], st.gyro[2]);
+    g_pad.motion_samples = g_pad.polls = g_pad.empty_reads = g_pad.max_batch = 0;
+    g_pad.min_gap_us = UINT64_MAX, g_pad.max_gap_us = 0;
 }
 
 static void pad_remove(const char *why) {
@@ -238,6 +270,13 @@ static void pad_add(const PadRecord *r) {
     pad_clear_state();
     LOG("[input] DualSense added: user %d, pad handle %d, connection generation %u, SDL gamepad %u\n", g_pad.user,
         g_pad.handle, r->connected_count, g_pad.id);
+    PadInformation info;
+    memset(&info, 0, sizeof info);
+    int32_t ri = scePadGetControllerInformation(g_pad.handle, &info);
+    LOG("[input] DualSense information %#x: connection type %u (%s), device class %d, stick dead zones %u / %u, "
+        "touch pad %ux%u\n", (unsigned)ri, info.connection_type,
+        ri < 0 ? "unknown" : info.connection_type == 0 ? "a controller on this console" : "remote, e.g. Remote Play",
+        info.device_class, info.dead_zone_left, info.dead_zone_right, info.touch_width, info.touch_height);
     pad_configure_motion();
     push_device(SDL_EVENT_GAMEPAD_ADDED);
 }
@@ -305,7 +344,10 @@ static void pad_publish(const PadRecord *r) {
 static void pad_read(void) {
     PadRecord rec[PAD_RECORDS];
     int32_t n = scePadRead(g_pad.handle, rec, PAD_RECORDS);
+    g_pad.polls++;
+    if (n == 0) g_pad.empty_reads++;
     if (n == 0) return;  // nothing new: the current state stands
+    if (n > 0 && (uint32_t)n > g_pad.max_batch) g_pad.max_batch = (uint32_t)n;
     if (n < 0 || n > PAD_RECORDS) {
         if (g_pad.read_errors++ % 1000 == 0)
             LOG("[input] scePadRead(handle %d) failed: %#x (%u failures)\n", g_pad.handle, (unsigned)n, g_pad.read_errors);
@@ -322,8 +364,14 @@ static void pad_read(void) {
             pad_remove("a new connection");
         if (!g_pad.present && usable) pad_add(r);
         if (g_pad.present) newest = r, pad_motion(r);
+        if (g_pad.last_ts_us && r->timestamp_us > g_pad.last_ts_us) {
+            uint64_t gap = r->timestamp_us - g_pad.last_ts_us;
+            if (gap < g_pad.min_gap_us) g_pad.min_gap_us = gap;
+            if (gap > g_pad.max_gap_us) g_pad.max_gap_us = gap;
+        }
+        g_pad.last_ts_us = r->timestamp_us;
     }
-    if (newest) pad_publish(newest), motion_log(newest);
+    if (newest) pad_publish(newest), g_pad.newest = *newest;
 }
 
 // ---- the signed-in user's devices
@@ -384,6 +432,7 @@ void ps5_input_poll(void) {
     user_events();
     open_devices();
     if (g_pad.handle >= 0) pad_read();
+    if (g_pad.present) motion_log();
     if ((g_pad.rumble[0] || g_pad.rumble[1]) && g_pad.rumble_until_ns && now >= g_pad.rumble_until_ns)
         rumble_send(0, 0, " (its duration ended)");
 }
