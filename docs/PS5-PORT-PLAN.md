@@ -456,21 +456,25 @@ it, so an explicit choice in the Video page always wins, also across updates:
   internal resolution is benchmarked, the 4K default stays the measured M6 configuration (1920×1080 internal →
   3840×2160, `[post] 1920x1080 fsr1 -> 3840x2160`).
 
-Status 2026-10-28 (eboot `bd57c53b…`, host-built; the first console run of `46779550…` is in FINDINGS): the backend choice is the build's
-(`runtime/nvn/vulkan/framegen.h` `g_fg_backend`: desktop links `framegen.cpp`, FSR 3; the PS5 links `mihawk.cpp`,
-MihawkGen, so no GPL code reaches the desktop build). MihawkGen is pinned in `ps5/deps.lock` (`c57232a9…`, weights
-`network.fgw` by SHA-256), exported with `git archive` into `.deps/ps5/mihawkgen` and compiled into the title; the
-title folder ships `network.fgw` and MihawkGen's licence and notices. With the row on, at 119.88 Hz and in play,
-`device.c` draws each game frame and its HUD-less image (the scene composite before the HUD, as FSR 3 uses) into 4K
-images of its own (two of each, alternating), records the neural method at t = 0.5 between the last two HUD-less
-images (3 slots = frames in flight, all barriers its own), puts the newest frame's HUD over the result
-(`fg_hud.frag`) into a window image presented first, and the game's frame half a frame later (8.34 ms while the game
-keeps its pace), from a present thread (on the one queue the PS5 has, under a queue lock). The
+Status 2026-10-28 (eboot `be3a1081…`, host-built; console runs of earlier builds in FINDINGS): the backend choice is
+the build's (`runtime/nvn/vulkan/framegen.h` `g_fg_backend`: desktop links `framegen.cpp`, FSR 3; the PS5 links
+`mihawk.cpp`, MihawkGen, so no GPL code reaches the desktop build). MihawkGen is pinned in `ps5/deps.lock`
+(`c57232a9…`, weights `network.fgw` by SHA-256), exported with `git archive` into `.deps/ps5/mihawkgen` and compiled
+into the title; the title folder ships `network.fgw` and MihawkGen's licence and notices. With the row on, at
+119.88 Hz and in play, `exec.c fg_mihawk` records the neural method at t = 0.5 between the HUD-less images of the last
+two game frames (the scene composite before the HUD, as FSR 3 uses) at the game image's size (1920×1080; the 4K
+window adds no detail, it is that image upscaled), 3 slots = frames in flight, all barriers its own, and puts the
+newest frame's HUD over the result (`fg_hud.frag`). `device.c` presents it as FSR 3's frame (crop, anti-aliasing,
+upscale) and the game's frame half a frame later (8.34 ms while the game keeps its pace, never closer), from a
+present thread (on the one queue the PS5 has, under a queue lock). This replaces D7's "4K output" (the 4K build
+measured GPU 11.43 ms and render-thread CPU 13.6 ms per game frame vs 7.72 / 10.7 with FG off, FINDINGS). The
 frame-rate limit counts the game's frames (`framepace.c`: 60 gives 120 presents; capped at half the refresh rate,
-without VSync's VRR margin); camera cuts and the first frame after FG was off show the game's frame twice. The
-generator's GPU time (its passes' timestamps, `fg_context_set_profile`) is in the 2 s `[fg]` line, each wait in
-`[fgpipe]`; the benchmark summary adds presented fps, the present-interval distribution and FG GPU ms;
-`fg-capture.txt` captures generated/real pairs. Host check: `make test-framepace-fg`.
+without VSync's VRR margin);
+camera cuts and the first frame after FG was off show the game's frame twice. The generator's GPU time (its passes'
+timestamps, `fg_context_set_profile`) is in the 2 s `[fg]` line, each wait and the render thread's CPU in
+`[fgpipe]`; the benchmark summary adds presented fps, the present-interval distribution and FG GPU ms, and 10 s of
+unmeasured fast motion with generated/real captures follow it; `fg-capture.txt` captures pairs in play. Host check:
+`make test-framepace-fg`.
 
 ### After M7 (optional) — HDR10 output
 Requested 2026-10-28. Desktop has HDR10 presentation on `test` and lists colour grading/HDR as roadmap. On PS5 the
@@ -495,6 +499,12 @@ that samples those targets (post-effects, bloom, screen-space steps, the HUD com
 HUD-less capture for MihawkGen) must read only the used part. **Done when:** on the benchmark the internal size
 varies with load, the GPU frame time stays under its target, there are no edge or stretch artifacts in the frame
 captures, no new hitches, and the desktop build is unchanged in behaviour.
+Behaviour (user's example, 2026-10-28): the internal resolution steps down from the default (e.g. 1080p) through
+900p to a floor of 720p under load, and back up when there is room, always upscaled by FSR 1 to the output size. The
+trigger is the **measured GPU time per game frame**, not the frame rate: when the render thread (CPU) causes a drop,
+lowering the resolution would only blur the picture. Step down after a few frames over the GPU budget, step up only
+after a longer stretch well under it (hysteresis, so the size doesn't oscillate). MihawkGen runs at the game image's
+size (M7), so it must accept the current used part of a max-size image too.
 
 ### M8 — Temporal upgrades (after PR #194/#195)
 Reuse PR #194's motion vectors, jitter, depth copy and reactive mask and PR #195's FSR 3.1 path; do not re-derive
