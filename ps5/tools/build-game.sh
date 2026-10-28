@@ -49,6 +49,9 @@ fi
 [[ "sha256:$(sha256sum "$mh/framegen/models/network.fgw" | cut -d' ' -f1)" == "$mh_net_pin" ]] ||
     { echo "$mh/framegen/models/network.fgw does not match ps5/deps.lock (mihawkgen-network)" >&2; exit 1; }
 mh_sources=("$mh"/framegen/src/*.cpp)
+ffx=third_party/FidelityFX
+ffx_sources=("$ffx"/sdk/src/components/fsr3upscaler/ffx_fsr3upscaler.cpp
+    "$ffx"/sdk/src/backends/vk/ffx_vk.cpp "$ffx"/sdk/src/shared/*.cpp)
 
 # Generated inputs: the Vulkan commands (no loader in a title), SMAA's shader as a C string (as the Makefile makes it)
 gen="$root/build/ps5/game-gen"
@@ -63,8 +66,9 @@ spirv_id=$(sha256sum < runtime/nvn/vulkan/spirv.c | cut -c1-16)
 export PS5_RADV_ARCHIVE="$radv/libvulkan_radeon.ps5.a"
 export PS5_CFLAGS="-fexceptions -Iruntime -Iruntime/nvn -Iruntime/ps5/include -Ithird_party -I$radv/include \
 -I$shaderc/include -isystem third_party/stb -I$gen/inc -Ithird_party/smaa/Textures -I$zlib -isystem ${ffmpeg[0]}/include \
--I$mh -I$mh/framegen/include \
--DROMFS_PACKAGE -DTRANSLATOR_ID=\"$translator_id\" -DSPIRV_ID=\"$spirv_id\" -march=x86-64-v3 -Wno-format"
+-I$mh -I$mh/framegen/include -I$ffx/sdk/include -I$ffx/sdk/include/FidelityFX/gpu \
+-I$ffx/sdk/src/components -I$ffx/sdk/src/shared -I$ffx/sdk/src/backends/shared -I$ffx/spirv \
+-DSW_FSR3=1 -DROMFS_PACKAGE -DTRANSLATOR_ID=\"$translator_id\" -DSPIRV_ID=\"$spirv_id\" -march=x86-64-v3 -Wno-format"
 # (--wrap=ps5_heap_*: the SDK's malloc wrappers go through runtime/ps5/heap_arenas.c, arenas of their own per thread)
 export PS5_LINK_INPUTS="--gc-sections --wrap=exit --wrap=_exit --wrap=_Exit --wrap=quick_exit --wrap=abort --wrap=sceSystemServiceLoadExec --wrap=ps5_heap_malloc --wrap=ps5_heap_calloc --wrap=ps5_heap_memalign --wrap=ps5_heap_free --start-group $game $package/libsavagewind-package.a $ns/libpietendo/bin/linux/libpietendo.a $ns/libtoolchain/bin/linux/libtoolchain.a $ns/libfmt/bin/linux/libfmt.a $ns/liblz4/bin/linux/liblz4.a $ns/libmbedtls/bin/linux/libmbedtls.a $shaderc/lib/libshaderc_combined.a ${ffmpeg[*]:1} --end-group"
 app=$(bash ps5/tools/build-title.sh game \
@@ -83,8 +87,8 @@ app=$(bash ps5/tools/build-title.sh game \
     runtime/nvn/shader_archive.c runtime/nvn/smaa_data.c runtime/nvn/tegra.c runtime/nvn/maxwell/translate.c \
     runtime/nvn/vulkan/cache_pack.c runtime/nvn/vulkan/device.c runtime/nvn/vulkan/exec.c runtime/nvn/vulkan/textures.c \
     runtime/nvn/vulkan/shaders.c runtime/nvn/vulkan/spirv.c runtime/nvn/vulkan/precompile.c runtime/nvn/vulkan/rprof.c \
-    runtime/nvn/vulkan/record.c runtime/nvn/vulkan/vma.cpp \
-    runtime/nvn/vulkan/mihawk.cpp "${mh_sources[@]}" \
+    runtime/nvn/vulkan/record.c runtime/nvn/vulkan/vma.cpp runtime/nvn/vulkan/mvec.c runtime/nvn/vulkan/fsr3.cpp runtime/nvn/vulkan/ffx_shaders.cpp \
+    runtime/nvn/vulkan/mihawk.cpp "${mh_sources[@]}" "${ffx_sources[@]}" \
     runtime/services/acc.c runtime/services/am.c runtime/services/audio.c runtime/services/fs.c runtime/services/hid_set.c \
     runtime/services/misc.c runtime/services/time.c runtime/services/test_warp.c | tee /dev/stderr | tail -n 1)
 # The button prompts' label font (runtime/nvn/glyphs.c: rt_resource, /app0), with its licence
@@ -94,4 +98,5 @@ cp third_party/fonts/FiraSans/OFL.txt "$app/FiraSans-OFL.txt"
 cp "$mh/framegen/models/network.fgw" "$app/network.fgw"
 cp "$mh/LICENSE.md" "$app/MihawkGen-LICENSE.md"
 cp "$mh/THIRD_PARTY_NOTICES.txt" "$app/MihawkGen-THIRD_PARTY_NOTICES.txt"
+cp "$ffx/LICENSE.txt" "$app/FidelityFX-LICENSE.txt"
 printf '%s\n' "$app"

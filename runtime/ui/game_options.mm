@@ -107,7 +107,11 @@ std::unordered_map<uint32_t, std::u16string> g_text;
 std::vector<int> g_shown;   // per item: the value shown instead of get(), one that can't be picked yet (-1: none)
 const char16_t GREY = 3;    // (the game's message colour for greyed values)
 const char *const k_modes[] = {"Ultra Quality", "Quality", "Balanced", "Performance"};
+#ifdef __APPLE__
 const char *const k_aa[] = {"Off", "SMAA"};
+#else
+const char *const k_aa[] = {"Off", "SMAA", "TAA"};  // (settings.h AA_*)
+#endif
 const char *const k_aniso[] = {"Off", "2x", "4x", "8x", "16x"};  // (settings anisotropy 0..4)
 const char *const k_shadow[] = {"Console (896)", "High (2048)", "Ultra (4096)", "Extreme (8192)"};  // (SHADOW_*)
 const char *const k_icons[] = {"Automatic", "Keyboard", "Xbox", "PlayStation", "Nintendo"};  // (ICONS_*)
@@ -136,6 +140,7 @@ int game_value(const Item &it, int g) {
     int n = it.count(it);
     return it.wrap ? (g - 1 + n) % n : g;
 }
+
 
 const char *bind_label(const Item &it, int) {
     int dev, slot, ms;
@@ -836,8 +841,7 @@ Item video_frame_rate(const int *rates, int n) {
     return fps;
 }
 
-// Upscaler: Off (the game's image scaled plainly), the spatial upscaler, and the temporal ones still to come (shown
-// greyed: upscaler_available)
+// Upscaler: Off, the spatial upscaler, FSR 3 where available, and DLSS (not yet available).
 Item video_upscaler(const int *upscalers, int n) {
     Item it = choice(P_VIDEO, "Upscaler", "Off: full resolution. AMD FSR 1: renders smaller, then upscales.",
                      values_count,
@@ -846,7 +850,7 @@ Item video_upscaler(const int *upscalers, int n) {
                          if (u == UPSCALE_OFF) return tr("Off");
                          if (u == UPSCALE_METALFX) return tr("MetalFX");
                          if (u == UPSCALE_FSR1) return tr("AMD FSR 1");
-                         if (u == UPSCALE_FSR3) return soon("FSR 3");
+                         if (u == UPSCALE_FSR3) return upscaler_available(u) ? tr("AMD FSR 3") : soon("FSR 3");
                          return soon("DLSS", renderer_gpu_rtx() ? "(coming soon)" : "(NVIDIA RTX only)");
                      },
                      [](const Item &it) { return values_index(it, g_settings.upscaler); },
@@ -854,6 +858,10 @@ Item video_upscaler(const int *upscalers, int n) {
                      values_default(upscalers, n, UPSCALE_DEFAULT));
     it.values = upscalers, it.nvalues = n;
     it.value_off = [](const Item &it, int x) { return !upscaler_available(it.values[x]); };
+    it.desc_fn = [](const Item &) {
+        return g_settings.upscaler == UPSCALE_FSR3 ? tr("AMD FSR 3: renders smaller, then rebuilds detail from past frames.")
+                                                   : tr("Off: full resolution. AMD FSR 1: renders smaller, then upscales.");
+    };
     return it;
 }
 

@@ -39,6 +39,9 @@ Settings g_settings = {
     .fps_limit = FPS_DEFAULT,
     .precompile_shaders = true,
     .vsync = VSYNC_DEFAULT,
+#ifdef __PROSPERO__
+    .hdr = HDR_OFF,
+#endif
     .wide_view = true,
     .fov = 100,
     .vk_recorder = VK_RECORDER_DEFAULT,
@@ -95,8 +98,9 @@ void settings_load(void) {
         }
         else if (!strcmp(key, "settings_version")) version = atoi(val);
         else if (!strcmp(key, "resolution")) snprintf(old_res, sizeof old_res, "%s", val);  // (version 1)
-        else if (!strcmp(key, "upscaler"))  // (metalfx / fsr1: this OS's spatial upscaler; fsr3 / dlss: not yet)
-            g_settings.upscaler = !strcmp(val, "fsr1") || !strcmp(val, "metalfx") ? UPSCALE_SPATIAL : UPSCALE_OFF;
+        else if (!strcmp(key, "upscaler"))  // (metalfx / fsr1: this OS's spatial upscaler; fsr3: Vulkan; dlss: not yet)
+            g_settings.upscaler = !strcmp(val, "fsr1") || !strcmp(val, "metalfx") ? UPSCALE_SPATIAL
+                                : !strcmp(val, "fsr3") ? UPSCALE_FSR3_OR_SPATIAL : UPSCALE_OFF;
         else if (!strcmp(key, "upscaler_quality")) {
             for (int i = 0; i < UPQ_COUNT; i++)
                 if (!strcmp(val, k_quality[i])) g_settings.upscale_quality = i;
@@ -106,7 +110,8 @@ void settings_load(void) {
             if (sscanf(val, "%dx%d", &w, &h) == 2 && w >= 320 && h >= 200 && w <= 16384 && h <= 16384)
                 g_settings.window_w = w, g_settings.window_h = h;
         }
-        else if (!strcmp(key, "antialias")) g_settings.antialias = !strcmp(val, "off") ? AA_OFF : AA_SMAA;  // ("fxaa": SMAA now)
+        else if (!strcmp(key, "antialias"))  // ("fxaa": SMAA now; "taa": Vulkan only)
+            g_settings.antialias = !strcmp(val, "off") ? AA_OFF : !strcmp(val, "taa") ? AA_TAA_OR_SMAA : AA_SMAA;
         else if (!strcmp(key, "anisotropy")) {  // (game, 2x .. 16x)
             int a = atoi(val);
             g_settings.anisotropy = a >= 16 ? 4 : a >= 8 ? 3 : a >= 4 ? 2 : a >= 2 ? 1 : 0;
@@ -172,15 +177,17 @@ void settings_load(void) {
     if (version < 2) {
         // internal resolution: a share of the display is now the upscaler's nearest mode (75%: Ultra Quality,
         // 1 / 1.3; 50% and 25%: Performance, 1 / 2); the upscaler itself is kept (bilinear: Off)
+#ifndef __PROSPERO__
         bool q75 = !strcmp(old_res, "75%") || !strcmp(old_res, "67%");
         bool low = q75 || !strcmp(old_res, "50%") || !strcmp(old_res, "25%");
         g_settings.upscale_quality = q75 ? UPQ_ULTRA : low ? UPQ_PERFORMANCE : UPQ_QUALITY;
+#endif
         if (fabsf(g_settings.mouse_sens - 1.0f) < 0.005f) g_settings.mouse_sens = MOUSE_SENS_DEFAULT;
         LOG("[settings] %s is from an older version (resolution %s): upscaler %d, mode %d, mouse %.2f\n",
             SETTINGS_FILE, old_res[0] ? old_res : "-", g_settings.upscaler, g_settings.upscale_quality,
             g_settings.mouse_sens);
     }
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(__PROSPERO__)
     if (version < 3 && g_settings.upscaler == UPSCALE_FSR1) {
         bool lower = version < 2 && (!strcmp(old_res, "75%") || !strcmp(old_res, "67%") || !strcmp(old_res, "50%") ||
                                      !strcmp(old_res, "25%"));
@@ -239,7 +246,7 @@ void settings_save(void) {
     int u = g_settings.upscaler, uq = g_settings.upscale_quality;
     fprintf(f, "upscaler = %s\n", u >= 0 && u < UPSCALE_COUNT ? ups[u] : "off");
     fprintf(f, "upscaler_quality = %s\n", k_quality[uq >= 0 && uq < UPQ_COUNT ? uq : UPQ_QUALITY]);
-    fprintf(f, "antialias = %s\n", g_settings.antialias == AA_SMAA ? "smaa" : "off");
+    fprintf(f, "antialias = %s\n", g_settings.antialias == AA_TAA ? "taa" : g_settings.antialias == AA_SMAA ? "smaa" : "off");
     int an = g_settings.anisotropy;
     if (an >= 1 && an <= 4) fprintf(f, "anisotropy = %dx\n", 1 << an);
     else fprintf(f, "anisotropy = game\n");

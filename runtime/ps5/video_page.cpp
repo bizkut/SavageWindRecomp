@@ -4,9 +4,9 @@
 // surface is made once (window.c reads the setting then). Frame rate: 30 / 60 / Off, the desktop's frame_rate setting.
 // Frame generation: On / Off (M7: PS5_MihawkGen, runtime/nvn/vulkan/mihawk.cpp; the desktop's frame_generation
 // setting), offered only while the display runs at 119.88 Hz: each game frame is then presented twice, so the TV shows
-// twice the frame-rate limit (60 -> 120). The upscaler and its mode stay; VSync (FIFO is fixed, D4), HDR (not planned
-// yet) and the performance overlay are left out. Choices persist in savagewind.ini through the storage broker
-// (settings_save). Also the Quit question's texts: both its answers close the title.
+// twice the frame-rate limit (60 -> 120). HDR is offered when VideoOut advertises an HDR10 format; the image remains
+// SDR internally and is encoded for HDR at presentation. VSync (FIFO is fixed, D4) and the performance overlay are
+// left out. Choices persist in savagewind.ini through the storage broker (settings_save).
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <stdio.h>
 
@@ -17,12 +17,13 @@ extern "C" {
 #include "../settings.h"
 #include "../window_size.h"
 }
+extern "C" bool ps5_video_hdr_available(void);
 
 namespace opts {
 namespace {
 
 const int k_fps[] = {30, 60, 0};                      // frame rate (0: Off, no limit)
-const int k_ups_value[] = {UPSCALE_OFF, UPSCALE_FSR1};  // (the spatial upscaler; no temporal one on the PS5 yet)
+const int k_ups_value[] = {UPSCALE_OFF, UPSCALE_FSR1, UPSCALE_FSR3};
 const WinSize k_sizes[] = {{1920, 1080}, {3840, 2160}};
 const char *const k_size_names[] = {"1080p", "4K"};
 
@@ -84,6 +85,13 @@ void video_page(std::vector<Item> &v) {
                                fprintf(stderr, "[options] Video > Frame generation: %s\n", x ? "On" : "Off");
                            },
                            0));
+    if (ps5_video_hdr_available())
+        v.push_back(toggle(P_VIDEO, "HDR", "Output HDR10 on a compatible display.",
+                           [](const Item &) { return g_settings.hdr == HDR_ON; },
+                           [](const Item &, int x) {
+                               g_settings.hdr = x ? HDR_ON : HDR_OFF;
+                               fprintf(stderr, "[options] Video > HDR: %s\n", x ? "On" : "Off");
+                           }, 0));
     v.push_back(video_wide_view());
     v.push_back(video_field_of_view());
     v.push_back(video_upscaler(k_ups_value, (int)(sizeof k_ups_value / sizeof k_ups_value[0])));

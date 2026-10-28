@@ -17,39 +17,11 @@
 #include <FidelityFX/host/backends/vk/ffx_vk.h>
 #include <FidelityFX/host/ffx_frameinterpolation.h>
 #include <FidelityFX/host/ffx_opticalflow.h>
-#include <ffx_shader_blobs.h>
 
 #include "framegen.h"
 
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 
-// ---- the shaders: tools/ffx_shaders.py's blobs (wave32, 32-bit floats; frame interpolation for low-resolution
-// motion vectors without jitter, both depth directions) in place of the SDK's FidelityFX_SC permutation tables
-#include "ffx_shaders_vk.h"
-
-enum { FI_PERM_DEPTH_INVERTED = 1 << 2 };  // (ffx_frameinterpolation_private.h FRAMEINTERPOLATION_SHADER_PERMUTATION_*)
-
-extern "C" FfxErrorCode ffxGetPermutationBlobByIndex(FfxEffect effect, FfxPass pass, FfxBindStage, uint32_t options,
-                                                     FfxShaderBlob *out) {
-    if (effect == FFX_EFFECT_FRAMEINTERPOLATION && pass < FFX_FRAMEINTERPOLATION_PASS_COUNT) {
-        memcpy(out, &ffx_fi_blobs[(options & FI_PERM_DEPTH_INVERTED) ? 1 : 0][pass], sizeof *out);
-        return FFX_OK;
-    }
-    if (effect == FFX_EFFECT_OPTICALFLOW && pass < FFX_OPTICALFLOW_PASS_COUNT) {
-        memcpy(out, &ffx_of_blobs[pass], sizeof *out);
-        return FFX_OK;
-    }
-    LOG("[fg] no shader for effect %d pass %d\n", (int)effect, (int)pass);
-    return FFX_ERROR_INVALID_ARGUMENT;
-}
-
-extern "C" FfxErrorCode ffxIsWave64(FfxEffect, uint32_t, bool &wave64) {
-    wave64 = false;  // (only wave32 blobs: the backend then asks for no subgroup size)
-    return FFX_OK;
-}
-
-// The backend's hook into its frame interpolation swapchain, which isn't built
-FfxErrorCode ffxSetFrameGenerationConfigToSwapchainVK(FfxFrameGenerationConfig const *) { return FFX_OK; }
 
 // ---- contexts
 enum { R_OF_VECTOR, R_OF_SCD, R_DILATED_DEPTH, R_DILATED_MV = R_DILATED_DEPTH + 2, R_PREV_DEPTH = R_DILATED_MV + 2,

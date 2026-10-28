@@ -60,8 +60,13 @@ for source in "$@"; do
     object="$build/obj/${source//\//_}.o"  # (the path: runtime/ps5/input.c and runtime/hle/input.c are both linked)
     # (.mm: the shared UI sources, plain C++ apart from __APPLE__ blocks, as the Makefile builds them on Linux)
     case $source in *.c) std=(-std=gnu11) ;; *.S) std=() ;; *.mm) std=(-x c++ -std=c++20) ;; *) std=(-std=c++20) ;; esac
+    extra=()
+    case $source in
+        third_party/FidelityFX/sdk/src/*.cpp|runtime/nvn/vulkan/fsr3.cpp|runtime/nvn/vulkan/ffx_shaders.cpp)
+            extra=(-include "$root/third_party/FidelityFX/ffx_compat.h") ;;
+    esac
     # shellcheck disable=SC2086
-    cc "${std[@]}" -O2 -g1 -Wall -Wextra -fno-omit-frame-pointer -ffunction-sections -fdata-sections \
+    cc "${std[@]}" "${extra[@]}" -O2 -g1 -Wall -Wextra -fno-omit-frame-pointer -ffunction-sections -fdata-sections \
         ${PS5_CFLAGS:-} -c "$root/$source" -o "$object"
     objects+=("$object")
 done

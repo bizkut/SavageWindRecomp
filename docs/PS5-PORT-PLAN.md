@@ -461,6 +461,10 @@ it, so an explicit choice in the Video page always wins, also across updates:
   distant detail. **4K default: 1080p internal with FG on, 1440p internal with FG off** (FG off holds 59.9 fps at 1440p).
   Revisit when the render-thread work frees time, or if the user prefers 1440p's sharpness on the TV.
 
+The PS5 applies missing video keys after choosing the actual VideoOut mode, then saves them; explicit keys are kept.
+The default-selection and key-presence cases have a host test in `tools/test_ps5_video_defaults.c`. Console first-launch
+and persistence checks remain to be run.
+
 Status 2026-10-28 (eboot `22a6cf72…`, host-built; console runs of earlier builds in FINDINGS): the backend choice is
 the build's (`runtime/nvn/vulkan/framegen.h` `g_fg_backend`: desktop links `framegen.cpp`, FSR 3; the PS5 links
 `mihawk.cpp`, MihawkGen, so no GPL code reaches the desktop build). MihawkGen is pinned in `ps5/deps.lock`
@@ -525,11 +529,17 @@ stays only if the benchmark shows it helps on the PS5. **Done when:** render-thr
 and the "command translation" hitches are gone from the benchmark.
 
 ### M8 — Temporal upgrades (after PR #194/#195)
-Reuse PR #194's motion vectors, jitter, depth copy and reactive mask and PR #195's FSR 3.1 path; do not re-derive
-motion vectors. Open item: take them by upstream merge (preferred) or rebase/cherry-pick the pinned heads, resolving
-the three `test` conflicts. Re-qualify on PS5 at 1.9.0: their evidence is 1.8.2, Linux, RTX 3080 Ti only, so CPU cost
-(~0.7 ms/frame desktop), GPU cost, VRR/120 Hz pacing with FG, and image quality are all unmeasured here. Then A/B
-MihawkGen neural vs `mvwarp`/`mvsplat`, and choose defaults by measured image quality and GPU time.
+PR #194 (`35efe256e4`) and PR #195 (`5039b30407`) are integrated from their pinned heads, including per-object
+motion vectors, jitter, depth copy, reactive mask, TAA and the FidelityFX FSR 3.1 upscaler. On PS5 they remain opt-in:
+`antialias = taa` enables TAA, and `upscaler = fsr3` selects FSR 3.1 (with `upscaler_quality`); either enables
+motion vectors and jitter. Existing FSR 1 and anti-aliasing defaults are unchanged. The title links the upscaler
+and its Vulkan backend against RADV, separately from MihawkGen's frame-generation backend.
+
+Re-qualify on PS5 at 1.9.0: upstream evidence is 1.8.2, Linux, RTX 3080 Ti only, so CPU cost, GPU cost, VRR/120 Hz
+pacing with FG, and image quality are unmeasured here. The vectors are jitter-free NDC differences in an RGBA16F
+scene-sized image, not MihawkGen's RG16F backward UV vectors; a conversion, matching depth/frame lifetime and explicit
+barriers are needed before `mvwarp`/`mvsplat` can use them. Then A/B those methods against neural, and choose defaults
+by measured image quality and GPU time.
 
 **FSR 4 candidate (`../ps5-fsr4`, FSR 4.1.1 INT8; requested 2026-10-28).** Gated, in order: (1) M8's motion vectors,
 depth and jitter exist (FSR 4 is temporal; it needs all three); (2) feasibility on RADV: the SDK is built for ps5vk

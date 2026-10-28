@@ -10,6 +10,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
+#include <errno.h>
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -22,6 +23,7 @@
 #include "../platform.h"
 #include "../settings.h"
 #include "../window_size.h"
+#include "video_defaults.h"
 
 #define HIGH_REFRESH_MHZ 119880
 
@@ -76,7 +78,7 @@ SDL_WindowFlags SDL_GetWindowFlags(SDL_Window *window) {
 }
 // the display plane has its own mode: "exclusive fullscreen" in device.c's swapchain line
 const SDL_DisplayMode *SDL_GetWindowFullscreenMode(SDL_Window *window) { return window ? &g_mode : NULL; }
-// HDR (device.c hdr_wanted): the WSI offers SDR formats only; Video > HDR On still asks and logs that it is SDR
+// HDR selection is explicit on PS5; there is no SDL desktop HDR state.
 SDL_PropertiesID SDL_GetWindowProperties(SDL_Window *window) { return window ? 1 : 0; }
 bool SDL_GetBooleanProperty(SDL_PropertiesID props, const char *name, bool default_value) {
     (void)props; (void)name;
@@ -205,6 +207,24 @@ bool SDL_Vulkan_CreateSurface(SDL_Window *window, VkInstance instance, const VkA
     g_mode.refresh_rate_numerator = (int)mode->parameters.refreshRate;
     g_mode.refresh_rate_denominator = 1000;
     atomic_store(&g_hz, hz);
+    // Only fill missing choices once the actual output mode is known.
+    const char *settings = getenv("SAVAGEWIND_SETTINGS");
+    if (!settings || !*settings) settings = "savagewind.ini";
+    char path[2048];
+    if (rt_data_path(settings, path, sizeof path)) {
+        FILE *f = fopen(path, "r");
+        if (f || errno == ENOENT) {
+            unsigned present = video_defaults_present(f);
+            bool readable = !f || !ferror(f);
+            if (f) fclose(f);
+            if (readable && video_defaults_apply(&g_settings, present, window->w, window->h,
+                                                  mode->parameters.refreshRate)) {
+                settings_save();
+                ps5_logf("[ps5] first-launch video defaults: FG %d, upscaler %d, quality %d\n",
+                         g_settings.frame_gen, g_settings.upscaler, g_settings.upscale_quality);
+            }
+        }
+    }
     long a3 = title_attribute3();
     ps5_logf("[ps5] VideoOut: chose mode %d: display plane surface %dx%d at %.3f Hz, present mode FIFO\n", best,
              window->w, window->h, hz);

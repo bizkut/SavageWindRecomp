@@ -429,6 +429,8 @@ static void create_device(void) {
     b->fillModeNonSolid = h->fillModeNonSolid;
     b->samplerAnisotropy = h->samplerAnisotropy;
     g_vk.feat_aniso = h->samplerAnisotropy;
+    b->shaderStorageImageExtendedFormats = h->shaderStorageImageExtendedFormats;
+    g_vk.storage_ext = h->shaderStorageImageExtendedFormats;
     b->textureCompressionBC = h->textureCompressionBC;
     b->shaderInt64 = h->shaderInt64;
     b->depthBiasClamp = h->depthBiasClamp;
@@ -862,6 +864,11 @@ static VkPipelineLayout hdr_layout;
 static VkPipeline hdr_pipe;
 static VkDescriptorPool hdr_pool;
 static VkDescriptorSet hdr_sets[8];
+#ifdef __PROSPERO__
+// Published after querying the actual VideoOut surface; the options page runs on another thread.
+static atomic_bool ps5_hdr_available;
+bool ps5_video_hdr_available(void) { return atomic_load(&ps5_hdr_available); }
+#endif
 
 // Video > HDR as it stands now: whether the swapchain should be HDR10, and SDR white's nits
 static bool hdr_wanted(float *white) {
@@ -985,6 +992,14 @@ static void create_swapchain(void) {
     VkSurfaceFormatKHR fmts[64];
     if (nf > 64) nf = 64;
     vkGetPhysicalDeviceSurfaceFormatsKHR(g_vk.phys, g_vk.surface, &nf, fmts);
+#ifdef __PROSPERO__
+    bool offered_hdr = false;
+    for (uint32_t i = 0; i < nf; i++)
+        if ((fmts[i].format == VK_FORMAT_A2B10G10R10_UNORM_PACK32 || fmts[i].format == VK_FORMAT_A2R10G10B10_UNORM_PACK32) &&
+            fmts[i].colorSpace == VK_COLOR_SPACE_HDR10_ST2084_EXT) offered_hdr = true;
+    atomic_store(&ps5_hdr_available, g_cs_ext && offered_hdr);
+    LOG("[ps5] VideoOut HDR10 format offered=%d colorspace_extension=%d\n", offered_hdr, g_cs_ext);
+#endif
     // scanout shows the bytes the game wrote (see the raw views in the present pass): a UNORM swapchain like Metal's
     VkSurfaceFormatKHR sf = fmts[0];
     for (uint32_t i = 0; i < nf; i++)
@@ -1021,6 +1036,10 @@ static void create_swapchain(void) {
     LOG("[vk] swapchain %ux%u, %u images, present mode %s (VSync %s; surface has %s), %s, display %.2f Hz\n",
         ext.width, ext.height, count, present_mode_name(mode), present_mode_name(wanted_present_mode()), modes, kind,
         winsize_refresh_rate());
+#ifdef __PROSPERO__
+    LOG("[ps5] VideoOut swapchain format=%u colorSpace=%u (%s)\n", (unsigned)sf.format,
+        (unsigned)sf.colorSpace, hdr_found ? "HDR10 ST2084 BT.2020" : "SDR");
+#endif
     VK_CHECK(vkCreateSwapchainKHR(g_vk.dev, &ci, NULL, &g_vk.swapchain));
     for (uint32_t i = 0; i < g_vk.sc_count; i++) vkDestroyImageView(g_vk.dev, g_vk.sc_views[i], NULL);
     hdr_release();
@@ -1634,6 +1653,7 @@ void vk_frame_end(const char *shot_path) {
     rec_CmdEndRendering(cb);
     VkSpan shot = {0};
     bool capture = frame_capture[0] != 0;
+    // Captures read the SDR intermediate before HDR encoding, so PNGs remain SDR-viewable.
     if (shot_path || capture) save_window_image(cb, &shot);
     if (g_hdr) hdr_write(cb, cur_frame.image);
     else image_barrier(cb, g_vk.sc_images[cur_frame.image], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -2076,7 +2096,9 @@ presented:
     }
     if (g_debug_frame) LOG("===== debug frame %llu =====\n", (unsigned long long)total_frames);
     {   // (testing) SAVAGEWIND_UPSCALE_AT=<frame>:<off|ultra|quality|balanced|performance>,... (ascending): the
-        // upscaler from that frame on, as the Video page sets it (A/B of the same view a few frames apart)
+        // upscaler from that frame on, as the Video page sets it (A/B of the same view a few frames apart): FSR 1, or
+        // FSR 3 with a fsr3- in front of the mode (fsr3-quality); fsr3-native: FSR 3 at the window's size (its native
+        // AA: the reference for TAA, which is the same reconstruction)
         static const char *next;
         static int init;
         if (!init) { init = 1; next = getenv("SAVAGEWIND_UPSCALE_AT"); }
@@ -2086,9 +2108,13 @@ presented:
             if ((long)total_frames < at) break;
             const char *m = *end == ':' ? end + 1 : end;
             static const char *const names[] = {"ultra", "quality", "balanced", "performance"};
+            bool f3 = !strncmp(m, "fsr3-", 5);
+            if (f3) m += 5;
             g_settings.upscaler = UPSCALE_OFF;
             for (int i = 0; i < 4; i++)
-                if (!strncmp(m, names[i], strlen(names[i]))) g_settings.upscaler = UPSCALE_FSR1, g_settings.upscale_quality = i;
+                if (!strncmp(m, names[i], strlen(names[i])))
+                    g_settings.upscaler = f3 ? UPSCALE_FSR3 : UPSCALE_FSR1, g_settings.upscale_quality = i;
+            if (f3 && !strncmp(m, "native", 6)) g_settings.upscaler = UPSCALE_FSR3, g_settings.upscale_quality = UPQ_COUNT;
             LOG("[test] frame %llu: upscaler %d mode %d\n", (unsigned long long)total_frames, g_settings.upscaler,
                 g_settings.upscale_quality);
             next = strchr(m, ',');

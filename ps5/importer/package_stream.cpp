@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "package_core.h"
 #include "package_exefs.h"
+#include <atomic>
 #include <condition_variable>
 #include <mutex>
 
@@ -32,6 +33,8 @@ struct PackageStream {
     std::condition_variable available;
     std::vector<Stream> idle;
     size_t readers = 0, reader_limit = kMaxReaders;
+    std::atomic<uint64_t> read_count{0}, read_bytes{0}, sequential{0}, pool_waits{0};
+    std::atomic<uint64_t> small{0}, medium{0}, large{0};
     PackageStream() : importer(".") { importer.st.session = "package-runtime"; }
 
     Stream make_reader() {
@@ -56,6 +59,7 @@ struct PackageStream {
                 return reader;
             }
             if (readers < reader_limit) break;
+            pool_waits.fetch_add(1, std::memory_order_relaxed);
             available.wait(lock);
         }
         size_t count = ++readers;
@@ -182,6 +186,26 @@ extern "C" ssize_t savagewind_package_pread(void *handle, void *dst, size_t size
         ~Lease() { if (reader) package->release(std::move(reader)); }
     } lease{package, nullptr};
     try {
+        static thread_local PackageStream *last_package;
+        static thread_local uint64_t last_end = UINT64_MAX;
+        if (last_package == package && last_end == offset)
+            package->sequential.fetch_add(1, std::memory_order_relaxed);
+        last_package = package;
+        last_end = size <= UINT64_MAX - offset ? offset + size : UINT64_MAX;
+        package->read_bytes.fetch_add(size, std::memory_order_relaxed);
+        (size < 65536 ? package->small : size < 524288 ? package->medium : package->large)
+            .fetch_add(1, std::memory_order_relaxed);
+        uint64_t reads = package->read_count.fetch_add(1, std::memory_order_relaxed) + 1;
+        if ((reads & 1023) == 0) {
+            char detail[256];
+            std::snprintf(detail, sizeof detail,
+                          "reads=%llu bytes=%llu sequential=%llu pool_waits=%llu sizes_lt64k=%llu lt512k=%llu ge512k=%llu",
+                          (unsigned long long)reads, (unsigned long long)package->read_bytes.load(),
+                          (unsigned long long)package->sequential.load(), (unsigned long long)package->pool_waits.load(),
+                          (unsigned long long)package->small.load(), (unsigned long long)package->medium.load(),
+                          (unsigned long long)package->large.load());
+            diagnostic("package-runtime", "read-profile", 0, "info", detail);
+        }
         lease.reader = package->acquire();
         lease.reader->seek(int64_t(offset), tc::io::SeekOrigin::Begin);
         return ssize_t(lease.reader->read(static_cast<byte_t *>(dst), size));

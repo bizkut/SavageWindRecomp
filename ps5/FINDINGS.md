@@ -929,3 +929,23 @@ HUD clean with FG on (no ghosting on hearts/health bar); VRR active on the TV. S
 motion (expected from colour-only generation; M8 motion vectors are the planned improvement). Input latency and the
 physical DualSense remain untested. With the benchmark at 100 % on time and 119.3 Hz presented, M7's done-when is met
 except the latency A/B; FG becomes the 120 Hz first-launch default.
+
+## 2026-10-28 — Loading read investigation (instrumented, console run pending)
+
+In `ab-log-async-a.klog`, 65 loading-screen hitches were attributed to package reads. Thread 124 commonly spent roughly
+26 ms on three reads totalling 1.5 MiB, while the presenting guest thread waited; the log shows a second reader opened,
+not saturation of the four-reader pool. The per-reader stream does synchronous seek/read through the NCA decrypt and
+update-patch layers. `package-runtime step=read-profile` now reports cumulative request sizes, adjacent offsets on the
+same thread, and pool waits every 1024 requests. `SAVAGEWIND_LOG_FILES=1` logs changing RomFS file names but adds logging
+overhead. Neither the new counters nor an after-change hitch count have been measured on console; these measurements
+are needed before choosing and qualifying a read-ahead or concurrency change.
+
+## 2026-10-28 — M8 PRs integrated (off by default), precompile null fix, first-launch defaults (.41)
+
+PRs #194/#195 (motion vectors, TAA, FSR 3.1) are integrated behind `antialias = taa` / `upscaler = fsr3`, off by
+default. The first build (`c658aad8…`) crashed in the precompile's pipeline warm-up: `stage_layouts+0x132` read
+`b->si->mvec` (PR #194's push constant) with `si` unset in `vk_pso_warm_stage`. Fixed by setting it. Eboot
+`394c05da…`: precompile 68.2 s (all 13,997 translations cached), then **first-launch defaults with no keys in the ini:
+FG 1, FSR 1, Performance (1080p internal at 4K)**, written to the ini. Benchmark: 99.4 % on time, 59.6 / 119.1 fps,
+GPU 9.95 ms. Loading still shows 70 package-read hitches; read profile: 4,096 reads, 2.76 GB, 599 sequential,
+0 reader-pool waits, 730 reads of ≥512 KB.
