@@ -977,3 +977,11 @@ pipeline-creation hitches (first use of each size's variants). The 720p capture 
 sharp HUD; a green/blue arc and glow near the sun side look like the game's sun lens flare, not confirmed (the DRS-off
 run captured a different frame). The run tool's control payload timed out twice during DRS-on runs (the title kept
 running; the klog was captured directly).
+
+## 2026-10-28 — HDR default follows the system output (.41, ps5/evidence/m7/hdrdet-sys*.klog, hdr-default-on.klog)
+
+`sceVideoOutGetOutputStatus` on a handle opened before RADV (layout: RADV's `struct videoout_output_status`) reads
+**dynamic_range 1 with PS5 Settings > Video Output > HDR Off, and 2 with "On when supported"** on .41's HDR TV
+(return 0 both times). `sceVideoOutGetCurrentOutputMode_` fails there (0x80290018) and is not used; the SDK's device
+capability query has no documented ABI and is not called. First-launch default: 2 → `hdr = on`, 1 → off, failure or
+other values → off. Confirmed: with no `hdr` key the game logged "HDR at start: yes" and wrote `hdr = on`.

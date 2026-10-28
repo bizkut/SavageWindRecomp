@@ -26,8 +26,9 @@
 #include "video_defaults.h"
 
 #define HIGH_REFRESH_MHZ 119880
-// The startup mode is diagnostic until a system-HDR-off comparison confirms it.
-#define HDR_AUTO_DEFAULT 0
+// HDR default from the system's output at start (confirmed on .41, 2026-10-28: output status dynamic_range reads 2
+// with PS5 Settings > Video Output > HDR "On when supported" on an HDR TV, 1 with HDR off)
+#define HDR_AUTO_DEFAULT 1
 
 int64_t sceKernelGetDirectMemorySize(void);  // libkernel
 // The RADV VideoOut WSI uses these same entry points and output-status layout.
@@ -37,8 +38,8 @@ int sceVideoOutGetOutputStatus(int32_t handle, void *status);
 int sceVideoOutGetCurrentOutputMode_(int32_t handle, void *mode);
 
 static VideoHdrCapability probe_hdr_capability(void) {
-    // Query before RADV opens VideoOut. These calls report current output, not TV capability.
-    // The WSI's status and mode buffers are 48 and 32 bytes respectively.
+    // Query before RADV opens VideoOut: the system's current output (its HDR setting on an HDR-capable TV). The
+    // output-status layout is RADV's struct videoout_output_status (resolution, dynamic_range, ...).
     _Alignas(8) unsigned char status[192] = {0}, mode[128] = {0};
     VideoHdrCapability hdr = VIDEO_HDR_UNKNOWN;
     int handle = sceVideoOutOpen(0xff, 0, 0, NULL);
@@ -52,8 +53,9 @@ static VideoHdrCapability probe_hdr_capability(void) {
         memcpy(&mode_size, mode, sizeof mode_size);
         ps5_logf("[ps5] HDR probe: startup dynamic_range=%u mode_size=%u mode_color=%u\n",
                  dynamic_range, mode_size, mode[6]);
-        // RADV's explicit output-mode setup writes 12 at byte 6 for BT.2020 PQ.
-        if (mr == 0 && mode_size == 32)
+        // dynamic_range 2: the system outputs HDR; 1: SDR. (sceVideoOutGetCurrentOutputMode_ fails here, 0x80290018.)
+        if (sr == 0) hdr = dynamic_range == 2 ? VIDEO_HDR_CAPABLE : dynamic_range == 1 ? VIDEO_HDR_NOT_CAPABLE : VIDEO_HDR_UNKNOWN;
+        else if (mr == 0 && mode_size == 32)
             hdr = mode[6] == 12 ? VIDEO_HDR_CAPABLE : VIDEO_HDR_NOT_CAPABLE;
         for (unsigned i = 0; i < sizeof status; i += 16)
             ps5_logf("[ps5] HDR probe: status +%03x %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
@@ -65,7 +67,7 @@ static VideoHdrCapability probe_hdr_capability(void) {
                      mode[i+8], mode[i+9], mode[i+10], mode[i+11], mode[i+12], mode[i+13], mode[i+14], mode[i+15]);
         ps5_logf("[ps5] HDR probe: VideoOut close=%#x\n", (unsigned)sceVideoOutClose(handle));
     }
-    ps5_logf("[ps5] HDR at start: %s; default stays off until confirmed (TV capability not queried)\n",
+    ps5_logf("[ps5] HDR at start: %s (system output dynamic range)\n",
              hdr == VIDEO_HDR_CAPABLE ? "yes" : hdr == VIDEO_HDR_NOT_CAPABLE ? "no" : "unknown");
     if (hdr == VIDEO_HDR_UNKNOWN) ps5_logf("[ps5] HDR capability unknown\n");
     return hdr;
