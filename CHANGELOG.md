@@ -2,10 +2,18 @@
 
 What changed in each Savage Wind release. The `test` branch holds what the next one will contain.
 
-Unreleased: Vulkan can sharpen identified game font sheets at 4K using the player's own game files.
-The Video setting **Sharp game text** defaults on for PS5 and off on desktop; unknown sheets stay unchanged.
+Unreleased: Vulkan can reconstruct identified game font sheets at 4K from the player's own game files using per-glyph
+distance fields. The Video setting **Sharp game text** defaults on for PS5 and off on desktop; unknown sheets stay
+unchanged. For comparisons, `sharp_text_method = sdf` selects distance fields and `sharpen` (default) the prior method.
 Vulkan also offers **Sharp layout artwork**, which enlarges selected title artwork from the player's own archive.
 It defaults off on all platforms; restart after changing it. Unrecognized textures stay unchanged.
+An experimental user-generated UI HD pack can replace matching layout textures with compressed mipmapped artwork
+derived on the player's own PC; no game artwork is distributed. The `hd_ui` setting controls loading. Generator
+version 2 corrects `0x0901` heart textures to two-channel BC5 and invalidates older generated packs.
+Storage-capable textures may use the pack for sampling; an actual storage, copy, clear or render use restores the
+guest image and prevents that texture body from switching back to an HD replacement.
+On PS5, experimental first-start generation uses the player's imported packages and the bundled Real-ESRGAN model;
+`hd_ui_generate` defaults on for 4K output. Console generation and its startup time have not yet been qualified.
 
 ## Alpha 3 hotfix (0.3.1-alpha.3, Windows) - 2026-10-25
 

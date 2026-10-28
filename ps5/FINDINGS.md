@@ -1017,13 +1017,13 @@ FFX exceptions now logged at our boundary. Earlier "FSR 3.1" benchmark rows were
 FSR 3.1 dispatches every frame (2,100+ per run). It costs ~2.3 ms GPU and ~2.7 ms render-thread CPU over FSR 1 at the
 same internal size (the motion-vector and TAA inputs). Image quality comparison still to do.
 
-## 2026-10-28 — Button icons at native 4K (.41, ps5/evidence/m8/shots/)
+## 2026-10-28 — Button icons at native 4K (.41, ps5/evidence/m8/shots/ (local only))
 
 A native 3840×2160 crop of the prompt bar (new `shot.txt` tool) shows the L-stick icon ~70 px tall with 2–3 px soft
 edges: the 50×50 glyph-sheet cells magnified with linear filtering. The HUD is drawn at output resolution, so the
 upscaler is not involved. A 4× glyph sheet and procedural PlayStation stick icons are being built.
 
-## 2026-10-28 — Sharp button icons at 4K (.41, ps5/evidence/m8/shots/before-after.png)
+## 2026-10-28 — Sharp button icons at 4K (.41, ps5/evidence/m8/shots/before-after.png (local only))
 
 Eboot `41055321…`: the button glyph sheet is replaced by a 4× (1024×4096 R8) image of procedurally drawn icons,
 including new PlayStation-style L/R stick icons with direction arrows ("high-resolution R8 image 1024x4096 (4x)").
@@ -1109,3 +1109,11 @@ sample decodes to 51–67 dB PSNR vs the PC files (max pixel difference 37/255),
 In play: benchmark 99.9 % on time, 59.6 / 119.3 fps; 18 textures replaced (≈1.2 MB GPU). The hearts are matched but
 rejected because the game creates them with the storage flag (`[hd-ui] rejected … storage=1`); that rule stays
 until a revert-on-write path exists.
+
+## 2026-10-28 — HD hearts in play (.41, ps5/evidence/m8/ab-hdui5.klog)
+
+Eboot `e4845749…`: storage-flagged, CPU-owned textures now sample the HD image; any storage bind, copy, clear,
+render or GPU write restores the original first and drops HD for that body (`[hd-ui] reverted`, none on the route).
+The heart (Nt_HeartNewB_00, 48×48 RG8 → 192×192 BC5) is replaced: 22 textures matched, 1.6 MB GPU. Same route
+frame, pack off vs on: heart edge step (top-200 red-channel gradient) 52.9 → 93.7, visibly crisp outlines.
+Benchmark 99.6 % on time, 59.6 / 119.3 fps. Backgrounds differ between runs (scene variance), hearts compared only.

@@ -3,6 +3,9 @@
 #include "tegra.h"
 #include "../rt.h"
 #include "../framepace.h"
+#include "../paths.h"
+#include <dirent.h>
+#include <stdio.h>
 #include <SDL3/SDL.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -15,6 +18,147 @@ static uint64_t hash(const uint8_t *p, size_t n) {
     uint64_t h = 0xcbf29ce484222325ull;
     for (size_t i = 0; i < n; i++) h = (h ^ p[i]) * 0x100000001b3ull;
     return h;
+}
+
+// The directory's names form the lookup index; no game data is stored in it.
+static uint64_t *hd_hashes;
+static size_t hd_count;
+static bool hd_scanned;
+static int compare_hash(const void *a, const void *b) {
+    uint64_t x = *(const uint64_t *)a, y = *(const uint64_t *)b;
+    return (x > y) - (x < y);
+}
+bool hd_ui_available(void) {
+    if (!hd_scanned) {
+        hd_scanned = true;
+        char path[1024];
+        DIR *dir = rt_data_path("hd-ui", path, sizeof path) ? opendir(path) : NULL;
+        if (dir) {
+            struct dirent *e;
+            while ((e = readdir(dir))) {
+                unsigned long long h; char extra;
+                if (strlen(e->d_name) != 20 || strcmp(e->d_name + 16, ".dds") ||
+                    sscanf(e->d_name, "%16llx%c", &h, &extra) != 2 || extra != '.') continue;
+                uint64_t *p = realloc(hd_hashes, (hd_count + 1) * sizeof *p);
+                if (!p) break;
+                hd_hashes = p; hd_hashes[hd_count++] = (uint64_t)h;
+            }
+            closedir(dir);
+            qsort(hd_hashes, hd_count, sizeof *hd_hashes, compare_hash);
+            LOG("[hd-ui] indexed %zu pack textures\n", hd_count);
+        }
+    }
+    return hd_count != 0;
+}
+bool hd_ui_load(const uint8_t *linear, size_t bytes, uint32_t width, uint32_t height, uint32_t format, HdUiImage *out) {
+    if (!hd_ui_available()) return false;
+    uint64_t h = hash(linear, bytes);
+    if (!bsearch(&h, hd_hashes, hd_count, sizeof *hd_hashes, compare_hash)) return false;
+    char path[64]; snprintf(path, sizeof path, "hd-ui/%016llx.dds", (unsigned long long)h);
+    FILE *f = rt_data_fopen(path, "rb");
+    if (!f) return false;
+    uint8_t header[148]; bool ok = fread(header, 1, sizeof header, f) == sizeof header;
+    uint32_t w = ok ? u32(header + 16) : 0, ht = ok ? u32(header + 12) : 0;
+    uint32_t levels = ok ? u32(header + 28) : 0, dxgi = ok ? u32(header + 128) : 0;
+    uint32_t scale = width <= 256 && height <= 256 ? 4 : 2;
+    if (!ok || memcmp(header, "DDS ", 4) || u32(header + 4) != 124 ||
+        u32(header + 76) != 32 || memcmp(header + 84, "DX10", 4) ||
+        (format == 0x49 || format == 0x01 ? dxgi != 80 :
+         format == 0x4b || format == 0x0d ? dxgi != 83 : (dxgi != 98 && dxgi != 99)) ||
+        u32(header + 132) != 3 || u32(header + 140) != 1 ||
+        !width || !height || width > 4096 / scale || height > 4096 / scale ||
+        w != width * scale || ht != height * scale || !levels || levels > 13) {
+        fclose(f); return false;
+    }
+    size_t size = 0; uint32_t mw = w, mh = ht, expected = 1;
+    while (mw > 1 || mh > 1) { mw = mw > 1 ? mw / 2 : 1; mh = mh > 1 ? mh / 2 : 1; expected++; }
+    if (levels != expected) { fclose(f); return false; }
+    mw = w; mh = ht;
+    for (uint32_t i = 0; i < levels; i++) {
+        size += (size_t)((mw + 3) / 4) * ((mh + 3) / 4) * (dxgi == 80 ? 8 : 16);
+        mw = mw > 1 ? mw / 2 : 1; mh = mh > 1 ? mh / 2 : 1;
+    }
+    uint8_t *data = malloc(size);
+    ok = data && fread(data, 1, size, f) == size && fgetc(f) == EOF;
+    fclose(f);
+    if (!ok) { free(data); return false; }
+    *out = (HdUiImage){data, size, w, ht, levels, dxgi, h};
+    return true;
+}
+
+void hd_ui_note_rejected(const uint8_t *linear,size_t bytes,uint32_t width,uint32_t height,
+                         uint32_t format,bool storage,bool scalable,uint32_t samples,uint32_t level_mask) {
+    if (!hd_ui_available()) return;
+    uint64_t h=hash(linear,bytes);
+    if (!bsearch(&h,hd_hashes,hd_count,sizeof *hd_hashes,compare_hash)) return;
+    static uint64_t *seen; static size_t count, cap;
+    for (size_t i=0;i<count;i++) if (seen[i]==h) return;
+    if (count==cap) {
+        size_t n=cap?cap*2:64; uint64_t *p=realloc(seen,n*sizeof *p);
+        if (!p) return;
+        seen=p; cap=n;
+    }
+    seen[count++]=h;
+    LOG("[hd-ui] rejected hash=%016llx %ux%u format=%#x storage=%d scalable=%d samples=%u level_mask=%#x\n",
+        (unsigned long long)h,width,height,format,storage,scalable,samples,level_mask);
+}
+
+// Diagnostic-only manifest index. The generator emits one field per line in each texture object.
+typedef struct { uint64_t hash; uint32_t width, height, source_format; char name[96]; } HdDiagEntry;
+static HdDiagEntry *hd_diag_entries;
+static size_t hd_diag_count, hd_diag_cap;
+static bool hd_diag_scanned;
+static void hd_diag_scan(void) {
+    if (hd_diag_scanned) return;
+    hd_diag_scanned = true;
+    FILE *f=rt_data_fopen("hd-ui/manifest.json","rb");
+    if (!f) { LOG("[hd-ui-diag] manifest unavailable\n"); return; }
+    char line[1024]; HdDiagEntry e={0}; unsigned fields=0;
+    while (fgets(line,sizeof line,f)) {
+        unsigned long long h; unsigned v;
+        if (sscanf(line," \"hash\" : \"%llx\"", &h)==1) { e.hash=(uint64_t)h; fields|=1; }
+        else if (sscanf(line," \"name\" : \"%95[^\"]\"", e.name)==1) fields|=2;
+        else if (sscanf(line," \"source_format\" : \"%x\"", &v)==1) { e.source_format=v; fields|=4; }
+        else if (sscanf(line," \"width\" : %u", &v)==1) { e.width=v; fields|=8; }
+        else if (sscanf(line," \"height\" : %u", &v)==1) { e.height=v; fields|=16; }
+        else if (strchr(line,'}')) {
+            if (fields==31) {
+                if (hd_diag_count==hd_diag_cap) {
+                    size_t cap=hd_diag_cap?hd_diag_cap*2:128;
+                    HdDiagEntry *p=realloc(hd_diag_entries,cap*sizeof *p);
+                    if (!p) break;
+                    hd_diag_entries=p; hd_diag_cap=cap;
+                }
+                hd_diag_entries[hd_diag_count++]=e;
+            }
+            e=(HdDiagEntry){0}; fields=0;
+        }
+    }
+    fclose(f);
+    LOG("[hd-ui-diag] manifest entries=%zu\n",hd_diag_count);
+}
+bool hd_ui_diag_candidate(uint32_t width,uint32_t height) {
+    static int enabled=-1;
+    if (enabled<0) { struct stat st; enabled=rt_data_stat("hd-ui/diag.txt",&st)==0; }
+    if (!enabled) return false;
+    hd_diag_scan();
+    for (size_t i=0;i<hd_diag_count;i++)
+        if (hd_diag_entries[i].width==width && hd_diag_entries[i].height==height) return true;
+    return false;
+}
+void hd_ui_diag_upload(uint32_t width,uint32_t height,uint32_t format,uint32_t levels,
+                       uint32_t layers,uint32_t layer,uint32_t target,bool pitch,
+                       bool gpu_owned,bool eligible,const uint8_t *linear,size_t bytes) {
+    uint64_t h=linear?hash(linear,bytes):0;
+    LOG("[hd-ui-diag] upload %ux%u format=%#x levels=%u layers=%u layer=%u target=%u pitch=%d gpu_owned=%d eligible=%d bytes=%zu hash=%016llx%s\n",
+        width,height,format,levels,layers,layer,target,pitch,gpu_owned,eligible,bytes,
+        (unsigned long long)h,linear?"":" unavailable");
+    for (size_t i=0;i<hd_diag_count;i++) {
+        const HdDiagEntry *e=&hd_diag_entries[i];
+        if (e->width==width && e->height==height)
+            LOG("[hd-ui-diag] candidate %s bntx=%#x hash=%016llx hash_match=%d\n",
+                e->name,e->source_format,(unsigned long long)e->hash,linear && e->hash==h);
+    }
 }
 typedef struct { uint64_t hash; uint32_t w, h, format; char name[64]; } Entry;
 static Entry entries[128];

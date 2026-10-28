@@ -17,6 +17,7 @@
 #include "../astc.h"
 #include "../glyphs.h"
 #include "../sharp_ui.h"
+#include "../hd_ui_guard.h"
 #include "../renderer.h"
 #include "../texture_size.h"
 
@@ -300,7 +301,8 @@ void vk_image_init_layout(VkCommandBuffer cb, VkImage img, VkImageAspectFlags as
 }
 
 // Images destroyed by the guest are kept until the submissions that may use them have completed.
-typedef struct { VkImage img; VmaAllocation mem; VkImageView view; uint64_t seq; } Dead;
+typedef struct { VkImage img; VmaAllocation mem; VkImageView view; uint64_t seq, hd_ui_bytes; } Dead;
+static uint64_t hd_ui_gpu_bytes;
 static Dead *dead;
 static int ndead, cap_dead;
 static void views_forget(TexBackend *b);
@@ -312,6 +314,7 @@ void vk_collect_dead(void) {
         if (dead[i].seq > done) { dead[k++] = dead[i]; continue; }
         if (dead[i].view) vkDestroyImageView(g_vk.dev, dead[i].view, NULL);
         else vmaDestroyImage(g_vk.vma, dead[i].img, dead[i].mem);
+        hd_ui_gpu_bytes -= dead[i].hd_ui_bytes;
     }
     ndead = k;
 }
@@ -449,6 +452,7 @@ void vk_dl_note_upload(void *img, uint32_t w, uint32_t h, uint32_t lv);  // (exe
 static uint32_t level_w(const TexBackend *b, uint32_t lv) { uint32_t v = b->width >> lv; return v ? v : 1; }
 static uint32_t level_h(const TexBackend *b, uint32_t lv) { uint32_t v = b->height >> lv; return v ? v : 1; }
 
+
 static void destroy_image(TexBackend *b) {
     if (b->block) {
         destroy_image(b->block);
@@ -456,7 +460,8 @@ static void destroy_image(TexBackend *b) {
         b->block = NULL;
     }
     views_forget(b);
-    if (b->image || b->mem) defer((Dead){.img = b->image, .mem = b->mem});  // (never the same allocation twice)
+    if (b->image || b->mem) defer((Dead){.img = b->image, .mem = b->mem, .hd_ui_bytes = b->hd_ui_bytes});
+    b->hd_ui_bytes = 0;
     b->image = VK_NULL_HANDLE;
     b->mem = VK_NULL_HANDLE;
 }
@@ -907,6 +912,21 @@ static void ui_restore(NvnTexture *t, TexBackend *b) {
     if (!b->ui_replaced) return;
     destroy_image(b); b->ui_replaced=false; create_image(t,b);
 }
+// Non-sampling guest operations need the original image, not the generated sampled replacement.
+static void hd_ui_guest_use(NvnTexture *t, TexBackend *b, const char *reason) {
+    bool restore=hd_ui_begin_guest_use(&b->hd_ui_blocked,b->ui_replaced);
+    b->ui_pending=0;
+    if (!restore) return;
+    uint64_t h=b->hd_ui_hash;
+    bool hd=b->hd_ui_bytes!=0;
+    ui_restore(t,b);
+    upload_levels(t,b,~0u);
+    if (hd) LOG("[hd-ui] reverted hash=%016llx reason=%s\n",(unsigned long long)h,reason);
+}
+
+void vk_texture_guest_access(NvnTexture *t, const char *reason) {
+    if (t) hd_ui_guest_use(t,tex_backend(t),reason);
+}
 
 static void ui_upload(VkCommandBuffer cb, TexBackend *b, const uint8_t *rgba) {
     VkSpan s=vk_transient_copy(rgba,(uint64_t)b->width*b->height*4,16);
@@ -924,9 +944,83 @@ static void ui_upload(VkCommandBuffer cb, TexBackend *b, const uint8_t *rgba) {
     vk_full_barrier(cb);
 }
 
+static bool hd_ui_upload(NvnTexture *t, TexBackend *b, VkCommandBuffer cb, HdUiImage *hd) {
+    const uint64_t budget = 512ull * 1024 * 1024;
+    if (hd->width > g_vk.props.limits.maxImageDimension2D ||
+        hd->height > g_vk.props.limits.maxImageDimension2D || hd->bytes > budget - hd_ui_gpu_bytes)
+        return false;
+    VkFormat format = hd->dxgi == 80 ? VK_FORMAT_BC4_UNORM_BLOCK :
+                      hd->dxgi == 83 ? VK_FORMAT_BC5_UNORM_BLOCK :
+                      hd->dxgi == 99 ? VK_FORMAT_BC7_SRGB_BLOCK : VK_FORMAT_BC7_UNORM_BLOCK;
+    if (!format_supports(format, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) return false;
+    VkImageCreateInfo ci = {.sType=VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, .imageType=VK_IMAGE_TYPE_2D,
+        .format=format, .extent={hd->width,hd->height,1}, .mipLevels=hd->levels, .arrayLayers=1,
+        .samples=VK_SAMPLE_COUNT_1_BIT, .tiling=VK_IMAGE_TILING_OPTIMAL,
+        .usage=VK_IMAGE_USAGE_SAMPLED_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT};
+    VmaAllocationCreateInfo ai = {.usage=VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE};
+    VkImage image; VmaAllocation mem;
+    if (vmaCreateImage(g_vk.vma, &ci, &ai, &image, &mem, NULL) != VK_SUCCESS) return false;
+    VmaAllocationInfo info;
+    vmaGetAllocationInfo(g_vk.vma, mem, &info);
+    if (info.size > budget - hd_ui_gpu_bytes) { vmaDestroyImage(g_vk.vma, image, mem); return false; }
+    destroy_image(b);
+    b->image=image; b->mem=mem; b->format=format; b->usage=ci.usage;
+    b->width=hd->width; b->height=hd->height; b->levels=hd->levels; b->ui_replaced=true;
+    b->hd_ui_bytes=info.size; b->hd_ui_hash=hd->hash; b->hd_ui_was_active=true; hd_ui_gpu_bytes+=info.size;
+    vk_image_init_layout(cb,image,VK_IMAGE_ASPECT_COLOR_BIT);
+    VkSpan span=vk_transient_copy(hd->data,hd->bytes,16);
+    VkBufferImageCopy copies[13]; uint32_t w=hd->width, h=hd->height; uint64_t off=0;
+    for (uint32_t i=0; i<hd->levels; i++) {
+        copies[i]=(VkBufferImageCopy){.bufferOffset=span.off+off,
+            .imageSubresource={VK_IMAGE_ASPECT_COLOR_BIT,i,0,1}, .imageExtent={w,h,1}};
+        off+=(uint64_t)((w+3)/4)*((h+3)/4)*(hd->dxgi == 80 ? 8 : 16);
+        w=w>1?w/2:1; h=h>1?h/2:1;
+    }
+    rec_CmdCopyBufferToImage(cb,span.buf,image,VK_IMAGE_LAYOUT_GENERAL,hd->levels,copies);
+    vk_full_barrier(cb);
+    LOG("[hd-ui] matched hash=%016llx %ux%u loaded=%zu gpu_bytes=%llu total_gpu_bytes=%llu\n",
+        (unsigned long long)hd->hash,t->width,t->height,hd->bytes,
+        (unsigned long long)info.size,(unsigned long long)hd_ui_gpu_bytes);
+    return true;
+}
+
 
 // Guest memory -> image for the levels in level_mask (bit per level), every layer or slice.
 static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask);
+// Diagnose all candidate-sized uploads, including arrays and uploads ineligible for replacement.
+static void hd_ui_trace_upload(NvnTexture *t, TexBackend *b, const FormatInfo *fi, uint32_t level_mask) {
+    if (!g_settings.hd_ui || !hd_ui_available() || !hd_ui_diag_candidate(t->width,t->height)) return;
+    uint32_t layers=t->layout.layers?t->layout.layers:1;
+    bool pitch=nvn_texture_flags_pitch(t->flags);
+    bool eligible=!b->gpu_owned && !b->storage && !b->scalable && t->target==1 && layers==1 &&
+                  t->samples<=1 && !pitch && (level_mask&1);
+    if (!t->addr || !fi || !fi->bpb || !storage_readable(t,storage_size(t))) {
+        hd_ui_diag_upload(t->width,t->height,t->format,t->levels,layers,0,t->target,pitch,
+                          b->gpu_owned,eligible,NULL,0);
+        return;
+    }
+    LevelLayout l=tegra_level(&t->layout,0);
+    size_t row=(size_t)l.wb*fi->bpb, bytes=row*l.hb;
+    uint8_t *pixels=malloc(bytes);
+    if (!pixels || (pitch && t->stride<row)) {
+        free(pixels);
+        hd_ui_diag_upload(t->width,t->height,t->format,t->levels,layers,0,t->target,pitch,
+                          b->gpu_owned,eligible,NULL,0);
+        return;
+    }
+    uint64_t layer_size=pitch?t->stride*(t->layout.height?t->layout.height:1):tegra_layer_size(&t->layout);
+    for (uint32_t layer=0;layer<layers;layer++) {
+        const uint8_t *src=(const uint8_t *)(uintptr_t)(t->addr+layer*layer_size+l.offset);
+        if (pitch) {
+            for (uint32_t y=0;y<l.hb;y++) memcpy(pixels+(size_t)y*row,src+(size_t)y*t->stride,row);
+        } else {
+            tegra_deswizzle(src,pixels,l.wb,l.hb,1,fi->bpb,l.block_height_log2,l.block_depth_log2);
+        }
+        hd_ui_diag_upload(t->width,t->height,t->format,t->levels,layers,layer,t->target,pitch,
+                          b->gpu_owned,eligible,pixels,bytes);
+    }
+    free(pixels);
+}
 static void upload_levels(NvnTexture *t, TexBackend *b, uint32_t level_mask) {
     uint64_t t0 = tex_timing ? 0 : SDL_GetTicksNS(), up = g_ft[FT_UPLOAD_BYTES];
     upload_levels_now(t, b, level_mask);
@@ -937,6 +1031,7 @@ static void upload_levels(NvnTexture *t, TexBackend *b, uint32_t level_mask) {
 static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask) {
     const FormatInfo *fi = t->layout.fmt;
     VkFmt mf = fmt_of(t->format);
+    hd_ui_trace_upload(t,b,fi,level_mask);
     if (!t->addr || t->target == 10 || !fi || !fi->bpb || !storage_readable(t, storage_size(t))) return;
     if (b->format != mf.vf && !b->astc_bw && !b->glyph_scale && !b->ui_replaced) return;  // unsupported format
     VkCommandBuffer cb = vk_upload_cmd();
@@ -944,7 +1039,37 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
     if (layers > b->layers && b->depth == 1) layers = b->layers;
     bool linear = nvn_texture_flags_pitch(t->flags);
     uint64_t layer_size = linear ? t->stride * (t->layout.height ? t->layout.height : 1) : tegra_layer_size(&t->layout);
-    if (g_settings.sharp_ui && !b->gpu_owned && !b->storage && !b->scalable &&
+    if (g_settings.hd_ui && hd_ui_available() && !b->gpu_owned && t->target==1 && layers==1 && !linear &&
+        (b->scalable || t->samples>1 || !(level_mask&1) || b->hd_ui_blocked)) {
+        LevelLayout l=tegra_level(&t->layout,0);
+        size_t bytes=(size_t)l.wb*l.hb*fi->bpb;
+        uint8_t *pixels=malloc(bytes);
+        if (pixels) {
+            tegra_deswizzle((const uint8_t *)(uintptr_t)t->addr+l.offset,pixels,l.wb,l.hb,1,fi->bpb,l.block_height_log2,l.block_depth_log2);
+            hd_ui_note_rejected(pixels,bytes,l.w,l.h,t->format,b->storage,b->scalable,t->samples,level_mask);
+            free(pixels);
+        }
+    }
+    if (g_settings.hd_ui && hd_ui_available() && !b->gpu_owned && !b->hd_ui_blocked && !b->scalable &&
+        t->target == 1 && layers == 1 && t->samples <= 1 && !linear && (level_mask & 1)) {
+        LevelLayout l=tegra_level(&t->layout,0);
+        size_t bytes=(size_t)l.wb*l.hb*fi->bpb;
+        uint8_t *pixels=malloc(bytes);
+        if (pixels) {
+            tegra_deswizzle((const uint8_t *)(uintptr_t)t->addr+l.offset,pixels,l.wb,l.hb,1,fi->bpb,l.block_height_log2,l.block_depth_log2);
+            HdUiImage hd;
+            bool loaded=hd_ui_load(pixels,bytes,l.w,l.h,t->format,&hd);
+            free(pixels);
+            if (loaded) {
+                bool uploaded=hd_ui_upload(t,b,cb,&hd);
+                free(hd.data);
+                if (uploaded) return;
+            }
+        }
+    }
+    // The edge fallback uploads RGBA, so it cannot reuse a compressed HD image.
+    if (b->hd_ui_bytes) { ui_restore(t,b); level_mask=~0u; }
+    if (g_settings.sharp_ui && !b->gpu_owned && !b->storage && !b->scalable && !b->hd_ui_blocked &&
         t->target == 1 && layers == 1 && t->samples <= 1 && !linear &&
         (level_mask & 1) && sharp_ui_candidate(t->format,t->width,t->height)) {
         LevelLayout l=tegra_level(&t->layout,0);
@@ -1054,9 +1179,10 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
             uint8_t *high = NULL;
             int gs = glyph_output_scale();
             if (t->target != 1 || t->levels > 1 || t->samples > 1) gs = 1;
-            bool sheet = lv == 0 && layer == 0 && t->format == 0x49 && t->pool;
-            bool layout = lv == 0 && layer == 0 && t->format == 0x01 && !linear;
-            bool font_like = t->target != 4 && lv == 0 && layer == 0 && !linear && t->pool && l.d == 1 &&
+            bool original_only=b->hd_ui_blocked && b->hd_ui_was_active;
+            bool sheet = !original_only && lv == 0 && layer == 0 && t->format == 0x49 && t->pool;
+            bool layout = !original_only && lv == 0 && layer == 0 && t->format == 0x01 && !linear;
+            bool font_like = !original_only && t->target != 4 && lv == 0 && layer == 0 && !linear && t->pool && l.d == 1 &&
                              (t->format == 0x49 || t->format == 0x01) && l.w >= 128 && l.h >= 128;
             uint64_t font_start = font_like && !b->font_logged ? SDL_GetTicksNS() : 0;
             int pending = 0;
@@ -1251,10 +1377,7 @@ void vk_trace_dump(NvnTexture *t) {
 
 TexBackend *vk_tex(NvnTexture *t, bool for_render) {
     TexBackend *b = tex_backend(t);
-    if (for_render && (b->ui_replaced || b->ui_pending)) {
-        b->gpu_owned=true; b->ui_pending=0;
-        if (b->ui_replaced) upload_levels(t,b,~0u);
-    }
+    if (for_render) hd_ui_guest_use(t,b,"render");
     if (!for_render && !b->gpu_owned && vk_trace_tex(t))  // (CPU-owned: guest memory is uploaded when it changed)
         vk_trace_event(t, 1, NULL, 0, "use: CPU-owned, uploaded %d dynamic %d", b->uploaded, b->dynamic);
     if (b->pending_rgba) upload_pending(b);
@@ -1263,7 +1386,7 @@ TexBackend *vk_tex(NvnTexture *t, bool for_render) {
     if ((b->glyph_gen && (b->glyph_gen != glyphs_generation() || b->glyph_output_scale != glyph_scale)) ||
         glyphs_text_ready(b->font_pending))
         upload_levels(t, b, 1);
-    if (sharp_ui_ready(b->ui_pending) || (b->ui_replaced && !g_settings.sharp_ui)) {
+    if (sharp_ui_ready(b->ui_pending) || (b->ui_replaced && (b->hd_ui_bytes ? !g_settings.hd_ui : !g_settings.sharp_ui))) {
         b->ui_pending=0;
         upload_levels(t,b,~0u);
     }
@@ -1285,7 +1408,11 @@ TexBackend *vk_tex(NvnTexture *t, bool for_render) {
     return b;
 }
 
-void renderer_mark_gpu_owned(NvnTexture *t) { tex_backend(t)->gpu_owned = true; }
+void renderer_mark_gpu_owned(NvnTexture *t) {
+    TexBackend *b=tex_backend(t);
+    hd_ui_guest_use(t,b,"gpu-write");
+    b->gpu_owned=true;
+}
 
 // Guest memory -> image for every level, whoever owns the image (exec.c: linear render targets the CPU wrote).
 void vk_texture_reload(NvnTexture *t) {
@@ -1541,6 +1668,7 @@ static int format_kind(VkFormat f) {  // a colour format's numeric type: 0 float
 
 VkImageView vk_storage_view(NvnTexture *t, const NvnTextureView *v, bool has_view, int want_textype, VkFormat raw, int *kind) {
     *kind = 0;
+    vk_texture_guest_access(t,"storage");
     TexBackend *b = vk_tex(t, false);
     if (!has_view) v = NULL;
     // (the image in the texture's own format: not a fallback RGBA8 one, nor CPU-decoded ASTC)

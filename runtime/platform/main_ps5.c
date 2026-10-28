@@ -3,6 +3,7 @@
 #include "../gamelib.h"
 #include "../hle.h"
 #include "../kernel.h"
+#include "../nvn/hd_ui_generate.h"
 #include "../nvn/precompile.h"
 #include "../paths.h"
 #include "../settings.h"
@@ -73,10 +74,16 @@ static void fini_main(Cpu *c) {
 // (on a thread of its own with an 8 MiB stack: opening the packages needs more than the main thread's 2 MiB,
 // runtime/platform/exefs_ps5.c)
 static ShaderPrecompile g_pc;
+static bool g_generate_hd, g_run_shaders;
 static void *precompile_main(void *arg) {
     (void)arg;
     RomfsImage *img = fs_game_romfs();  // (kept open: the game reads it next)
-    if (img) shader_precompile_run(&g_pc, img, "exefs/main");
+    if (img) {
+        if (g_generate_hd && !hd_ui_generate_start()) LOG("[hd-ui-gen] could not start generation\n");
+        if (g_run_shaders) shader_precompile_run(&g_pc, img, "exefs/main");
+        else atomic_store(&g_pc.state, SP_DONE);
+        hd_ui_generate_shaders_done();
+    }
     else {
         snprintf(g_pc.why, sizeof g_pc.why, "the game's RomFS can't be read");
         atomic_store(&g_pc.state, SP_FAILED);
@@ -91,12 +98,15 @@ static void thousands(char *out, size_t n, int v) {  // 13997 -> "13,997"
 
 static void first_start_precompile(void) {
     int shaders = 0, status = shader_precompile_status(&shaders, NULL, 0);
-    if (status == 1 || !g_settings.precompile_shaders) {
+    g_run_shaders = status != 1 && g_settings.precompile_shaders;
+    g_generate_hd = g_settings.hd_ui_generate && hd_ui_generate_needed();
+    if (!g_run_shaders && !g_generate_hd) {
         LOG("[precompile] %s\n", status == 1 ? "done for this translator and driver: skipped" : "off (precompile_shaders = 0)");
         return;
     }
-    LOG("[precompile] %s: every shader of the game is translated and compiled now, with its pipeline libraries\n",
-        status ? "the translator or the driver changed" : "first start");
+    if (g_run_shaders)
+        LOG("[precompile] %s: every shader of the game is translated and compiled now, with its pipeline libraries\n",
+            status ? "the translator or the driver changed" : "first start");
     uint64_t t0 = plat_now_ns();
     extern void vk_present_progress(float done, const char *const *lines);
     extern void gpu_lock(void), gpu_unlock(void);
@@ -113,18 +123,24 @@ static void first_start_precompile(void) {
     int last_state = -1;
     extern uint64_t radv_ps5_allocated_bytes;  // (RADV's PS5 winsys: its buffers' direct memory)
     extern void rt_heap_timing(uint64_t *calls, uint64_t *ns, unsigned *own_arenas);  // (runtime/ps5/heap_arenas.c)
-    for (int st; (st = atomic_load(&g_pc.state)) < SP_DONE;) {
-        float f = shader_precompile_progress(&g_pc);
-        char pct[16], step[160], a[16], b[16];
+    for (;;) {
+        int st = atomic_load(&g_pc.state), hd_done = 0, hd_total = 0;
+        bool hd_active = hd_ui_generate_progress(&hd_done, &hd_total);
+        if (st >= SP_DONE && !hd_active) break;
+        float f = st < SP_DONE ? shader_precompile_progress(&g_pc) : hd_total ? (float)hd_done / hd_total : 0;
+        char pct[16], step[160], hd_step[100], a[16], b[16];
         snprintf(pct, sizeof pct, "%d %%", (int)(f * 100));  // (99 at most until it is done)
         thousands(a, sizeof a, atomic_load(&g_pc.done));
         thousands(b, sizeof b, atomic_load(&g_pc.total));
         if (st == SP_READING) snprintf(step, sizeof step, "Step 1 of 3: reading the game's shaders");
         else if (st == SP_COMPILING) snprintf(step, sizeof step, "Step 2 of 3: translating shaders, %s of %s", a, b);
         else if (st == SP_PIPELINES) snprintf(step, sizeof step, "Step 3 of 3: compiling them for the GPU, %s of %s", a, b);
+        else if (st >= SP_DONE) snprintf(step, sizeof step, "Shaders ready");
         else snprintf(step, sizeof step, "Opening the game's files");
-        const char *lines[4] = {"Compiling shaders", pct, step,
-                                "This happens only on the first start and after an update."};
+        if (hd_active && hd_total) snprintf(hd_step, sizeof hd_step, "HD interface %d of %d", hd_done, hd_total);
+        else if (hd_active || (g_generate_hd && st == SP_IDLE)) snprintf(hd_step, sizeof hd_step, "HD interface: reading textures");
+        else snprintf(hd_step, sizeof hd_step, "This happens only on the first start and after an update.");
+        const char *lines[4] = {"Compiling shaders", pct, step, hd_step};
         gpu_lock();
         vk_present_progress(f, lines);
         gpu_unlock();
@@ -155,6 +171,7 @@ static void first_start_precompile(void) {
         usleep(100000);
     }
     pthread_join(t, NULL);
+    hd_ui_generate_join();
     struct ps5_heap_stats heap;
     ps5_heap_stats(&heap);
     int st = atomic_load(&g_pc.state);

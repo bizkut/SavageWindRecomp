@@ -21,6 +21,8 @@
 #include "../paths.h"
 #include "../settings.h"
 #include "../nvn/glyphs.h"
+#include "../nvn/hd_ui_pack_source.h"
+#include "../nvn/hd_ui_policy.h"
 #include "../nvn/sharp_ui.h"
 #include "../romfs_image.h"
 #ifdef ROMFS_PACKAGE
@@ -330,6 +332,7 @@ static uint8_t *yaz0_unpack(const uint8_t *d, size_t n, size_t *out_n) {
     if (n < 16 || memcmp(d, "Yaz0", 4)) return NULL;
     size_t size = (size_t)d[4] << 24 | (size_t)d[5] << 16 | (size_t)d[6] << 8 | d[7], s = 16, w = 0;
     uint8_t *o = malloc(size ? size : 1);
+    if (!o) return NULL;
     while (w < size && s < n) {
         uint8_t code = d[s++];
         for (int b = 0; b < 8 && w < size && s < n; b++) {
@@ -1050,6 +1053,55 @@ static bool load_image(int k, const char *dir, const char *name) {
 // The game's RomFS image as the game reads it (shader precompilation at the PS5 title's first start, before the game
 // runs); NULL when it can't be read (logged).
 RomfsImage *fs_game_romfs(void) { return load_image(0, g_romfs_dir, "IStorage(romfs)") ? images[0].img : NULL; }
+
+int fs_hd_ui_packs(HdUiPackCallback callback, void *context) {
+    const RomImage *m = &images[0];
+    if (!callback || !m->img || !m->rom_files) return -1;
+    for (int i = 0; i < m->rom_nfiles; i++) {
+        const RomFile *f = &m->rom_files[i];
+        size_t n = strlen(f->path);
+        if (n <= 10 || strncmp(f->path, "Pack/", 5) || strcmp(f->path + n - 5, ".pack")) continue;
+        if (f->size > (1ull << 30)) return -1;  // same limit as the PC package extractor
+        size_t size = (size_t)f->size;
+        uint8_t *bytes = malloc(size ? size : 1);
+        if (!bytes) return -1;
+        bool ok = romfs_image_pread(m->img, bytes, size, f->off) == (ssize_t)size;
+        if (ok) ok = callback(context, f->path, bytes, size) == 0;
+        free(bytes);
+        if (!ok) return -1;
+    }
+    return 0;
+}
+
+typedef struct { HdUiLayoutCallback callback; void *context; } HdUiLayouts;
+static int hd_ui_pack_layouts(void *context, const char *pack, const uint8_t *bytes, size_t size) {
+    HdUiLayouts *job = context;
+    uint32_t cursor = 0;
+    const char *name;
+    const uint8_t *data;
+    size_t name_len, data_len;
+    int result;
+    while ((result = hd_ui_sarc_layout(bytes, size, &cursor, &name, &name_len, &data, &data_len)) > 0) {
+        uint8_t *unpacked = NULL;
+        const uint8_t *archive = data;
+        size_t archive_len = data_len;
+        if (data_len >= 4 && !memcmp(data, "Yaz0", 4)) {
+            unpacked = yaz0_unpack(data, data_len, &archive_len);
+            if (!unpacked) return -1;
+            archive = unpacked;
+        }
+        int r = job->callback(job->context, pack, name, name_len, archive, archive_len);
+        free(unpacked);
+        if (r) return -1;
+    }
+    return result < 0 ? -1 : 0;
+}
+
+int fs_hd_ui_layouts(HdUiLayoutCallback callback, void *context) {
+    if (!callback) return -1;
+    HdUiLayouts job = {callback, context};
+    return fs_hd_ui_packs(hd_ui_pack_layouts, &job);
+}
 
 static Service *open_image(int k, const char *dir, const char *name) {
     if (!load_image(k, dir, name)) return NULL;

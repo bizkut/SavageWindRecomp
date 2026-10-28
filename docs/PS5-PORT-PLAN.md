@@ -498,6 +498,50 @@ Identified button sheets and HUD icon masks use 2× R8 replacements at 1440p out
 normalized cell layout; allocation failure or multi-level textures retain the original-size upload path. The game's
 unchanged bitmap letters and icons that are not redrawn remain limited by their original artwork.
 
+### UI HD pack, user-generated
+
+Generate the pack on the player's PC from their own base and 1.9.0 update packages; derived artwork is not distributed
+with the port. The intended pack covers non-font BNTX textures in every `Layout/*.sblarc`: BC4/BC5 retain their
+channels, while colour textures use BC7, all with mipmaps. A manifest records original content hashes. The runtime
+uses it when `hd_ui` is enabled, retaining the original or Sharp UI fallback when a replacement cannot be used;
+the GPU allocation budget is 512 MiB.
+Storage-capable textures can use an HD replacement when sampled. When the guest actually uses a texture for storage,
+copy, clear or rendering, the runtime restores the guest image and keeps that texture body on the guest path.
+
+**Done when:** the generator produces the complete pack from the user's packages, host tests cover lookup and BC7
+loading, desktop and PS5 builds succeed, and an in-game console comparison confirms the replacements and budget.
+
+On Linux, build the host importer target `savagewind-hd-ui-extract`, then run
+`savagewind-hd-ui-extract <prod.keys> <private-temporary-dir> <base.nsp> <update.nsp>` followed by
+`python3 tools/hd_ui_pack.py <private-temporary-dir> <output-hd-ui-dir>`. The temporary directory contains derived game
+data and must not be distributed. The Python tool needs Pillow, a C++ compiler and Vulkan; it fetches the pinned
+upscaler and BC7 encoder into its cache. Copy the resulting output directory to `/data/savagewind/hd-ui/` on PS5 or
+`hd-ui/` in the desktop data directory. `make test-hd-ui` exercises the host DDS lookup.
+The default selection skips textures with a side under 16 pixels, sources larger than 1024 pixels on either side,
+and flat, pure-gradient or low-edge masks; `--max-size` changes the size ceiling. Remaining textures at most 256
+pixels on both sides use 4×, larger textures 2×. The common C policy in `runtime/nvn/hd_ui_policy.c` defines the
+selection and layout enumeration for PC and console. The PC tool prioritizes HUD entries, writes the manifest after
+each result, and resumes verified entries on restart. It prints the Vulkan device and periodic progress/ETA.
+The `0x0901` source format is treated as two RG8 channels and encoded as BC5, matching its NVN upload. Generator
+version 2 invalidates packs made with the earlier RGBA4/BC7 interpretation.
+
+
+**On-console generation (requested 2026-10-28; console qualification pending).** The PS5 title can generate the
+same DDS/manifest format from the player's merged packages. `hd_ui_generate` defaults on at 4K output and off at
+lower output resolutions; `hd_ui` independently controls whether the resulting textures are loaded. During shader
+precompilation the pinned ncnn Real-ESRGAN animevideov3 network upscales on its own low-priority Vulkan queues.
+BC4/BC5/BC7 encoding and mips run after the shader workers finish. A bounded queue connects those stages, and the
+existing progress screen shows the HD interface count. Files and atomic manifest updates go through the storage
+broker to `/data/savagewind/hd-ui/`; a verified partial manifest resumes after interruption. A generator or game
+version change triggers regeneration. To force regeneration for testing, remove `hd-ui/manifest.json`; the generator
+will replace its matching DDS files. The PC generator remains available.
+
+Host evidence: the corrected extraction code matched the PC generator for 881 selected entries in the merged Common
+and Title packs. On lavapipe, two real texture inputs at both scales matched the pinned release binary at infinite,
+infinite, 65.03 and 65.49 dB PSNR; BC4/BC5/BC7 top-level blocks matched the PC encoders on the test inputs.
+The console generator, manifest coverage, startup cost and 30-second overhead target have **not been validated on
+PS5**. A fresh first-start console run and comparison against the PC manifest remain required before qualification.
+
 ### After M7 (optional) — HDR10 output
 Requested 2026-10-28. Desktop has HDR10 presentation on `test` and lists colour grading/HDR as roadmap. On PS5 the
 only evidence is that the pinned RADV build carries Forever patch 0001 (HDR10/immediate); no HDR swapchain has run on

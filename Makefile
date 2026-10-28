@@ -399,6 +399,15 @@ build/test_shaders: tools/test_shaders.m runtime/nvn/maxwell/translate.c runtime
 build/test_romfs: tools/test_romfs.c runtime/romfs_build.c runtime/romfs_image.c runtime/romfs_build.h runtime/romfs_image.h
 	clang -O1 -Iruntime -o $@ tools/test_romfs.c runtime/romfs_build.c runtime/romfs_image.c -lpthread
 
+$(B)/test_ps5_video_defaults: tools/test_ps5_video_defaults.c runtime/ps5/video_defaults.h runtime/settings.h
+	@mkdir -p $(B)
+	$(CC) -O1 -o $@ tools/test_ps5_video_defaults.c
+
+test-ps5-video-defaults: $(B)/test_ps5_video_defaults
+	$(B)/test_ps5_video_defaults
+
+.PHONY: test-ps5-video-defaults
+
 $(B)/test_bind_capture: tools/test_bind_capture.c runtime/hle/bindings.c runtime/input_bind.h
 	@mkdir -p $(B)
 	$(CC) -O1 -DSDL_STATIC_LIB $(OSFLAGS) $(DEPINC) -Iruntime -o $@ tools/test_bind_capture.c runtime/hle/bindings.c -lSDL3
@@ -407,6 +416,15 @@ test-bind-capture: $(B)/test_bind_capture
 	$(B)/test_bind_capture
 
 .PHONY: test-bind-capture
+$(B)/test_hd_ui: tools/test_hd_ui.c runtime/nvn/sharp_ui.c runtime/nvn/sharp_ui.h runtime/nvn/hd_ui_guard.h
+	@mkdir -p $(B)
+	$(CC) -O1 -ffunction-sections -fdata-sections $(DEPINC) -Wl,--gc-sections -o $@ tools/test_hd_ui.c runtime/nvn/sharp_ui.c
+
+test-hd-ui: $(B)/test_hd_ui
+	$(B)/test_hd_ui
+
+.PHONY: test-hd-ui
+
 
 $(B)/test_vibration: tools/test_vibration.c runtime/hle/vibration.c runtime/vibration.h runtime/services/hid_set.c
 	@mkdir -p $(B)

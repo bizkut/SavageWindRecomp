@@ -1,0 +1,30 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -330,7 +330,11 @@
+     endif()
+ endif()
+ 
+-if(NCNN_VULKAN)
++if(NCNN_VULKAN AND SW_GLSLANG_PARENT)
++    add_library(glslang INTERFACE)
++    add_library(SPIRV INTERFACE)
++    target_include_directories(glslang INTERFACE "${SW_GLSLANG_PARENT}" "${SW_GLSLANG_PARENT}/glslang")
++elseif(NCNN_VULKAN)
+     if(NCNN_SYSTEM_GLSLANG)
+         set(GLSLANG_TARGET_DIR "GLSLANG-NOTFOUND" CACHE PATH "Absolute path to glslangTargets.cmake directory")
+         if(NOT GLSLANG_TARGET_DIR AND NOT DEFINED ENV{GLSLANG_TARGET_DIR})
+--- a/src/gpu.cpp
++++ b/src/gpu.cpp
+@@ -2010,9 +2010,9 @@
+         enabledExtensionFeatures = &queryCooperativeMatrixFeatures;
+     }
+ 
+-    std::vector<float> compute_queue_priorities(info.compute_queue_count(), 1.f);   // 0.f ~ 1.f
+-    std::vector<float> graphics_queue_priorities(info.graphics_queue_count(), 1.f); // 0.f ~ 1.f
+-    std::vector<float> transfer_queue_priorities(info.transfer_queue_count(), 1.f); // 0.f ~ 1.f
++    std::vector<float> compute_queue_priorities(info.compute_queue_count(), 0.f);
++    std::vector<float> graphics_queue_priorities(info.graphics_queue_count(), 0.f);
++    std::vector<float> transfer_queue_priorities(info.transfer_queue_count(), 0.f);
+ 
+     VkDeviceQueueCreateInfo deviceQueueCreateInfos[3];
+ 

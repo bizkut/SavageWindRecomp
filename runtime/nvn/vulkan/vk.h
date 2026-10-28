@@ -124,6 +124,10 @@ typedef struct TexBackend {
     int font_pending;             // worker-cache slot awaiting publication, 0 when none
     int ui_pending;               // selected artwork worker slot
     bool ui_replaced;             // RGBA8 replacement, retaining guest component swizzle
+    uint64_t hd_ui_bytes;         // live allocation charged to the HD UI budget
+    uint64_t hd_ui_hash;          // original content identity while an HD image is live
+    bool hd_ui_blocked;           // body was used in a guest image/transfer operation
+    bool hd_ui_was_active;        // this body must not fall back to scaled glyphs after guest use
     // textures.c: one image per memory and shape, shared by every texture made there
     uint64_t key_addr;           // 0: not shared
     uint32_t key[7];             // target, format, width, height, depth, levels, samples
@@ -144,6 +148,8 @@ typedef struct TexBackend {
 } TexBackend;
 
 TexBackend *vk_tex(NvnTexture *t, bool for_render);  // backend image (uploads CPU contents unless for_render)
+// Restore the guest image before any non-sampling access, disabling HD for this body.
+void vk_texture_guest_access(NvnTexture *t, const char *reason);
 VkFormat vk_format(uint32_t nvn_format);
 bool vk_format_alpha_one(uint32_t nvn_format);
 // View of t (optionally through an NVN texture view) for rendering or sampling.

@@ -6,7 +6,8 @@
 #include "../settings.h"
 
 enum { VIDEO_HAS_FG = 1, VIDEO_HAS_UPSCALER = 2, VIDEO_HAS_QUALITY = 4,
-       VIDEO_HAS_SIZE = 8, VIDEO_HAS_FPS = 16, VIDEO_HAS_HDR = 32, VIDEO_HAS_SHARP_UI = 64, VIDEO_HAS_ALL = 127 };
+       VIDEO_HAS_SIZE = 8, VIDEO_HAS_FPS = 16, VIDEO_HAS_HDR = 32, VIDEO_HAS_SHARP_UI = 64,
+       VIDEO_HAS_HD_UI_GENERATE = 128, VIDEO_HAS_ALL = 255 };
 typedef enum { VIDEO_HDR_UNKNOWN, VIDEO_HDR_NOT_CAPABLE, VIDEO_HDR_CAPABLE } VideoHdrCapability;
 
 static unsigned video_defaults_present(FILE *f) {
@@ -21,6 +22,7 @@ static unsigned video_defaults_present(FILE *f) {
         else if (!strcmp(key, "frame_rate")) present |= VIDEO_HAS_FPS;
         else if (!strcmp(key, "hdr")) present |= VIDEO_HAS_HDR;
         else if (!strcmp(key, "sharp_ui")) present |= VIDEO_HAS_SHARP_UI;
+        else if (!strcmp(key, "hd_ui_generate")) present |= VIDEO_HAS_HD_UI_GENERATE;
     }
     return present;
 }
@@ -31,6 +33,7 @@ static bool video_defaults_apply(Settings *s, unsigned present, int width, int h
     if (!(present & VIDEO_HAS_HDR)) s->hdr = hdr == VIDEO_HDR_CAPABLE ? HDR_ON : HDR_OFF;
     // Layout-art enlargement only pays off when the output is 4K (user decision 2026-10-28).
     if (!(present & VIDEO_HAS_SHARP_UI)) s->sharp_ui = width >= 3840 && height >= 2160;
+    if (!(present & VIDEO_HAS_HD_UI_GENERATE)) s->hd_ui_generate = width >= 3840 && height >= 2160;
     if ((present & VIDEO_HAS_ALL) == VIDEO_HAS_ALL) return false;
     if (!(present & VIDEO_HAS_UPSCALER))
         s->upscaler = width >= 3840 && height >= 2160 ? UPSCALE_FSR1 : UPSCALE_OFF;

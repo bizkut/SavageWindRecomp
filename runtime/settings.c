@@ -39,6 +39,7 @@ Settings g_settings = {
     .fps_limit = FPS_DEFAULT,
     .precompile_shaders = true,
     .sharp_text_sharpen = SHARP_TEXT_SHARPEN_DEFAULT,
+    .hd_ui = true,
     .vsync = VSYNC_DEFAULT,
 #ifdef __PROSPERO__
     .hdr = HDR_OFF,
@@ -153,6 +154,8 @@ void settings_load(void) {
             else if (!strcmp(val, "sharpen")) g_settings.sharp_text_sharpen = true;
         }
         else if (!strcmp(key, "sharp_ui")) { g_settings.sharp_ui = atoi(val) != 0; g_settings.sharp_ui_chosen = true; }
+        else if (!strcmp(key, "hd_ui")) g_settings.hd_ui = atoi(val) != 0;
+        else if (!strcmp(key, "hd_ui_generate")) g_settings.hd_ui_generate = atoi(val) != 0;
         else if (!strcmp(key, "async_shaders")) g_settings.async_shaders = atoi(val) != 0;
         else if (!strcmp(key, "precompile_shaders")) g_settings.precompile_shaders = atoi(val) != 0;
         else if (!strcmp(key, "wide_view")) g_settings.wide_view = atoi(val) != 0;
@@ -286,6 +289,10 @@ void settings_save(void) {
     if (g_settings.sharp_text_sharpen != SHARP_TEXT_SHARPEN_DEFAULT) // written only when it differs from the platform's
         fprintf(f, "sharp_text_method = %s\n", g_settings.sharp_text_sharpen ? "sharpen" : "sdf");
     fprintf(f, "sharp_ui = %d\n", g_settings.sharp_ui);
+    fprintf(f, "hd_ui = %d\n", g_settings.hd_ui);
+#ifdef __PROSPERO__
+    fprintf(f, "hd_ui_generate = %d\n", g_settings.hd_ui_generate);
+#endif
     fprintf(f, "async_shaders = %d\n", g_settings.async_shaders);
     fprintf(f, "precompile_shaders = %d\n", g_settings.precompile_shaders);
     static const char *const shadow[SHADOW_COUNT] = {"console", "high", "ultra", "extreme"};

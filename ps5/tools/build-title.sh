@@ -64,6 +64,8 @@ for source in "$@"; do
     case $source in
         third_party/FidelityFX/sdk/src/*.cpp|runtime/nvn/vulkan/fsr3.cpp|runtime/nvn/vulkan/ffx_shaders.cpp)
             extra=(-include "$root/third_party/FidelityFX/ffx_compat.h") ;;
+        runtime/nvn/hd_ui_ncnn.cpp)
+            extra=(-I"$PS5_NCNN_SRC/src" -I"$PS5_NCNN_SRC/../build/src") ;;
     esac
     # shellcheck disable=SC2086
     cc "${std[@]}" "${extra[@]}" -O2 -g1 -Wall -Wextra -fno-omit-frame-pointer -ffunction-sections -fdata-sections \

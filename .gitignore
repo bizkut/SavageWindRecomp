@@ -43,3 +43,6 @@ docs/RAMAS.md
 
 # PS5 title host test binary
 ps5/title/host_test
+
+# Console captures show the game: kept locally (~/savagewind-private-evidence), never committed
+ps5/evidence/**/*.png

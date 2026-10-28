@@ -5747,6 +5747,7 @@ static void copy_buffer_to_texture(uint64_t src, const TexRefRec *dst) {
     uint64_t row, img;
     copy_region_dims(t, dst, &fi, rg, &level, &row, &img);
     if (!fi || !fi->bpb) return;
+    vk_texture_guest_access(t, "copy-dst");
     TexBackend *b = vk_tex(t, false);  // prior CPU contents uploaded first
     renderer_mark_gpu_owned(t);
     vk_trace_event(t, 0, NULL, 0, "copy from buffer %llx", (unsigned long long)src);
@@ -5809,6 +5810,7 @@ static void copy_texture_to_buffer(const TexRefRec *src, uint64_t dst) {
     uint64_t row, img;
     copy_region_dims(t, src, &fi, rg, &level, &row, &img);
     if (!fi || !fi->bpb || fi->bpb == 3 || row % fi->bpb) return;
+    vk_texture_guest_access(t, "copy-src");
     TexBackend *b = vk_tex(t, false);
     float tsx, tsy;
     renderer_texture_scale(t, &tsx, &tsy);
@@ -5864,6 +5866,8 @@ static void copy_texture(const TexRefRec *src, const TexRefRec *dst, uint64_t fl
     gp_mark(vk_cmd(), "copy texture %ux%u -> %ux%u", st_->width, st_->height, dt->width, dt->height);
     dl_note("copy texture %ux%u f%#x -> %ux%u f%#x (%p -> %p)", st_->width, st_->height, st_->format, dt->width, dt->height,
             dt->format, (void *)st_, (void *)dt);
+    vk_texture_guest_access(st_, "copy-src");
+    vk_texture_guest_access(dt, "copy-dst");
     TexBackend *s = vk_tex(st_, false), *d = vk_tex(dt, true);
     if (getenv("SAVAGEWIND_LOG_COPIES")) {  // (debugging)
         static int n;
@@ -7732,6 +7736,8 @@ static void exec_list(uint64_t handle, int depth) {
         case CMD_CLEAR_COLOR: {
             snap_reason = "clear-color"; snapshots_invalidate(NULL);
             int index = (int)r->x[0];
+            if (index >= 0 && index < st.rt.ncolor && st.rt.color[index])
+                vk_texture_guest_access(st.rt.color[index], "clear");
             if (getenv("SAVAGEWIND_LOG_CLEARS") && index < st.rt.ncolor && st.rt.color[index])
                 LOG("[cclear] frame %llu idx %d %ux%u f%#x mask %#x\n", (unsigned long long)renderer_present_count(), index,
                     st.rt.color[index]->width, st.rt.color[index]->height, st.rt.color[index]->format, (uint32_t)r->x[2]);
@@ -7748,6 +7754,7 @@ static void exec_list(uint64_t handle, int depth) {
             int32_t sc[4];
             memcpy(sc, st.scissor[0], sizeof sc);
             vk_end_pass();
+            vk_texture_guest_access(t, "clear");
             memset(&st.rt, 0, sizeof st.rt);
             st.rt.ncolor = 1;
             st.rt.color[0] = t;
@@ -7766,6 +7773,7 @@ static void exec_list(uint64_t handle, int depth) {
         case CMD_CLEAR_DEPTH_STENCIL:
             snap_reason = "clear-depth"; snapshots_invalidate(NULL);
             if (st.rt.depth) {
+                vk_texture_guest_access(st.rt.depth, "clear");
                 bool has_stencil = renderer_format_has_stencil(st.rt.depth->format);
                 clear(-1, 0, NULL, 0, r->x[0] != 0, r->f[0], has_stencil && r->x[2] != 0, (uint32_t)r->x[1], (uint32_t)r->x[2]);
             }

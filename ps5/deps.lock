@@ -15,3 +15,10 @@ mihawkgen             ../PS5_MihawkGen (framegen/, git archive)        c57232a9f
 mihawkgen-network     framegen/models/network.fgw of that revision     sha256:31ecc7d69af1e9defd62b9abad71bc3430cd8a0a4d2f4eafcabaafa48c34bf6b
 # ^ M7 frame generation (runtime/nvn/vulkan/mihawk.cpp, plan D7/D10): GPL-3.0-or-later, linked into the PS5 title only;
 #   ps5/tools/build-game.sh exports the revision into .deps/ps5/mihawkgen and refuses another one or other weights.
+# User-generated UI pack upscaler: Real-ESRGAN v0.2.5.0 Ubuntu 20220424 binary and models (code BSD-3, model BSD-3).
+realesrgan-ubuntu     realesrgan-ncnn-vulkan-20220424-ubuntu.zip       sha256:e5aa6eb131234b87c0c51f82b89390f5e3e642b7b70f2b9bbe95b6a285a40c96
+realesrgan-windows    realesrgan-ncnn-vulkan-20220424-windows.zip      sha256:abc02804e17982a3be33675e4d471e91ea374e65b70167abc09e31acb412802d
+# ncnn submodule of Real-ESRGAN-ncnn-vulkan release-day source 37026f49824c5cf84062e7c6a5dd71445dcf610f (BSD-3).
+ncnn                  Tencent/ncnn (source tarball)                    6125c9f47cd14b589de0521350668cf9d3d37e3c sha256:8c5111052ec0e315bd4c3adcb42b704064dd8bd0e77f81c261e7aed2e39e0cd6
+realesr-animevideov3  models/realesr-animevideov3-x4.bin               sha256:548a36f9c3f4ab8da56cd3b13badf23968bee207b396dad14d04b830e5f2ab2d
+bc7enc-rdo            richgel999/bc7enc_rdo (MIT; source tarball)     b9438627eef73a1157e84201b6fa6eb2ffd6d9f0 sha256:bbb33d1dbb6178a3a2c044956c3cc0b8ea9fc2f2903824379dd86f87d53b64c6
