@@ -1,8 +1,8 @@
 // Frame generation's backends behind exec.c vk_fg_generate and device.c's presents (docs/PS5-PORT-PLAN.md D7). Each
 // build links one: desktop framegen.cpp (AMD FSR 3 frame interpolation: the FidelityFX SDK's frame interpolation and
 // optical flow, from the game image, its HUD-less image, depth and camera motion vectors), the PS5 mihawk.cpp
-// (PS5_MihawkGen's neural method, from the last two final window images only; GPL-3.0-or-later, D10: never in the
-// desktop build). Plain C: both are C++.
+// (PS5_MihawkGen's neural method, from the HUD-less images of the last two frames only; GPL-3.0-or-later, D10: never
+// in the desktop build). Plain C: both are C++.
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
@@ -55,7 +55,7 @@ typedef struct {
     // FSR 3 (FG_BACKEND_FSR3_FI): records the interpolated frame between the previous call's frame and this one into
     // f->out. false: failed (logged).
     bool (*dispatch)(VkCommandBuffer cb, const FgConfig *c, const FgFrame *f);
-    // MihawkGen (FG_BACKEND_MIHAWK), on the final window images (w x h):
+    // MihawkGen (FG_BACKEND_MIHAWK), on images of the game image's size (w x h; exec.c fg_mihawk):
     //   ready: the generator for that size with `slots` frames in flight (made at the first call and after a size
     //     change, with the GPU idle; the weights read then). false: unavailable, the reason logged once.
     //   record: the frame halfway between prev and next (sampled views, both in SHADER_READ_ONLY_OPTIMAL with their

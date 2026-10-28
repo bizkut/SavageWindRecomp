@@ -451,25 +451,25 @@ it, so an explicit choice in the Video page always wins, also across updates:
 - Frame generation: On when the display runs at 119.88 Hz (any resolution), off at 60 Hz. This default turns on only
   once M7's done-when passes; until then it stays Off.
 - Upscaler, by output resolution and measured with the benchmark with FG on: at 1080p, native 1080p without FSR;
-  at 4K, FSR 1 from the highest internal resolution whose GPU time (game + MihawkGen) keeps the frame target. Start
-  candidates: 1440p (Quality), then 1080p (Performance), which M6 measured at 7.7 ms GPU without FG. Until a higher
-  internal resolution is benchmarked, the 4K default stays the measured M6 configuration (1920×1080 internal →
-  3840×2160, `[post] 1920x1080 fsr1 -> 3840x2160`).
+  at 4K, FSR 1 from the highest internal resolution whose GPU time (game + MihawkGen) keeps the frame target. The
+  measured configuration is **2560×1440 internal → 3840×2160** (`[post] scene 2560x1440 fsr1 -> 3840x2160` in the
+  M6/M7 benchmarks; the `1920x1080` `[post]` line is the title screen): GPU 7.7 ms per frame without FG, 11.6 ms with
+  MihawkGen at 1440p (1.9 ms). That stays the 4K default; 1080p internal is the fallback if a heavier scene needs it.
 
-Status 2026-10-28 (eboot `be3a1081…`, host-built; console runs of earlier builds in FINDINGS): the backend choice is
+Status 2026-10-28 (eboot `b3cca2a6…`, host-built; console runs of earlier builds in FINDINGS): the backend choice is
 the build's (`runtime/nvn/vulkan/framegen.h` `g_fg_backend`: desktop links `framegen.cpp`, FSR 3; the PS5 links
 `mihawk.cpp`, MihawkGen, so no GPL code reaches the desktop build). MihawkGen is pinned in `ps5/deps.lock`
 (`c57232a9…`, weights `network.fgw` by SHA-256), exported with `git archive` into `.deps/ps5/mihawkgen` and compiled
 into the title; the title folder ships `network.fgw` and MihawkGen's licence and notices. With the row on, at
 119.88 Hz and in play, `exec.c fg_mihawk` records the neural method at t = 0.5 between the HUD-less images of the last
-two game frames (the scene composite before the HUD, as FSR 3 uses) at the game image's size (1920×1080; the 4K
-window adds no detail, it is that image upscaled), 3 slots = frames in flight, all barriers its own, and puts the
-newest frame's HUD over the result (`fg_hud.frag`). `device.c` presents it as FSR 3's frame (crop, anti-aliasing,
-upscale) and the game's frame half a frame later (8.34 ms while the game keeps its pace, never closer), from a
-present thread (on the one queue the PS5 has, under a queue lock). This replaces D7's "4K output" (the 4K build
-measured GPU 11.43 ms and render-thread CPU 13.6 ms per game frame vs 7.72 / 10.7 with FG off, FINDINGS). The
-frame-rate limit counts the game's frames (`framepace.c`: 60 gives 120 presents; capped at half the refresh rate,
-without VSync's VRR margin);
+two game frames (the scene composite before the HUD, as FSR 3 uses), scaled down to the 3D scene's internal size
+(2560×1440 at 4K with FSR 1 Quality), 3 slots = frames in flight, all barriers its own; the generated frame goes back
+up to the final image's 4K with FSR 1 EASU + RCAS as the scene does, and the newest frame's HUD is put over it
+(`fg_hud.frag`). `device.c` presents it as FSR 3's frame (crop, anti-aliasing) and the game's frame half a period
+later, on a grid of the game's period (late frames move it, early ones bring it back 1 ms a pair), from a present
+thread (on the one queue the PS5 has, under a queue lock; up to three queued presents). This replaces D7's "4K
+output" (the 4K generator measured 2.75 ms, FINDINGS). The frame-rate limit counts the game's frames
+(`framepace.c`: 60 gives 120 presents; capped at half the refresh rate, without VSync's VRR margin);
 camera cuts and the first frame after FG was off show the game's frame twice. The generator's GPU time (its passes'
 timestamps, `fg_context_set_profile`) is in the 2 s `[fg]` line, each wait and the render thread's CPU in
 `[fgpipe]`; the benchmark summary adds presented fps, the present-interval distribution and FG GPU ms, and 10 s of

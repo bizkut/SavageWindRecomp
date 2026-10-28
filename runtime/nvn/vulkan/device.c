@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "../../benchmark.h"
@@ -995,9 +996,9 @@ static void create_swapchain(void) {
     hdr_failed = hdr && !hdr_found;
     if (hdr && !hdr_found) LOG("[vk] HDR wanted, but this display offers no HDR10 swapchain format: SDR\n");
     if (hdr_found) draw.format = VK_FORMAT_B8G8R8A8_UNORM;
-    // (+1, and one for frame generation's queued pair: present_wait_room; MihawkGen one more: two presents a game
-    // frame at the refresh rate, one on screen, one queued, the next pair's being drawn)
-    uint32_t count = caps.minImageCount + 2 + (g_fg_backend.kind == FG_BACKEND_MIHAWK);
+    // (+1, and one for frame generation's queued pair: present_wait_room; MihawkGen two more: two presents a game
+    // frame at the refresh rate, one on screen, up to three queued, the next one being drawn)
+    uint32_t count = caps.minImageCount + 2 + (g_fg_backend.kind == FG_BACKEND_MIHAWK ? 2 : 0);
     if (caps.maxImageCount && count > caps.maxImageCount) count = caps.maxImageCount;
     if (count > 8) count = 8;
     VkSwapchainKHR old = g_vk.swapchain;
@@ -1224,10 +1225,11 @@ static int pres_on = -1;         // presents go to the present thread (render th
 static bool pres_shared;         // ... which presents on g_vk.queue, the submissions' queue
 static pthread_t pres_tid;
 
-// ---- where frame generation's frames wait, per 2 s window (the "[fgpipe]" line with MihawkGen): the render thread's
-// acquires, its wait for room in the present queue, for a generator slot, for the queue (submissions); the present
-// thread's wait for the GPU, its half-frame spacing, its vkQueuePresentKHR calls, its wait for the queue
-enum { PP_ACQUIRE, PP_ROOM, PP_SLOT, PP_QLOCK_SUBMIT, PP_GPU, PP_PACE, PP_PRESENT, PP_QLOCK_PRESENT, PP_COUNT };
+// ---- where frame generation's frames go, per 2 s window (the "[fgpipe]" line with MihawkGen): the render thread's
+// CPU time in the present and, of it, in frame generation's recording; its acquires, its wait for room in the present
+// queue, for the queue (submissions); the present thread's wait for the GPU, its half-frame spacing, its
+// vkQueuePresentKHR calls, its wait for the queue
+enum { PP_PRESENT_CPU, PP_FG_CPU, PP_ACQUIRE, PP_ROOM, PP_QLOCK_SUBMIT, PP_GPU, PP_PACE, PP_PRESENT, PP_QLOCK_PRESENT, PP_COUNT };
 static _Atomic uint64_t pp_sum[PP_COUNT], pp_max[PP_COUNT], pp_depth_max;
 static void pp_add(int i, uint64_t ns) {
     atomic_fetch_add(&pp_sum[i], ns);
@@ -1244,18 +1246,24 @@ void vk_queue_lock(void) {
     pp_add(pres ? PP_QLOCK_PRESENT : PP_QLOCK_SUBMIT, SDL_GetTicksNS() - t0);
 }
 void vk_queue_unlock(void) { pthread_mutex_unlock(&queue_m); }
+
 // Frame generation (exec.c vk_fg_generate) presents two frames for each the game draws, the generated one, then the
 // game's (PRES_GEN, PRES_AFTER_GEN). The display shows a frame when the GPU has drawn it, not when it is handed over:
 // the GPU runs a frame or two behind (present to shown ~33 ms at 50 drawn fps), and both frames of a pair are done
 // within a millisecond of each other. Spacing the presents by the CPU's clock left them on screen together and then a
 // long gap (with VSync's FIFO and with G-SYNC: ghosting while the camera moved). So each is presented once the GPU has
 // drawn it, the generated one at once, the game's half the time between generated frames after it, as AMD's frame
-// interpolation swapchain does. With MihawkGen, while the game keeps its pace (the averaged time within 10% of the
-// period, framepace.c framepace_fg_period_ns), half the period itself: 8.34 ms at 59.94 fps, one refresh at 119.88 Hz.
+// interpolation swapchain does. With MihawkGen, while the frame-rate limit paces the game (framepace.c
+// framepace_fg_period_ns), the pairs keep a grid of the game's period: a generated frame is presented on the grid (the
+// last one's time + the period) or when the GPU has drawn it if later, and the game's frame half a period after it
+// (8.34 ms at 59.94 fps: one refresh at 119.88 Hz). A late frame moves the grid later; the grid then comes back by 1 ms
+// a pair while the frames are early, and starts over from a frame over half a period off it. (bench3-fg1.klog:
+// spacing each pair from the previous present only ever moved it later, the present queue filled and the render
+// thread waited 6.86 ms a frame for room in it.)
 enum { PRES_PLAIN, PRES_GEN, PRES_AFTER_GEN };
 
 static void present_wait_turn(int kind, uint64_t seq) {
-    static uint64_t last_gen;
+    static uint64_t last_gen, grid;
     static double gen_iv;  // (between generated frames, averaged: the game's frame time)
     if (kind == PRES_PLAIN) return;
     VkSemaphoreWaitInfo wi = {.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO, .semaphoreCount = 1, .pSemaphores = &g_vk.timeline,
@@ -1263,17 +1271,27 @@ static void present_wait_turn(int kind, uint64_t seq) {
     uint64_t tw = SDL_GetTicksNS();
     vkWaitSemaphores(g_vk.dev, &wi, 1000000000ull);  // (drawn; a second at most)
     pp_add(PP_GPU, SDL_GetTicksNS() - tw);
-    uint64_t now = SDL_GetTicksNS();
+    uint64_t now = SDL_GetTicksNS(), period = framepace_fg_period_ns();
+    if (period) {
+        if (kind == PRES_GEN) {
+            uint64_t p = grid + period, at = now;
+            if (grid && now + period / 2 > p && now < p + period / 2 && now < p)  // (early, near the grid)
+                at = now > p - 1000000 ? now : p - 1000000;
+            if (at > now) SDL_DelayPrecise(at - now), pp_add(PP_PACE, at - now);
+            grid = at;
+            return;
+        }
+        uint64_t at = grid + period / 2;
+        if (now < at && at - now < period) SDL_DelayPrecise(at - now), pp_add(PP_PACE, at - now);
+        return;
+    }
     if (kind == PRES_GEN) {
         double dt = last_gen ? (double)(now - last_gen) : 0;
         if (dt > 0 && dt < 1e8) gen_iv = gen_iv > 0 ? gen_iv + (dt - gen_iv) * 0.1 : dt;
         last_gen = now;
         return;
     }
-    double half = gen_iv / 2;
-    uint64_t period = framepace_fg_period_ns();
-    if (period && gen_iv > 0 && fabs(gen_iv - (double)period) < period * 0.1) half = period / 2.0;
-    uint64_t at = last_gen + (uint64_t)half;
+    uint64_t at = last_gen + (uint64_t)(gen_iv / 2);
     if (gen_iv > 0 && now < at) SDL_DelayPrecise(at - now), pp_add(PP_PACE, at - now);
 }
 
@@ -1341,14 +1359,16 @@ void vk_present_idle(void) {
 
 // Before the next window image is drawn: no plain present waiting (one frame at a time, as before; with the shared
 // queue's thread one may: it waits there for the GPU), at most two of frame generation's (the previous pair's game
-// frame, this pair's generated one)
+// frame, this pair's generated one); three with MihawkGen's paced grid, so a late present does not hold the next
+// game frame's drawing (bench3-fg1.klog: 6.86 ms a frame here with two)
+extern volatile int g_fg_counts_game;  // (framepace.c: MihawkGen's limit counts the game's frames)
 static void present_wait_room(void) {
     uint64_t t0 = SDL_GetTicksNS();
     pthread_mutex_lock(&pres_m);
     for (;;) {
         bool plain = false;
         for (int i = 0; i < presq_n; i++) plain |= presq[(presq_head + i) % PRES_Q].kind == PRES_PLAIN;
-        if ((!plain || pres_shared) && presq_n <= 2) break;
+        if ((!plain || pres_shared) && presq_n <= (g_fg_counts_game ? 3 : 2)) break;
         pthread_cond_wait(&pres_cv, &pres_m);
     }
     pthread_mutex_unlock(&pres_m);
@@ -1439,19 +1459,13 @@ static void hdr_write(VkCommandBuffer cb, uint32_t i) {
 }
 
 // (the present's own time and its acquire: runtime/frametime.h FT_PRESENT_NS, FT_ACQUIRE_NS)
-typedef struct {
-    uint32_t image;
-    VkSemaphore acquired;
-    bool ok;
-    bool rendering;    // a rendering into view is open (else the frame was copied into the window image: frame_blit)
-    VkImageView view;  // what the frame is drawn into: the window image, or MihawkGen's final image (mh_frame_begin)
-} Frame;
+typedef struct { uint32_t image; VkSemaphore acquired; bool ok; } Frame;
 static Frame cur_frame;
 
-// Begin rendering into cur_frame.view (the window's size), its contents loaded or cleared to clear
+// Begin rendering into the acquired window image, its contents loaded or cleared to clear
 static void frame_render_begin(const float *clear) {
     VkCommandBuffer cb = vk_cmd();
-    VkRenderingAttachmentInfo ca = {.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, .imageView = cur_frame.view,
+    VkRenderingAttachmentInfo ca = {.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, .imageView = g_vk.sc_views[cur_frame.image],
                                     .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                                     .loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
                                     .storeOp = VK_ATTACHMENT_STORE_OP_STORE};
@@ -1503,8 +1517,6 @@ static bool frame_acquire(void) {
     }
     cur_frame.acquired = acquire_sem[slot];
     slot_seq[slot] = vk_pending_seq();
-    cur_frame.view = g_vk.sc_views[cur_frame.image];
-    cur_frame.rendering = false;
     cur_frame.ok = true;
     return true;
 }
@@ -1515,29 +1527,11 @@ bool vk_frame_begin(const float clear[4]) {
     if (!frame_acquire()) return false;
     image_barrier(vk_cmd(), g_vk.sc_images[cur_frame.image], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     frame_render_begin(clear);
-    cur_frame.rendering = true;
     return true;
 }
 
-// A window image holding a copy of src (w x h, in TRANSFER_SRC_OPTIMAL, scaled to the window if its size differs),
-// for vk_frame_end. Returns false when there is nothing to draw into.
-static bool frame_blit(VkImage src, uint32_t w, uint32_t h) {
-    if (!frame_acquire()) return false;
-    VkCommandBuffer cb = vk_cmd();
-    VkImage dst = g_vk.sc_images[cur_frame.image];
-    image_barrier(cb, dst, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    VkImageBlit bl = {.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}, .dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
-                      .srcOffsets = {{0, 0, 0}, {(int32_t)w, (int32_t)h, 1}},
-                      .dstOffsets = {{0, 0, 0}, {(int32_t)g_vk.sc_extent.width, (int32_t)g_vk.sc_extent.height, 1}}};
-    bool same = w == g_vk.sc_extent.width && h == g_vk.sc_extent.height;
-    vkCmdBlitImage(cb, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bl,
-                   same ? VK_FILTER_NEAREST : VK_FILTER_LINEAR);
-    image_barrier(cb, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    return true;
-}
-
-// Passes of their own between vk_frame_begin and vk_frame_end (exec.c post passes): end the frame's rendering, and
-// begin it again keeping what was drawn.
+// Passes of their own between vk_frame_begin and vk_frame_end (exec.c post passes): end the window image's
+// rendering, and begin it again keeping what was drawn.
 void vk_frame_suspend(void) {
     if (cur_frame.ok) vkCmdEndRendering(vk_cmd());
 }
@@ -1613,8 +1607,7 @@ static int frame_kind;  // (frame generation: PRES_GEN / PRES_AFTER_GEN for the 
 void vk_frame_end(const char *shot_path) {
     if (!cur_frame.ok) return;
     VkCommandBuffer cb = vk_cmd();
-    if (cur_frame.rendering) vkCmdEndRendering(cb);
-    cur_frame.rendering = false;
+    vkCmdEndRendering(cb);
     VkSpan shot = {0};
     bool capture = frame_capture[0] != 0;
     if (shot_path || capture) save_window_image(cb, &shot);
@@ -1788,10 +1781,9 @@ static uint64_t pso_wait(void) {  // ns waited
 // setting (tests).
 extern volatile int g_fg_want;
 extern volatile int g_fg_active;       // (framepace.c: the game's frame is presented after a generated one)
-extern volatile int g_fg_counts_game;  // (framepace.c: the frame-rate limit counts the game's frames, not the presents)
 TexBackend *vk_fg_generate(NvnTexture *t, TexBackend *b);
-bool vk_fg_camera_cut(void);
-static uint64_t gen_frames;
+void vk_fg_mihawk_window(char *out, size_t n);
+static uint64_t gen_frames, gen_twice;  // (this window: generated frames presented; game frames presented twice)
 static char fg_real_shot[256];  // (SAVAGEWIND_FG_SHOT_AT: the game's frame after a generated one saved)
 
 void vk_fg_wait_idle(void) {
@@ -1813,160 +1805,77 @@ static bool fg_wanted(void) {
     return !framepace_title_ui() && !framepace_menu_ui() && !framepace_paused() && !menu_is_open();
 }
 
-// ---- MihawkGen (FG_BACKEND_MIHAWK: the PS5 build, mihawk.cpp; docs/PS5-PORT-PLAN.md D7). The game's frame is drawn
-// as into the window (crop, upscale, menus), but into a final image of this file's (two, in turn: this frame's and
-// the last one's). The generator makes the frame halfway between those two (t = 0.5, the neural method), then each
-// is copied into a window image: the generated one presented first, the game's half a frame later
-// (present_wait_turn). The frame-rate limit counts the game's frames (framepace.c): 60 gives 120 presents. The
-// images and every barrier around the generator are this file's (framegen.h); its slots are the frames in flight. A
-// camera cut (exec.c vk_fg_camera_cut) and the first frame after generation was off present the game's frame in both
-// places, so the presents keep their cadence. The generator's GPU time per 2 s is in the "[fg]" line.
-enum { MH_SLOTS = FRAMES };
+// MihawkGen (FG_BACKEND_MIHAWK, the PS5 build: exec.c fg_mihawk, mihawk.cpp) presents as FSR 3 does here: the
+// generated frame (or the game's, shown twice) drawn into a window image first, the game's frame half a frame later.
+// With one queue the presents run on a thread of their own (present_thread_shared). The frame-rate limit counts the
+// game's frames (framepace.c): 60 gives 120 presents.
+//
+// Diagnostics: fg-capture.txt in the data root ("<count> [<every>]", re-read when it changes), or the benchmark's fast
+// pan (benchmark_fg_capture), captures the next <count> generated frames, one every <every> game frames (default
+// 30), each with the game's frame presented after it: screenshots/fg-<run>-<nn>-gen.png and -real.png, the window
+// images halved (vk_frame_end, capture_write). Each capture waits for the GPU (a hitch); the file is looked at once a
+// second.
 static struct {
-    VkImage img[3];       // 0, 1: final images (the window's format and size); 2: the generated frame (R8G8B8A8_UNORM)
-    VmaAllocation mem[3];
-    VkImageView view[3];  // (2: its storage view)
-    uint32_t w, h;
-    VkFormat format;
-    int cur;              // the image this frame is drawn into
-    bool active;          // this frame goes through here (mh_frame_begin .. mh_frame_end)
-    bool have_prev;       // img[cur ^ 1] holds the previous game frame, in SHADER_READ_ONLY_OPTIMAL
-    bool failed;          // unavailable for this run (logged)
-    int slot;
-    uint64_t slot_seq[MH_SLOTS];  // the submission that last recorded each slot
-    uint64_t gpu_sum, gpu_max, gpu_n, repeats;  // this 2 s window: the generator's GPU time, frames shown twice
-} mh;
+    int left, every, k;
+    long run;
+    uint64_t last;
+} cap;
 
-static void mh_release(void) {
-    for (int i = 0; i < 3; i++) {
-        if (mh.view[i]) vkDestroyImageView(g_vk.dev, mh.view[i], NULL);
-        if (mh.img[i]) vmaDestroyImage(g_vk.vma, mh.img[i], mh.mem[i]);
-        mh.view[i] = VK_NULL_HANDLE, mh.img[i] = VK_NULL_HANDLE, mh.mem[i] = VK_NULL_HANDLE;
-    }
-    mh.w = mh.h = 0;
-    mh.have_prev = false;
-}
-
-// The images and the generator for the window's size and format. false: not available (logged once).
-static bool mh_prepare(void) {
-    uint32_t w = g_vk.sc_extent.width, h = g_vk.sc_extent.height;
-    if (mh.failed || !w || !h) return false;
-    if (mh.w == w && mh.h == h && mh.format == g_vk.sc_format) return true;
-    if (g_vk.sc_format != VK_FORMAT_B8G8R8A8_UNORM && g_vk.sc_format != VK_FORMAT_R8G8B8A8_UNORM) {
-        LOG("[fg] MihawkGen off: the window's format %d is not 8-bit UNORM\n", g_vk.sc_format);
-        mh.failed = true;
-        return false;
-    }
-    if (mh.w) {  // (a new window size: nothing may still use the old images)
-        vk_fg_wait_idle();
-        mh_release();
-    }
-    if (!g_fg_backend.ready(w, h, MH_SLOTS)) {
-        mh.failed = true;
-        return false;
-    }
-    for (int i = 0; i < 3; i++) {
-        VkFormat f = i < 2 ? g_vk.sc_format : VK_FORMAT_R8G8B8A8_UNORM;
-        VkImageCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, .imageType = VK_IMAGE_TYPE_2D, .format = f,
-                                .extent = {w, h, 1}, .mipLevels = 1, .arrayLayers = 1, .samples = VK_SAMPLE_COUNT_1_BIT,
-                                .tiling = VK_IMAGE_TILING_OPTIMAL,
-                                .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-                                         (i < 2 ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
-                                                : VK_IMAGE_USAGE_STORAGE_BIT)};
-        VmaAllocationCreateInfo ai = {.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE};
-        VK_CHECK(vmaCreateImage(g_vk.vma, &ci, &ai, &mh.img[i], &mh.mem[i], NULL));
-        VkImageViewCreateInfo vi = {.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, .image = mh.img[i],
-                                    .viewType = VK_IMAGE_VIEW_TYPE_2D, .format = f,
-                                    .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
-        VK_CHECK(vkCreateImageView(g_vk.dev, &vi, NULL, &mh.view[i]));
-    }
-    mh.w = w, mh.h = h, mh.format = g_vk.sc_format;
-    mh.have_prev = false;
-    LOG("[fg] MihawkGen on the final %ux%u images (format %d): generated frame R8G8B8A8_UNORM, %d slots\n", w, h,
-        g_vk.sc_format, MH_SLOTS);
-    return true;
-}
-
-// Begin drawing the game's frame into this frame's final image (cleared to clear), in place of a window image
-static void mh_frame_begin(const float clear[4]) {
-    mh.cur = mh.have_prev ? mh.cur ^ 1 : 0;
-    image_barrier(vk_cmd(), mh.img[mh.cur], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    cur_frame.view = mh.view[mh.cur];
-    cur_frame.ok = cur_frame.rendering = true;
-    frame_render_begin(clear);
-}
-
-// The frame between the last game frame and this one (or this one again on a cut), presented, then this one.
-// shot_path: the window image of the game's frame saved, as vk_frame_end.
-static void mh_frame_end(const char *shot_path, bool cut) {
-    VkCommandBuffer cb = vk_cmd();
-    vkCmdEndRendering(cb);
-    cur_frame.ok = cur_frame.rendering = false;
-    VkImage now = mh.img[mh.cur], first = now;
-    if (mh.have_prev && !cut) {
-        mh.slot = (mh.slot + 1) % MH_SLOTS;
-        vk_wait_seq(mh.slot_seq[mh.slot]);  // (the slot's last use is done: its descriptor sets and timestamps)
-        uint64_t ns;
-        if (g_fg_backend.gpu_ns((uint32_t)mh.slot, &ns)) {
-            mh.gpu_sum += ns, mh.gpu_n++;
-            if (ns > mh.gpu_max) mh.gpu_max = ns;
-            benchmark_fg_gpu(ns);
-        }
-        // inputs sampled by compute, the output written by it (its last contents are not needed)
-        image_barrier(cb, now, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        image_barrier(cb, mh.img[2], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-        g_fg_backend.record(cb, (uint32_t)mh.slot, mh.view[mh.cur ^ 1], mh.view[mh.cur], mh.view[2]);
-        mh.slot_seq[mh.slot] = vk_pending_seq();
-        // the output's compute writes visible to the copy into the window; this frame's image to its copy
-        image_barrier(cb, mh.img[2], VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-        image_barrier(cb, now, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-        first = mh.img[2];
-        static int logged;
-        if (!logged++) LOG("[fg] first generated frame (MihawkGen neural, t = 0.5, slot %d)\n", mh.slot);
+static void fg_capture_poll(uint64_t frame) {
+    int n = 0, every = 30;
+    long run = 0;
+    if (benchmark_fg_capture(&n, &every)) {
+        run = (long)time(NULL);
     } else {
-        image_barrier(cb, now, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        static long seen_mtime = -1, seen_size = -1;
+        struct stat st;
+        if (frame % 60 || rt_data_stat("fg-capture.txt", &st) != 0) return;
+        if ((long)st.st_mtime == seen_mtime && (long)st.st_size == seen_size) return;
+        seen_mtime = (long)st.st_mtime, seen_size = (long)st.st_size, run = seen_mtime;
+        FILE *f = rt_data_fopen("fg-capture.txt", "r");
+        if (f) {
+            if (fscanf(f, "%d %d", &n, &every) < 1) n = 0;
+            fclose(f);
+        }
     }
-    bool shown = frame_blit(first, mh.w, mh.h);
-    if (shown) {
-        frame_kind = PRES_GEN;
-        vk_frame_end(NULL);
-        if (first == now) mh.repeats++;
-        else gen_frames++, perfmon_generated_frame();
-    }
-    frame_kind = shown ? PRES_AFTER_GEN : PRES_PLAIN;
-    if (frame_blit(now, mh.w, mh.h)) vk_frame_end(shot_path);
-    else frame_kind = PRES_PLAIN, renderer_submit();
-    // (the next frame's previous one; in the next submission, before anything there reads it)
-    image_barrier(vk_cmd(), now, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    mh.have_prev = true;
+    if (every < 1) every = 1;
+    cap.left = n > 0 ? n : 0, cap.every = every, cap.k = 0, cap.run = run, cap.last = 0;
+    LOG("[fg] capturing %d generated frames, one every %d game frames (screenshots/fg-%ld-*)\n", cap.left, every, run);
 }
 
 static void present_locked(NvnTexture *t) {
     g_last_presented = t;
     TexBackend *b = vk_tex(t, true);
     b->presented = true;
-    uint64_t t0 = SDL_GetTicksNS();
+    uint64_t t0 = SDL_GetTicksNS(), c0 = plat_thread_cpu_ns();
     vk_end_pass();
     t0 += pso_wait();  // (not the acquire's time)
-    // Frame generation: the frame between the last one and this, presented first. FSR 3: exec.c vk_fg_generate, on
-    // the game image; MihawkGen: on the final images, after this frame is drawn (mh_frame_end).
-    TexBackend *gen = g_fg_backend.kind == FG_BACKEND_FSR3_FI ? vk_fg_generate(t, b) : NULL;
+    // Frame generation (exec.c vk_fg_generate): the frame between the last one and this, presented first (MihawkGen:
+    // or this one, shown twice)
+    uint64_t c1 = plat_thread_cpu_ns();
+    TexBackend *gen = vk_fg_generate(t, b);
+    pp_add(PP_FG_CPU, plat_thread_cpu_ns() - c1);
     {   // (measuring) SAVAGEWIND_FG_TEST=1: the frame made, not presented
         static int test = -1;
         if (test < 0) test = getenv("SAVAGEWIND_FG_TEST") ? atoi(getenv("SAVAGEWIND_FG_TEST")) : 0;
         if (test == 1) gen = NULL;
     }
-    bool cut = false;
-    mh.active = false;
+    char cap_real[160] = "";
     if (g_fg_backend.kind == FG_BACKEND_MIHAWK) {
         g_fg_counts_game = 1;
-        cut = vk_fg_camera_cut();  // (every frame: it also clears the frame's cameras)
-        mh.active = g_fg_want && mh_prepare();
-        if (!mh.active) mh.have_prev = false;
+        if (gen) present_thread_shared();
+        fg_capture_poll(total_frames);
+        // capture this pair (fg_capture_poll)?
+        if (gen && gen != b && cap.left > 0 && total_frames >= cap.last + (uint64_t)cap.every) {
+            cap.last = total_frames, cap.left--, cap.k++;
+            snprintf(frame_capture, sizeof frame_capture, "screenshots/fg-%ld-%02d-gen.png", cap.run, cap.k);
+            snprintf(cap_real, sizeof cap_real, "screenshots/fg-%ld-%02d-real.png", cap.run, cap.k);
+            LOG("[fg] capture %d at game frame %llu (%d more)\n", cap.k, (unsigned long long)total_frames, cap.left);
+        }
     }
-    g_fg_active = gen != NULL || mh.active;
+    g_fg_active = gen != NULL;
     static const float black[4] = {0, 0, 0, 1};
-    bool have = mh.active ? (mh_frame_begin(black), true) : vk_frame_begin(black);
+    bool have = vk_frame_begin(black);
     uint64_t nd = SDL_GetTicksNS() - t0;
     if (nd > 30000000) {
         static int warned;
@@ -2022,8 +1931,9 @@ static void present_locked(NvnTexture *t) {
             frame_kind = PRES_GEN;
             vk_frame_end(gpath[0] ? gpath : NULL);
             frame_kind = PRES_AFTER_GEN;  // (the game's frame, below)
-            gen_frames++;
-            perfmon_generated_frame();
+            snprintf(frame_capture, sizeof frame_capture, "%s", cap_real);
+            if (gen != b) gen_frames++, perfmon_generated_frame();
+            else gen_twice++;
             if (!vk_frame_begin(black)) { renderer_submit(); goto presented; }
             cb = vk_cmd();
         }
@@ -2051,15 +1961,17 @@ static void present_locked(NvnTexture *t) {
             }
         }
         const char *path = shot ? "build/window.png" : wpath[0] ? wpath : fg_real_shot[0] ? fg_real_shot : NULL;
-        if (mh.active) mh_frame_end(path, cut);
-        else vk_frame_end(path);
+        vk_frame_end(path);
+        frame_capture[0] = 0;
         fg_real_shot[0] = 0;
         if (shot && getenv("SAVAGEWIND_EXIT_AFTER_SHOT")) { fflush(stderr); _exit(0); }
     } else {
         renderer_submit();
     }
 presented:
+    frame_capture[0] = 0;
     ft_add(FT_PRESENT_NS, SDL_GetTicksNS() - t0);
+    pp_add(PP_PRESENT_CPU, plat_thread_cpu_ns() - c0);
     g_fg_want = fg_wanted();  // (for the next frame's draws)
     ft_frame();
     extern void vk_list_stats_frame(void);
@@ -2210,17 +2122,31 @@ presented:
             LOG("[vk] t=%.1f frame %llu %.1f fps max %.0fms (%s) | %s\n", now, (unsigned long long)total_frames,
                 frames / (now - last_fps_time), max_gap * 1000.0, renderer_stats(), ft);
         }
-        if ((gen_frames || mh.repeats) && last_fps_time > 0) {
-            // (one klog write: a render-thread LOG costs ~1.4 ms on the PS5)
+        if ((gen_frames || gen_twice) && last_fps_time > 0) {
+            // (one klog write each: a render-thread LOG costs ~1.4 ms on the PS5)
             double s = now - last_fps_time;
-            char extra[192] = "";
-            if (g_fg_backend.kind == FG_BACKEND_MIHAWK)
-                snprintf(extra, sizeof extra, " (MihawkGen: gpu_ms %.3f max %.3f over %llu frames; %llu game frames shown "
-                         "twice: cut or restart)", mh.gpu_n ? mh.gpu_sum / 1e6 / (double)mh.gpu_n : 0.0, mh.gpu_max / 1e6,
-                         (unsigned long long)mh.gpu_n, (unsigned long long)mh.repeats);
-            LOG("[fg] %.1f generated frames/s: %.1f presented%s\n", gen_frames / s, (frames + gen_frames + mh.repeats) / s, extra);
+            char extra[256] = "";
+            if (g_fg_backend.kind == FG_BACKEND_MIHAWK) vk_fg_mihawk_window(extra, sizeof extra);
+            LOG("[fg] %.1f generated frames/s: %.1f presented%s\n", gen_frames / s, (frames + gen_frames + gen_twice) / s, extra);
+            if (g_fg_backend.kind == FG_BACKEND_MIHAWK) {
+                double f = frames ? (double)frames : 1;
+                uint64_t v[PP_COUNT], m[PP_COUNT];
+                for (int i = 0; i < PP_COUNT; i++) v[i] = atomic_exchange(&pp_sum[i], 0), m[i] = atomic_exchange(&pp_max[i], 0);
+                LOG("[fgpipe] ms per game frame, mean (max of one): render thread: present CPU %.2f (%.1f), of it frame "
+                    "generation %.2f (%.1f); waits: acquire %.2f (%.1f), present queue room %.2f (%.1f), queue for submits "
+                    "%.2f (%.1f); present thread (%s): GPU %.2f (%.1f), half-frame spacing %.2f (%.1f), vkQueuePresentKHR "
+                    "%.2f (%.1f), queue %.2f (%.1f); queued presents max %llu\n", v[PP_PRESENT_CPU] / 1e6 / f,
+                    m[PP_PRESENT_CPU] / 1e6, v[PP_FG_CPU] / 1e6 / f, m[PP_FG_CPU] / 1e6, v[PP_ACQUIRE] / 1e6 / f,
+                    m[PP_ACQUIRE] / 1e6, v[PP_ROOM] / 1e6 / f, m[PP_ROOM] / 1e6, v[PP_QLOCK_SUBMIT] / 1e6 / f,
+                    m[PP_QLOCK_SUBMIT] / 1e6,
+                    pres_on != 1 ? "none: the calling thread" : pres_shared ? "on the shared queue" : "second queue",
+                    v[PP_GPU] / 1e6 / f, m[PP_GPU] / 1e6, v[PP_PACE] / 1e6 / f, m[PP_PACE] / 1e6, v[PP_PRESENT] / 1e6 / f,
+                    m[PP_PRESENT] / 1e6, v[PP_QLOCK_PRESENT] / 1e6 / f, m[PP_QLOCK_PRESENT] / 1e6,
+                    (unsigned long long)atomic_exchange(&pp_depth_max, 0));
+            }
         }
-        mh.gpu_sum = mh.gpu_max = mh.gpu_n = mh.repeats = 0;
+        gen_twice = 0;
+        for (int i = 0; i < PP_COUNT; i++) atomic_store(&pp_sum[i], 0), atomic_store(&pp_max[i], 0);
         max_gap = 0;
         frames = 0;
         gen_frames = 0;

@@ -913,9 +913,9 @@ static const char *builtin_src(const char *name, int *stage) {
                "  if (pc.b.w > 1.5) o = vec2(inbox ? 1.0 : 0.0, inbox && z >= pc.lk.x && z <= pc.lk.y ? 1.0 : 0.0);  // (debug)\n"
                "}\n";
     }
-    // MihawkGen's generated frame with the newest game frame's HUD (exec.c vk_fg_hud_draw): g = the frame generated
-    // from the HUD-less images, f = the newest final image, h = its HUD-less version, all at the window's size. a.x =
-    // the difference over which a pixel is the HUD's (any channel, anywhere in its 3 x 3 neighbourhood), b.xy = size.
+    // MihawkGen's generated frame with the newest game frame's HUD (exec.c fg_mihawk): g = the frame generated from the
+    // HUD-less images, f = the newest game image, h = its HUD-less version, all at the game image's size. a.x = the
+    // difference over which a pixel is the HUD's (any channel, anywhere in its 3 x 3 neighbourhood), b.xy = size.
     if (!strcmp(name, "fg_hud.frag")) {
         *stage = STAGE_FRAGMENT;
         return "#version 450\n"
@@ -935,6 +935,16 @@ static const char *builtin_src(const char *name, int *stage) {
                "    }\n"
                "  o = vec4(d > pc.a.x ? texelFetch(f, ip, 0).rgb : texelFetch(g, ip, 0).rgb, 1.0);\n"
                "}\n";
+    }
+    // MihawkGen's input (exec.c fg_mihawk): the HUD-less image at the generator's size, bilinear (at half the size, the
+    // mean of each 2 x 2). b.xy = the output's size.
+    if (!strcmp(name, "fg_down.frag")) {
+        *stage = STAGE_FRAGMENT;
+        return "#version 450\n"
+               "layout(set = 0, binding = 0) uniform sampler2D t;\n"
+               "layout(push_constant) uniform P { vec4 a; vec4 b; } pc;\n"
+               "layout(location = 0) out vec4 o;\n"
+               "void main() { o = vec4(texture(t, gl_FragCoord.xy / pc.b.xy).rgb, 1.0); }\n";
     }
     if (!strcmp(name, "clear.vert")) {
         *stage = STAGE_VERTEX;

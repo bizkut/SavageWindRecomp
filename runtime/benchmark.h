@@ -23,6 +23,9 @@ void benchmark_gpu(uint64_t frame, uint64_t ns);
 // the game's shown early on a cut), and the frame generator's GPU time for each generated frame (MihawkGen)
 void benchmark_present(bool generated);
 void benchmark_fg_gpu(uint64_t ns);
+// vulkan/device.c, each presented frame: true once, when the fast-motion segment after the route wants frame
+// generation's captures (*count pairs, one every *every game frames)
+bool benchmark_fg_capture(int *count, int *every);
 
 #ifdef __cplusplus
 }

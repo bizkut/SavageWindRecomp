@@ -8,6 +8,10 @@
 // the guest threads' CPU time, its GPU time, and the cause of each hitch; and each present to the display
 // (vulkan/device.c: the game's frames and, with frame generation, the generated ones): the presented frame rate and
 // the intervals between presents (when they were handed to the display), and the frame generator's GPU time.
+// After the summary is written, 10 s of fast motion that is not measured, for frame generation's artifacts: Link runs
+// forward (left stick up) while the camera turns right at full speed (1-5 s), then left (5-9 s); with frame
+// generation on, 8 pairs of generated and real frames are captured there, one every 30 game frames from 1.5 s
+// (vulkan/device.c fg_capture_poll: screenshots/fg-<time>-<nn>-gen.png / -real.png). Then the game closes.
 #include "benchmark.h"
 
 #include <dirent.h>
@@ -26,7 +30,7 @@
 #endif
 
 #define S 1000000000ull
-enum { WARMUP_S = 20, ROUTE_S = 60, TITLE_TIMEOUT_S = 240, MAX_FRAMES = 16384 };
+enum { WARMUP_S = 20, ROUTE_S = 60, PAN_S = 10, TITLE_TIMEOUT_S = 240, MAX_FRAMES = 16384 };
 
 static int g_on = -1;
 bool benchmark_on(void) {
@@ -139,9 +143,9 @@ const char *benchmark_save_dir(void) {
 }
 
 // ---- the route
-enum { B_TITLE_WAIT, B_TITLE, B_LOADING, B_WARMUP, B_ROUTE, B_DONE };
+enum { B_TITLE_WAIT, B_TITLE, B_LOADING, B_WARMUP, B_ROUTE, B_PAN, B_DONE };
 static const char *const state_names[] = {"waiting for the title screen", "title screen", "loading", "settling",
-                                          "route", "done"};
+                                          "route", "fast motion (not measured: frame generation's captures)", "done"};
 static int g_state;
 static uint64_t g_t0, g_state_t;  // when the benchmark began, when its state did
 
@@ -192,6 +196,13 @@ bool benchmark_input(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, i
         else if (t >= 31 && t < 51) *rx = -32767;
         break;
     }
+    case B_PAN: {  // Link runs forward while the camera turns at full speed
+        double t = (now - g_state_t) / 1e9;
+        if (t >= 1 && t < 9) *ly = 32767;
+        if (t >= 1 && t < 5) *rx = 32767;
+        else if (t >= 5 && t < 9) *rx = -32767;
+        break;
+    }
     default: break;
     }
     return true;
@@ -206,6 +217,11 @@ static int g_ncauses, g_hitches;
 
 void benchmark_frame(uint64_t frame, uint64_t dt_ns, uint64_t render_ns, uint64_t guest_ns, const char *hitch) {
     if (g_on != 1) return;
+    if (g_state == B_PAN && plat_now_ns() - g_state_t >= PAN_S * S) {
+        LOG("[bench] fast motion done: the game closes\n");
+        fflush(stderr);
+        exit(0);
+    }
     if (g_state != B_ROUTE) return;
     if (plat_now_ns() - g_state_t >= ROUTE_S * S) { finish(NULL); return; }
     if (!g_n) g_first_frame = frame;
@@ -228,6 +244,16 @@ void benchmark_frame(uint64_t frame, uint64_t dt_ns, uint64_t render_ns, uint64_
 void benchmark_gpu(uint64_t frame, uint64_t ns) {
     if (g_on != 1 || !g_n || frame < g_first_frame || g_ngpu == MAX_FRAMES) return;
     g_gpu[g_ngpu++] = (float)(ns / 1e6);
+}
+
+bool benchmark_fg_capture(int *count, int *every) {
+    static bool asked;
+    if (g_on != 1 || asked || __atomic_load_n(&g_state, __ATOMIC_RELAXED) != B_PAN ||
+        plat_now_ns() - g_state_t < S * 3 / 2)
+        return false;
+    asked = true;
+    *count = 8, *every = 30;
+    return true;
 }
 
 // ---- presents: their times (the present thread writes, finish reads up to the count it publishes) and frame
@@ -275,8 +301,8 @@ static Dist dist(const float *v, int n) {
 }
 
 static void finish(const char *failure) {
-    if (g_state == B_DONE) return;
-    g_state = B_DONE;
+    if (g_state == B_DONE || g_state == B_PAN) return;
+    g_state = B_DONE;  // (the presents stop being measured)
     char text[4096];
     size_t at = 0;
     time_t now = time(NULL);
@@ -362,6 +388,11 @@ static void finish(const char *failure) {
     snprintf(hist, sizeof hist, "%s %s mean_ms=%.3f p95_ms=%.3f frames=%d presented_fps=%.1f fg_gpu_ms=%.3f\n", when,
              failure ? "failed" : "done", mean, p95, failure ? 0 : g_n, presented_fps, fg_ms);
     append_line("benchmark/history.txt", hist);
+    if (!failure) {
+        LOG("[bench] summary in benchmark/last.txt (and benchmark/history.txt); %d s of fast motion follow\n", PAN_S);
+        set_state(B_PAN, plat_now_ns());
+        return;
+    }
     LOG("[bench] summary in benchmark/last.txt (and benchmark/history.txt): the game closes\n");
     fflush(stderr);
     exit(0);

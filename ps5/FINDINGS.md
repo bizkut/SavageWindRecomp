@@ -663,7 +663,7 @@ game's own threads still use the shared arenas.
 
 ## 2026-10-28 — M6 benchmark: Great Plateau route, two runs (.41, ps5/evidence/m6/bench1-2.klog)
 
-Built-in benchmark (eboot `08f0e14f…`, 4K output, 1080p internal, no player), 60 s measured after 20 s settling:
+Built-in benchmark (eboot `08f0e14f…`, 4K output, 2560×1440 internal (FSR 1), no player), 60 s measured after 20 s settling:
 
 | | run 1 | run 2 |
 |---|---|---|
@@ -741,11 +741,11 @@ From bench2-fg1.klog:
 - **Uneven intervals:** a generated frame was presented as soon as the GPU finished it, sometimes under half a period
   after the game frame before it (9.8 % under 6.5 ms); late game frames make the 10–15 ms ones.
 
-Changes (eboot `be3a1081…`): MihawkGen now runs at the game image's size (1920×1080: the
-4K window image adds no detail, it is this image upscaled by the present) on the two HUD-less images
+Changes (eboot `be3a1081…`): MihawkGen was meant to run at the game image's size, on the assumption that it is
+1920×1080 (wrong: the game's final image is made at the window's 4K, RS_OUT; bench3 below), on the two HUD-less images
 (`exec.c fg_mihawk`; the copy alternates between two images), puts the HUD over the result there, and the generated
-frame is presented as FSR 3's is, through the same crop and upscale: no 4K final/HUD-less images, no copies, no 4K
-composite (a quarter of the generator's pixels). A generated frame now waits until half a period after the last game
+frame is presented as FSR 3's is, through the same crop: no window-sized offscreen images or blits (but the
+generator stayed at 4K, the final image's size). A generated frame now waits until half a period after the last game
 frame's present. `[fgpipe]` adds the render thread's CPU in the present and in frame generation's recording. The
 benchmark gains 10 s of unmeasured fast motion after the summary (Link runs forward while the camera turns at full
 speed right, then left), where 8 generated/real pairs are captured with FG on.
@@ -763,3 +763,26 @@ intended 1080p MihawkGen did not take effect: it still ran at 3840×2160 (2.75 m
 captured during a fast camera turn with Link running, the hearts are clean and sharp in every generated frame (the
 pixels around them differ by the motion itself), so the ghosting the user reported is gone in these captures; the
 user's own check in play is still pending.
+
+Why 4K, and the queue wait (host analysis of bench3-fg1.klog): the game's final image is drawn at the window's size
+(textures.c RS_OUT: 3840×2160 at 4K, for a sharp HUD); only the 3D scene is at the internal size (`[post] scene
+2560x1440 fsr1 -> 3840x2160`), and the "1920x1080" in early `[post]` lines is the title screen before the scale
+applies. The queue wait: each generated present waited until half a period after the previous game frame's present,
+so a late present moved every later one later and never back; the queue filled and the render thread waited.
+Changes (host-built, eboot in the plan's M7 status): MihawkGen runs at the 3D scene's internal size (2560×1440 here;
+the HUD-less images scaled down to it, the generated frame scaled up with FSR 1 EASU + RCAS as the scene is, then the
+4K HUD over it); the pairs keep a grid of the game's period (a late frame moves it later, early frames bring it back
+1 ms a pair, a frame over half a period off starts it over); one more queued pair (3) and swapchain image (6).
+
+## 2026-10-28 — Correction: the benchmarks ran at 2560×1440 internal, not 1080p
+
+Every in-game `[post]` line of the M6 and M7 benchmarks reads `scene 2560x1440 fsr1 -> 3840x2160`; the
+`1920x1080 fsr1` line appears once, at the title screen. Earlier entries and messages said "1080p internal". The
+GPU 7.7 ms per frame figure is at 1440p internal.
+
+## 2026-10-28 — M7 benchmark 4: MihawkGen at 1440p, present grid (.41, ps5/evidence/m7/bench4-*)
+
+Eboot `b3cca2a6…`. MihawkGen now runs at the scene size, 2560×1440: **1.90 ms per generated frame** (was 2.75 at 4K).
+FG on: presented 115.7, game 57.9 fps, 79.1 % on time, GPU 11.6 ms per game frame. The present-queue wait is gone (0),
+but the render thread now waits 5.45 ms per frame to acquire a swapchain image; intervals are 78.8 % in 6.5–10 ms.
+FG off unchanged (98.7 %).

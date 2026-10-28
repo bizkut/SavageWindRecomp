@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "../../benchmark.h"
 #include "../../frametime.h"
 #include "../../kernel.h"
 #include "../../paths.h"
@@ -6026,8 +6027,8 @@ static void scene_post(Prog *pr, CmdRec *r) {
 // then the game's frame half a frame later. Desktop: AMD FSR 3 frame interpolation (framegen.cpp), from the two
 // frames' final images, the newer one's 3D scene depth, its HUD-less image and motion vectors made here from the
 // camera (BOTW has none); see docs/SAVAGE-WIND.md. The PS5: PS5_MihawkGen (mihawk.cpp), from the HUD-less images of
-// the two frames at the window's size, the newest frame's HUD drawn over its result (device.c); of what is gathered
-// here it takes the HUD-less image and the camera, to see a cut (vk_fg_mihawk_inputs).
+// the two frames at the game image's size, the newest frame's HUD put over its result (fg_mihawk); of what is
+// gathered here it takes the HUD-less image and the camera, to see a cut.
 //   - The camera: the world's draws into the 3D scene's depth read a context constant buffer (c3) that holds, as
 //     floats, the view (0-11, 3x4 rows), view-projection (12-27), projection (28-43, OpenGL style), the camera's own
 //     matrix (44-55: right, up, back, position in its columns) and near / far (56, 57). The world camera's is the
@@ -6057,12 +6058,22 @@ static struct {
     bool have_prev_link;
     bool have_prev;
     uint64_t frame_id, last_ns;
+    // MihawkGen (fg_mihawk): which of its two inputs this frame's goes into (the other holds the last frame's), whether
+    // that one is a usable previous frame, the generator's size, its slots, this 2 s window
+    int in_cur;
+    bool mh_prev, mh_failed;
+    uint32_t mh_w, mh_h;
+    int slot;
+    uint64_t slot_seq[3];
+    uint64_t gpu_sum, gpu_max, gpu_n, repeats;
 } fg;
 
-// Its own images (with storage use, which post_image's lack): 0 the HUD-less copy, 1 motion vectors, 2 the
-// interpolated frame
+// Its own images (with storage use, which post_image's lack): FG_HUDLESS the HUD-less copy, 1 motion vectors, 2 the
+// interpolated frame (FSR 3); MihawkGen: FG_MH_IN + 0/1 its inputs (the HUD-less images at its size), FG_MH_GEN the
+// generated frame, FG_MH_EASU / FG_MH_RCAS it upscaled to the game image's size, FG_MH_OUT the HUD over it
+enum { FG_HUDLESS = 0, FG_MH_IN = 3, FG_MH_GEN = 5, FG_MH_EASU = 6, FG_MH_RCAS = 7, FG_MH_OUT = 8, FG_IMAGES = 9 };
 static TexBackend *fg_image(int i, uint32_t w, uint32_t h, VkFormat f, VkImageUsageFlags usage) {
-    static TexBackend img[3];
+    static TexBackend img[FG_IMAGES];
     TexBackend *d = &img[i];
     if (d->image && (d->width != w || d->height != h || d->format != f)) {
         vk_views_forget(d);
@@ -6098,7 +6109,7 @@ static void fg_copy_hudless(void) {
     if (!s || !s->image || s->aspect != VK_IMAGE_ASPECT_COLOR_BIT || s->layers != 1 || s->samples != 1) return;
     // (as the presented image has it: BOTW draws the HUD into a linear 10-bit image, then copies that sRGB-encoded into
     // the 8-bit one it presents; a blit into an sRGB image encodes the same way, and it is read through a UNORM view)
-    TexBackend *d = fg_image(0, s->width, s->height, srgb_of(fg.present_format ? fg.present_format : VK_FORMAT_R8G8B8A8_UNORM),
+    TexBackend *d = fg_image(FG_HUDLESS, s->width, s->height, srgb_of(fg.present_format ? fg.present_format : VK_FORMAT_R8G8B8A8_UNORM),
                              VK_IMAGE_USAGE_TRANSFER_DST_BIT);
     vk_end_pass();
     VkCommandBuffer cb = vk_cmd();
@@ -6177,9 +6188,13 @@ static bool fg_project(const double *vp, const float *p, float ysign, bool gl_de
     return true;
 }
 
+static TexBackend *fg_mihawk(TexBackend *b);
+
 // At the game's present (device.c), outside the window image's rendering: the frame between the previous one and
-// t (b: its image), or NULL (not wanted, or this frame lacks what it needs: the next one starts over).
+// t (b: its image), or NULL (not wanted, or this frame lacks what it needs: the next one starts over). MihawkGen may
+// also return b itself (fg_mihawk: shown twice).
 TexBackend *vk_fg_generate(NvnTexture *t, TexBackend *b) {
+    if (g_fg_backend.kind == FG_BACKEND_MIHAWK) return fg_mihawk(b);
     // (the game composites the scene into an image of its own and copies that into the presented one: the same size)
     TexBackend *ob = fg.out_rt ? vk_tex(fg.out_rt, true) : NULL;
     bool same = ob && ob->width == b->width && ob->height == b->height && fg.present_format == unorm_of(b->format);
@@ -6334,70 +6349,159 @@ TexBackend *vk_fg_generate(NvnTexture *t, TexBackend *b) {
     return out;
 }
 
-// MihawkGen (device.c, at the game's present, outside any rendering): this frame's HUD-less image when it was taken
-// (the composite's target right after the scene composite, before the HUD's first draw, converted as the game
-// converts it: fg_copy_hudless) and has the presented image b's size; NULL otherwise. *cut: this frame starts a new
-// shot against the last one (the camera jumped over 10 m or turned over ~35 degrees, FSR 3's reset rule above), from
-// the world camera the most draws used; no camera this frame (no 3D scene) is not a cut, and the next camera starts
-// over. Clears the frame's captures (fg_draw gathers them while frame generation is wanted). The image is reused by
-// the next frame's capture: device.c draws it into an image of its own before that.
-TexBackend *vk_fg_mihawk_inputs(TexBackend *b, bool *cut) {
+// ---- MihawkGen (the PS5 build: mihawk.cpp). The generator makes the frame halfway between the HUD-less images of the
+// last two frames (t = 0.5, the neural method): the HUD is alpha-blended over the moving world, so its pixels change
+// from frame to frame and the network's still-region gate warped them (ghosts of the hearts and the health bar, user
+// report 2026-10-28, when it got the final images). It runs at the 3D scene's internal size (1920 x 1080 at 4K with
+// FSR 1 Performance; the final image's other pixels are the scene's own upscale, bench3-fg1.klog: 2.75 ms at 4K): the
+// HUD-less images are scaled down to it (fg_down.frag), the generated frame up again as the scene is (FSR 1 EASU +
+// RCAS). fg_hud.frag then takes this frame's final image wherever it differs from its HUD-less version (the HUD) and
+// the generated frame elsewhere, into FG_MH_OUT, which device.c presents as the game's frames are (crop,
+// anti-aliasing), half a frame before b. The first frame after generation was off, a camera cut (the camera jumped
+// over 10 m or turned over ~35 degrees, FSR 3's reset rule above) and a frame with no HUD-less image (no 3D scene
+// composite: loading screens) return b itself: shown twice, the presents keep their cadence. Slots = frames in
+// flight; a slot is reused once the submission that recorded it is done. The generator's contract: its inputs in
+// SHADER_READ_ONLY_OPTIMAL with their writes visible to compute, its output in GENERAL, and its writes made visible to
+// what reads them, all by the caller (here; the runtime's images live in GENERAL).
+static void fg_layout(VkCommandBuffer cb, VkImage img, VkImageLayout from, VkImageLayout to) {
+    VkImageMemoryBarrier2 ib = {.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+                                .srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, .srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT,
+                                .dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+                                .dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT,
+                                .oldLayout = from, .newLayout = to, .image = img,
+                                .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
+                                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED};
+    VkDependencyInfo di = {.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO, .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &ib};
+    vkCmdPipelineBarrier2(cb, &di);
+}
+
+static TexBackend *fg_mihawk(TexBackend *b) {
     if (!g_fg_vk.dev) g_fg_vk = (FgVk){g_vk.phys, g_vk.dev, vk_fg_wait_idle};
+    // this frame's HUD-less image: the composite's target has the presented image's size (the game copies one into
+    // the other) and was copied before the HUD's first draw (fg_copy_hudless)
     TexBackend *ob = fg.out_rt ? vk_tex(fg.out_rt, true) : NULL;
     bool same = ob && ob->width == b->width && ob->height == b->height && fg.present_format == unorm_of(b->format);
     fg.present_format = unorm_of(b->format);
     if (fg.copy_pending) fg_copy_hudless();  // (nothing drawn after the composite)
-    TexBackend *hl = fg.hudless_ok && same ? fg_image(0, b->width, b->height, srgb_of(unorm_of(b->format)),
-                                                       VK_IMAGE_USAGE_TRANSFER_DST_BIT) : NULL;
+    VkFormat hf = srgb_of(unorm_of(b->format));
+    TexBackend *hl = fg.hudless_ok && same ? fg_image(FG_HUDLESS, b->width, b->height, hf, VK_IMAGE_USAGE_TRANSFER_DST_BIT) : NULL;
+    TexBackend *scene = hl && fg.scene ? vk_tex(fg.scene, false) : NULL;
+    // the camera: a cut?
     int best = -1;
     for (int i = 0; i < fg.ncand; i++)
         if (best < 0 || fg.cand[i].draws > fg.cand[best].draws) best = i;
-    *cut = false;
+    bool cut = false;
     if (best >= 0) {
         const float *m = fg.cand[best].m;
         float pos[3] = {m[47], m[51], m[55]}, fwd[3] = {-m[46], -m[50], -m[54]}, dp = 0, dot = 0;
         for (int k = 0; k < 3; k++) dp += (pos[k] - fg.prev_pos[k]) * (pos[k] - fg.prev_pos[k]), dot += fwd[k] * fg.prev_fwd[k];
-        *cut = fg.have_prev && (dp > 100 || dot < 0.82f);
+        cut = fg.have_prev && (dp > 100 || dot < 0.82f);
         memcpy(fg.prev_pos, pos, sizeof pos), memcpy(fg.prev_fwd, fwd, sizeof fwd);
     }
     fg.have_prev = best >= 0;
     fg.ncand = 0;
     fg.hudless_ok = fg.copy_pending = false;
     fg.out_rt = fg.scene = NULL;
-    return hl;
+    if (!g_fg_want || fg.mh_failed || !b->image || b->layers != 1 || b->samples != 1 || (b->aspect & ~VK_IMAGE_ASPECT_COLOR_BIT)) {
+        fg.mh_prev = false;
+        return NULL;
+    }
+    // the generator's size: the scene's, when smaller than the final image (else the final image's)
+    uint32_t gw = fg.mh_w ? fg.mh_w : b->width, gh = fg.mh_h ? fg.mh_h : b->height;
+    if (scene) {
+        bool smaller = scene->width < b->width && scene->height <= b->height;
+        gw = smaller ? scene->width : b->width, gh = smaller ? scene->height : b->height;
+    }
+    if (gw > b->width || gh > b->height) gw = b->width, gh = b->height;  // (the final image got smaller)
+    if (fg.mh_w != gw || fg.mh_h != gh) {  // (the generator for this size; the GPU idle while it is made)
+        if (!g_fg_backend.ready(gw, gh, 3)) {
+            fg.mh_failed = true;
+            return NULL;
+        }
+        LOG("[fg] MihawkGen at %ux%u for the %ux%u final image (the 3D scene's size %ux%u)\n", gw, gh, b->width, b->height,
+            scene ? scene->width : 0, scene ? scene->height : 0);
+        fg.mh_w = gw, fg.mh_h = gh, fg.mh_prev = false;
+    }
+    TexBackend *out = b;
+    TexBackend *in = NULL;
+    VkCommandBuffer cb = VK_NULL_HANDLE;
+    if (hl) {  // this frame's HUD-less image at the generator's size (the bytes as stored: gamma-encoded)
+        in = fg_image(FG_MH_IN + fg.in_cur, gw, gh, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+        vk_end_pass();
+        cb = vk_cmd();
+        VkImageView src[3] = {raw_view(hl)};
+        float pc[8] = {0, 0, 0, 0, (float)gw, (float)gh, 0, 0};
+        post_pass_pc(cb, "fg_down.frag", src, 1, in, pc, sizeof pc, false);
+    }
+    if (hl && fg.mh_prev && !cut) {
+        TexBackend *prev = fg_image(FG_MH_IN + (fg.in_cur ^ 1), gw, gh, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+        TexBackend *gen = fg_image(FG_MH_GEN, gw, gh, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_STORAGE_BIT);
+        TexBackend *o = fg_image(FG_MH_OUT, b->width, b->height, unorm_of(b->format), VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+        fg.slot = (fg.slot + 1) % 3;
+        vk_wait_seq(fg.slot_seq[fg.slot]);  // (its last recording done: descriptor sets, timestamps; long since, in practice)
+        uint64_t ns;
+        if (g_fg_backend.gpu_ns((uint32_t)fg.slot, &ns)) {
+            fg.gpu_sum += ns, fg.gpu_n++;
+            if (ns > fg.gpu_max) fg.gpu_max = ns;
+            benchmark_fg_gpu(ns);
+        }
+        cb = vk_cmd();
+        if (g_gpuprof_frame) gp_mark(cb, "frame generation: MihawkGen neural");
+        vk_full_barrier(cb);  // (the inputs' writes)
+        fg_layout(cb, prev->image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        fg_layout(cb, in->image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        fg_layout(cb, gen->image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL);  // (the last frame's reads done)
+        g_fg_backend.record(cb, (uint32_t)fg.slot, post_view(prev), post_view(in), post_view(gen));
+        fg.slot_seq[fg.slot] = vk_pending_seq();
+        fg_layout(cb, prev->image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
+        fg_layout(cb, in->image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
+        VkImageView up = post_view(gen);
+        if (gw != b->width || gh != b->height) {  // up as the scene is (exec.c scene_post: EASU, then RCAS)
+            if (g_gpuprof_frame) gp_mark(cb, "frame generation: FSR 1 up");
+            uint32_t ow = b->width, oh = b->height;
+            TexBackend *e = fg_image(FG_MH_EASU, ow, oh, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+            TexBackend *r = fg_image(FG_MH_RCAS, ow, oh, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+            float iw = (float)gw, ih = (float)gh;
+            float pe[8] = {iw / ow, ih / oh, 0.5f * iw / ow - 0.5f, 0.5f * ih / oh - 0.5f, iw, ih};
+            VkImageView ei[3] = {up};
+            post_pass(cb, "easu.frag", ei, 1, e, pe, false);
+            float pr[8] = {exp2f(-0.2f), 0, 0, 0, (float)ow, (float)oh};  // (sharpness 0.2 stops, as scene_post)
+            VkImageView ri[3] = {post_view(e)};
+            post_pass(cb, "rcas.frag", ri, 1, r, pr, false);
+            up = post_view(r);
+        }
+        if (g_gpuprof_frame) gp_mark(cb, "frame generation: the HUD over it");
+        VkImageView hi[3] = {up, raw_view(b), raw_view(hl)};  // (post_pass_pc starts with a full barrier)
+        float pc[8] = {3.0f / 255.0f, 0, 0, 0, (float)b->width, (float)b->height, 0, 0};
+        post_pass_pc(cb, "fg_hud.frag", hi, 3, o, pc, sizeof pc, false);
+        if (g_gpuprof_frame) gp_mark(cb, "frame generation: done");
+        out = o;
+        static int logged;
+        if (!logged++)
+            LOG("[fg] first generated frame: MihawkGen neural, t = 0.5, on the HUD-less images at %ux%u, the HUD of the "
+                "newest %ux%u final image over it\n", gw, gh, b->width, b->height);
+    } else {
+        fg.repeats++;
+        static uint64_t n;
+        if (!hl && n++ % 300 == 0)
+            LOG("[fg] game frame shown twice: no HUD-less image (composite target %s, %ux%u, image %ux%u)\n",
+                ob ? "found" : "missing", ob ? ob->width : 0, ob ? ob->height : 0, b->width, b->height);
+    }
+    if (cb) {
+        vk_full_barrier(cb);
+        vk_dyn_forget();
+    }
+    fg.mh_prev = hl != NULL;
+    if (hl) fg.in_cur ^= 1;  // (the next frame's input: the other image)
+    return out;
 }
 
-// MihawkGen's presented generated frame (fg_hud.frag): the newest game frame's HUD over the frame generated from the
-// HUD-less images. Where the final image and its HUD-less version differ (by over 3/255 anywhere in a pixel's 3 x 3
-// neighbourhood: the HUD, blended over the world, with the upscaler's spread around its edges), the final image;
-// elsewhere the generated one. The pipeline is made before the window image's rendering begins (vk_fg_hud_prepare);
-// vk_fg_hud_draw draws inside it. Its three views are in SHADER_READ_ONLY_OPTIMAL.
-void vk_fg_hud_prepare(VkFormat fmt) { post_pipeline("fg_hud.frag", fmt); }
-
-void vk_fg_hud_draw(VkCommandBuffer cb, VkFormat fmt, VkImageView gen, VkImageView final, VkImageView hudless, uint32_t w,
-                    uint32_t h) {
-    VkPipeline pipe = post_pipeline("fg_hud.frag", fmt);
-    VkDescriptorSet ds = vk_alloc_set(post_set_layout);
-    VkImageView v[3] = {gen, final, hudless};
-    VkDescriptorImageInfo ii[3];
-    VkWriteDescriptorSet wr[3];
-    for (int i = 0; i < 3; i++) {
-        ii[i] = (VkDescriptorImageInfo){vk_default_sampler(false), v[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
-        wr[i] = (VkWriteDescriptorSet){.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = ds, .dstBinding = (uint32_t)i,
-                                       .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                                       .pImageInfo = &ii[i]};
-    }
-    vkUpdateDescriptorSets(g_vk.dev, 3, wr, 0, NULL);
-    vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe);
-    vk_dyn_forget();
-    vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, post_layout, 0, 1, &ds, 0, NULL);
-    VkViewport vp = {0, 0, (float)w, (float)h, 0, 1};
-    VkRect2D sc = {{0, 0}, {w, h}};
-    vkCmdSetViewport(cb, 0, 1, &vp);
-    vkCmdSetScissor(cb, 0, 1, &sc);
-    float pc[8] = {3.0f / 255.0f, 0, 0, 0, (float)w, (float)h, 0, 0};
-    vkCmdPushConstants(cb, post_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof pc, pc);
-    vkCmdDraw(cb, 3, 1, 0, 0);
+// The "[fg]" line's MihawkGen part for this window (device.c, every 2 s), and a new window
+void vk_fg_mihawk_window(char *out, size_t n) {
+    snprintf(out, n, " (MihawkGen at %ux%u: gpu_ms %.3f max %.3f over %llu frames; %llu game frames shown twice: start, cut "
+             "or no HUD-less image)", fg.mh_w, fg.mh_h, fg.gpu_n ? fg.gpu_sum / 1e6 / (double)fg.gpu_n : 0.0,
+             fg.gpu_max / 1e6, (unsigned long long)fg.gpu_n, (unsigned long long)fg.repeats);
+    fg.gpu_sum = fg.gpu_max = fg.gpu_n = fg.repeats = 0;
 }
 
 // Inside the window image's rendering (device.c vk_frame_begin): the game image into (vx, vy, vw, vh).
