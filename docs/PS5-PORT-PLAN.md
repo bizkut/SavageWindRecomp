@@ -354,13 +354,34 @@ are a link boundary, not proof that every pre-bootstrap guest path avoids them. 
 unavailable later subsystems log and fail if reached; missing HLE imports retain the desktop's fallback behavior.
 
 ### M3 — Rendering on VideoOut
-RADV link, display-plane surface, swapchain at 3840×2160, FIFO, 119.88 Hz request; shaderc + caches (D6);
-`sceAgcSuspendPoint` for rest mode (as `ps5-wow/ps5/title/main.c`).
+RADV link, display-plane surface, swapchain at the chosen mode's extent (D4), FIFO, 119.88 Hz request; shaderc + caches
+(D6); `sceAgcSuspendPoint` for rest mode (as `ps5-wow/ps5/title/main.c`).
 **Done when:** title screen and Great Plateau render; klog shows the 4K surface, mode, and VRR lines from D4.
+
+The M3 link adds the desktop Vulkan backend unchanged in behaviour (`runtime/nvn/*`, `runtime/nvn/vulkan/*` without
+`framegen.cpp` and `imgui_glue.cpp`, `hle/nvn_boot.c`, `hle/framepace.c`) on the pinned RADV archive and shaderc.
+`runtime/ps5/window.c` answers device.c's SDL window, surface, timer and event calls with the VideoOut display plane
+(D4 mode choice; VSync pinned to On/FIFO) and the PS5 half of `window_size.h`. A title has no Vulkan loader, so
+`ps5/tools/gen-vk-globals.py` generates a trampoline per command of the RADV header, resolved through
+`vk_icdGetInstanceProcAddr`. RADV's zlib (linked whole) serves the runtime too. RADV's PS5 winsys already calls
+`sceAgcSuspendPoint` after each submission. Still at a boundary (`runtime/ps5/unavailable.c`, each answering as the
+desktop does with no such device or feature): input and bindings, button-glyph replacement, the overlay menu and
+Savage Wind's Options pages (all M4), movies (M5), frame generation (M7), the performance overlay.
 
 ### M4 — Input
 D8 complete. **Done when:** a scripted klog of each device: DualSense buttons/sticks/triggers/gyro aim/rumble; USB
 mouse camera and clicks; USB keyboard movement and menus; unplug/replug each device mid-game.
+
+**PS5 Video page** in Savage Wind's existing Options pages (`runtime/ui/game_options.mm`, pause > System > Options
+and the title screen), enabled with input:
+- **Resolution: Auto / 1080p / 4K** replaces Window size and Fullscreen. Auto (default) is the D4 mode chosen at
+  start; 1080p and 4K are offered only if the display reports them. Applying it rebuilds the display-plane swapchain
+  (M3's surface code); if a live rebuild proves unreliable, the row says it applies at the next start.
+- **Frame rate: 30 / 60 / Off**: the existing `frame_rate` setting, limiting real frames.
+- **Upscaler** and its mode stay. VSync and HDR rows are removed: FIFO is fixed (D4) and HDR is not planned yet.
+- Choices persist in `savagewind.ini` through the broker.
+**Done when:** on .41, each row's choice is applied, logged, and restored after a restart; Resolution offers only the
+modes the display reports (4K TV now, a 1080p display before M6 closes).
 
 ### M5 — Audio and movies
 D9. **Done when:** 10-minute run with zero AudioOut errors/underruns logged, intro movie plays; user listening check.
@@ -375,6 +396,8 @@ without FSR; at 4K, the resolution/FSR mode the measurement supports. **Done whe
 D7 backend; frame pacing in `runtime/hle/framepace.c` for real + generated presents under VRR.
 **Done when:** settled 119–120 Hz presented cadence in play, `gpu_ms` of the generator logged per window, VRR
 confirmed on the TV, FG off in menus; A/B vs FG off for latency and artifacts (camera pan, Link running, HUD).
+The Video page's **Frame generation: On / Off** row drives MihawkGen instead of desktop FSR 3, offered only when the
+display runs at 119.88 Hz; with it on, the TV shows twice the frame-rate limit (60 → 120). Persisted like the rest.
 
 ### M8 — Temporal upgrades (after PR #194/#195)
 Reuse PR #194's motion vectors, jitter, depth copy and reactive mask and PR #195's FSR 3.1 path; do not re-derive
