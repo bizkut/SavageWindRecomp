@@ -4,10 +4,12 @@
 #include <tc/crypto/Sha2256Generator.h>
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -156,29 +158,43 @@ int main(int argc, char **argv) {
         if (!tables.load(image)) throw std::runtime_error("invalid RomFS tables");
         std::ifstream manifest(argv[2]);
         if (!manifest) throw std::runtime_error("cannot open manifest");
-        std::vector<unsigned char> buf(1024 * 1024);
-        std::string line;
-        size_t matched = 0, total = 0;
-        while (std::getline(manifest, line)) {
-            if (line.size() < 74 || line.compare(66, 6, "romfs/") != 0) continue;
-            ++total;
-            uint64_t offset, size;
-            std::string name = line.substr(72);
-            if (!tables.file(name, offset, size)) throw std::runtime_error("missing " + name);
-            tc::crypto::Sha2256Generator hash;
-            hash.initialize();
-            for (uint64_t pos = 0; pos < size;) {
-                size_t n = size_t(std::min<uint64_t>(buf.size(), size - pos));
-                if (!read_at(image, buf.data(), n, offset + pos)) throw std::runtime_error("read failed " + name);
-                hash.update(buf.data(), n);
-                pos += n;
+        std::vector<std::string> lines;
+        for (std::string line; std::getline(manifest, line);)
+            if (line.size() >= 74 && line.compare(66, 6, "romfs/") == 0) lines.push_back(line);
+        // Four threads read concurrently, so the check covers every reader of the package stream.
+        const size_t check_threads = 4, total = lines.size();
+        std::atomic<size_t> matched{0};
+        std::mutex error_mutex;
+        std::string error;
+        std::vector<std::thread> checkers;
+        for (size_t t = 0; t < check_threads; ++t) checkers.emplace_back([&, t] {
+            std::vector<unsigned char> buf(1024 * 1024);
+            auto failed = [&](const std::string &what) {
+                std::lock_guard<std::mutex> guard(error_mutex);
+                if (error.empty()) error = what;
+            };
+            for (size_t i = t; i < total; i += check_threads) {
+                const std::string &line = lines[i];
+                uint64_t offset, size;
+                std::string name = line.substr(72);
+                if (!tables.file(name, offset, size)) return failed("missing " + name);
+                tc::crypto::Sha2256Generator hash;
+                hash.initialize();
+                for (uint64_t pos = 0; pos < size;) {
+                    size_t n = size_t(std::min<uint64_t>(buf.size(), size - pos));
+                    if (!read_at(image, buf.data(), n, offset + pos)) return failed("read failed " + name);
+                    hash.update(buf.data(), n);
+                    pos += n;
+                }
+                std::array<unsigned char, 32> digest{};
+                hash.getHash(digest.data());
+                if (hex(digest.data(), digest.size()) != line.substr(0, 64)) return failed("hash mismatch " + name);
+                ++matched;
             }
-            std::array<unsigned char, 32> digest{};
-            hash.getHash(digest.data());
-            if (hex(digest.data(), digest.size()) != line.substr(0, 64)) throw std::runtime_error("hash mismatch " + name);
-            ++matched;
-        }
-        std::printf("manifest: %zu/%zu matched\n", matched, total);
+        });
+        for (auto &thread : checkers) thread.join();
+        if (!error.empty()) throw std::runtime_error(error);
+        std::printf("manifest: %zu/%zu matched (%zu threads)\n", matched.load(), total, check_threads);
         if (total != 41062 || matched != total || tables.file_count() != total)
             throw std::runtime_error("unexpected RomFS or manifest count");
         bench("package", image, open_time);

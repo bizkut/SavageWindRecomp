@@ -1,31 +1,48 @@
-diff --git a/src/NcaProcess.h b/src/NcaProcess.h
---- a/src/NcaProcess.h
-+++ b/src/NcaProcess.h
-@@ -24,6 +24,7 @@ class NcaProcess
-     void setKeyCfg(const KeyBag &keycfg);
-     void setVerifyMode(bool verify);
-     void setBaseNcaPath(const tc::Optional<tc::io::Path> &nca_path);
-+    void setBaseNcaStream(const std::shared_ptr<tc::io::IStream> &stream);
- 
+diff --git a/src/GameCardProcess.h b/src/GameCardProcess.h
+index ac7b0b8..24d87bd 100644
+--- a/src/GameCardProcess.h
++++ b/src/GameCardProcess.h
+@@ -25,6 +25,7 @@ class GameCardProcess
      // fs specific
      void setShowFsTree(bool show_fs_tree);
-@@ -33,6 +34,7 @@ class NcaProcess
- 
-     // post process() get FS out
-     const std::shared_ptr<tc::io::IFileSystem> &getFileSystem() const;
-+    std::shared_ptr<tc::io::IStream> getPartitionReader(size_t index) const;
+     void setExtractJobs(const std::vector<nstool::ExtractJob> extract_jobs);
++    const std::shared_ptr<tc::io::IFileSystem> &getFileSystem() const { return mFileSystem; }
  
    private:
-     const std::string kNpdmExefsPath = "/main.npdm";
-@@ -46,6 +47,7 @@ class NcaProcess
+     const std::string kXciMountPointName = "gamecard";
+diff --git a/src/KeyBag.cpp b/src/KeyBag.cpp
+index b4c34c0..ed85a8f 100644
+--- a/src/KeyBag.cpp
++++ b/src/KeyBag.cpp
+@@ -694,6 +694,13 @@ void nstool::KeyBagInitializer::importTicket(const tc::io::Path &tik_path)
+         return;
+     }
  
-     bool mVerify;
-     tc::Optional<tc::io::Path> mBaseNcaPath;
-+    std::shared_ptr<tc::io::IStream> mBaseNcaStream;
++    importTicketStream(tik_stream);
++}
++
++void nstool::KeyBagInitializer::importTicketStream(const std::shared_ptr<tc::io::IStream> &tik_stream)
++{
++    Report &r = get_report();
++    const tc::io::Path tik_path("embedded ticket");
+     // check size
+     size_t tik_raw_size = tc::io::IOUtil::castInt64ToSize(tik_stream->length());
  
-     // fs processing
-     std::shared_ptr<tc::io::IFileSystem> mFileSystem;
+diff --git a/src/KeyBag.h b/src/KeyBag.h
+index 23e1c68..ac51fc7 100644
+--- a/src/KeyBag.h
++++ b/src/KeyBag.h
+@@ -83,6 +83,8 @@ class KeyBagInitializer : public KeyBag
+         const std::vector<tc::io::Path> &tik_path_list,
+         const tc::Optional<tc::io::Path> &cert_path);
+ 
++    void importTicketStream(const std::shared_ptr<tc::io::IStream> &stream);
++
+   private:
+     KeyBagInitializer();
+ 
 diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
+index 4d29495..6ce03e3 100644
 --- a/src/NcaProcess.cpp
 +++ b/src/NcaProcess.cpp
 @@ -11,6 +11,18 @@
@@ -47,7 +64,7 @@ diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
  nstool::NcaProcess::NcaProcess()
      : mModuleName("nstool::NcaProcess"), mFile(), mOutputFile(), mCliOutputMode(), mKeyCfg(), mVerify(false),
        mBaseNcaPath(), mFileSystem(), mFsProcess()
-@@ -19,14 +31,20 @@
+@@ -19,14 +31,20 @@ nstool::NcaProcess::NcaProcess()
  
  void nstool::NcaProcess::process()
  {
@@ -68,7 +85,7 @@ diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
  
      // validate signatures
      if (mVerify)
-@@ -38,7 +56,9 @@
+@@ -38,7 +56,9 @@ void nstool::NcaProcess::process()
      displayHeader();
  
      // process partition
@@ -78,7 +95,7 @@ diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
  }
  
  void nstool::NcaProcess::setInputFile(const std::shared_ptr<tc::io::IStream> &file)
-@@ -62,6 +82,11 @@
+@@ -62,6 +82,11 @@ void nstool::NcaProcess::setBaseNcaPath(const tc::Optional<tc::io::Path> &nca_pa
      mBaseNcaPath = nca_path;
  }
  
@@ -90,7 +107,7 @@ diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
  void nstool::NcaProcess::setKeyCfg(const KeyBag &keycfg)
  {
      mKeyCfg = keycfg;
-@@ -93,6 +118,11 @@
+@@ -93,6 +118,79 @@ const std::shared_ptr<tc::io::IFileSystem> &nstool::NcaProcess::getFileSystem()
      return mFileSystem;
  }
  
@@ -99,10 +116,78 @@ diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
 +    return index < mPartitions.size() ? mPartitions[index].reader : nullptr;
 +}
 +
++nstool::NcaProcess::PartitionReaderFactory nstool::NcaProcess::getPartitionReaderFactory(size_t index) const
++{
++    if (index >= mPartitions.size() || mPartitions[index].reader == nullptr)
++        return nullptr;
++    const sPartitionInfo &info = mPartitions[index];
++    struct Recipe
++    {
++        int64_t offset, size, base_offset, base_size;
++        pie::hac::nca::EncryptionType enc_type, base_enc_type;
++        pie::hac::detail::aes128_key_t key, base_key;
++        pie::hac::detail::aes_iv_t ctr, base_ctr;
++        pie::hac::nca::HashType hash_type;
++        pie::hac::HierarchicalSha256Header sha256_hdr;
++        std::shared_ptr<pie::hac::BKTREncryptedStream> bktr;
++        std::shared_ptr<pie::hac::HierarchicalIntegrityStream> integrity;
++    } recipe{info.offset, info.size, info.base_offset, info.base_size, info.enc_type, info.base_enc_type,
++             info.decrypt_key, info.base_decrypt_key, info.decrypt_ctr, info.base_decrypt_ctr, info.hash_type,
++             info.hierarchicalsha256_hdr, nullptr, nullptr};
++    if (info.enc_type == pie::hac::nca::EncryptionType_AesCtrEx)
++        recipe.bktr = std::static_pointer_cast<pie::hac::BKTREncryptedStream>(info.decrypt_reader);
++    if (info.hash_type == pie::hac::nca::HashType_HierarchicalIntegrity)
++        recipe.integrity = std::static_pointer_cast<pie::hac::HierarchicalIntegrityStream>(info.reader);
++    std::string module = mModuleName;
++    return [recipe, module](const std::shared_ptr<tc::io::IStream> &file,
++                            const std::shared_ptr<tc::io::IStream> &base_file) -> std::shared_ptr<tc::io::IStream> {
++        auto decrypt = [&module](const std::shared_ptr<tc::io::IStream> &stream, int64_t offset, int64_t size,
++                                 pie::hac::nca::EncryptionType type, const pie::hac::detail::aes128_key_t &key,
++                                 const pie::hac::detail::aes_iv_t &ctr) -> std::shared_ptr<tc::io::IStream> {
++            if (stream == nullptr)
++                throw tc::Exception(module, "Partition stream not supplied.");
++            std::shared_ptr<tc::io::IStream> raw =
++                std::make_shared<tc::io::SubStream>(tc::io::SubStream(stream, offset, size));
++            if (type == pie::hac::nca::EncryptionType_None)
++                return raw;
++            if (type == pie::hac::nca::EncryptionType_AesCtr)
++                return std::make_shared<tc::crypto::Aes128CtrEncryptedStream>(
++                    tc::crypto::Aes128CtrEncryptedStream(raw, key, ctr));
++            throw tc::Exception(module, "Partition encryption cannot be rebuilt.");
++        };
++        std::shared_ptr<tc::io::IStream> decrypt_reader;
++        if (recipe.enc_type == pie::hac::nca::EncryptionType_AesCtrEx)
++        {
++            if (file == nullptr)
++                throw tc::Exception(module, "Partition stream not supplied.");
++            decrypt_reader = std::make_shared<pie::hac::BKTREncryptedStream>(
++                *recipe.bktr, std::make_shared<tc::io::SubStream>(tc::io::SubStream(file, recipe.offset, recipe.size)),
++                decrypt(base_file, recipe.base_offset, recipe.base_size, recipe.base_enc_type, recipe.base_key,
++                        recipe.base_ctr));
++        }
++        else
++        {
++            decrypt_reader = decrypt(file, recipe.offset, recipe.size, recipe.enc_type, recipe.key, recipe.ctr);
++        }
++        switch (recipe.hash_type)
++        {
++        case (pie::hac::nca::HashType_None):
++            return decrypt_reader;
++        case (pie::hac::nca::HashType_HierarchicalSha256):
++            return std::make_shared<pie::hac::HierarchicalSha256Stream>(
++                pie::hac::HierarchicalSha256Stream(decrypt_reader, recipe.sha256_hdr));
++        case (pie::hac::nca::HashType_HierarchicalIntegrity):
++            return std::make_shared<pie::hac::HierarchicalIntegrityStream>(*recipe.integrity, decrypt_reader);
++        default:
++            throw tc::Exception(module, "Partition hash type cannot be rebuilt.");
++        }
++    };
++}
++
  void nstool::NcaProcess::importHeader()
  {
      if (mFile == nullptr)
-@@ -120,8 +150,10 @@
+@@ -120,8 +218,10 @@ void nstool::NcaProcess::importHeader()
          throw tc::Exception(mModuleName, "Failed to decrypt NCA header. (nca_header_key could not be loaded)");
      }
  
@@ -113,7 +198,7 @@ diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
  
      // generate header hash
      tc::crypto::GenerateSha2256Hash(
-@@ -262,13 +294,15 @@
+@@ -262,13 +362,15 @@ void nstool::NcaProcess::generateNcaBodyEncryptionKeys()
  nstool::NcaProcess nstool::NcaProcess::readBaseNCA()
  {
      // open base nca stream
@@ -132,7 +217,7 @@ diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
  
      // process base nca with output suppressed
      NcaProcess obj;
-@@ -286,6 +320,7 @@
+@@ -286,6 +388,7 @@ void nstool::NcaProcess::generatePartitionConfiguration()
  {
      for (size_t i = 0; i < mHdr.getPartitionEntryList().size(); i++)
      {
@@ -140,7 +225,16 @@ diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
          // get reference to relevant structures
          const pie::hac::ContentArchiveHeader::sPartitionEntry &partition = mHdr.getPartitionEntryList()[i];
          pie::hac::sContentArchiveFsHeader &fs_header = mHdrBlock.fs_header[partition.header_index];
-@@ -385,7 +420,9 @@
+@@ -366,6 +469,8 @@ void nstool::NcaProcess::generatePartitionConfiguration()
+                     // create decryption stream
+                     info.decrypt_reader = std::make_shared<tc::crypto::Aes128CtrEncryptedStream>(
+                         tc::crypto::Aes128CtrEncryptedStream(info.raw_reader, partition_key, partition_ctr));
++                    info.decrypt_key = partition_key;
++                    info.decrypt_ctr = partition_ctr;
+                 }
+                 else if (info.enc_type == pie::hac::nca::EncryptionType_AesCtrEx)
+                 {
+@@ -385,7 +490,9 @@ void nstool::NcaProcess::generatePartitionConfiguration()
                      // IndirectStorage IStream construction being done after decryption but before hash layer processing
                      // this might be relevant when processing compressed or sparse storage
  
@@ -150,18 +244,32 @@ diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
  
                      if (nca_base.mHdr.getProgramId() != mHdr.getProgramId())
                      {
-@@ -409,8 +446,10 @@
+@@ -400,6 +507,11 @@ void nstool::NcaProcess::generatePartitionConfiguration()
+                             partition_base.raw_reader != nullptr)
+                         {
+                             base_reader = partition_base.decrypt_reader;
++                            info.base_offset = partition_base.offset;
++                            info.base_size = partition_base.size;
++                            info.base_enc_type = partition_base.enc_type;
++                            info.base_decrypt_key = partition_base.decrypt_key;
++                            info.base_decrypt_ctr = partition_base.decrypt_ctr;
+                         }
+                     }
+ 
+@@ -409,8 +521,12 @@ void nstool::NcaProcess::generatePartitionConfiguration()
                      }
  
                      // create decryption stream
 +                    savage_nca_trace("bktr-open-begin", i);
                      info.decrypt_reader = std::make_shared<pie::hac::BKTREncryptedStream>(pie::hac::BKTREncryptedStream(
                          info.raw_reader, partition_key, partition_ctr, fs_header.patch_info, base_reader));
++                    info.decrypt_key = partition_key;
++                    info.decrypt_ctr = partition_ctr;
 +                    savage_nca_trace("bktr-open-done", i);
                  }
                  else if (info.enc_type == pie::hac::nca::EncryptionType_AesXts)
                  {
-@@ -429,6 +468,7 @@
+@@ -429,6 +545,7 @@ void nstool::NcaProcess::generatePartitionConfiguration()
              }
  
              // filter out unrecognised hash types, and hash based readers
@@ -169,7 +277,7 @@ diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
              switch (info.hash_type)
              {
              case (pie::hac::nca::HashType_None):
-@@ -449,6 +489,7 @@
+@@ -449,6 +566,7 @@ void nstool::NcaProcess::generatePartitionConfiguration()
                      fmt::format(
                          "HashType({:s}): UNKNOWN", pie::hac::ContentArchiveUtil::getHashTypeAsString(info.hash_type)));
              }
@@ -177,7 +285,7 @@ diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
  
              // filter out unrecognised format types
              switch (info.format_type)
-@@ -826,6 +867,7 @@
+@@ -826,6 +944,7 @@ void nstool::NcaProcess::processPartitions()
  
      for (size_t i = 0; i < mHdr.getPartitionEntryList().size(); i++)
      {
@@ -185,7 +293,7 @@ diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
          uint32_t index = mHdr.getPartitionEntryList()[i].header_index;
          struct sPartitionInfo &partition = mPartitions[index];
  
-@@ -867,10 +909,10 @@
+@@ -867,10 +986,10 @@ void nstool::NcaProcess::processPartitions()
  
      tc::io::VirtualFileSystem::FileSystemSnapshot fs_snapshot = pie::hac::CombinedFsSnapshotGenerator(mount_points);
  
@@ -198,47 +306,376 @@ diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
      mFsProcess.setFsFormatName("ContentArchive");
      mFsProcess.setFsRootLabel(getContentTypeForMountStr(mHdr.getContentType()));
      mFsProcess.process();
-diff --git a/src/KeyBag.h b/src/KeyBag.h
---- a/src/KeyBag.h
-+++ b/src/KeyBag.h
-@@ -82,6 +82,8 @@ class KeyBagInitializer : public KeyBag
-         const std::vector<tc::io::Path> &tik_path_list,
-         const tc::Optional<tc::io::Path> &cert_path);
+diff --git a/src/NcaProcess.h b/src/NcaProcess.h
+index 8087b1d..f937862 100644
+--- a/src/NcaProcess.h
++++ b/src/NcaProcess.h
+@@ -7,6 +7,8 @@
+ #include <pietendo/hac/HierarchicalIntegrityHeader.h>
+ #include <pietendo/hac/HierarchicalSha256Header.h>
  
-+    void importTicketStream(const std::shared_ptr<tc::io::IStream> &stream);
++#include <functional>
 +
-   private:
-     KeyBagInitializer();
+ namespace nstool
+ {
  
-diff --git a/src/KeyBag.cpp b/src/KeyBag.cpp
---- a/src/KeyBag.cpp
-+++ b/src/KeyBag.cpp
-@@ -694,6 +694,13 @@ void nstool::KeyBagInitializer::importTicket(const tc::io::Path &tik_path)
-         return;
-     }
+@@ -24,6 +26,7 @@ class NcaProcess
+     void setKeyCfg(const KeyBag &keycfg);
+     void setVerifyMode(bool verify);
+     void setBaseNcaPath(const tc::Optional<tc::io::Path> &nca_path);
++    void setBaseNcaStream(const std::shared_ptr<tc::io::IStream> &stream);
  
-+    importTicketStream(tik_stream);
-+}
-+
-+void nstool::KeyBagInitializer::importTicketStream(const std::shared_ptr<tc::io::IStream> &tik_stream)
-+{
-+    Report &r = get_report();
-+    const tc::io::Path tik_path("embedded ticket");
-     // check size
-     size_t tik_raw_size = tc::io::IOUtil::castInt64ToSize(tik_stream->length());
- 
-diff --git a/src/GameCardProcess.h b/src/GameCardProcess.h
---- a/src/GameCardProcess.h
-+++ b/src/GameCardProcess.h
-@@ -25,6 +25,7 @@ class GameCardProcess
      // fs specific
      void setShowFsTree(bool show_fs_tree);
-     void setExtractJobs(const std::vector<nstool::ExtractJob> extract_jobs);
-+    const std::shared_ptr<tc::io::IFileSystem> &getFileSystem() const { return mFileSystem; }
+@@ -32,6 +35,14 @@ class NcaProcess
+ 
+     // post process() get FS out
+     const std::shared_ptr<tc::io::IFileSystem> &getFileSystem() const;
++    std::shared_ptr<tc::io::IStream> getPartitionReader(size_t index) const;
++
++    // Rebuilds the reader of partition @p index over other streams with the same NCA content (@p file for this NCA,
++    // @p base_file for the base NCA of an update partition). Decryption and hash tables are shared with this process's
++    // reader; positions are not, so each thread can read through its own reader. Null if the partition has no reader.
++    using PartitionReaderFactory = std::function<std::shared_ptr<tc::io::IStream>(
++        const std::shared_ptr<tc::io::IStream> &file, const std::shared_ptr<tc::io::IStream> &base_file)>;
++    PartitionReaderFactory getPartitionReaderFactory(size_t index) const;
  
    private:
-     const std::string kXciMountPointName = "gamecard";
+     const std::string kNpdmExefsPath = "/main.npdm";
+@@ -46,6 +57,7 @@ class NcaProcess
+ 
+     bool mVerify;
+     tc::Optional<tc::io::Path> mBaseNcaPath;
++    std::shared_ptr<tc::io::IStream> mBaseNcaStream;
+ 
+     // fs processing
+     std::shared_ptr<tc::io::IFileSystem> mFileSystem;
+@@ -119,6 +131,15 @@ class NcaProcess
+         // crypto metadata
+         pie::hac::detail::aes_iv_t aes_ctr;
+ 
++        // decrypt_reader inputs, kept for getPartitionReaderFactory
++        pie::hac::detail::aes128_key_t decrypt_key{};
++        pie::hac::detail::aes_iv_t decrypt_ctr{}; // aes_ctr advanced to the partition offset
++        int64_t base_offset = 0;                  // AesCtrEx: base NCA RomFS partition
++        int64_t base_size = 0;
++        pie::hac::nca::EncryptionType base_enc_type = pie::hac::nca::EncryptionType_None;
++        pie::hac::detail::aes128_key_t base_decrypt_key{};
++        pie::hac::detail::aes_iv_t base_decrypt_ctr{};
++
+         // sparse metadata
+         SparseInfo sparse_info;
+     };
+diff --git a/deps/libpietendo/include/pietendo/hac/BKTREncryptedStream.h b/deps/libpietendo/include/pietendo/hac/BKTREncryptedStream.h
+index d809fb0..2cc48e4 100644
+--- a/deps/libpietendo/include/pietendo/hac/BKTREncryptedStream.h
++++ b/deps/libpietendo/include/pietendo/hac/BKTREncryptedStream.h
+@@ -79,6 +79,13 @@ class BKTREncryptedStream : public tc::io::IStream
+         const pie::hac::sContentArchiveFsHeaderPatchInfo &patch_info,
+         const std::shared_ptr<tc::io::IStream> &baseStream);
+ 
++    // Same indirect and subsection tables as @p other (shared, not re-read) over other update and base streams with
++    // the same content; the new object has its own position, so each thread can read through its own copy.
++    BKTREncryptedStream(
++        const BKTREncryptedStream &other,
++        const std::shared_ptr<tc::io::IStream> &stream,
++        const std::shared_ptr<tc::io::IStream> &baseStream);
++
+     /**
+      * @brief Indicates whether the current stream supports reading.
+      **/
+@@ -183,15 +190,17 @@ class BKTREncryptedStream : public tc::io::IStream
+ 
+     struct IndirectEntry
+     {
+-        std::shared_ptr<tc::io::IStream> reader;
++        // read from mPatchReader (update NCA) instead of mBaseReader (base NCA)
++        bool patch;
+         // offset in reader (source offset)
+         int64_t physical_offset;
+         // destination offset
+         int64_t virtual_offset;
+         int64_t size;
+     };
+-    // Map to relate a final Stream offset and IStream and offset where the data are
+-    std::map<int64_t, IndirectEntry> mIndirectEntries;
++    // Map to relate a final Stream offset and IStream and offset where the data are (immutable, shared by objects
++    // made with the copy-over-streams constructor)
++    std::shared_ptr<const std::map<int64_t, IndirectEntry>> mIndirectEntries;
+ 
+     // Reader to read data from NCA base
+     std::shared_ptr<tc::io::IStream> mBaseReader;
+diff --git a/deps/libpietendo/include/pietendo/hac/BKTRSubsectionEncryptedStream.h b/deps/libpietendo/include/pietendo/hac/BKTRSubsectionEncryptedStream.h
+index 94ff82f..f23f7cd 100644
+--- a/deps/libpietendo/include/pietendo/hac/BKTRSubsectionEncryptedStream.h
++++ b/deps/libpietendo/include/pietendo/hac/BKTRSubsectionEncryptedStream.h
+@@ -77,6 +77,11 @@ class BKTRSubsectionEncryptedStream : public tc::io::IStream
+         const counter_t &counter,
+         const pie::hac::sContentArchiveBucketInfo &bucket_info);
+ 
++    // Same subsection table as @p other (shared, not re-read) over another stream with the same content; the new
++    // object has its own position and decryptors, so each thread can read through its own copy.
++    BKTRSubsectionEncryptedStream(
++        const BKTRSubsectionEncryptedStream &other, const std::shared_ptr<tc::io::IStream> &stream);
++
+     /**
+      * @brief Indicates whether the current stream supports reading.
+      **/
+@@ -181,11 +186,17 @@ class BKTRSubsectionEncryptedStream : public tc::io::IStream
+ 
+     struct Subsection
+     {
+-        std::shared_ptr<tc::io::IStream> reader;
++        uint32_t generation;
+         int64_t offset;
+         int64_t end_offset;
+     };
+-    std::map<int64_t, Subsection> mSubsections;
++    std::shared_ptr<const std::map<int64_t, Subsection>> mSubsections;
++
++    key_t mKey;
++    counter_t mCounter;
++    // one decrypting reader per generation over this object's stream
++    std::map<uint32_t, std::shared_ptr<tc::io::IStream>> mGenerationReaders;
++    void createGenerationReaders(const std::shared_ptr<tc::io::IStream> &stream);
+ 
+     std::vector<std::shared_ptr<tc::io::IStream>> mStreams;
+ };
+diff --git a/deps/libpietendo/include/pietendo/hac/HierarchicalIntegrityStream.h b/deps/libpietendo/include/pietendo/hac/HierarchicalIntegrityStream.h
+index 2360c15..38606db 100644
+--- a/deps/libpietendo/include/pietendo/hac/HierarchicalIntegrityStream.h
++++ b/deps/libpietendo/include/pietendo/hac/HierarchicalIntegrityStream.h
+@@ -29,6 +29,9 @@ class HierarchicalIntegrityStream : public tc::io::IStream
+     HierarchicalIntegrityStream();
+     HierarchicalIntegrityStream(
+         const std::shared_ptr<tc::io::IStream> &stream, const pie::hac::HierarchicalIntegrityHeader &hash_header);
++    // Same verified hash data as @p other (shared, not re-read) over another stream with the same content;
++    // the new object has its own position, so each thread can read through its own copy.
++    HierarchicalIntegrityStream(const HierarchicalIntegrityStream &other, const std::shared_ptr<tc::io::IStream> &stream);
+ 
+     /**
+      * @brief Indicates whether the current stream supports reading.
+@@ -149,11 +152,12 @@ class HierarchicalIntegrityStream : public tc::io::IStream
+         return tc::io::IOUtil::castSizeToInt64(block) * tc::io::IOUtil::castSizeToInt64(mDataStreamBlockSize);
+     };
+ 
+-    // hash cache for data layer
+-    tc::ByteData mHashCache;
+-    inline byte_t *getBlockHash(size_t begin_block)
++    // hash cache for data layer (immutable, shared by objects made with the copy-over-stream constructor)
++    std::shared_ptr<const tc::ByteData> mHashCache;
++    int64_t mDataLayerOffset;
++    inline const byte_t *getBlockHash(size_t begin_block)
+     {
+-        return mHashCache.data() + (begin_block * tc::crypto::Sha2256Generator::kHashSize);
++        return mHashCache->data() + (begin_block * tc::crypto::Sha2256Generator::kHashSize);
+     }
+ 
+     // hash calc temp
+diff --git a/deps/libpietendo/src/hac/BKTREncryptedStream.cpp b/deps/libpietendo/src/hac/BKTREncryptedStream.cpp
+index a657eff..3cb45ef 100644
+--- a/deps/libpietendo/src/hac/BKTREncryptedStream.cpp
++++ b/deps/libpietendo/src/hac/BKTREncryptedStream.cpp
+@@ -20,6 +20,27 @@ pie::hac::BKTREncryptedStream::BKTREncryptedStream()
+ {
+ }
+ 
++pie::hac::BKTREncryptedStream::BKTREncryptedStream(
++    const BKTREncryptedStream &other,
++    const std::shared_ptr<tc::io::IStream> &stream,
++    const std::shared_ptr<tc::io::IStream> &base)
++    : BKTREncryptedStream()
++{
++    if (other.mIndirectEntries == nullptr || other.mPatchReader == nullptr)
++    {
++        throw tc::ObjectDisposedException(kClassName, "source stream is disposed.");
++    }
++    if (base == nullptr || base->canRead() == false || base->canSeek() == false)
++    {
++        throw tc::NotSupportedException(kClassName, "baseStream does not support reading and seeking.");
++    }
++    mLength = other.mLength;
++    mIndirectEntries = other.mIndirectEntries;
++    mBaseReader = base;
++    mPatchReader = std::make_shared<pie::hac::BKTRSubsectionEncryptedStream>(
++        *std::static_pointer_cast<pie::hac::BKTRSubsectionEncryptedStream>(other.mPatchReader), stream);
++}
++
+ pie::hac::BKTREncryptedStream::BKTREncryptedStream(
+     const std::shared_ptr<tc::io::IStream> &stream,
+     const key_t &key,
+@@ -75,6 +96,7 @@ pie::hac::BKTREncryptedStream::BKTREncryptedStream(
+ 
+     mLength = indirect_block->header.total_size;
+     int64_t end_virtual_offset = indirect_block->header.total_size;
++    auto entries = std::make_shared<std::map<int64_t, IndirectEntry>>();
+ 
+     // Reverse lookup to save size from virtual offset
+     for (size_t i = indirect_block->header.bucket_count; i > 0; --i)
+@@ -90,15 +112,15 @@ pie::hac::BKTREncryptedStream::BKTREncryptedStream(
+                 throw tc::InvalidOperationException(kClassName, "Indirect storage not ascending ordered.");
+             }
+ 
+-            IndirectEntry &indirect_entry = mIndirectEntries[virtual_offset];
++            IndirectEntry &indirect_entry = (*entries)[virtual_offset];
+             // Select reader for each indirect storage entry
+             switch (entry.storage_index)
+             {
+             case indirectstorage::StorageSource_BaseRomFs:
+-                indirect_entry.reader = mBaseReader;
++                indirect_entry.patch = false;
+                 break;
+             case indirectstorage::StorageSource_PatchRomFs:
+-                indirect_entry.reader = mPatchReader;
++                indirect_entry.patch = true;
+                 break;
+             default:
+                 throw tc::NotSupportedException(
+@@ -112,6 +134,7 @@ pie::hac::BKTREncryptedStream::BKTREncryptedStream(
+             end_virtual_offset = virtual_offset;
+         }
+     }
++    mIndirectEntries = entries;
+ }
+ 
+ bool pie::hac::BKTREncryptedStream::canRead() const
+@@ -179,9 +202,9 @@ size_t pie::hac::BKTREncryptedStream::read(byte_t *ptr, size_t count)
+     // map must to contain an entry for offset 0, but never retrieve by upper bound (because the key returned must be
+     // greater) and in case ask for a offset greater (or equal) to last entry its return "end", so its safe to get
+     // previous entry
+-    const IndirectEntry &entry = (--mIndirectEntries.upper_bound(current_pos))->second;
++    const IndirectEntry &entry = (--mIndirectEntries->upper_bound(current_pos))->second;
+ 
+-    std::shared_ptr<tc::io::IStream> reader = entry.reader;
++    const std::shared_ptr<tc::io::IStream> &reader = entry.patch ? mPatchReader : mBaseReader;
+ 
+     // determine begin & end offsets
+     int64_t begin_read_offset = current_pos;
+@@ -263,5 +286,5 @@ void pie::hac::BKTREncryptedStream::dispose()
+         // release ptr
+         mPatchReader.reset();
+     }
+-    mIndirectEntries.clear();
++    mIndirectEntries.reset();
+ }
+\ No newline at end of file
+diff --git a/deps/libpietendo/src/hac/BKTRSubsectionEncryptedStream.cpp b/deps/libpietendo/src/hac/BKTRSubsectionEncryptedStream.cpp
+index 0a4f244..f20ee02 100644
+--- a/deps/libpietendo/src/hac/BKTRSubsectionEncryptedStream.cpp
++++ b/deps/libpietendo/src/hac/BKTRSubsectionEncryptedStream.cpp
+@@ -42,7 +42,44 @@ void setGenerationAesCtr(uint32_t generation, byte_t *aes_ctr)
+     aes_ctr_words[1].wrap(generation);
+ }
+ 
+-pie::hac::BKTRSubsectionEncryptedStream::BKTRSubsectionEncryptedStream() : mLength(0), mCurrentPos(0) {}
++pie::hac::BKTRSubsectionEncryptedStream::BKTRSubsectionEncryptedStream()
++    : mLength(0), mCurrentPos(0), mKey(), mCounter()
++{
++}
++
++pie::hac::BKTRSubsectionEncryptedStream::BKTRSubsectionEncryptedStream(
++    const BKTRSubsectionEncryptedStream &other, const std::shared_ptr<tc::io::IStream> &stream)
++    : BKTRSubsectionEncryptedStream()
++{
++    if (other.mSubsections == nullptr)
++    {
++        throw tc::ObjectDisposedException(kClassName, "source stream is disposed.");
++    }
++    if (stream == nullptr || stream->canRead() == false || stream->canSeek() == false)
++    {
++        throw tc::NotSupportedException(kClassName, "stream does not support reading and seeking.");
++    }
++    mLength = stream->length();
++    mSubsections = other.mSubsections;
++    mKey = other.mKey;
++    mCounter = other.mCounter;
++    createGenerationReaders(stream);
++}
++
++void pie::hac::BKTRSubsectionEncryptedStream::createGenerationReaders(const std::shared_ptr<tc::io::IStream> &stream)
++{
++    for (const auto &item : *mSubsections)
++    {
++        std::shared_ptr<tc::io::IStream> &reader = mGenerationReaders[item.second.generation];
++        if (reader == nullptr)
++        {
++            auto counter = mCounter;
++            setGenerationAesCtr(item.second.generation, counter.data());
++            reader = std::make_shared<tc::crypto::Aes128CtrEncryptedStream>(
++                tc::crypto::Aes128CtrEncryptedStream(stream, mKey, counter));
++        }
++    }
++}
+ 
+ pie::hac::BKTRSubsectionEncryptedStream::BKTRSubsectionEncryptedStream(
+     const std::shared_ptr<tc::io::IStream> &stream,
+@@ -79,10 +116,9 @@ pie::hac::BKTRSubsectionEncryptedStream::BKTRSubsectionEncryptedStream(
+         (const pie::hac::sAesCtrExStorageBlock *)subsection_block_raw.data();
+ 
+     mLength = stream->length();
+-    auto new_counter = counter;
+-
+-    // Relation generation -> decrypted IStream
+-    std::map<uint32_t, std::shared_ptr<tc::io::IStream>> generationMap;
++    mKey = key;
++    mCounter = counter;
++    auto subsections = std::make_shared<std::map<int64_t, Subsection>>();
+ 
+     for (size_t i = 0; i < subsection_block->header.bucket_count; ++i)
+     {
+@@ -90,25 +126,19 @@ pie::hac::BKTRSubsectionEncryptedStream::BKTRSubsectionEncryptedStream(
+         for (size_t j = 0; j < subsection.header.entry_count; ++j)
+         {
+             const pie::hac::sAesCtrExStorageEntry &entry = subsection.entries[j];
+-            uint32_t newGeneration = entry.generation;
+             int64_t subsec_offset = entry.offset;
+             int64_t end_offset = (j + 1 == subsection.header.entry_count)
+                 ? castUint64ToInt64(subsection.header.end_offset_bucket.unwrap())
+                 : subsection.entries[j + 1].offset.unwrap();
+-            setGenerationAesCtr(newGeneration, new_counter.data());
+-            std::shared_ptr<tc::io::IStream> &reader = generationMap[entry.generation];
+-            if (reader == nullptr)
+-            {
+-                reader = std::make_shared<tc::crypto::Aes128CtrEncryptedStream>(
+-                    tc::crypto::Aes128CtrEncryptedStream(stream, key, new_counter));
+-            }
+-
+-            Subsection &current_subsection = mSubsections[subsec_offset];
+-            current_subsection.reader = reader;
++
++            Subsection &current_subsection = (*subsections)[subsec_offset];
++            current_subsection.generation = entry.generation;
+             current_subsection.offset = subsec_offset;
+             current_subsection.end_offset = end_offset;
+         }
+     }
++    mSubsections = subsections;
++    createGenerationReaders(stream);
+ }
+ 
+ bool pie::hac::BKTRSubsectionEncryptedStream::canRead() const
+@@ -169,9 +199,9 @@ size_t pie::hac::BKTRSubsectionEncryptedStream::read(byte_t *ptr, size_t count)
+     // map must to contain an entry for offset 0, but never retrieve by upper bound (because the key returned must be
+     // greater) and in case ask for a offset greater (or equal) to last entry its return "end", so its safe to get
+     // previous entry
+-    const Subsection &section = (--mSubsections.upper_bound(current_pos))->second;
++    const Subsection &section = (--mSubsections->upper_bound(current_pos))->second;
+ 
+-    std::shared_ptr<tc::io::IStream> reader = section.reader;
++    const std::shared_ptr<tc::io::IStream> &reader = mGenerationReaders.find(section.generation)->second;
+ 
+     // determine begin & end offsets
+     int64_t begin_read_offset = current_pos;
+@@ -237,5 +267,6 @@ void pie::hac::BKTRSubsectionEncryptedStream::dispose()
+         // release ptr
+         stream.reset();
+     }
+-    mSubsections.clear();
++    mSubsections.reset();
++    mGenerationReaders.clear();
+ }
 diff --git a/deps/libpietendo/src/hac/ContentInfo.cpp b/deps/libpietendo/src/hac/ContentInfo.cpp
+index 230d4d3..f35e455 100644
 --- a/deps/libpietendo/src/hac/ContentInfo.cpp
 +++ b/deps/libpietendo/src/hac/ContentInfo.cpp
 @@ -18,12 +18,13 @@ void pie::hac::ContentInfo::operator=(const ContentInfo &other)
@@ -256,3 +693,65 @@ diff --git a/deps/libpietendo/src/hac/ContentInfo.cpp b/deps/libpietendo/src/hac
  }
  
  bool pie::hac::ContentInfo::operator!=(const ContentInfo &other) const
+diff --git a/deps/libpietendo/src/hac/HierarchicalIntegrityStream.cpp b/deps/libpietendo/src/hac/HierarchicalIntegrityStream.cpp
+index ac2466e..b990529 100644
+--- a/deps/libpietendo/src/hac/HierarchicalIntegrityStream.cpp
++++ b/deps/libpietendo/src/hac/HierarchicalIntegrityStream.cpp
+@@ -8,10 +8,33 @@
+ 
+ pie::hac::HierarchicalIntegrityStream::HierarchicalIntegrityStream()
+     : mModuleLabel("pie::hac::HierarchicalIntegrityStream"), mBaseStream(), mDataStreamBlockSize(0),
+-      mDataStreamLogicalLength(0), mDataStream(), mHashCache(), mHashCalc(new tc::crypto::Sha2256Generator())
++      mDataStreamLogicalLength(0), mDataStream(), mHashCache(), mDataLayerOffset(0),
++      mHashCalc(new tc::crypto::Sha2256Generator())
+ {
+ }
+ 
++pie::hac::HierarchicalIntegrityStream::HierarchicalIntegrityStream(
++    const HierarchicalIntegrityStream &other, const std::shared_ptr<tc::io::IStream> &stream)
++    : HierarchicalIntegrityStream()
++{
++    if (other.mHashCache == nullptr)
++    {
++        throw tc::ObjectDisposedException(mModuleLabel, "source stream is disposed.");
++    }
++    if (stream == nullptr || stream->canRead() == false || stream->canSeek() == false)
++    {
++        throw tc::InvalidOperationException(mModuleLabel, "stream does not support reading and seeking.");
++    }
++    mBaseStream = stream;
++    mDataStreamBlockSize = other.mDataStreamBlockSize;
++    mDataStreamLogicalLength = other.mDataStreamLogicalLength;
++    mHashCache = other.mHashCache;
++    mDataLayerOffset = other.mDataLayerOffset;
++    int64_t data_layer_physical_size =
++        mBaseStream->length() > mDataLayerOffset ? (mBaseStream->length() - mDataLayerOffset) : 0;
++    mDataStream = std::make_shared<tc::io::SubStream>(mBaseStream, mDataLayerOffset, data_layer_physical_size);
++}
++
+ pie::hac::HierarchicalIntegrityStream::HierarchicalIntegrityStream(
+     const std::shared_ptr<tc::io::IStream> &stream, const pie::hac::HierarchicalIntegrityHeader &hash_header)
+     : HierarchicalIntegrityStream()
+@@ -108,11 +131,12 @@ pie::hac::HierarchicalIntegrityStream::HierarchicalIntegrityStream(
+     }
+ 
+     // save final hash layer to verify data
+-    mHashCache = hash_layer_data.back();
++    mHashCache = std::make_shared<const tc::ByteData>(std::move(hash_layer_data.back()));
+ 
+     // create data layer
+     mDataStreamBlockSize = data_layer.block_size;
+     mDataStreamLogicalLength = data_layer.size;
++    mDataLayerOffset = data_layer.offset;
+     int64_t data_layer_physical_size =
+         mBaseStream->length() > data_layer.offset ? (mBaseStream->length() - data_layer.offset) : 0;
+     // fmt::print("make IVFC data stream:\n offset=0x{:x}\n size=0x{:x}\n", data_layer.offset,
+@@ -385,7 +409,7 @@ void pie::hac::HierarchicalIntegrityStream::dispose()
+     }
+ 
+     // clear hash cache
+-    mHashCache = tc::ByteData();
++    mHashCache.reset();
+ }
+ 
+ bool pie::hac::HierarchicalIntegrityStream::validateLayerBlocksWithHashLayer(

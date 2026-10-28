@@ -196,7 +196,11 @@ static tc::io::sDirectoryListing listing(const Vfs &v, const std::string &p) {
 struct Package {
     std::string name, prefix;
     Vfs vfs;
+    fs::path path;
 };
+// The NSP or XCI at path as a filesystem over its own file descriptor. Uses nstool's process classes, which append
+// to a process-global report: callers on different threads must serialise.
+Vfs package_filesystem(const fs::path &path);
 static std::string hex(const byte_t *p, size_t n) {
     static const char x[] = "0123456789abcdef";
     std::string s;

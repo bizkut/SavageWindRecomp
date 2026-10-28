@@ -379,3 +379,42 @@ What runs 1–7 found, each fixed before the next:
 Also measured: `stat("")` in a title returns EINVAL (not ENOENT), which makes throwing `std::filesystem` calls throw.
 Flexible memory free at startup: 212 MB of 448 MB (the eboot's own segments use the rest). Not yet in M2: rendering
 (M3), input devices (M4), audio output and movies (M5; the audio service HLE runs with no host device).
+
+## 2026-10-28 — Package RomFS: one reader per concurrent read (host check)
+
+The package stream no longer serialises reads behind one mutex. Every layer of a RomFS reader keeps a position, so
+concurrent reads now check out their own reader; up to 4 exist, made on first concurrent use. Extra readers share
+the first one's keys, BKTR indirect/subsection tables and verified IVFC hash layer (`nstool-streams.patch` adds
+copy-over-stream constructors to the pietendo BKTR and IVFC streams and `NcaProcess::getPartitionReaderFactory`);
+each adds two package file descriptors and at most 229 KiB host RSS (measured with three extra readers, thread
+overhead included). The C API is unchanged.
+
+Host, base NSP + 1.9.0 update NSP: **41,062/41,062** RomFS files match, now hashed by 4 threads at once. Random
+64 KiB reads with 4 threads: **82.6 → 406 MiB/s** (1 thread: 106.6 / 111.8 MiB/s). This is a host check; the console
+rate is still the 42.5 MiB/s of the title run above until the rebuilt probe title runs on .41.
+
+## 2026-10-28 — M3 title linked on the host (renderer on RADV, not yet run)
+
+`bash ps5/tools/build-game.sh` now links the desktop Vulkan backend (`runtime/nvn/*`, `runtime/nvn/vulkan/*` without
+FSR 3 frame generation and the ImGui glue), the real `nvnBootstrapLoader`, RADV (pinned archive, linked whole) and
+shaderc into `ps5/dist/game/PPSA90212/eboot.bin`: 278,721,662 bytes, SHA-256
+`51fc7cfee12d53cb8a2cd89c9b00e0cd62e478db53ccbeada3ed185d7c94c8da`, `.text` 233 MB. Found while linking: a title has
+no Vulkan loader and RADV exports only `vk_icdGetInstanceProcAddr`, so the build generates one trampoline per command
+of RADV's `vulkan_core.h` (`ps5/tools/gen-vk-globals.py`); RADV's archive carries Mesa's zlib 1.3.1, which collided
+with the separately compiled zlib, so the runtime now uses RADV's. `runtime/ps5/window.c` makes the VideoOut display
+plane surface from the modes the display reports (largest extent, 119.88 Hz preferred; host test
+`ps5/probe/test_window_modes.c` covers a 4K, a 1080p and a 1440p mode list). The desktop `runtime-objs` target still
+compiles. This is a link result: no console run yet.
+
+## 2026-10-28 — Per-thread package readers in the title (.41, package-probe-title-run4)
+
+The per-stream mutex is replaced by a pool of up to 4 readers per package. Inside the unelevated title: open 3.01 s,
+220/220 samples match, sequential 69.2 MiB/s, random 64 KiB 41.9 MiB/s with 1 thread and **163.5 MiB/s with 4
+threads** (it was 42.5). Title plain-file reads measured 124–171 MiB/s with 4 threads.
+
+## 2026-10-28 — M3 run 1: VideoOut + RADV up in the game title (.41, ps5/evidence/m3/run1)
+
+The title found 2 modes (3840×2160 at 119.88 and 59.94 Hz) and chose 119.88 Hz. AvControl reports
+VRR(peg:120 range:48-120); the GPU is RADV NAVI21 with Vulkan 1.4.354; the swapchain is 3840×2160 with 4 images,
+FIFO, at 119.88 Hz. After that the host faults inside `ipc_handle_request` handling a guest request with a 270-byte
+buffer at 0x7090000000. No frame has been presented yet.

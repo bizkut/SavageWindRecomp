@@ -1,23 +1,28 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "package_core.h"
+Vfs package_filesystem(const fs::path &path) {
+    std::string name = path.filename().string();
+    auto stream = std::make_shared<tc::io::FileStream>(
+        tc::io::Path(path.string()), tc::io::FileMode::Open, tc::io::FileAccess::Read);
+    if (ends(name, ".nsp")) {
+        nstool::PfsProcess proc;
+        proc.setInputFile(stream);
+        proc.process();
+        return proc.getFileSystem();
+    }
+    if (ends(name, ".xci")) {
+        nstool::GameCardProcess proc;
+        proc.setInputFile(stream);
+        proc.process();
+        return proc.getFileSystem();
+    }
+    fail("unsupported_container", "Expected an NSP or XCI.", name);
+}
 void PackageCore::open_package(const fs::path &path) {
         std::string name = path.filename().string();
         try {
-            auto stream = std::make_shared<tc::io::FileStream>(
-                tc::io::Path(path.string()), tc::io::FileMode::Open, tc::io::FileAccess::Read);
-            if (ends(name, ".nsp")) {
-                nstool::PfsProcess proc;
-                proc.setInputFile(stream);
-                proc.process();
-                packages.push_back({name, "", proc.getFileSystem()});
-            } else if (ends(name, ".xci")) {
-                nstool::GameCardProcess proc;
-                proc.setInputFile(stream);
-                proc.process();
-                packages.push_back({name, "/secure", proc.getFileSystem()});
-            } else {
-                fail("unsupported_container", "Expected an NSP or XCI.", name);
-            }
+            Vfs vfs = package_filesystem(path);
+            packages.push_back({name, ends(name, ".xci") ? "/secure" : "", vfs, path});
         } catch (const tc::Exception &e) {
             diagnostic(st.session.c_str(), "open_package", errno, "tc::Exception", e.what());
             fail("content_corrupt", "Cannot read package. Replace the damaged file.", name);
