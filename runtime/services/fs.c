@@ -770,7 +770,12 @@ static void rom_index(void) {
         o += 0x20 + ((namelen + 3) & ~3u);
     }
     if (g_settings.sharp_text) index_text_fonts();
+#ifdef __PROSPERO__
+    // The 4K first-launch default (runtime/ps5/video_defaults.h) is decided only once VideoOut picks its mode.
+    if (g_settings.sharp_ui || !g_settings.sharp_ui_chosen) index_layout_art();
+#else
     if (g_settings.sharp_ui) index_layout_art();
+#endif
     voice_redirect(fmeta, foff, fsz);
     // Overlay: replacement files are served from the overlay folder. The file-meta table is patched
     // (in a copy) to point them at data appended past the end of the image; reads there go to host files.

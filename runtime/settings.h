@@ -89,6 +89,7 @@ typedef struct {
     int button_icons;    // ICONS_*: the game's button prompts show this device's buttons (Automatic: the one in use)
     bool sharp_text;     // Vulkan: sharpen identified game font sheets at 4K
     bool sharp_ui;       // Vulkan: enlarge selected layout artwork from the player's archives
+    bool sharp_ui_chosen;  // sharp_ui came from the ini (PS5: otherwise the 4K first-launch default decides)
     bool async_shaders;  // draw on while new shaders compile (no stutter; what needs them is skipped meanwhile)
     bool precompile_shaders;  // setting the game files up also precompiles every shader (runtime/nvn/precompile.h)
     int shadow_res;      // SHADOW_*: shadow maps at the console's size or bigger

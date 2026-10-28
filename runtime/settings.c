@@ -147,7 +147,7 @@ void settings_load(void) {
                 if (!strcmp(val, k_icons[i])) g_settings.button_icons = i;
         }
         else if (!strcmp(key, "sharp_text")) g_settings.sharp_text = atoi(val) != 0;
-        else if (!strcmp(key, "sharp_ui")) g_settings.sharp_ui = atoi(val) != 0;
+        else if (!strcmp(key, "sharp_ui")) { g_settings.sharp_ui = atoi(val) != 0; g_settings.sharp_ui_chosen = true; }
         else if (!strcmp(key, "async_shaders")) g_settings.async_shaders = atoi(val) != 0;
         else if (!strcmp(key, "precompile_shaders")) g_settings.precompile_shaders = atoi(val) != 0;
         else if (!strcmp(key, "wide_view")) g_settings.wide_view = atoi(val) != 0;

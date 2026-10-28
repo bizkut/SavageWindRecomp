@@ -1055,3 +1055,10 @@ entries were removed. An apparent grey background in the first comparison was no
 title screen animates between art, so fixed-time captures differ in background. Default off on all platforms; with it
 off no archive is indexed (0 `[sharp-ui]` lines) and the benchmark is unchanged: 99.9 % on time, 59.6 / 119.3 fps.
 Captures of the game's art were kept outside the repository and deleted.
+
+## 2026-10-28 — `sharp_ui` on by default at 4K output (user decision; .41, ps5/evidence/m8/ab-ui-firstlaunch.klog)
+
+First-launch default (runtime/ps5/video_defaults.h): absent `sharp_ui` → on when VideoOut runs 3840×2160, off below.
+On PS5 the layout archive is indexed when the setting is on or not yet chosen (the mode is known only after indexing).
+.41 with no `sharp_ui` in the ini: logo and title art enlarged and live (frames 78–80), indexing 82 ms, ini saved
+`sharp_ui = 1`; benchmark unchanged (99.9 % on time, 59.6 / 119.3 fps). Desktop default stays off.
