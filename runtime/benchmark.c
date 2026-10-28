@@ -32,6 +32,7 @@
 #include "settings.h"
 #include "window_size.h"
 #ifdef __PROSPERO__
+#include "ps5/dynamic_resolution.h"
 #include "storage_ps5.h"
 #endif
 
@@ -40,6 +41,9 @@ enum { WARMUP_S = 20, ROUTE_S = 60, PAN_S = 10, TITLE_TIMEOUT_S = 240, MAX_FRAME
 
 static int g_on = -1;
 static int g_internal_h;  // benchmark.txt "internal = <height>p": the 3D scene's height for this run (0: the settings')
+#ifdef __PROSPERO__
+static int g_gpu_load_ms;
+#endif
 bool benchmark_on(void) {
     if (g_on < 0) {
         struct stat st;
@@ -113,6 +117,12 @@ static void internal_apply(void) {
     const char *line = t ? strstr(t, "internal") : NULL;
     int want = 0;
     if (line) sscanf(line, "internal = %dp", &want);
+#ifdef __PROSPERO__
+    int load = 0;
+    line = t ? strstr(t, "gpu_load") : NULL;
+    if (line && sscanf(line, "gpu_load = %d", &load) == 1 && load > 0) g_gpu_load_ms = load;
+    LOG("[bench] gpu_load = %d ms for the first 20 s of the measured route\n", g_gpu_load_ms);
+#endif
     free(t);
     if (want <= 0) return;
     WinSize out = winsize_effective(g_settings.fullscreen);
@@ -137,6 +147,11 @@ static void internal_apply(void) {
 
 // The 3D scene's size now (output_scale.c: the game's 1600x900 scene targets at its scale)
 static void internal_size(int *w, int *h) {
+#ifdef __PROSPERO__
+    unsigned dw = 0, dh = 0;
+    dynamic_resolution_size(&dw, &dh);
+    if (dw && dh) { *w = (int)dw; *h = (int)dh; return; }
+#endif
     WinSize out = winsize_effective(g_settings.fullscreen);
     OutScale os;
     output_scale(out.w, out.h, g_settings.wide_view, &os);
@@ -262,6 +277,19 @@ static int g_n, g_ngpu, g_on_time;
 static uint64_t g_first_frame;
 static struct { char name[48]; int n; } g_causes[16];
 static int g_ncauses, g_hitches;
+#ifdef __PROSPERO__
+static struct { int w, h; uint64_t ns; } g_sizes[32];
+static int g_nsizes;
+static double g_size_w_ns, g_size_h_ns;
+static uint64_t g_size_ns;
+
+int benchmark_gpu_load(void) {
+    if (__atomic_load_n(&g_on, __ATOMIC_RELAXED) != 1 ||
+        __atomic_load_n(&g_state, __ATOMIC_RELAXED) != B_ROUTE) return 0;
+    uint64_t start = __atomic_load_n(&g_state_t, __ATOMIC_RELAXED), now = plat_now_ns();
+    return now >= start && now - start < 20 * S ? g_gpu_load_ms : 0;
+}
+#endif
 
 void benchmark_frame(uint64_t frame, uint64_t dt_ns, uint64_t render_ns, uint64_t guest_ns, const char *hitch) {
     if (g_on != 1) return;
@@ -276,6 +304,17 @@ void benchmark_frame(uint64_t frame, uint64_t dt_ns, uint64_t render_ns, uint64_
     if (g_n == MAX_FRAMES) return;
     uint64_t period = framepace_period_ns();
     g_dt[g_n] = (float)(dt_ns / 1e6), g_render[g_n] = (float)(render_ns / 1e6), g_guest[g_n] = (float)(guest_ns / 1e6);
+#ifdef __PROSPERO__
+    int iw, ih;
+    internal_size(&iw, &ih);
+    int si = 0;
+    while (si < g_nsizes && (g_sizes[si].w != iw || g_sizes[si].h != ih)) si++;
+    if (si == g_nsizes && g_nsizes < 32) {
+        g_sizes[si].w = iw; g_sizes[si].h = ih; g_nsizes++;
+    }
+    if (si < 32) g_sizes[si].ns += dt_ns;
+    g_size_w_ns += (double)iw * dt_ns; g_size_h_ns += (double)ih * dt_ns; g_size_ns += dt_ns;
+#endif
     g_on_time += dt_ns <= period + period / 20;
     g_n++;
     if (!hitch) return;
@@ -384,6 +423,27 @@ static void finish(const char *failure) {
         internal_size(&iw, &ih);
         char ifrom[48] = "the settings";
         if (g_internal_h) snprintf(ifrom, sizeof ifrom, "benchmark.txt: internal = %dp", g_internal_h);
+#ifdef __PROSPERO__
+        int min_i = 0, max_i = 0;
+        for (int i = 1; i < g_nsizes; i++) {
+            if ((int64_t)g_sizes[i].w * g_sizes[i].h < (int64_t)g_sizes[min_i].w * g_sizes[min_i].h) min_i = i;
+            if ((int64_t)g_sizes[i].w * g_sizes[i].h > (int64_t)g_sizes[max_i].w * g_sizes[max_i].h) max_i = i;
+        }
+        if (!g_nsizes) { g_sizes[0].w = iw; g_sizes[0].h = ih; }
+        char steps[1024] = "";
+        size_t sat = 0;
+        for (int i = 0; i < g_nsizes && sat < sizeof steps; i++) {
+            int n = snprintf(steps + sat, sizeof steps - sat, "%s%dx%d:%.3f", i ? "," : "",
+                             g_sizes[i].w, g_sizes[i].h, g_sizes[i].ns / 1e9);
+            if (n < 0 || (size_t)n >= sizeof steps - sat) break;
+            sat += (size_t)n;
+        }
+        at += (size_t)snprintf(text + at, sizeof text - at,
+                               "internal size min %dx%d mean %.1fx%.1f max %dx%d; step seconds %s; gpu_load %d ms\n",
+                               g_sizes[min_i].w, g_sizes[min_i].h, g_size_ns ? g_size_w_ns / g_size_ns : iw,
+                               g_size_ns ? g_size_h_ns / g_size_ns : ih, g_sizes[max_i].w, g_sizes[max_i].h,
+                               steps, g_gpu_load_ms);
+#endif
         at += (size_t)snprintf(text + at, sizeof text - at,
                                "Savage Wind benchmark, %s: Great Plateau camera route, %d s measured after %d s settling; "
                                "internal resolution %dx%d (%s)\n"
@@ -449,12 +509,23 @@ static void finish(const char *failure) {
             at += (size_t)snprintf(text + at, sizeof text - at, "previous run: none\n");
         }
         free(prev);
+#ifdef __PROSPERO__
+        at += (size_t)snprintf(text + at, sizeof text - at,
+                               "result mean_ms=%.3f p95_ms=%.3f p99_ms=%.3f on_time=%.1f hitches=%d render_ms=%.2f guest_ms=%.2f "
+                               "gpu_ms=%.2f frames=%d presented_fps=%.1f game_fps=%.1f present_iv_p95_ms=%.2f fg_gpu_ms=%.3f "
+                               "internal=%dx%d internal_min=%dx%d internal_mean=%.1fx%.1f internal_max=%dx%d steps=%s gpu_load=%d\n",
+                               f.mean, f.p95, f.p99, g_n ? 100.0 * g_on_time / g_n : 0.0, g_hitches, r.mean, g.mean, u.mean,
+                               g_n, presented_fps, game_fps, pi.p95, fd.mean, iw, ih, g_sizes[min_i].w, g_sizes[min_i].h,
+                               g_size_ns ? g_size_w_ns / g_size_ns : iw, g_size_ns ? g_size_h_ns / g_size_ns : ih,
+                               g_sizes[max_i].w, g_sizes[max_i].h, steps, g_gpu_load_ms);
+#else
         at += (size_t)snprintf(text + at, sizeof text - at,
                                "result mean_ms=%.3f p95_ms=%.3f p99_ms=%.3f on_time=%.1f hitches=%d render_ms=%.2f guest_ms=%.2f "
                                "gpu_ms=%.2f frames=%d presented_fps=%.1f game_fps=%.1f present_iv_p95_ms=%.2f fg_gpu_ms=%.3f "
                                "internal=%dx%d\n",
                                f.mean, f.p95, f.p99, g_n ? 100.0 * g_on_time / g_n : 0.0, g_hitches, r.mean, g.mean, u.mean,
                                g_n, presented_fps, game_fps, pi.p95, fd.mean, iw, ih);
+#endif
         write_file("benchmark/last.txt", text, at < sizeof text ? at : sizeof text - 1);
         for (char *p = text, *e; *p; p = e + 1) {  // (the summary in the log too, one line each)
             e = strchr(p, '\n');

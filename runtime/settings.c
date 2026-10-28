@@ -117,6 +117,9 @@ void settings_load(void) {
             g_settings.anisotropy = a >= 16 ? 4 : a >= 8 ? 3 : a >= 4 ? 2 : a >= 2 ? 1 : 0;
         }
         else if (!strcmp(key, "frame_generation")) g_settings.frame_gen = atoi(val) != 0;
+#ifdef __PROSPERO__
+        else if (!strcmp(key, "dynamic_resolution")) g_settings.dynamic_resolution = atoi(val) != 0;
+#endif
         else if (!strcmp(key, "fg_upscale")) g_settings.fg_upscale = !strcmp(val, "bilinear") ? FG_UP_BILINEAR : FG_UP_FSR1;
         else if (!strcmp(key, "fg_passes")) g_settings.fg_separate = !strcmp(val, "separate");
         else if (!strcmp(key, "fg_split_submits")) g_settings.fg_split_submits = atoi(val) != 0;
@@ -252,6 +255,9 @@ void settings_save(void) {
     else fprintf(f, "anisotropy = game\n");
     fprintf(f, "sharpening = %d\n", g_settings.sharpening * 10);
     fprintf(f, "frame_generation = %d\n", g_settings.frame_gen ? 1 : 0);
+#ifdef __PROSPERO__
+    fprintf(f, "dynamic_resolution = %d\n", g_settings.dynamic_resolution ? 1 : 0);
+#endif
     fprintf(f, "fg_upscale = %s\n", g_settings.fg_upscale == FG_UP_BILINEAR ? "bilinear" : "fsr1");
     if (g_settings.fg_separate) fprintf(f, "fg_passes = separate\n");  // (A/B only: written while set)
     if (g_settings.fg_split_submits) fprintf(f, "fg_split_submits = 1\n");

@@ -1177,7 +1177,11 @@ static const char *builtin_src(const char *name, int *stage) {
                "}\n"
                "void main() {\n"
                "  vec2 pp = floor(gl_FragCoord.xy) * pc.a.xy + pc.a.zw;\n"
+#ifdef __PROSPERO__
+               "  float alpha = texture(t, clamp(pp + 0.5, vec2(0.5), pc.b.xy - 0.5) / vec2(textureSize(t, 0))).a;\n"
+#else
                "  float alpha = texture(t, (pp + 0.5) / pc.b.xy).a;\n"
+#endif
                "  vec2 fpf = floor(pp); pp -= fpf;\n"
                "  ivec2 fp = ivec2(fpf);\n"
                "  //    b c\n"

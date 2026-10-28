@@ -87,7 +87,7 @@ void video_page(std::vector<Item> &v) {
                            0));
     if (ps5_video_hdr_available())
         v.push_back(toggle(P_VIDEO, "HDR", "Output HDR10 on a compatible display.",
-                           [](const Item &) { return g_settings.hdr == HDR_ON; },
+                           [](const Item &) { return (int)(g_settings.hdr == HDR_ON); },
                            [](const Item &, int x) {
                                g_settings.hdr = x ? HDR_ON : HDR_OFF;
                                fprintf(stderr, "[options] Video > HDR: %s\n", x ? "On" : "Off");
@@ -97,6 +97,9 @@ void video_page(std::vector<Item> &v) {
     v.push_back(video_upscaler(k_ups_value, (int)(sizeof k_ups_value / sizeof k_ups_value[0])));
     v.push_back(video_upscaler_mode());
     v.push_back(video_antialiasing());
+    v.push_back(toggle(P_VIDEO, "Dynamic resolution", "Off while TAA or FSR 3 is enabled.",
+                       [](const Item &) { return (int)g_settings.dynamic_resolution; },
+                       [](const Item &, int x) { g_settings.dynamic_resolution = x != 0; settings_save(); }, 0));
     v.push_back(video_anisotropy());
     v.push_back(video_sharpening());
     v.push_back(video_async_shaders());

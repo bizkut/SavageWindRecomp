@@ -64,6 +64,9 @@ typedef struct {
     int sharpening;      // AMD CAS sharpening of the 3D image, 0 (off) .. 10 (100%) (vulkan/exec.c scene_post)
     bool frame_gen;      // frame generation: a frame made between each two the game draws (vulkan/framegen.h: AMD FSR 3 on
                          // desktop, PS5_MihawkGen on the PS5, there at 119.88 Hz only)
+#ifdef __PROSPERO__
+    bool dynamic_resolution; // DRS is disabled by default and while temporal upscaling is active
+#endif
     int fg_upscale;      // FG_UP_* (savagewind.ini only: fg_upscale = fsr1 | bilinear)
     bool fg_separate;    // (A/B, savagewind.ini only: fg_passes = separate) MihawkGen's passes after it unfused, as before
     bool fg_split_submits;  // (A/B, savagewind.ini only: fg_split_submits = 1) the game's frame and MihawkGen's passes

@@ -29,6 +29,7 @@
 #include "../../game_sites.h"
 #ifdef __PROSPERO__
 #include "../../storage_ps5.h"
+#include "../../ps5/dynamic_resolution.h"
 #include <errno.h>
 #endif
 uint64_t renderer_present_count(void);
@@ -1372,7 +1373,12 @@ static void begin_pass(void) {
         uint32_t lv = st.rt.has_cview[i] && (st.rt.cview[i].setmask & 1) ? st.rt.cview[i].base_level : 0;
         uint32_t ew = level_extent(b->width, lv), eh = level_extent(b->height, lv);
         if (blocks) ew = b->block->width, eh = b->block->height;
-        if (!w) { renderer_texture_scale(t, &pass_sx, &pass_sy); pass_out = b->rs_group == RS_OUT; w = ew; }
+        if (!w) {
+            renderer_texture_scale(t, &pass_sx, &pass_sy); pass_out = b->rs_group == RS_OUT; w = ew;
+#ifdef __PROSPERO__
+            if (b->rs_group == RS_SCENE) pass_sx *= dynamic_resolution_fraction(), pass_sy *= dynamic_resolution_fraction();
+#endif
+        }
         if (ew < minw) minw = ew;
         if (eh < minh) minh = eh;
         pass_samples = b->samples;
@@ -1392,7 +1398,12 @@ static void begin_pass(void) {
             if (b->aspect & VK_IMAGE_ASPECT_STENCIL_BIT) { sa = a; has_s = true; pass_stencil = b->format; }
             uint32_t lv = st.rt.has_dview && (st.rt.dview.setmask & 1) ? st.rt.dview.base_level : 0;
             uint32_t ew = level_extent(b->width, lv), eh = level_extent(b->height, lv);
-            if (!w) { renderer_texture_scale(st.rt.depth, &pass_sx, &pass_sy); w = ew; }
+            if (!w) {
+                renderer_texture_scale(st.rt.depth, &pass_sx, &pass_sy); w = ew;
+#ifdef __PROSPERO__
+                if (b->rs_group == RS_SCENE) pass_sx *= dynamic_resolution_fraction(), pass_sy *= dynamic_resolution_fraction();
+#endif
+            }
             if (ew < minw) minw = ew;
             if (eh < minh) minh = eh;
             if (!pass_ncolor) pass_samples = b->samples;
@@ -1724,32 +1735,53 @@ static void stage_layouts(StageBuild *b, int stage);
 // at each texel's centre) is to the pixel's: the blur stays, the other side's colour doesn't come in. Found by its translated source (the two reads and the sky test), compiled as
 // a copy: the translation and its caches are untouched, and with another translation the blur is left as it is.
 // SAVAGEWIND_NO_BLUR_EDGE_FIX=1: the game's own read.
+#ifdef __PROSPERO__
+#define BLUR_READ "textureLod(t1, drsuv1(vec2(uintBitsToFloat(r4), uintBitsToFloat(r5)), vec2(0.0), uintBitsToFloat(r7)), uintBitsToFloat(r7))"
+#define BLUR_DEPTH "texture(t0, drsuv0(vec2(uintBitsToFloat(r4), uintBitsToFloat(r5))"
+#else
 #define BLUR_READ "textureLod(t1, vec2(uintBitsToFloat(r4), uintBitsToFloat(r5)), uintBitsToFloat(r7))"
+#define BLUR_DEPTH "texture(t0, vec2(uintBitsToFloat(r4), uintBitsToFloat(r5)))"
+#endif
 static char *blur_edge_source(const ShaderInfo *si, int stage) {
     static int on = -1;
     if (on < 0) on = getenv("SAVAGEWIND_NO_BLUR_EDGE_FIX") == NULL;
     if (!on || stage != STAGE_FRAGMENT || !si->msl || si->ntex != 2) return NULL;
     const char *s = si->msl, *read = strstr(s, BLUR_READ), *body = strstr(s, "void main()");
     if (!read || !body || strstr(read + 1, BLUR_READ) ||
-        !strstr(s, "texture(t0, vec2(uintBitsToFloat(r4), uintBitsToFloat(r5)))") ||
+        !strstr(s, BLUR_DEPTH) ||
         !strstr(s, ">= uintBitsToFloat(cb3[0][2])") || !strstr(s, "uniform sampler2D t1;"))
         return NULL;
     static const char fn[] =
         "// (SavageWind: the half-size copy's four texels around uv, weighted by their depth's nearness to this pixel's)\n"
         "vec4 sw_blur_read(vec2 uv, float lod) {\n"
+#ifdef __PROSPERO__
+        "  vec2 hs = max(vec2(1.0), round(vec2(textureSize(t1, 0)) * rscale[2].zw)), p = uv * hs - 0.5, f = fract(p), base = (floor(p) + 0.5) / hs;\n"
+        "  float d0 = textureLod(t0, drsuv0(uv, vec2(0.0), 0.0), 0.0).x;\n"
+#else
         "  vec2 hs = vec2(textureSize(t1, 0)), p = uv * hs - 0.5, f = fract(p), base = (floor(p) + 0.5) / hs;\n"
         "  float d0 = textureLod(t0, uv, 0.0).x;\n"
+#endif
         "  vec4 acc = vec4(0.0);\n"
         "  float wsum = 0.0;\n"
         "  for (int j = 0; j < 2; j++)\n"
         "    for (int i = 0; i < 2; i++) {\n"
         "      vec2 q = base + vec2(float(i), float(j)) / hs;\n"
+#ifdef __PROSPERO__
+        "      float r = abs(textureLod(t0, drsuv0(q, vec2(0.0), 0.0), 0.0).x - d0) / max(d0, 1e-6) / 0.03;\n"
+        "      float w = (i == 1 ? f.x : 1.0 - f.x) * (j == 1 ? f.y : 1.0 - f.y) / (1.0 + r * r);\n"
+        "      acc += w * textureLod(t1, drsuv1(q, vec2(0.0), lod), lod);\n"
+#else
         "      float r = abs(textureLod(t0, q, 0.0).x - d0) / max(d0, 1e-6) / 0.03;\n"
         "      float w = (i == 1 ? f.x : 1.0 - f.x) * (j == 1 ? f.y : 1.0 - f.y) / (1.0 + r * r);\n"
         "      acc += w * textureLod(t1, q, lod);\n"
+#endif
         "      wsum += w;\n"
         "    }\n"
+#ifdef __PROSPERO__
+        "  return wsum > 1e-5 ? acc / wsum : textureLod(t1, drsuv1(uv, vec2(0.0), lod), lod);\n"
+#else
         "  return wsum > 1e-5 ? acc / wsum : textureLod(t1, uv, lod);\n"
+#endif
         "}\n";
     size_t n = strlen(s), nr = strlen(BLUR_READ), nfn = sizeof fn - 1;
     const char *call = "sw_blur_read(vec2(uintBitsToFloat(r4), uintBitsToFloat(r5)), uintBitsToFloat(r7))";
@@ -3959,7 +3991,18 @@ static VkDescriptorSet stage_set(Prog *p, VkDescriptorSetLayout layout, uint32_t
         w[n] = (VkWriteDescriptorSet){.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = VK_NULL_HANDLE, .dstBinding = b->binding,
                                       .descriptorCount = 1, .descriptorType = b->type};
         if (b->binding == 18) {
-            for (int t = 0; t < si->ntex && t < 64; t++) { rs[1 + t][0] = tex_sc[sg][t][0]; rs[1 + t][1] = tex_sc[sg][t][1]; }
+            for (int t = 0; t < si->ntex && t < 64; t++) {
+                rs[1 + t][0] = tex_sc[sg][t][0]; rs[1 + t][1] = tex_sc[sg][t][1];
+#ifdef __PROSPERO__
+                if (!si->tex[t].is_image) {
+                    NvnTexture *tex = shader_texture_object(stage, &si->tex[t]);
+                    float f = tex && !(stage == 1 && tex == scene_up.t) &&
+                              vk_texture_scale_group(tex) == RS_SCENE ? dynamic_resolution_fraction() : 1.0f;
+                    rs[1 + t][0] *= f; rs[1 + t][1] *= f;
+                    rs[1 + t][2] = rs[1 + t][3] = f;
+                }
+#endif
+            }
             bi[n] = ubo_span(copy_dedupe(sg ? DEDUPE_RSCALE_F : DEDUPE_RSCALE_V, rs, sizeof rs, 256), sizeof rs);
         } else {
             float zero[8] = {0};
@@ -5801,6 +5844,11 @@ static void copy_texture(const TexRefRec *src, const TexRefRec *dst, uint64_t fl
     float ssx, ssy, dsx, dsy;
     renderer_texture_scale(st_, &ssx, &ssy);
     renderer_texture_scale(dt, &dsx, &dsy);
+    #ifdef __PROSPERO__
+    float sf = s->rs_group == RS_SCENE ? dynamic_resolution_fraction() : 1.0f;
+    float df = d->rs_group == RS_SCENE ? dynamic_resolution_fraction() : 1.0f;
+    ssx *= sf; ssy *= sf; dsx *= df; dsy *= df;
+    #endif
     int sx0 = (int)lroundf(sr[0] * ssx), sy0 = (int)lroundf(sr[1] * ssy);
     int dx0 = (int)lroundf(dr[0] * dsx), dy0 = (int)lroundf(dr[1] * dsy);
     int sw = sr[3] ? (int)lroundf(sr[3] * ssx) : (int)s->width, sh = sr[4] ? (int)lroundf(sr[4] * ssy) : (int)s->height;
@@ -5815,6 +5863,10 @@ static void copy_texture(const TexRefRec *src, const TexRefRec *dst, uint64_t fl
         // undefined in Vulkan (garbage that changed every frame on NVIDIA: flicker in the depth pyramid's users)
         int slw = (int)level_extent(s->width, slv), slh = (int)level_extent(s->height, slv);
         int dlw = (int)level_extent(d->width, dlv), dlh = (int)level_extent(d->height, dlv);
+        #ifdef __PROSPERO__
+        slw = (int)fmaxf(1, roundf(slw * sf)); slh = (int)fmaxf(1, roundf(slh * sf));
+        dlw = (int)fmaxf(1, roundf(dlw * df)); dlh = (int)fmaxf(1, roundf(dlh * df));
+        #endif
         if (!sr[3]) sw = slw - sx0;
         if (!sr[4]) sh = slh - sy0;
         if (!dr[3]) dw = dlw - dx0;
@@ -6212,6 +6264,9 @@ static void scene_post(Prog *pr, CmdRec *r) {
     if (cas_on < 0) cas_on = getenv("SAVAGEWIND_SCENE_CAS") ? atoi(getenv("SAVAGEWIND_SCENE_CAS")) : 1;
     bool fsr = fsr_on && g_settings.upscaler == UPSCALE_FSR1, cas = cas_on && g_settings.sharpening > 0;
     bool fsr3 = fsr_on && rt_fsr3() && mvec_enabled();  // (FSR 3: its own sharpening, RCAS, in place of CAS)
+    #ifdef __PROSPERO__
+    if (dynamic_resolution_fraction() < 1.0f) fsr = true;
+    #endif
     if (!fsr3) rt_jitter_set_phases(8);
     if (!fsr && !cas && !taa && !fsr3) return;
     NvnTexture *t = scene_composite(pr, r), *rt = st.rt.ncolor ? st.rt.color[0] : NULL;
@@ -6224,8 +6279,15 @@ static void scene_post(Prog *pr, CmdRec *r) {
     if (oh > 16384) oh = 16384;
     {
         TexBackend *b = vk_tex(t, false);
+        uint32_t used_w = b->width, used_h = b->height;
+        #ifdef __PROSPERO__
+        if (b->rs_group == RS_SCENE) {
+            used_w = (uint32_t)fmaxf(1, roundf(b->width * dynamic_resolution_fraction()));
+            used_h = (uint32_t)fmaxf(1, roundf(b->height * dynamic_resolution_fraction()));
+        }
+        #endif
         // (else at its size in the window already; FSR 3: FSR 1 for a frame it can't do, its first)
-        bool up = (fsr || fsr3) && (ow > b->width + 1 || oh > b->height + 1);
+        bool up = (fsr || fsr3) && (ow > used_w + 1 || oh > used_h + 1);
         if (t != taa_t) taa = NULL;
         scene_mip_bias = (taa || fsr3) && ow && b->width ? log2f((float)b->width / (float)ow) - 1.0f : 0.0f;
         static const char *bias_env = (const char *)1;  // (testing) SAVAGEWIND_MIP_BIAS=<levels>: in place of that
@@ -6252,7 +6314,7 @@ static void scene_post(Prog *pr, CmdRec *r) {
         }
         if (up) {
             TexBackend *e = post_image(5, ow, oh, b->format), *o = post_image(6, ow, oh, b->format);
-            float iw = (float)b->width, ih = (float)b->height;
+            float iw = (float)used_w, ih = (float)used_h;
             float pe[8] = {iw / ow, ih / oh, 0.5f * iw / ow - 0.5f, 0.5f * ih / oh - 0.5f, iw, ih};
             VkImageView in[3] = {src};
             post_pass(cb, "easu.frag", in, 1, e, pe, false);
@@ -6435,6 +6497,12 @@ static void fg_copy_hudless(void) {
     VkImageBlit bl = {.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1}, .dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
                       .srcOffsets = {{0, 0, 0}, {(int32_t)s->width, (int32_t)s->height, 1}},
                       .dstOffsets = {{0, 0, 0}, {(int32_t)s->width, (int32_t)s->height, 1}}};
+    #ifdef __PROSPERO__
+    if (s->rs_group == RS_SCENE) {
+        bl.srcOffsets[1].x = (int32_t)fmaxf(1, roundf(s->width * dynamic_resolution_fraction()));
+        bl.srcOffsets[1].y = (int32_t)fmaxf(1, roundf(s->height * dynamic_resolution_fraction()));
+    }
+    #endif
     rec_CmdBlitImage(cb, s->image, VK_IMAGE_LAYOUT_GENERAL, d->image, VK_IMAGE_LAYOUT_GENERAL, 1, &bl, VK_FILTER_NEAREST);
     vk_full_barrier(cb);
     fgt_mark(cb, FGP_COPY, 1);
@@ -6799,6 +6867,9 @@ static TexBackend *fg_mihawk(TexBackend *b) {
         if (g_fg_backend.gpu_ns((uint32_t)fg.slot, &ns)) {
             fg.gpu_sum += ns, fg.gpu_n++;
             if (ns > fg.gpu_max) fg.gpu_max = ns;
+            #ifdef __PROSPERO__
+            dynamic_resolution_fg_gpu(ns);
+            #endif
             benchmark_fg_gpu(ns);
         }
         cb = vk_cmd();

@@ -495,19 +495,25 @@ only evidence is that the pinned RADV build carries Forever patch 0001 (HDR10/im
 this port. **Done when:** an HDR10 surface is created on .41, the TV reports HDR, a Video row turns it on/off, and SDR
 output is unchanged with it off.
 
+Implementation awaiting console qualification: `hdr = off` is the PS5 default; the Video page offers Off/On when
+RADV advertises HDR10. Patch 0001's format advertisement checks the title's HDR attribute, not the TV, so display
+HDR capability is unknown and the user must choose a compatible display. The desktop HDR pass converts the SDR
+intermediate to BT.2020 PQ after FSR 1 and MihawkGen; captures read that SDR intermediate before encoding and remain
+SDR-viewable. `hdr_paper_white` optionally sets SDR white in nits (default 200). The title logs the selected format
+and colour space. HDR switching, AvControl's status, SDR capture identity and benchmark cost still require .41 runs.
+
 ### After M6 (optional) — Draw distance and detail
 Requested 2026-10-28; desktop roadmap item, not yet built there. On PS5 it trades distance for fps within the
 headroom M6 measures. Take desktop's implementation when it lands; otherwise build it as shared code. **Done when:**
 each setting's CPU/GPU cost is measured with the benchmark and the default keeps the M6 frame target.
 
 ### After M7 (optional) — Dynamic resolution (PS5 only)
-Requested 2026-10-28; **PS5 only** (user decision): desktop behaviour is unchanged and gets no new setting. New work:
-no renderer has it (Metal counts `g_gpu_total_ns`, but `output_scale.c` never uses it; Vulkan has no equivalent). It
-helps only when the GPU is the limit; today the render thread's CPU time is (M6 benchmark: GPU 7.7 ms, render thread
-10–14 ms), so it waits until that changes. Scope: the controller (target GPU time from the measured timestamps, the
-per-frame internal size) lives in a PS5 file per D2; the shared Vulkan backend gains only a size hook that desktop
-leaves at the allocation size. Allocate the scaled targets at the maximum size and set each pass's viewport/scissor
-to the used part (`pass_size()` in `runtime/nvn/vulkan/exec.c` uses the allocation size today). Every later pass
+Requested 2026-10-28; **PS5 only** (user decision): desktop behaviour is unchanged and gets no new setting. It
+helps only when the GPU is the limit; the M6 benchmark measured GPU 7.7 ms and render-thread CPU 10–14 ms.
+The controller (target GPU time from measured timestamps, per-frame internal size) lives in a PS5 file per D2;
+the shared Vulkan backend gains a size hook that desktop leaves at the allocation size.
+Allocate scaled targets at the maximum size and set each pass's viewport/scissor
+to the used part. Every later pass
 that samples those targets (post-effects, bloom, screen-space steps, the HUD composite, FSR 1's input rectangle, the
 HUD-less capture for MihawkGen) must read only the used part. **Done when:** on the benchmark the internal size
 varies with load, the GPU frame time stays under its target, there are no edge or stretch artifacts in the frame
@@ -518,6 +524,12 @@ trigger is the **measured GPU time per game frame**, not the frame rate: when th
 lowering the resolution would only blur the picture. Step down after a few frames over the GPU budget, step up only
 after a longer stretch well under it (hysteresis, so the size doesn't oscillate). MihawkGen runs at the game image's
 size (M7), so it must accept the current used part of a max-size image too.
+
+The PS5 Video page exposes `dynamic_resolution` (default `0` in `savagewind.ini`); TAA and FSR 3.1 force it off.
+The GPU-timestamp controller uses the configured scene size, 900p, and 720p with three-frame downshift and
+two-second recovery hysteresis. Benchmark diagnostics accept `gpu_load = N` in `benchmark.txt` for the first
+20 seconds of the measured route and report the internal-size distribution. This implementation is not yet
+qualified on the console; the visual, timing, and hitch criteria above still apply.
 
 ### After M7 — Render-thread CPU (queued 2026-10-28)
 The render thread (NVN → Vulkan translation) is the frame-time limit: 10.4–10.7 ms per frame without FG and

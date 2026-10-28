@@ -74,7 +74,7 @@ export PS5_LINK_INPUTS="--gc-sections --wrap=exit --wrap=_exit --wrap=_Exit --wr
 app=$(bash ps5/tools/build-title.sh game \
     runtime/platform/main_ps5.c runtime/platform/ps5.c runtime/platform/gamelib_ps5.c \
     runtime/platform/exefs_ps5.c runtime/ps5/sdl_shim.c runtime/ps5/log.c runtime/ps5/unavailable.c runtime/ps5/diagnostics.cpp \
-    runtime/ps5/window.c runtime/ps5/input.c runtime/ps5/audio.c runtime/ps5/heap_arenas.c runtime/ps5/libc_aliases.S \
+    runtime/ps5/window.c runtime/ps5/input.c runtime/ps5/audio.c runtime/ps5/heap_arenas.c runtime/ps5/dynamic_resolution.c runtime/ps5/libc_aliases.S \
     build/ps5/game-gen/vk_globals.c \
     runtime/benchmark.c runtime/dispatch.c runtime/fnprof.c runtime/frametime.c runtime/ipc.c runtime/kernel.c runtime/loader.c runtime/imageload.c \
     runtime/platform/paths_ps5.c runtime/settings.c runtime/language.c runtime/storage_ps5.c \
@@ -85,7 +85,7 @@ app=$(bash ps5/tools/build-title.sh game \
     runtime/ui/game_options.mm runtime/ui/i18n.mm runtime/ps5/video_page.cpp runtime/nvn/glyphs.c \
     runtime/nvn/astc.c runtime/nvn/cmdbuf.c runtime/nvn/formats.c runtime/nvn/objects.c runtime/nvn/output_scale.c \
     runtime/nvn/shader_archive.c runtime/nvn/smaa_data.c runtime/nvn/tegra.c runtime/nvn/maxwell/translate.c \
-    runtime/nvn/vulkan/cache_pack.c runtime/nvn/vulkan/device.c runtime/nvn/vulkan/exec.c runtime/nvn/vulkan/textures.c \
+    runtime/nvn/vulkan/benchmark_load.c runtime/nvn/vulkan/cache_pack.c runtime/nvn/vulkan/device.c runtime/nvn/vulkan/exec.c runtime/nvn/vulkan/textures.c \
     runtime/nvn/vulkan/shaders.c runtime/nvn/vulkan/spirv.c runtime/nvn/vulkan/precompile.c runtime/nvn/vulkan/rprof.c \
     runtime/nvn/vulkan/record.c runtime/nvn/vulkan/vma.cpp runtime/nvn/vulkan/mvec.c runtime/nvn/vulkan/fsr3.cpp runtime/nvn/vulkan/ffx_shaders.cpp \
     runtime/nvn/vulkan/mihawk.cpp "${mh_sources[@]}" "${ffx_sources[@]}" \

@@ -949,3 +949,12 @@ default. The first build (`c658aad8…`) crashed in the precompile's pipeline wa
 FG 1, FSR 1, Performance (1080p internal at 4K)**, written to the ini. Benchmark: 99.4 % on time, 59.6 / 119.1 fps,
 GPU 9.95 ms. Loading still shows 70 package-read hitches; read profile: 4,096 reads, 2.76 GB, 599 sequential,
 0 reader-pool waits, 730 reads of ≥512 KB.
+
+## 2026-10-28 — HDR10 output (.41, ps5/evidence/m7/ab-hdr-*.klog)
+
+Eboot `273f379b…` (Video > HDR, default Off). HDR on: swapchain format 64 with colour space `1000104008` (HDR10
+ST2084, BT.2020), "SDR white at 200 nits", and RADV's VideoOut reports `dynamic_range=2` with HDR scanout samples
+every 10 s. HDR off: format 44, colour space 0 (SDR). AvControl reports the TV as `HDR:o HFR:o VRR:TypeA` in both runs,
+a usable capability hint (the driver itself offers HDR from title metadata only). FG benchmark: HDR on 99.8 % on time,
+GPU 10.03 ms; off 99.6 %, 9.98 ms; both 59.6 / 119.3 fps, so HDR costs nothing measurable. Whether the TV shows HDR
+and how it looks needs the user. One HDR-off run produced no result (the first run after deploying; rerun was fine).

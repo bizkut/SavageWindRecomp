@@ -27,6 +27,7 @@
 #include "../output_scale.h"
 #include "../renderer.h"
 #ifdef __PROSPERO__
+#include "../../ps5/dynamic_resolution.h"
 #include "../../storage_ps5.h"
 #endif
 
@@ -998,7 +999,8 @@ static void create_swapchain(void) {
         if ((fmts[i].format == VK_FORMAT_A2B10G10R10_UNORM_PACK32 || fmts[i].format == VK_FORMAT_A2R10G10B10_UNORM_PACK32) &&
             fmts[i].colorSpace == VK_COLOR_SPACE_HDR10_ST2084_EXT) offered_hdr = true;
     atomic_store(&ps5_hdr_available, g_cs_ext && offered_hdr);
-    LOG("[ps5] VideoOut HDR10 format offered=%d colorspace_extension=%d\n", offered_hdr, g_cs_ext);
+    LOG("[ps5] VideoOut HDR10 format offered=%d colorspace_extension=%d; display HDR capability unknown\n",
+        offered_hdr, g_cs_ext);
 #endif
     // scanout shows the bytes the game wrote (see the raw views in the present pass): a UNORM swapchain like Metal's
     VkSurfaceFormatKHR sf = fmts[0];
@@ -1651,6 +1653,12 @@ void vk_frame_end(const char *shot_path) {
     if (!cur_frame.ok) return;
     VkCommandBuffer cb = vk_cmd();
     rec_CmdEndRendering(cb);
+#ifdef __PROSPERO__
+    if (frame_kind != PRES_GEN) {
+        extern void benchmark_load_record(VkCommandBuffer cb);
+        benchmark_load_record(cb);
+    }
+#endif
     VkSpan shot = {0};
     bool capture = frame_capture[0] != 0;
     // Captures read the SDR intermediate before HDR encoding, so PNGs remain SDR-viewable.
@@ -2190,8 +2198,15 @@ presented:
         if (last_fps_time > 0) {
             char ft[1024];
             ft_window(ft, sizeof ft);
+#ifdef __PROSPERO__
+            unsigned iw, ih;
+            dynamic_resolution_size(&iw, &ih);
+            LOG("[vk] t=%.1f frame %llu %.1f fps max %.0fms internal=%ux%u (%s) | %s\n", now,
+                (unsigned long long)total_frames, frames / (now - last_fps_time), max_gap * 1000.0, iw, ih, renderer_stats(), ft);
+#else
             LOG("[vk] t=%.1f frame %llu %.1f fps max %.0fms (%s) | %s\n", now, (unsigned long long)total_frames,
                 frames / (now - last_fps_time), max_gap * 1000.0, renderer_stats(), ft);
+#endif
         }
         if ((gen_frames || gen_twice || gen_dropped) && last_fps_time > 0) {
             // (one klog write each: a render-thread LOG costs ~1.4 ms on the PS5)

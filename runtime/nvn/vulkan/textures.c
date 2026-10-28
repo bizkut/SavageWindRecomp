@@ -158,12 +158,20 @@ static bool format_supports(VkFormat f, VkFormatFeatureFlags want) {
 //             are made at instead of the game's; never smaller than the game's (output_scale.c shadow_map_size). Also
 //             their half-size copy (R16 448x448x3, the max of each 2x2), at the same factor: water and the other
 //             forward-shaded surfaces take their shadows from it (issue #101)
+#ifdef __PROSPERO__
+#include "../../ps5/dynamic_resolution.h"
+#endif
 static float g_rs[4][2] = {{1, 1}, {1, 1}, {1, 1}, {1, 1}};
 static uint32_t g_shadow_size;
 void renderer_get_scale(float *sx, float *sy) { *sx = g_rs[RS_OUT][0]; *sy = g_rs[RS_OUT][1]; }
 void renderer_set_scale(float sx, float sy) { g_rs[RS_OUT][0] = sx; g_rs[RS_OUT][1] = sy; }
 void renderer_get_scene_scale(float *sx, float *sy) { *sx = g_rs[RS_SCENE][0]; *sy = g_rs[RS_SCENE][1]; }
-void renderer_set_scene_scale(float sx, float sy) { g_rs[RS_SCENE][0] = sx; g_rs[RS_SCENE][1] = sy; }
+void renderer_set_scene_scale(float sx, float sy) {
+    g_rs[RS_SCENE][0] = sx; g_rs[RS_SCENE][1] = sy;
+#ifdef __PROSPERO__
+    dynamic_resolution_begin_frame(sx, sy);
+#endif
+}
 void renderer_set_shadow_size(uint32_t n) {  // (never past what the GPU can make: Extreme is 8192)
     g_shadow_size = n < g_vk.props.limits.maxImageDimension2D ? n : g_vk.props.limits.maxImageDimension2D;
 }

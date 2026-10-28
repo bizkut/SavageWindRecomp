@@ -10,6 +10,9 @@
 #include "kernel.h"
 #include "rt.h"
 
+#ifdef __PROSPERO__
+#include "ps5/dynamic_resolution.h"
+#endif
 uint64_t g_ft[FT_COUNT];
 static uint32_t present_handle;  // the guest thread that presents (0: none yet)
 
@@ -30,6 +33,9 @@ static void gpu_close(void) {
     if (gpu_ns > gpu_win_max) gpu_win_max = gpu_ns;
     gpu_min_sum += gpu_ns, gpu_min_n++;
     benchmark_gpu(gpu_frame, gpu_ns);
+    #ifdef __PROSPERO__
+    dynamic_resolution_gpu(gpu_ns);
+    #endif
 }
 
 void ft_gpu(uint64_t frame, uint64_t ns) {
