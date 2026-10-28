@@ -1022,3 +1022,10 @@ same internal size (the motion-vector and TAA inputs). Image quality comparison 
 A native 3840×2160 crop of the prompt bar (new `shot.txt` tool) shows the L-stick icon ~70 px tall with 2–3 px soft
 edges: the 50×50 glyph-sheet cells magnified with linear filtering. The HUD is drawn at output resolution, so the
 upscaler is not involved. A 4× glyph sheet and procedural PlayStation stick icons are being built.
+
+## 2026-10-28 — Sharp button icons at 4K (.41, ps5/evidence/m8/shots/before-after.png)
+
+Eboot `41055321…`: the button glyph sheet is replaced by a 4× (1024×4096 R8) image of procedurally drawn icons,
+including new PlayStation-style L/R stick icons with direction arrows ("high-resolution R8 image 1024x4096 (4x)").
+Native 4K crops before/after show sharp icon edges; the user confirmed on the TV. The game's own bitmap text
+("Move", "Camera") is unchanged and still soft.
