@@ -1127,3 +1127,12 @@ encoding (1 low-priority thread) waits until the compile ends, and work pauses o
 in 119.0 s** (run 4 baseline without generation 119.8 s), the game starts, and the pack completes in the background
 (866 textures, 199.1 s after its start, ~80 s into the title screen). Title screen meanwhile: 59.9 fps, one 267 ms
 frame and a few 19–31 ms frames while the generator ran. Replacements apply from the next texture load.
+
+## 2026-10-29 — Soak (stopped at 25 min by the user) and FSR 3.1 default (.41, ps5/evidence/m11/)
+
+Soak, eboot `f233cc80…`, 1440p internal (set during the run), partly played by the user: 25 min, 87,520 frames,
+96.0 % on time, 125 hitches, no fault; title heap 1,280 MiB and flexible free 104 MiB constant across samples, GPU
+allocation 1.33–1.46 GB. Stopped by the user ("it works good"); the 60-minute gate is waived by that decision.
+FSR 3.1 default (`2a6aaf6`), first launch with no upscaler keys: `upscaler 3, quality 3` → 1920×1080 → 3840×2160
+with FG. Benchmark: 95.1 % on time, 59.5 / 119.0 fps, render thread 11.7 ms (FSR 1: 8.9 ms, 99.9 %), GPU 12.4 ms.
+FSR 3.1's dispatch recording on the render thread is the cost.
