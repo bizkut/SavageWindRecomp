@@ -697,8 +697,10 @@ diff --git a/deps/libpietendo/src/hac/HierarchicalIntegrityStream.cpp b/deps/lib
 index ac2466e..b990529 100644
 --- a/deps/libpietendo/src/hac/HierarchicalIntegrityStream.cpp
 +++ b/deps/libpietendo/src/hac/HierarchicalIntegrityStream.cpp
-@@ -8,10 +8,33 @@
+@@ -8,10 +8,35 @@
  
++extern "C" int savage_sha256_ni(unsigned char *, const unsigned char *, size_t);
++
  pie::hac::HierarchicalIntegrityStream::HierarchicalIntegrityStream()
      : mModuleLabel("pie::hac::HierarchicalIntegrityStream"), mBaseStream(), mDataStreamBlockSize(0),
 -      mDataStreamLogicalLength(0), mDataStream(), mHashCache(), mHashCalc(new tc::crypto::Sha2256Generator())
@@ -755,3 +757,18 @@ index ac2466e..b990529 100644
  }
  
  bool pie::hac::HierarchicalIntegrityStream::validateLayerBlocksWithHashLayer(
+@@ -400,9 +426,11 @@ bool pie::hac::HierarchicalIntegrityStream::validateLayerBlocksWithHashLayer(
+         const byte_t *blk_hash_ptr = hash_layer + (mHashCalc->kHashSize * i);
+         // std::cout << tc::cli::FormatUtil::formatBytesAsHxdHexString(blk_hash_ptr, block_size);
+ 
+-        mHashCalc->initialize();
+-        mHashCalc->update(blk_ptr, blk_size);
+-        mHashCalc->getHash(mHash.data());
++        if (!savage_sha256_ni(mHash.data(), blk_ptr, blk_size)) {
++            mHashCalc->initialize();
++            mHashCalc->update(blk_ptr, blk_size);
++            mHashCalc->getHash(mHash.data());
++        }
+ 
+         // fmt::print("test hash: {:s}\n", tc::cli::FormatUtil::formatBytesAsString(blk_hash_ptr, 32, true, ":"));
+         // fmt::print("calc hash: {:s}\n", tc::cli::FormatUtil::formatBytesAsString(mHash.data(), 32, true, ":"));

@@ -15,6 +15,7 @@
 #include "../astc.h"
 #include "../glyphs.h"
 #include "../renderer.h"
+#include "../texture_size.h"
 
 // ================================================================== formats
 typedef struct { VkFormat vf; uint8_t expand_rgb, alpha_one; } VkFmt;
@@ -321,9 +322,7 @@ static void create_image(NvnTexture *t, TexBackend *b) {
     b->sy = rs_want(b, 1);
     uint32_t tw = t->width ? t->width : 1, th = t->height ? t->height : 1;
     if (b->scalable) {
-        tw = (uint32_t)lroundf(tw * b->sx); th = (uint32_t)lroundf(th * b->sy);
-        if (tw < 1) tw = 1;
-        if (th < 1) th = 1;
+        tw = texture_scaled_extent(tw, b->sx); th = texture_scaled_extent(th, b->sy);
     }
     VkImageType type = VK_IMAGE_TYPE_2D;
     uint32_t layers = 1, depth = 1;

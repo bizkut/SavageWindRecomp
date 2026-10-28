@@ -2,6 +2,7 @@
 #include "../../runtime/romfs_image.h"
 #include "package_exefs.h"
 #include <tc/crypto/Sha2256Generator.h>
+#include <tc/crypto/Aes128CtrEncryptor.h>
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -15,6 +16,21 @@
 #include <vector>
 
 using Clock = std::chrono::steady_clock;
+extern "C" int savage_sha256_ni(unsigned char *, const unsigned char *, size_t);
+static void test_sha256_ni() {
+    std::vector<unsigned char> input(16400);
+    for (size_t i = 0; i < input.size(); ++i) input[i] = (unsigned char)(i * 73 + 11);
+    for (size_t n : {size_t(0), size_t(1), size_t(55), size_t(56), size_t(63), size_t(64),
+                     size_t(65), size_t(4096), size_t(16384)}) {
+        unsigned char expected[32], actual[32];
+        tc::crypto::Sha2256Generator h;
+        h.initialize(); h.update(input.data() + 1, n); h.getHash(expected);
+        int accelerated = savage_sha256_ni(actual, input.data() + 1, n);
+        if (!accelerated) throw std::runtime_error("SHA-NI unavailable");
+        if (std::memcmp(expected, actual, 32))
+            throw std::runtime_error("SHA-NI digest mismatch");
+    }
+}
 static uint32_t u32(const unsigned char *p) { uint32_t v; std::memcpy(&v, p, 4); return v; }
 static uint64_t u64(const unsigned char *p) { uint64_t v; std::memcpy(&v, p, 8); return v; }
 static std::string hex(const unsigned char *p, size_t n) {
@@ -116,8 +132,58 @@ static void bench(const char *label, RomfsImage *image, double open_time) {
     }
     std::puts("");
 }
+
+static void bench_sizes(RomfsImage *image) {
+    const uint64_t size = romfs_image_size(image);
+    for (size_t bytes : {size_t(4096), size_t(16384), size_t(65536), size_t(524288), size_t(1048576)}) {
+        std::vector<unsigned char> buf(bytes);
+        double total = 0, max = 0;
+        uint64_t seed = 0x123456789abcdefULL;
+        for (int i = 0; i < 512; ++i) {
+            seed ^= seed << 13; seed ^= seed >> 7; seed ^= seed << 17;
+            uint64_t off = seed % (size - bytes);
+            auto start = Clock::now();
+            if (!read_at(image, buf.data(), bytes, off)) throw std::runtime_error("size benchmark read failed");
+            double elapsed = seconds(start);
+            total += elapsed;
+            max = std::max(max, elapsed);
+        }
+        std::printf("size=%zu random mean=%.3fms max=%.3fms\n", bytes, total * 1000 / 512, max * 1000);
+    }
+    std::vector<unsigned char> block(1048576);
+    unsigned char key[16] = {}, iv[16] = {}, digest[32];
+    auto start = Clock::now();
+    for (int i = 0; i < 256; ++i)
+        tc::crypto::DecryptAes128Ctr(block.data(), block.data(), block.size(), 0, key, sizeof key, iv, sizeof iv);
+    double aes = seconds(start);
+    start = Clock::now();
+    for (int i = 0; i < 256; ++i) {
+        tc::crypto::Sha2256Generator hash;
+        for (size_t off = 0; off < block.size(); off += 16384) {
+            hash.initialize();
+            hash.update(block.data() + off, 16384);
+            hash.getHash(digest);
+        }
+    }
+    std::printf("crypto 1MiB AES-CTR=%.3fms SHA256-16KiB-blocks=%.3fms\n", aes * 1000 / 256,
+                seconds(start) * 1000 / 256);
+}
 int main(int argc, char **argv) {
+    if (argc == 2 && !std::strcmp(argv[1], "--sha-test")) {
+        try { test_sha256_ni(); std::puts("SHA-NI vectors matched"); return 0; }
+        catch (const std::exception &e) { std::fprintf(stderr, "%s\n", e.what()); return 1; }
+    }
     if (argc < 6) { std::fprintf(stderr, "usage: package-test <keys> <manifest> <folder> <package>...\n"); return 2; }
+    if (!std::strcmp(argv[2], "--bench-only")) {
+        char why[256] = {};
+        RomfsImage *image = romfs_image_open_package(argv[1], const_cast<const char *const *>(argv + 4),
+                                                      size_t(argc - 4), 0, why, sizeof why);
+        if (!image) { std::fprintf(stderr, "package-test: %s\n", why); return 1; }
+        try { bench_sizes(image); }
+        catch (const std::exception &e) { std::fprintf(stderr, "package-test: %s\n", e.what()); romfs_image_close(image); return 1; }
+        romfs_image_close(image);
+        return 0;
+    }
     try {
         char invalid_why[256] = {};
         if (romfs_image_open_package(nullptr, nullptr, 0, 0, invalid_why, sizeof invalid_why) ||

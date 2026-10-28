@@ -86,12 +86,13 @@ static bool make_context(const Fsr3Dispatch *d) {
     size_t n = ffxGetScratchMemorySizeVK(d->phys, CONTEXTS);
     n = (n + 63) & ~(size_t)63;
     scratch = scratch_alloc(n);
+    if (!scratch) { LOG("[fsr3] scratch allocation failed: %zu bytes\n", n); return false; }
     memset(scratch, 0, n);
     static VkDeviceContext dc;  // (the backend keeps a pointer to it)
     dc = {d->dev, d->phys, device_proc};
     FfxFsr3UpscalerContextDescription cd = {};
     FfxErrorCode e = ffxGetInterfaceVK(&cd.backendInterface, ffxGetDeviceVK(&dc), scratch, n, CONTEXTS);
-    if (e != FFX_OK) { LOG("[fsr3] backend: error %d\n", (int)e); scratch_free(scratch); scratch = NULL; return false; }
+    if (e != FFX_OK) { LOG("[fsr3] ffxGetInterfaceVK failed: 0x%08x\n", (unsigned)e); scratch_free(scratch); scratch = NULL; return false; }
     // (LDR input, low-resolution and jitter-free motion vectors, standard depth; FFX_FSR3UPSCALER_ENABLE_DEBUG_CHECKING
     // with SAVAGEWIND_FSR3_DEBUG=1: its checks of the inputs, in the log)
     cd.flags = getenv("SAVAGEWIND_FSR3_DEBUG") ? FFX_FSR3UPSCALER_ENABLE_DEBUG_CHECKING : 0;
@@ -99,15 +100,28 @@ static bool make_context(const Fsr3Dispatch *d) {
     cd.maxUpscaleSize = {d->output.width, d->output.height};
     cd.fpMessage = message;
     e = ffxFsr3UpscalerContextCreate(&ctx, &cd);
-    if (e != FFX_OK) { LOG("[fsr3] context: error %d\n", (int)e); scratch_free(scratch); scratch = NULL; return false; }
+    if (e != FFX_OK) { LOG("[fsr3] ffxFsr3UpscalerContextCreate failed: 0x%08x%s\n", (unsigned)e,
+                           e == FFX_ERROR_INVALID_ARGUMENT ? " (invalid argument; see binding diagnostics)" : "");
+                       scratch_free(scratch); scratch = NULL; return false; }
     iface = cd.backendInterface;
     FfxFsr3UpscalerSharedResourceDescriptions sd = {};
     e = ffxFsr3UpscalerGetSharedResourceDescriptions(&ctx, &sd);
-    if (e == FFX_OK) e = iface.fpCreateBackendContext(&iface, FFX_EFFECT_SHAREDRESOURCES, nullptr, &shared_ctx);
+    bool shared_created = false;
+    int made = 0;
+    if (e == FFX_OK) {
+        e = iface.fpCreateBackendContext(&iface, FFX_EFFECT_SHAREDRESOURCES, nullptr, &shared_ctx);
+        shared_created = e == FFX_OK;
+    } else LOG("[fsr3] ffxFsr3UpscalerGetSharedResourceDescriptions failed: 0x%08x\n", (unsigned)e);
+    if (!shared_created && e != FFX_OK) LOG("[fsr3] shared backend context creation failed: 0x%08x\n", (unsigned)e);
     const FfxCreateResourceDescription *rd[3] = {&sd.dilatedDepth, &sd.dilatedMotionVectors, &sd.reconstructedPrevNearestDepth};
-    for (int i = 0; i < 3 && e == FFX_OK; i++) e = iface.fpCreateResource(&iface, rd[i], shared_ctx, &shared[i]);
+    while (made < 3 && e == FFX_OK) {
+        e = iface.fpCreateResource(&iface, rd[made], shared_ctx, &shared[made]);
+        if (e == FFX_OK) ++made;
+        else LOG("[fsr3] shared fpCreateResource index %d failed: 0x%08x\n", made, (unsigned)e);
+    }
     if (e != FFX_OK) {
-        LOG("[fsr3] shared images: error %d\n", (int)e);
+        while (made) iface.fpDestroyResource(&iface, shared[--made], shared_ctx);
+        if (shared_created) iface.fpDestroyBackendContext(&iface, shared_ctx);
         ffxFsr3UpscalerContextDestroy(&ctx);
         scratch_free(scratch);
         scratch = NULL;
@@ -116,7 +130,7 @@ static bool make_context(const Fsr3Dispatch *d) {
     have_ctx = true;
     ctx_dev = d->dev;
     ctx_rw = d->color.width, ctx_rh = d->color.height, ctx_ow = d->output.width, ctx_oh = d->output.height;
-    LOG("[fsr3] context %ux%u -> %ux%u\n", ctx_rw, ctx_rh, ctx_ow, ctx_oh);
+    LOG("[fsr3] context created %ux%u -> %ux%u\n", ctx_rw, ctx_rh, ctx_ow, ctx_oh);
     return true;
 }
 
@@ -167,9 +181,13 @@ extern "C" bool fsr3_dispatch(const Fsr3Dispatch *d) {
     FfxErrorCode e = ffxFsr3UpscalerContextDispatch(&ctx, &dd);
     if (e != FFX_OK) {
         static int logged;
-        if (logged++ < 8) LOG("[fsr3] dispatch: error %d\n", (int)e);
+        if (logged++ < 8) LOG("[fsr3] ffxFsr3UpscalerContextDispatch failed: 0x%08x\n", (unsigned)e);
         return false;
     }
+    static uint64_t dispatches;
+    ++dispatches;
+    if (dispatches == 1 || dispatches % 300 == 0)
+        LOG("[fsr3] dispatches %llu\n", (unsigned long long)dispatches);
     return true;
 }
 

@@ -12,10 +12,12 @@
 
 #include "../ui/game_options.h"
 #include "../ui/i18n.h"
+#include "upscale_label.h"
 
 extern "C" {
 #include "../settings.h"
 #include "../window_size.h"
+#include "../nvn/output_scale.h"
 }
 extern "C" bool ps5_video_hdr_available(void);
 
@@ -95,7 +97,16 @@ void video_page(std::vector<Item> &v) {
     v.push_back(video_wide_view());
     v.push_back(video_field_of_view());
     v.push_back(video_upscaler(k_ups_value, (int)(sizeof k_ups_value / sizeof k_ups_value[0])));
-    v.push_back(video_upscaler_mode());
+    Item mode = video_upscaler_mode();
+    static auto mode_name = mode.label;
+    mode.label = [](const Item &it, int x) {
+        static char buf[256];
+        WinSize out = winsize_effective(true);
+        double factor = g_settings.upscaler == UPSCALE_OFF || !upscale_modes_available() ? 1.0 : upscale_mode_factor(x);
+        ps5_upscale_label(buf, sizeof buf, mode_name(it, x), out.w, out.h, factor, g_settings.dynamic_resolution);
+        return (const char *)buf;
+    };
+    v.push_back(mode);
     v.push_back(video_antialiasing());
     v.push_back(toggle(P_VIDEO, "Dynamic resolution", "Off while TAA or FSR 3 is enabled.",
                        [](const Item &) { return (int)g_settings.dynamic_resolution; },

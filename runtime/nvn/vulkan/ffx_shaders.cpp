@@ -29,7 +29,8 @@ extern "C" FfxErrorCode ffxGetPermutationBlobByIndex(FfxEffect effect, FfxPass p
         memcpy(out, &ffx_fu_blobs[pass], sizeof *out);
         return FFX_OK;
     }
-    fprintf(stderr, "[ffx] no shader for effect %d pass %d\n", (int)effect, (int)pass);
+    fprintf(stderr, "[ffx] ffxGetPermutationBlobByIndex: no shader for effect %d pass %d options 0x%x\n",
+            (int)effect, (int)pass, options);
     return FFX_ERROR_INVALID_ARGUMENT;
 }
 

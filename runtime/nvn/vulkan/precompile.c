@@ -375,7 +375,15 @@ static void add_job(Jobs *J, int shader, const ShaderKey *k) {
     (*n)++;
 }
 
-static void status_path(char *out, size_t n) { vk_cache_path(out, n, "precompiled.txt"); }
+static void status_path(char *out, size_t n) {
+#ifdef __PROSPERO__
+    const bool drs = g_settings.dynamic_resolution && g_settings.antialias != AA_TAA &&
+                     g_settings.upscaler != UPSCALE_FSR3;
+    vk_cache_path(out, n, drs ? "precompiled-drs.txt" : "precompiled.txt");
+#else
+    vk_cache_path(out, n, "precompiled.txt");
+#endif
+}
 
 // cache/precompiled.txt: the shader version (vk_shader_version), then "<shaders> <YYYY-MM-DD>"
 int shader_precompile_status(int *shaders, char *date, int n) {
@@ -464,7 +472,17 @@ bool shader_precompile_run(ShaderPrecompile *p, RomfsImage *img, const char *exe
     }
     for (int i = 0; i < nlog; i++) {
         int k = shader_archive_find(&set, log[i].code);
-        if (k >= 0 && (int)log[i].stage == set.shaders[k].stage) add_job(&J, k, &log[i].key);
+        if (k >= 0 && (int)log[i].stage == set.shaders[k].stage) {
+            add_job(&J, k, &log[i].key);
+#ifdef __PROSPERO__
+            if (drs) {
+                ShaderKey variant = log[i].key;
+                variant.drs = 1;
+                vk_key_normalize(set.shaders[k].code, set.shaders[k].stage, &variant);
+                add_job(&J, k, &variant);
+            }
+#endif
+        }
     }
     Job *jobs = J.jobs;
     int njobs = J.n;
@@ -539,10 +557,24 @@ bool shader_precompile_run(ShaderPrecompile *p, RomfsImage *img, const char *exe
             if ((g->cs >= 0 && pr.cs >= 0) || (graphics && g->cs < 0 && pr.vs >= 0 && pr.fs >= 0)) pairs[np++] = pr;
         }
         if (g_vk.gpl) {
-            pairs = realloc(pairs, sizeof *pairs * (size_t)(np + set.nshaders + 1));
-            for (int i = 0; i < set.nshaders; i++) {
-                if (first[i] < 0 || set.shaders[i].stage == STAGE_COMPUTE) continue;
-                pairs[np++] = set.shaders[i].stage == STAGE_VERTEX ? (Pair){first[i], -1, -1} : (Pair){-1, first[i], -1};
+#ifdef __PROSPERO__
+            if (drs) {
+                pairs = realloc(pairs, sizeof *pairs * (size_t)(np + njobs + 1));
+                for (int i = 0; i < njobs; i++) {
+                    int stage = set.shaders[jobs[i].shader].stage;
+                    if (stage == STAGE_COMPUTE)
+                        pairs[np++] = (Pair){-1, -1, i};
+                    else
+                        pairs[np++] = stage == STAGE_VERTEX ? (Pair){i, -1, -1} : (Pair){-1, i, -1};
+                }
+            } else
+#endif
+            {
+                pairs = realloc(pairs, sizeof *pairs * (size_t)(np + set.nshaders + 1));
+                for (int i = 0; i < set.nshaders; i++) {
+                    if (first[i] < 0 || set.shaders[i].stage == STAGE_COMPUTE) continue;
+                    pairs[np++] = set.shaders[i].stage == STAGE_VERTEX ? (Pair){first[i], -1, -1} : (Pair){-1, first[i], -1};
+                }
             }
         }
         qsort(pairs, (size_t)np, sizeof *pairs, pair_cmp);
