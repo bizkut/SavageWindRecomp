@@ -922,3 +922,10 @@ hitches were largely this logging.
 ## 2026-10-28 — PS5 starts with controller button prompts (.41, ps5/evidence/m4/prompts-pad-at-start.png)
 
 Before any input the prompts showed keyboard keys (Move WASD, Controls Tab) because the last-used device started as the keyboard. On the PS5 it now starts as the controller (`INPUT_START_DEVICE`; desktop unchanged); a benchmark capture with no input shows controller icons (sticks, Options). Keys, clicks or a mouse turn switch to keyboard icons; a controller button or stick switches back.
+
+## 2026-10-28 — M7 checks by the user on .41
+
+HUD clean with FG on (no ghosting on hearts/health bar); VRR active on the TV. Scene ghosting is visible in fast
+motion (expected from colour-only generation; M8 motion vectors are the planned improvement). Input latency and the
+physical DualSense remain untested. With the benchmark at 100 % on time and 119.3 Hz presented, M7's done-when is met
+except the latency A/B; FG becomes the 120 Hz first-launch default.
