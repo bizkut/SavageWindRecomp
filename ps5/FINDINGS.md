@@ -552,3 +552,11 @@ movie played). Audio: the renderer went from 0–2 voice sources at the title sc
 errors, 0 dropped frames** in every 10 s window. Video: 59.9 fps in most 2 s windows, dips to 37–53 fps with up to
 312 ms frames as the world first loads (draws rise to ~470k per 2 s). Pending: the user's listening check, and a
 pre-rendered movie for the FFmpeg path.
+
+## 2026-10-28 — M6 measure 1: per-frame CPU/GPU at the title screen (.41, ps5/evidence/m6/measure1)
+
+Eboot `cf832101…`, 200 s idle at the title screen with no player. Each 60 s window had 99.0–99.2 % of frames on
+time; frame times p50 16.75, p95 16.75–17.00, p99 17.00–17.25 ms. Per frame: render thread CPU 1.1 ms, GPU 1.8 ms,
+guest threads 43.5 ms summed. The 3 hitches (44–47 ms) all came in the first minute, exactly 119 frames apart, and were
+logged as command translation on the render thread, with no compiles or uploads. These are title-screen figures;
+gameplay CPU/GPU (S6, the M6 target) needs a player or the benchmark route.
