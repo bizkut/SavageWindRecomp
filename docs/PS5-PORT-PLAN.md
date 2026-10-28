@@ -454,12 +454,14 @@ it, so an explicit choice in the Video page always wins, also across updates:
   at 4K, FSR 1 from the highest internal resolution whose GPU time (game + MihawkGen) keeps the frame target. The
   measured configuration is **2560×1440 internal → 3840×2160** (`[post] scene 2560x1440 fsr1 -> 3840x2160` in the
   M6/M7 benchmarks; the `1920x1080` `[post]` line is the title screen): GPU 7.7 ms per frame without FG, 11.6 ms with
-  MihawkGen at 1440p (1.9 ms). That stays the 4K default; 1080p internal is the fallback if a heavier scene needs it.
-  Before M7 closes, the benchmark runs at 1080p and at 1440p internal (same route, same capture frames): GPU time and
-  the capture pairs side by side. BOTW's textures are Switch-resolution, so 1440p gains edges, distant detail and thin
-  geometry, not texture detail; if the 4K captures differ little, 1080p becomes the default and the GPU time is kept.
+  MihawkGen at 1440p (1.9 ms).
+  Measured 1080p vs 1440p internal with FG on (2026-10-28, `ps5/evidence/m7/res-*.klog`): 1080p 88.4 % on time, GPU
+  10.35 ms, 117.0 presented fps; 1440p 79.4 %, GPU 11.62 ms, 115.6 fps. The captures are halved to 1920×1080, so they
+  cannot show the 1080p/1440p difference at 4K; BOTW's textures are Switch-resolution, so 1440p mainly adds edge and
+  distant detail. **4K default: 1080p internal with FG on, 1440p internal with FG off** (FG off holds 59.9 fps at 1440p).
+  Revisit when the render-thread work frees time, or if the user prefers 1440p's sharpness on the TV.
 
-Status 2026-10-28 (eboot `771afc26…`, host-built; console runs of earlier builds in FINDINGS): the backend choice is
+Status 2026-10-28 (eboot `22a6cf72…`, host-built; console runs of earlier builds in FINDINGS): the backend choice is
 the build's (`runtime/nvn/vulkan/framegen.h` `g_fg_backend`: desktop links `framegen.cpp`, FSR 3; the PS5 links
 `mihawk.cpp`, MihawkGen, so no GPL code reaches the desktop build). MihawkGen is pinned in `ps5/deps.lock`
 (`c57232a9…`, weights `network.fgw` by SHA-256), exported with `git archive` into `.deps/ps5/mihawkgen` and compiled
@@ -477,8 +479,9 @@ under half the refresh rate, 59.64 fps and 119.28 presents at 119.88 Hz, so FIFO
 camera cuts and the first frame after FG was off show the game's frame twice. The generator's GPU time (its passes'
 timestamps, `fg_context_set_profile`) is in the 2 s `[fg]` line, each wait and the render thread's CPU in
 `[fgpipe]`; the benchmark summary adds presented fps, the present-interval distribution and FG GPU ms, and 10 s of
-unmeasured fast motion with generated/real captures follow it; `fg-capture.txt` captures pairs in play. Host check:
-`make test-framepace-fg`.
+unmeasured fast motion with generated/real captures follow it, with the present's and frame generation's render-thread
+CPU; `internal = 1080p` / `1440p` in benchmark.txt picks a run's internal resolution (named in the summary);
+`fg-capture.txt` captures pairs in play. Host check: `make test-framepace-fg`.
 
 ### After M7 (optional) — HDR10 output
 Requested 2026-10-28. Desktop has HDR10 presentation on `test` and lists colour grading/HDR as roadmap. On PS5 the

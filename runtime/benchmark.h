@@ -26,6 +26,9 @@ void benchmark_fg_gpu(uint64_t ns);
 // vulkan/device.c, each presented frame: true once, when the fast-motion segment after the route wants frame
 // generation's captures (*count pairs, one every *every game frames)
 bool benchmark_fg_capture(int *count, int *every);
+// vulkan/device.c, each game frame's present: the render thread's CPU time in it and, of that, in frame generation's
+// recording (vk_fg_generate); fg: the frame was presented with a generated one
+void benchmark_render_cpu(uint64_t present_ns, uint64_t fg_ns, bool fg);
 
 #ifdef __cplusplus
 }

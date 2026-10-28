@@ -803,3 +803,24 @@ stalling when no window image is free). The render thread's acquire wait fell fr
 generated frames dropped. Still: game 57.8 fps, presented 115.5, 79.6 % on time, MihawkGen 1.92 ms. With every
 pipeline wait now near zero, what remains is the render thread's own CPU time with FG on (late frames at p95 19.5 ms),
 the work queued as "Render-thread CPU" after M7.
+
+Where the remaining frames go (host analysis, per 2 s window of the route in bench5-fg1 vs bench4-fg0): it is not the
+render thread's CPU in frame generation. Over the route the render thread used 11.22 ms per frame with FG on and
+10.68 off (+0.54); `[fgpipe]` puts the whole present at 0.4–1.0 ms and frame generation's recording at 0.11–0.15 ms.
+The late frames sit in the camera-turning half: there the render thread's CPU is the same with and without FG
+(13.0–14.1 ms), FG off holds 59.9 fps (93–99 % on time), and FG on drops to 53–58 fps (35–64 % on time); in the still
+second half FG on is 99 % on time. What FG adds there is GPU time on the frame's path: 11.0–11.8 ms per game frame
+against 7.3–7.9 off. That is MihawkGen's 1.9 ms plus about 1.8 ms of 4K passes on the one queue (the HUD-less copy,
+its scale-down, FSR 1 EASU + RCAS of the generated frame, the HUD composite, the generated frame's present), all
+ahead of the next frame's GPU work, which the game's own waits then see. Cheaper options, not taken without eyes on
+the result: the composite sampling the generated frame bilinearly (no EASU/RCAS passes), or 1080p internal. The
+benchmark summary now gives the present's and frame generation's CPU per frame, and `internal = <height>p` in
+benchmark.txt picks the internal resolution for a run (eboot in the plan's M7 status).
+
+## 2026-10-28 — M7: 1080p vs 1440p internal with FG on (.41, ps5/evidence/m7/res-*.klog, captures-res/)
+
+Eboot `22a6cf72…`, same route, FG on: **1080p internal: 88.4 % on time, GPU 10.35 ms, game 58.5 / presented 117.0
+fps. 1440p: 79.4 %, GPU 11.62 ms, 57.8 / 115.6.** The capture PNGs are halved to 1920×1080, so they cannot show the
+difference at 4K (their detail measure is equal: 11.16 vs 11.22). Default chosen: 1080p internal with FG on, 1440p
+with FG off. Per the agent's analysis (bench5 entry), the FG-on misses are GPU time in the camera-turning half
+(~7.5 → ~11.5 ms per game frame: MihawkGen 1.9 ms + ~1.8 ms of 4K passes), not render-thread CPU.

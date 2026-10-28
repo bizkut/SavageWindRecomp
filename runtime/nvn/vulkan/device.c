@@ -1862,7 +1862,8 @@ static void present_locked(NvnTexture *t) {
     // or this one, shown twice)
     uint64_t c1 = plat_thread_cpu_ns();
     TexBackend *gen = vk_fg_generate(t, b);
-    pp_add(PP_FG_CPU, plat_thread_cpu_ns() - c1);
+    uint64_t fg_cpu = plat_thread_cpu_ns() - c1;
+    pp_add(PP_FG_CPU, fg_cpu);
     {   // (measuring) SAVAGEWIND_FG_TEST=1: the frame made, not presented
         static int test = -1;
         if (test < 0) test = getenv("SAVAGEWIND_FG_TEST") ? atoi(getenv("SAVAGEWIND_FG_TEST")) : 0;
@@ -1992,7 +1993,9 @@ static void present_locked(NvnTexture *t) {
 presented:
     frame_capture[0] = 0;
     ft_add(FT_PRESENT_NS, SDL_GetTicksNS() - t0);
-    pp_add(PP_PRESENT_CPU, plat_thread_cpu_ns() - c0);
+    uint64_t present_cpu = plat_thread_cpu_ns() - c0;
+    pp_add(PP_PRESENT_CPU, present_cpu);
+    benchmark_render_cpu(present_cpu, fg_cpu, gen != NULL);
     g_fg_want = fg_wanted();  // (for the next frame's draws)
     ft_frame();
     extern void vk_list_stats_frame(void);

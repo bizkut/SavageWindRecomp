@@ -330,6 +330,14 @@ void benchmark_fg_gpu(uint64_t ns) {
     g_fg_gpu[g_nfg++] = (float)(ns / 1e6);
 }
 
+// the render thread's CPU in the presents (device.c present_locked) and in frame generation's recording
+static double g_present_cpu, g_fg_cpu;
+static int g_ncpu, g_nfg_frames;
+void benchmark_render_cpu(uint64_t present_ns, uint64_t fg_ns, bool fg) {
+    if (!measuring()) return;
+    g_present_cpu += present_ns / 1e6, g_fg_cpu += fg_ns / 1e6, g_ncpu++, g_nfg_frames += fg;
+}
+
 static int cmp_float(const void *a, const void *b) {
     float x = *(const float *)a, y = *(const float *)b;
     return x < y ? -1 : x > y;
@@ -376,9 +384,12 @@ static void finish(const char *failure) {
         for (int i = 0; i < g_ncauses; i++)
             at += (size_t)snprintf(text + at, sizeof text - at, "%s %s %d", i ? "," : ":", g_causes[i].name, g_causes[i].n);
         at += (size_t)snprintf(text + at, sizeof text - at,
-                               "\ncpu ms per frame: render thread mean %.2f p95 %.2f max %.1f; guest threads (summed) mean %.2f "
-                               "p95 %.2f max %.1f\ngpu ms per frame (%d frames): mean %.2f p95 %.2f max %.1f\n",
-                               r.mean, r.p95, r.max, g.mean, g.p95, g.max, g_ngpu, u.mean, u.p95, u.max);
+                               "\ncpu ms per frame: render thread mean %.2f p95 %.2f max %.1f (of it the present %.2f, frame "
+                               "generation's recording %.2f; frame generation %s, %d of %d frames); guest threads (summed) "
+                               "mean %.2f p95 %.2f max %.1f\ngpu ms per frame (%d frames): mean %.2f p95 %.2f max %.1f\n",
+                               r.mean, r.p95, r.max, g_ncpu ? g_present_cpu / g_ncpu : 0.0, g_ncpu ? g_fg_cpu / g_ncpu : 0.0,
+                               g_nfg_frames ? "on" : "off", g_nfg_frames, g_ncpu, g.mean, g.p95, g.max, g_ngpu, u.mean,
+                               u.p95, u.max);
         // the presents: their rate, the intervals between them (when each was handed to the display; at 119.88 Hz one
         // refresh is 8.34 ms) and frame generation's GPU time per generated frame
         int np = __atomic_load_n(&g_npresents, __ATOMIC_ACQUIRE), niv = np > 1 ? np - 1 : 0;
