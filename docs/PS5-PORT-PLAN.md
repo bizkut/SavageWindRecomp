@@ -483,16 +483,18 @@ Requested 2026-10-28; desktop roadmap item, not yet built there. On PS5 it trade
 headroom M6 measures. Take desktop's implementation when it lands; otherwise build it as shared code. **Done when:**
 each setting's CPU/GPU cost is measured with the benchmark and the default keeps the M6 frame target.
 
-### After M7 (optional) — Dynamic resolution
-Requested 2026-10-28. New shared work: no renderer has it (Metal counts `g_gpu_total_ns`, but `output_scale.c` never
-uses it; Vulkan has no equivalent). It helps only when the GPU is the limit; today the render thread's CPU time is
-(M6 benchmark: GPU 7.7 ms, render thread 10–14 ms), so it waits until that changes. Scope: allocate the scaled
-targets at the maximum size, choose a per-frame internal size from the measured GPU time, and set each pass's
-viewport/scissor to that part (`pass_size()` in `runtime/nvn/vulkan/exec.c` uses the allocation size today). Every
-later pass that samples those targets (post-effects, bloom, screen-space steps, the HUD composite, FSR 1's input
-rectangle, the HUD-less capture for MihawkGen) must read only the used part. **Done when:** on the benchmark the
-internal size varies with load, the GPU frame time stays under its target, there are no edge or stretch artifacts in
-the frame captures, and no new hitches.
+### After M7 (optional) — Dynamic resolution (PS5 only)
+Requested 2026-10-28; **PS5 only** (user decision): desktop behaviour is unchanged and gets no new setting. New work:
+no renderer has it (Metal counts `g_gpu_total_ns`, but `output_scale.c` never uses it; Vulkan has no equivalent). It
+helps only when the GPU is the limit; today the render thread's CPU time is (M6 benchmark: GPU 7.7 ms, render thread
+10–14 ms), so it waits until that changes. Scope: the controller (target GPU time from the measured timestamps, the
+per-frame internal size) lives in a PS5 file per D2; the shared Vulkan backend gains only a size hook that desktop
+leaves at the allocation size. Allocate the scaled targets at the maximum size and set each pass's viewport/scissor
+to the used part (`pass_size()` in `runtime/nvn/vulkan/exec.c` uses the allocation size today). Every later pass
+that samples those targets (post-effects, bloom, screen-space steps, the HUD composite, FSR 1's input rectangle, the
+HUD-less capture for MihawkGen) must read only the used part. **Done when:** on the benchmark the internal size
+varies with load, the GPU frame time stays under its target, there are no edge or stretch artifacts in the frame
+captures, no new hitches, and the desktop build is unchanged in behaviour.
 
 ### M8 — Temporal upgrades (after PR #194/#195)
 Reuse PR #194's motion vectors, jitter, depth copy and reactive mask and PR #195's FSR 3.1 path; do not re-derive
