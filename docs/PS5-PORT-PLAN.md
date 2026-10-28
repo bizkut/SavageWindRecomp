@@ -528,19 +528,24 @@ version 2 invalidates packs made with the earlier RGBA4/BC7 interpretation.
 
 **On-console generation (requested 2026-10-28; console qualification pending).** The PS5 title can generate the
 same DDS/manifest format from the player's merged packages. `hd_ui_generate` defaults on at 4K output and off at
-lower output resolutions; `hd_ui` independently controls whether the resulting textures are loaded. During shader
-precompilation the pinned ncnn Real-ESRGAN animevideov3 network upscales on its own low-priority Vulkan queues.
+lower output resolutions; `hd_ui` independently controls whether the resulting textures are loaded. The generator
+waits for shader archive reads before scanning layouts, then overlaps inference with shader compilation using the
+pinned ncnn Real-ESRGAN animevideov3 network on low-priority Vulkan queues; ncnn CPU work is capped at one thread.
 BC4/BC5/BC7 encoding and mips run after the shader workers finish. A bounded queue connects those stages, and the
-existing progress screen shows the HD interface count. Files and atomic manifest updates go through the storage
-broker to `/data/savagewind/hd-ui/`; a verified partial manifest resumes after interruption. A generator or game
-version change triggers regeneration. To force regeneration for testing, remove `hd-ui/manifest.json`; the generator
-will replace its matching DDS files. The PC generator remains available.
+precompile screen shows the HD interface count. Once precompilation ends, the game starts without waiting for the
+pack; generation continues on low-priority producer and encoder threads, pausing between work items while a loading
+screen is active. Replacements not discovered during the current session are available on the next launch. Files and
+atomic manifest updates go through the storage broker to `/data/savagewind/hd-ui/`; a verified partial manifest
+resumes after interruption. A generator or game version change triggers regeneration. To force regeneration for
+testing, back up and remove `hd-ui/manifest.json`; matching DDS files will be replaced. The PC tool remains available.
 
 Host evidence: the corrected extraction code matched the PC generator for 881 selected entries in the merged Common
 and Title packs. On lavapipe, two real texture inputs at both scales matched the pinned release binary at infinite,
 infinite, 65.03 and 65.49 dB PSNR; BC4/BC5/BC7 top-level blocks matched the PC encoders on the test inputs.
-The console generator, manifest coverage, startup cost and 30-second overhead target have **not been validated on
-PS5**. A fresh first-start console run and comparison against the PC manifest remain required before qualification.
+On .41, the earlier `e4845749…` build completed 866 textures in 204.6 s; shader state reached done at about 127 s,
+but the game waited 208.6 s for the pack, versus 119.8 s without generation (ps5/evidence/hdgen/fresh-start.klog).
+The nonblocking, low-priority version has not yet been run on PS5. Its startup overhead, in-game impact and full
+manifest coverage versus the PC tool remain unqualified.
 
 ### After M7 (optional) — HDR10 output
 Requested 2026-10-28. Desktop has HDR10 presentation on `test` and lists colour grading/HDR as roadmap. On PS5 the

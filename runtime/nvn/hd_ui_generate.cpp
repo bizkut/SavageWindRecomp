@@ -14,6 +14,7 @@ extern "C" {
 }
 #include <json/json.hpp>
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <cstdio>
 #include <cstdlib>
@@ -25,6 +26,9 @@ extern "C" {
 #include <string>
 #include <vector>
 #include <pthread.h>
+#ifdef __PROSPERO__
+#include <sched.h>
+#endif
 
 using json = nlohmann::json;
 static constexpr int generator_version = HD_UI_GENERATOR_VERSION;
@@ -49,13 +53,33 @@ struct Work {
     size_t pending_bytes = 0;
     std::atomic<int> done{0}, upscaled{0}, total{0};
     std::atomic<bool> active{true};
-    bool shader_done=false, producer_done=false, failed=false;
+    bool shader_reads_done=false, shader_done=false, producer_done=false, failed=false;
     pthread_t producer{}, encoder{};
     bool producer_started=false, encoder_started=false;
     HdUiNcnn *upscaler=nullptr;
     uint64_t start=0;
 };
 static std::atomic<Work *> work{nullptr};
+static std::atomic<bool> loading{false};
+
+static void background_thread(const char *name) {
+#ifdef __PROSPERO__
+    plat_thread_heap_own();
+    struct sched_param p = {};
+    p.sched_priority = sched_get_priority_min(SCHED_OTHER);
+    int rc = p.sched_priority < 0 ? -1 : pthread_setschedparam(pthread_self(), SCHED_OTHER, &p);
+    fprintf(stderr, "[hd-ui-gen] %s low-priority=%d rc=%d\n", name, p.sched_priority, rc);
+#else
+    (void)name;
+#endif
+}
+
+static bool wait_for_game_load(Work *w) {
+    std::unique_lock<std::mutex> lock(w->lock);
+    while (loading.load(std::memory_order_relaxed) && !w->failed)
+        w->cv.wait_for(lock, std::chrono::milliseconds(100));
+    return !w->failed;
+}
 
 static std::string digest(const void *data, size_t size) {
     unsigned char out[32];
@@ -122,6 +146,7 @@ static int publish(Work *w, bool complete) {
 struct Layout { Work *work; std::string archive; bool generate; };
 static int texture(void *context, const HdUiTexture *t) {
     Layout *l=(Layout *)context; Work *w=l->work;
+    if (!wait_for_game_load(w)) return -1;
     if (!l->generate) {
         Record r{t->hash,t->format,t->width,t->height,t->channels,t->scale,l->archive,
                  std::string(t->name,t->name_length),digest(t->linear,t->linear_size)};
@@ -169,19 +194,24 @@ static int texture(void *context, const HdUiTexture *t) {
     return 0;
 }
 static int layout(void *context, const char *pack, const char *name, size_t name_len, const uint8_t *data, size_t size) {
+    if (!wait_for_game_load((Work *)context)) return -1;
     Layout l{(Work *)context,std::string(pack)+":"+std::string(name,name_len),false};
     return hd_ui_extract_layout(data,size,texture,&l);
 }
 static int layout_generate(void *context, const char *pack, const char *name, size_t name_len, const uint8_t *data, size_t size) {
+    if (!wait_for_game_load((Work *)context)) return -1;
     Layout l{(Work *)context,std::string(pack)+":"+std::string(name,name_len),true};
     return hd_ui_extract_layout(data,size,texture,&l);
 }
 static void *encode_main(void *arg) {
     Work *w=(Work *)arg;
+    background_thread("encoder");
     try {
         for (;;) {
             std::unique_lock<std::mutex> lock(w->lock);
-            w->cv.wait(lock,[&]{return w->failed || (w->shader_done && (!w->pending.empty() || w->producer_done));});
+            while (!w->failed && (!w->shader_done || loading.load(std::memory_order_relaxed) ||
+                                  (w->pending.empty() && !w->producer_done)))
+                w->cv.wait_for(lock, std::chrono::milliseconds(100));
             if (w->failed || (w->pending.empty() && w->producer_done)) break;
             Pending item=std::move(w->pending.front()); w->pending.pop_front();
             w->pending_bytes-=item.pixels.size(); w->cv.notify_all(); lock.unlock();
@@ -200,9 +230,16 @@ static void *encode_main(void *arg) {
 }
 static void *producer_main(void *arg) {
     Work *w=(Work *)arg;
+    background_thread("producer");
     try {
         w->start=plat_now_ns();
         fprintf(stderr,"[hd-ui-gen] start game=%s generator=%d\n",g_game_version,generator_version);
+        {
+            std::unique_lock<std::mutex> lock(w->lock);
+            w->cv.wait(lock, [&]{ return w->shader_reads_done || w->failed; });
+            if (w->failed) throw std::runtime_error("generation stopped");
+        }
+        fprintf(stderr,"[hd-ui-gen] shader archive reads complete; scanning layouts\n");
         if (rt_storage_mkdirs("hd-ui")<0) throw std::runtime_error("mkdir failed");
         json old=load_manifest();
         if (old.is_object() && old.value("version",0)==1 &&
@@ -260,10 +297,21 @@ bool hd_ui_generate_start(void) {
     w->producer_started=true;
     return true;
 }
+void hd_ui_generate_shader_reads_done(void) {
+    Work *w=work.load();
+    if (!w) return;
+    std::lock_guard<std::mutex> lock(w->lock); w->shader_reads_done=true; w->cv.notify_all();
+}
 void hd_ui_generate_shaders_done(void) {
     Work *w=work.load();
     if (!w) return;
-    std::lock_guard<std::mutex> lock(w->lock); w->shader_done=true; w->cv.notify_all();
+    std::lock_guard<std::mutex> lock(w->lock);
+    w->shader_reads_done=true; w->shader_done=true; w->cv.notify_all();
+}
+void hd_ui_generate_set_loading(bool value) {
+    bool was = loading.exchange(value, std::memory_order_relaxed);
+    if (was != value && work.load())
+        fprintf(stderr, "[hd-ui-gen] %s for loading screen\n", value ? "pausing" : "resuming");
 }
 bool hd_ui_generate_progress(int *done,int *total) {
     Work *w=work.load();

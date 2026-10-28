@@ -49,6 +49,9 @@
 #include "../settings.h"
 #include "../framepace.h"
 #include "../window_size.h"
+#ifdef __PROSPERO__
+#include "../nvn/hd_ui_generate.h"
+#endif
 
 extern volatile int g_movie_playing;  // runtime/hle/movie.c: video decoders running
 extern volatile int g_movie_fps;      // runtime/hle/movie.c: the playing movie's frame rate
@@ -256,6 +259,9 @@ void rt_vfr_update(uint64_t vfr) {
     __atomic_fetch_add(&game_frames, 1, __ATOMIC_RELAXED);
     static int ui_state = -1;
     int ui = framepace_loading_ui() ? 2 : framepace_title_ui() ? 1 : 0;
+#ifdef __PROSPERO__
+    if (ui != ui_state) hd_ui_generate_set_loading(ui == 2);
+#endif
     if (ui != ui_state) {
         static const char *const names[] = {"play", "title", "loading"};
         LOG("[ui] screen: %s\n", names[ui]);

@@ -1117,3 +1117,13 @@ render or GPU write restores the original first and drops HD for that body (`[hd
 The heart (Nt_HeartNewB_00, 48×48 RG8 → 192×192 BC5) is replaced: 22 textures matched, 1.6 MB GPU. Same route
 frame, pack off vs on: heart edge step (top-200 red-channel gradient) 52.9 → 93.7, visibly crisp outlines.
 Benchmark 99.6 % on time, 59.6 / 119.3 fps. Backgrounds differ between runs (scene variance), hearts compared only.
+
+## 2026-10-29 — Fresh first start with on-console HD UI generation (.41, ps5/evidence/hdgen/fresh-start*.klog)
+
+Shader cache and hd-ui removed before each run. Eboot `e4845749…`: the start waited for generation, precompile
+summary at 208.6 s (shader work itself ~127 s). Eboot `30e899d5…`: generation no longer blocks the start; its layout
+scan waits until the shader archives are read, inference (1 ncnn CPU thread, low priority) overlaps compilation, BC
+encoding (1 low-priority thread) waits until the compile ends, and work pauses on loading screens. **Precompile done
+in 119.0 s** (run 4 baseline without generation 119.8 s), the game starts, and the pack completes in the background
+(866 textures, 199.1 s after its start, ~80 s into the title screen). Title screen meanwhile: 59.9 fps, one 267 ms
+frame and a few 19–31 ms frames while the generator ran. Replacements apply from the next texture load.

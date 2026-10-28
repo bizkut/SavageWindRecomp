@@ -17,6 +17,7 @@ HdUiNcnn *hd_ui_ncnn_create(const char *param2, const char *param4, const char *
     const char *params[] = {param2, param4};
     for (int i = 0; i < 2; ++i) {
         ncnn::Net &n = u->net[i];
+        n.opt.num_threads = 1;
         n.opt.use_vulkan_compute = true;
         n.opt.use_fp16_packed = true;
         n.opt.use_fp16_storage = true;
@@ -60,6 +61,7 @@ int hd_ui_ncnn_upscale(HdUiNcnn *u, const uint8_t *rgb, uint32_t width, uint32_t
             }
         }
         ncnn::Extractor ex = net.create_extractor();
+        ex.set_num_threads(1);
         ncnn::Mat out;
         if (ex.input("data", in) != 0 || ex.extract("output", out) != 0 || out.empty() ||
             out.w != (tw + 2 * pad) * (int)scale || out.h != (th + 2 * pad) * (int)scale || out.c != 3)

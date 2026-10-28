@@ -52,6 +52,9 @@ int main(int argc,char **argv) {
     assert(hd_ui_generate_needed());
     assert(hd_ui_generate_start());
     int done=0,total=0;
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    assert(hd_ui_generate_progress(&done,&total) && total==0 && done==0);
+    hd_ui_generate_shader_reads_done();
     for (int i=0;i<6000;i++) {
         assert(hd_ui_generate_progress(&done,&total));
         if (total==1 && done==1) break;
@@ -60,7 +63,13 @@ int main(int argc,char **argv) {
     assert(total==1 && done==1);
     // CPU compression is intentionally held until shader workers have finished.
     for (const auto& entry:std::filesystem::directory_iterator(root+"/hd-ui")) assert(entry.path().extension() != ".dds");
-    hd_ui_generate_shaders_done(); wait_finished(); hd_ui_generate_join();
+    hd_ui_generate_set_loading(true);
+    hd_ui_generate_shaders_done();
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    assert(hd_ui_generate_progress(nullptr,nullptr));
+    for (const auto& entry:std::filesystem::directory_iterator(root+"/hd-ui")) assert(entry.path().extension() != ".dds");
+    hd_ui_generate_set_loading(false);
+    wait_finished(); hd_ui_generate_join();
     assert(!hd_ui_generate_needed());
     std::ifstream in(root+"/hd-ui/manifest.json"); nlohmann::json manifest; in>>manifest;
     assert(manifest.at("complete")==true && manifest.at("textures").size()==1);
