@@ -34,6 +34,9 @@
 #ifdef __PROSPERO__
 #include "ps5/dynamic_resolution.h"
 #include "storage_ps5.h"
+#include <ps5platform/heap.h>
+#include <ps5platform/kernel.h>
+#include "nvn/vulkan/vk.h"
 #endif
 
 #define S 1000000000ull
@@ -41,6 +44,9 @@ enum { WARMUP_S = 20, ROUTE_S = 60, PAN_S = 10, TITLE_TIMEOUT_S = 240, MAX_FRAME
 
 static int g_on = -1;
 static int g_internal_h;  // benchmark.txt "internal = <height>p": the 3D scene's height for this run (0: the settings')
+static unsigned g_soak_minutes;
+static bool g_save_check;
+static uint64_t g_soak_frames, g_soak_on_time, g_soak_hitches, g_soak_next;
 #ifdef __PROSPERO__
 static int g_gpu_load_ms;
 #endif
@@ -107,16 +113,22 @@ static char *read_file(const char *path, size_t *n) {
     return d;
 }
 
-// benchmark.txt may hold a line "internal = <height>p" (1080p, 1440p, 2160p ...): the 3D scene's internal height for
-// this run, as Video > Upscaler gives it at the output's size (FSR 1 in the mode whose factor makes that height: at 4K
-// Performance 1080p, Quality 1440p; the upscaler off at the output's own height). Set in memory only (savagewind.ini
-// keeps the player's), when the settling starts. Anything else in the file is ignored.
+// benchmark.txt may hold "internal = <height>p": choose the configured upscaler's mode giving that height at the
+// output size, in memory only. Anything else in the file is ignored.
 static void internal_apply(void) {
     size_t n = 0;
     char *t = read_file("benchmark.txt", &n);
     const char *line = t ? strstr(t, "internal") : NULL;
     int want = 0;
     if (line) sscanf(line, "internal = %dp", &want);
+    unsigned minutes = 0;
+    line = t ? strstr(t, "soak") : NULL;
+    if (line && sscanf(line, "soak = %u", &minutes) == 1 && minutes > 0 && minutes <= 1440)
+        g_soak_minutes = minutes;
+    if (g_soak_minutes) LOG("[bench] soak = %u minutes\n", g_soak_minutes);
+    int save_check = 0;
+    line = t ? strstr(t, "save_check") : NULL;
+    if (line && sscanf(line, "save_check = %d", &save_check) == 1) g_save_check = save_check == 1;
 #ifdef __PROSPERO__
     int load = 0;
     line = t ? strstr(t, "gpu_load") : NULL;
@@ -127,8 +139,12 @@ static void internal_apply(void) {
     if (want <= 0) return;
     WinSize out = winsize_effective(g_settings.fullscreen);
     double f = out.h > 0 ? (double)out.h / want : 0;
+    if (g_settings.upscaler == UPSCALE_OFF && (f <= 0.99 || f >= 1.01)) {
+        LOG("[bench] internal = %dp: upscaler is off; the settings' kept\n", want);
+        return;
+    }
     if (f > 0.99 && f < 1.01) {
-        g_settings.upscaler = UPSCALE_OFF;
+        if (g_settings.upscaler != UPSCALE_OFF) g_settings.upscale_quality = UPQ_COUNT;
     } else {
         int q = -1;
         for (int i = 0; i < UPQ_COUNT; i++)
@@ -138,11 +154,12 @@ static void internal_apply(void) {
                 out.w, out.h);
             return;
         }
-        g_settings.upscaler = UPSCALE_FSR1, g_settings.upscale_quality = q;
+        g_settings.upscale_quality = q;
     }
     g_internal_h = want;
     LOG("[bench] internal = %dp: upscaler %s for this run\n", want,
-        g_settings.upscaler == UPSCALE_OFF ? "off" : "FSR 1");
+        g_settings.upscaler == UPSCALE_OFF ? "off" : g_settings.upscaler == UPSCALE_FSR3 ? "FSR 3" :
+        g_settings.upscaler == UPSCALE_FSR1 ? "FSR 1" : "other");
 }
 
 // The 3D scene's size now (output_scale.c: the game's 1600x900 scene targets at its scale)
@@ -253,6 +270,7 @@ bool benchmark_input(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, i
         break;
     case B_ROUTE: {
         double t = (now - g_state_t) / 1e9;
+        if (g_soak_minutes) t = fmod(t, ROUTE_S);
         if (t >= 5 && t < 25) *rx = 32767;
         else if (t >= 25 && t < 28) *ry = 32767;
         else if (t >= 28 && t < 31) *ry = -32767;
@@ -291,6 +309,39 @@ int benchmark_gpu_load(void) {
 }
 #endif
 
+static void soak_report(uint64_t elapsed, bool final) {
+    char line[512];
+#ifdef __PROSPERO__
+    struct ps5_heap_stats heap = {0};
+    ps5_heap_stats(&heap);
+    size_t flex_free = 0, flex_total = 0, direct_largest = 0;
+    int flex_rc = sceKernelAvailableFlexibleMemorySize(&flex_free);
+    int config_rc = sceKernelConfiguredFlexibleMemorySize(&flex_total);
+    int64_t direct_total = sceKernelGetDirectMemorySize(), direct_start = 0;
+    int direct_rc = sceKernelAvailableDirectMemorySize(0, direct_total, PS5_KERNEL_DIRECT_ALIGNMENT,
+                                                        &direct_start, &direct_largest);
+    VmaTotalStatistics stats = {0};
+    if (g_vk.vma) vmaCalculateStatistics(g_vk.vma, &stats);
+    snprintf(line, sizeof line,
+             "soak %s seconds=%.1f frames=%llu on_time=%llu hitches=%llu heap_mapped=%llu "
+             "flex_free=%llu flex_total=%llu flex_rc=%d config_rc=%d direct_largest=%llu direct_total=%lld "
+             "direct_rc=%d gpu_vma_allocation=%llu gpu_vma_block=%llu\n",
+             final ? "final" : "sample", elapsed / 1e9, (unsigned long long)g_soak_frames,
+             (unsigned long long)g_soak_on_time, (unsigned long long)g_soak_hitches,
+             (unsigned long long)heap.mapped_bytes, (unsigned long long)flex_free,
+             (unsigned long long)flex_total, flex_rc, config_rc, (unsigned long long)direct_largest,
+             (long long)direct_total, direct_rc,
+             (unsigned long long)stats.total.statistics.allocationBytes,
+             (unsigned long long)stats.total.statistics.blockBytes);
+#else
+    snprintf(line, sizeof line, "soak %s seconds=%.1f frames=%llu on_time=%llu hitches=%llu memory=unavailable\n",
+             final ? "final" : "sample", elapsed / 1e9, (unsigned long long)g_soak_frames,
+             (unsigned long long)g_soak_on_time, (unsigned long long)g_soak_hitches);
+#endif
+    LOG("[bench] %s", line);
+    append_line("benchmark/soak.txt", line);
+}
+
 void benchmark_frame(uint64_t frame, uint64_t dt_ns, uint64_t render_ns, uint64_t guest_ns, const char *hitch) {
     if (g_on != 1) return;
     if (g_state == B_PAN && plat_now_ns() - g_state_t >= PAN_S * S) {
@@ -299,9 +350,24 @@ void benchmark_frame(uint64_t frame, uint64_t dt_ns, uint64_t render_ns, uint64_
         exit(0);
     }
     if (g_state != B_ROUTE) return;
-    if (plat_now_ns() - g_state_t >= ROUTE_S * S) { finish(NULL); return; }
+    uint64_t elapsed = plat_now_ns() - g_state_t;
+    if (g_soak_minutes) {
+        if (!g_soak_next) g_soak_next = 300 * S;
+        if (elapsed >= g_soak_next) {
+            soak_report(elapsed, false);
+            do g_soak_next += 300 * S; while (elapsed >= g_soak_next);
+        }
+        if (elapsed >= (uint64_t)g_soak_minutes * 60 * S) {
+            soak_report(elapsed, true);
+            finish(NULL);
+            return;
+        }
+        g_soak_frames++;
+        g_soak_on_time += dt_ns <= framepace_period_ns() + framepace_period_ns() / 20;
+        g_soak_hitches += hitch != NULL;
+    } else if (elapsed >= ROUTE_S * S) { finish(NULL); return; }
     if (!g_n) g_first_frame = frame;
-    if (g_n == MAX_FRAMES) return;
+    if (g_n == MAX_FRAMES || (g_soak_minutes && elapsed >= ROUTE_S * S)) return;
     uint64_t period = framepace_period_ns();
     g_dt[g_n] = (float)(dt_ns / 1e6), g_render[g_n] = (float)(render_ns / 1e6), g_guest[g_n] = (float)(guest_ns / 1e6);
 #ifdef __PROSPERO__
@@ -330,6 +396,7 @@ void benchmark_frame(uint64_t frame, uint64_t dt_ns, uint64_t render_ns, uint64_
 
 void benchmark_gpu(uint64_t frame, uint64_t ns) {
     if (g_on != 1 || !g_n || frame < g_first_frame || g_ngpu == MAX_FRAMES) return;
+    if (g_soak_minutes && frame - g_first_frame >= (uint64_t)g_n) return;
     g_gpu[g_ngpu++] = (float)(ns / 1e6);
 }
 
@@ -365,7 +432,9 @@ static float g_fg_gpu[MAX_FRAMES];
 static int g_nfg;
 
 static bool measuring(void) {
-    return __atomic_load_n(&g_on, __ATOMIC_RELAXED) == 1 && __atomic_load_n(&g_state, __ATOMIC_RELAXED) == B_ROUTE;
+    if (__atomic_load_n(&g_on, __ATOMIC_RELAXED) != 1 ||
+        __atomic_load_n(&g_state, __ATOMIC_RELAXED) != B_ROUTE) return false;
+    return !g_soak_minutes || plat_now_ns() - __atomic_load_n(&g_state_t, __ATOMIC_RELAXED) < ROUTE_S * S;
 }
 
 void benchmark_present(bool generated) {
@@ -393,6 +462,7 @@ void benchmark_render_cpu(uint64_t present_ns, uint64_t fg_ns, bool fg) {
 int benchmark_segment(void) {
     if (!measuring()) return -1;
     double t = (plat_now_ns() - __atomic_load_n(&g_state_t, __ATOMIC_RELAXED)) / 1e9;
+    if (g_soak_minutes) t = fmod(t, ROUTE_S);
     return t >= 5 && t < 51;  // (benchmark_input: right 5-25 s, up / down 25-31, left 31-51)
 }
 double benchmark_route_seconds(void) {
@@ -430,6 +500,12 @@ static Dist dist(const float *v, int n) {
 static void finish(const char *failure) {
     if (g_state == B_DONE || g_state == B_PAN) return;
     g_state = B_DONE;  // (the presents stop being measured)
+    if (!failure && g_save_check) {
+        LOG("[bench] save_check unavailable: runtime has no game-level save or load trigger; "
+            "filesystem writes alone do not establish a successful game save and reload\n");
+        append_line("benchmark/save-check.txt",
+                    "unavailable: no game-level save or load trigger; no save/reload was attempted\n");
+    }
     char text[8192];
     size_t at = 0;
     time_t now = time(NULL);
@@ -468,10 +544,10 @@ static void finish(const char *failure) {
                                steps, g_gpu_load_ms);
 #endif
         at += (size_t)snprintf(text + at, sizeof text - at,
-                               "Savage Wind benchmark, %s: Great Plateau camera route, %d s measured after %d s settling; "
+                               "Savage Wind benchmark, %s: Great Plateau camera route, %s%d s measured after %d s settling; "
                                "internal resolution %dx%d (%s)\n"
                                "frames %d: frame ms mean %.3f p50 %.3f p95 %.3f p99 %.3f max %.1f; %.1f%% on time; %d hitches",
-                               when, ROUTE_S, WARMUP_S, iw, ih, ifrom, g_n, f.mean, f.p50, f.p95, f.p99, f.max,
+                               when, g_soak_minutes ? "first sample of soak, up to " : "", ROUTE_S, WARMUP_S, iw, ih, ifrom, g_n, f.mean, f.p50, f.p95, f.p99, f.max,
                                g_n ? 100.0 * g_on_time / g_n : 0.0, g_hitches);
         for (int i = 0; i < g_ncauses; i++)
             at += (size_t)snprintf(text + at, sizeof text - at, "%s %s %d", i ? "," : ":", g_causes[i].name, g_causes[i].n);

@@ -1136,3 +1136,12 @@ allocation 1.33–1.46 GB. Stopped by the user ("it works good"); the 60-minute 
 FSR 3.1 default (`2a6aaf6`), first launch with no upscaler keys: `upscaler 3, quality 3` → 1920×1080 → 3840×2160
 with FG. Benchmark: 95.1 % on time, 59.5 / 119.0 fps, render thread 11.7 ms (FSR 1: 8.9 ms, 99.9 %), GPU 12.4 ms.
 FSR 3.1's dispatch recording on the render thread is the cost.
+
+## 2026-10-29 — Text weight fixed: 4× sheets keep the original edge curve (.41, ps5/evidence/m8/)
+
+The user's photo of a loading tip showed bold, jagged text with "!" filled in. Same native-4K crop (loading tip,
+1 s into the loading screen), ink fraction (luma > 128): sharpening off 0.1445; previous default (`sdf`, ramp ≈ ¼
+source px) 0.1974 (+37 %, bold); fixed build `43ed3e99` 0.137 (−5 %). The game's font shader applies its own
+threshold to the sheet values, so the 4× sheet now encodes the original value-vs-distance curve (ramp width kept in
+source pixels) on the improved outline, for both the SDF and sharpen paths. The user confirmed on the TV: "much
+better". Benchmark (benchmark.txt `internal = …`) now keeps the configured upscaler instead of forcing FSR 1.

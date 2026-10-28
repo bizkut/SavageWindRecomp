@@ -203,7 +203,7 @@ static TextCache text_cache[32];
 
 static void *text_worker(void *arg) {
     TextCache *c = arg;
-    if (!c->sharpen) text_low_priority();
+    text_low_priority();
     uint64_t started = SDL_GetTicksNS();
     uint32_t w = c->w, h = c->h, scale = c->scale;
     uint8_t *src = malloc((uint64_t)w * h);
@@ -241,12 +241,11 @@ static void *text_worker(void *arg) {
                      src[(uint64_t)ay * w + bx] * fx * (denom-fy) +
                      src[(uint64_t)by * w + ax] * (denom-fx) * fy +
                      src[(uint64_t)by * w + bx] * fx * fy + denom * denom / 2) / (denom * denom);
-            v = (v - 64) * 2;
-            dst[(uint64_t)y * ow + x] = v < 0 ? 0 : v > 255 ? 255 : v;
+            dst[(uint64_t)y * ow + x] = (uint8_t)v;
         }
     }
     int sdf_count = 0, sharpen_count = 0;
-    if (!c->sharpen && !text_sdf_sheet(src, dst, w, h, c->cell_w, c->cell_h, c->cols, c->rows, scale, c->ink, &sdf_count, &sharpen_count)) {
+    if (!text_sdf_sheet(src, dst, w, h, c->cell_w, c->cell_h, c->cols, c->rows, scale, c->ink, c->sharpen, &sdf_count, &sharpen_count)) {
         free(src); free(dst);
         __atomic_store_n(&c->state, 3, __ATOMIC_RELEASE);
         return NULL;

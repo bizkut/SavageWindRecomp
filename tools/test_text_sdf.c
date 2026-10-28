@@ -1,10 +1,20 @@
-// cc -std=c11 -O2 tools/test_text_sdf.c -lm -o /tmp/test_text_sdf && /tmp/test_text_sdf
+// cc -std=c11 -O2 tools/test_text_sdf.c -lm -pthread -o /tmp/test_text_sdf && /tmp/test_text_sdf
 #include <assert.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "../runtime/nvn/text_sdf.h"
+
+static void check_shader_weight(const uint8_t *src, int n, const uint8_t *dst, int scale) {
+    const float thresholds[2][2] = {{0.4f,0.6f},{0.2f,0.5f}};
+    for (int t=0;t<2;t++) {
+        double before=0,after=0;
+        for(int i=0;i<n*n;i++) before+=text_shader(src[i]/255.0f,thresholds[t][0],thresholds[t][1]);
+        for(int i=0;i<n*n*scale*scale;i++) after+=text_shader(dst[i]/255.0f,thresholds[t][0],thresholds[t][1]);
+        assert(fabs(after/(scale*scale)-before)<before*0.02);
+    }
+}
 
 static void check(int circle) {
     enum { N = 32, S = 4, O = N*S };
@@ -20,9 +30,10 @@ static void check(int circle) {
         src[y*N+x] = (uint8_t)((hits*255+128)/256); input += src[y*N+x];
     }
     int sdf_count, sharpen_count;
-    assert(text_sdf_sheet(src,dst,N,N,N,N,1,1,S,NULL,&sdf_count,&sharpen_count));
+    assert(text_sdf_sheet(src,dst,N,N,N,N,1,1,S,NULL,0,&sdf_count,&sharpen_count));
     for (int i = 0; i < O*O; i++) output += dst[i];
     assert(fabs(output/(S*S)-input) < input*0.02);
+    check_shader_weight(src,N,dst,S);
     // Horizontal central edge is at x=8 and x=24 (within half a source pixel).
     int first = -1, last = -1;
     for (int x = 0; x < O; x++) if (dst[(O/2)*O+x] >= 128) { if (first < 0) first=x; last=x; }
@@ -30,7 +41,8 @@ static void check(int circle) {
     assert(fabs((last+0.5)/S-24) <= 0.5);
     uint32_t cjk_ink = (N << 8) | 0x10000;
     memset(dst, 0, sizeof(dst));
-    assert(text_sdf_sheet(src,dst,N,N,N,N,1,1,S,&cjk_ink,&sdf_count,&sharpen_count));
+    assert(text_sdf_sheet(src,dst,N,N,N,N,1,1,S,&cjk_ink,0,&sdf_count,&sharpen_count));
     assert(sdf_count == 0 && sharpen_count == 1);
+    check_shader_weight(src,N,dst,S);
 }
 int main(void) { check(0); check(1); puts("text SDF: square and circle passed"); }

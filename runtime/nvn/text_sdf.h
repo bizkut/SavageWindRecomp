@@ -64,20 +64,12 @@ static void text_distance(const float *a,float *out,float *tmp,int w,int h,float
     }
 }
 static float text_smooth(float x){x=x<0?0:x>1?1:x;return x*x*(3-2*x);}
-// The thin-stroke path uses the old coverage edge with the same adjustable threshold.
-static float text_coverage(unsigned code,float offset) {
-    float dist=((int)(code&127)-64)/8.0f;
-    float bil=((code>>7)&255)/255.0f;
-    if(code&32768) {
-        float sharp=(bil-0.25f+offset*0.25f)*2;
-        if(bil==0 || sharp<0)return 0;
-        return sharp>1?1:sharp;
-    }
-    return text_smooth(0.5f-dist+offset);
-}
+// The game's shader applies its own coverage threshold. Keep source-resolution edge
+// profiles instead of turning the atlas into a one-output-pixel coverage ramp.
+static float text_shader(float x,float lo,float hi) { return text_smooth((x-lo)/(hi-lo)); }
 typedef struct {
-    const uint8_t *src; const uint32_t *ink; uint16_t *field; uint32_t *hist;
-    int w,h,cw,ch,cols,rows,scale,first,last; double target; int failed, sdf_count, sharpen_count;
+    const uint8_t *src; const uint32_t *ink; uint16_t *field; uint8_t *profiles;
+    int w,h,cw,ch,cols,rows,scale,first,last,force_bilinear; int failed, sdf_count, sharpen_count;
 } TextSdfJob;
 static void *text_sdf_rows(void *arg) {
     TextSdfJob *j=arg;text_low_priority();int cw=j->cw,ch=j->ch,scale=j->scale,w=j->w,ow=w*scale;
@@ -88,7 +80,6 @@ static void *text_sdf_rows(void *arg) {
     for(int row=j->first;row<j->last;row++)for(int col=0;col<j->cols;col++) {
         int x0=col*(cw+1),y0=j->h-row*(ch+1)-ch; unsigned sum=0;
         for(int y=0;y<ch;y++)for(int x=0;x<cw;x++)sum+=j->src[(y0+y)*w+x0+x];
-        j->target+=(double)sum*scale*scale/255.0;
         if(!sum)continue;
         int left=j->ink?j->ink[row*j->cols+col]&255:0,right=j->ink?(j->ink[row*j->cols+col]>>8)&255:cw;
         if(left>=right||right>cw)continue;
@@ -124,9 +115,29 @@ static void *text_sdf_rows(void *arg) {
             for(int py=0;py<ch;py++) {int filled=j->src[(y0+py)*w+x0+left+px]>=64;if(filled&&!was)runs++;was=filled;}
             if(runs>max_yruns)max_yruns=runs;
         }
-        int sharpen=(j->ink && (j->ink[row*j->cols+col]&0x10000)) ||
+        int sharpen=j->force_bilinear || (j->ink && (j->ink[row*j->cols+col]&0x10000)) ||
                     (min_ridge<1.0f)||(junctions>256)||(max_xruns>=3&&max_yruns>=3);
         if(sharpen)j->sharpen_count++;else j->sdf_count++;
+        // Fit coverage against signed distance in source pixels. Empty bins are
+        // interpolated, and the fitted profile is constrained to be non-increasing.
+        double sums[128]={0}; unsigned counts[128]={0}; uint8_t *profile=j->profiles+(size_t)(row*j->cols+col)*128;
+        for(int py=0;py<ch;py++)for(int px=0;px<iw;px++) {
+            float distance=out[py*iw+px]; int bin=(int)roundf(distance*8)+64;
+            if(bin<0)bin=0;if(bin>127)bin=127;
+            sums[bin]+=j->src[(y0+py)*w+x0+left+px];counts[bin]++;
+        }
+        int previous=-1;
+        for(int bin=0;bin<128;bin++)if(counts[bin]) {
+            int value=(int)(sums[bin]/counts[bin]+0.5);
+            if(previous<0)for(int k=0;k<bin;k++)profile[k]=(uint8_t)value;
+            else {
+                int start=profile[previous];
+                for(int k=previous+1;k<bin;k++)profile[k]=(uint8_t)(start+(value-start)*(k-previous)/(bin-previous));
+            }
+            profile[bin]=(uint8_t)value; previous=bin;
+        }
+        if(previous<0)memset(profile,0,128);else for(int k=previous+1;k<128;k++)profile[k]=profile[previous];
+        for(int k=1;k<128;k++)if(profile[k]>profile[k-1])profile[k]=profile[k-1];
         for(int y=0;y<ch*scale;y++)for(int x=0;x<cw*scale;x++) {
             float sx=(x+0.5f)/scale-0.5f,sy=(y+0.5f)/scale-0.5f;int ix=(int)floorf(sx),iy=(int)floorf(sy);float fx=sx-ix,fy=sy-iy;
             int bx=ix+1,by=iy+1;if(ix<0)ix=0;if(iy<0)iy=0;if(bx>=cw)bx=cw-1;if(by>=ch)by=ch-1;
@@ -135,59 +146,114 @@ static void *text_sdf_rows(void *arg) {
             if(x>=left*scale&&x<right*scale){float tx=sx-left;int ax=(int)floorf(tx),xx=ax+1;float txf=tx-ax;if(ax<0)ax=0;if(xx>=iw)xx=iw-1; dist=scale*((out[iy*iw+ax]*(1-txf)+out[iy*iw+xx]*txf)*(1-fy)+(out[by*iw+ax]*(1-txf)+out[by*iw+xx]*txf)*fy);}
             if(dist < -8)dist=-8;if(dist>7.75f)dist=7.75f;
             int di=(int)roundf(dist*8)+64;if(di<0)di=0;if(di>126)di=126;int bi=(int)(bil*255+0.5f);if(bi<0)bi=0;if(bi>255)bi=255;
-            unsigned code=(unsigned)di|((unsigned)bi<<7)|(sharpen?32768u:0);j->field[(size_t)(y0*scale+y)*ow+x0*scale+x]=(uint16_t)code;j->hist[code]++;
+            unsigned code=(unsigned)di|((unsigned)bi<<7)|(sharpen?32768u:0);j->field[(size_t)(y0*scale+y)*ow+x0*scale+x]=(uint16_t)code;
         }
     }
 done: free(a);free(out);free(in);free(tmp);free(f);free(d);free(z);free(v);return NULL;
 }
-typedef struct { TextSdfJob *job; uint8_t *dst; float offset; } TextCorrection;
+typedef struct { TextSdfJob *job; uint8_t *dst; } TextCorrection;
+static uint8_t text_base(unsigned code,const uint8_t *profile,int scale,int force_bilinear) {
+    if(force_bilinear || (code&32768))return (code>>7)&255;
+    int bin=64+((int)(code&127)-64)/scale;
+    if(bin<0)bin=0;if(bin>127)bin=127;
+    return profile[bin];
+}
+static float text_tone(int value,float slope,float offset) {
+    if(value==0)return 0;
+    if(value==255)return 1;
+    float v=(value/255.0f-0.5f)*slope+0.5f+offset;
+    return v<0?0:v>1?1:v;
+}
 static void *text_sdf_correct(void *arg) {
     TextCorrection *c=arg; TextSdfJob *j=c->job; text_low_priority();
-    int w=j->w, ow=w*j->scale, cw=j->cw, ch=j->ch, scale=j->scale;
+    int w=j->w,ow=w*j->scale,cw=j->cw,ch=j->ch,scale=j->scale;
     for(int row=j->first;row<j->last;row++)for(int col=0;col<j->cols;col++) {
-        int x0=col*(cw+1),y0=j->h-row*(ch+1)-ch; double target=0,actual=0;
-        for(int y=0;y<ch;y++)for(int x=0;x<cw;x++)target+=j->src[(y0+y)*w+x0+x];
-        if(!target)continue;
-        target*=scale*scale;
-        for(int y=0;y<ch*scale;y++)for(int x=0;x<cw*scale;x++)
-            actual+=c->dst[(size_t)(y0*scale+y)*ow+x0*scale+x];
-        if(fabs(actual-target)<=target*0.01)continue;
-        float lo=c->offset-8,hi=c->offset+8;
-        for(int iter=0;iter<14;iter++) {
-            float mid=(lo+hi)*0.5f; double value=0;
-            for(int y=0;y<ch*scale;y++)for(int x=0;x<cw*scale;x++) {
-                size_t p=(size_t)(y0*scale+y)*ow+x0*scale+x;
-                unsigned code=j->field[p];
-                value+=code==65535?c->dst[p]:255*text_coverage(code,mid);
-            }
-            if(value<target)lo=mid;else hi=mid;
+        int x0=col*(cw+1),y0=j->h-row*(ch+1)-ch; unsigned original[256]={0},base[2][256]={{0}};
+        uint8_t *profile=j->profiles+(size_t)(row*j->cols+col)*128; unsigned sum=0;
+        for(int y=0;y<ch;y++)for(int x=0;x<cw;x++) {
+            unsigned v=j->src[(y0+y)*w+x0+x];original[v]++;sum+=v;
         }
-        float correction=(lo+hi)*0.5f;
+        if(!sum)continue;
+        int can_fallback=0;
         for(int y=0;y<ch*scale;y++)for(int x=0;x<cw*scale;x++) {
             size_t p=(size_t)(y0*scale+y)*ow+x0*scale+x; unsigned code=j->field[p];
-            if(code!=65535)c->dst[p]=(uint8_t)(text_coverage(code,correction)*255+0.5f);
+            if(code==65535){base[0][c->dst[p]]++;base[1][c->dst[p]]++;continue;}
+            if(!(code&32768))can_fallback=1;
+            base[0][text_base(code,profile,scale,0)]++;
+            base[1][text_base(code,profile,scale,1)]++;
+        }
+        double target1=0,target2=0,target3=0;
+        for(int k=0;k<256;k++) {
+            target1+=original[k]*text_shader(k/255.0f,0.4f,0.6f)*scale*scale;
+            target2+=original[k]*text_shader(k/255.0f,0.2f,0.5f)*scale*scale;
+            target3+=original[k]*(k/255.0)*scale*scale;
+        }
+        float best_slope=1,best_offset=0; int best_fallback=0; double best_error=1e30;
+        for(int fallback=0;fallback<=can_fallback;fallback++) {
+            for(int si=0;si<=31;si++) {
+                float slope=0.25f+si*0.25f,lo=-0.75f,hi=0.75f;
+                for(int it=0;it<13;it++) {
+                    float mid=(lo+hi)*0.5f;double v=0;
+                    for(int k=0;k<256;k++)if(base[fallback][k])
+                        v+=base[fallback][k]*text_shader(text_tone(k,slope,mid),0.4f,0.6f);
+                    if(v<target1)lo=mid;else hi=mid;
+                }
+                for(int oi=-8;oi<=8;oi++) {
+                    float offset=(lo+hi)*0.5f+oi*0.005f;double v1=0,v2=0;
+                    for(int k=0;k<256;k++)if(base[fallback][k]) {
+                        float v=text_tone(k,slope,offset);
+                        v1+=base[fallback][k]*text_shader(v,0.4f,0.6f);
+                        v2+=base[fallback][k]*text_shader(v,0.2f,0.5f);
+                    }
+                    double e1=fabs(v1-target1)/(target1>1?target1:1),e2=fabs(v2-target2)/(target2>1?target2:1);
+                    double error=e1>e2?e1:e2;
+                    if(error<best_error){best_error=error;best_slope=slope;best_offset=offset;best_fallback=fallback;}
+                }
+            }
+            if(best_error<=0.015)break;
+        }
+        if(best_fallback){j->sdf_count--;j->sharpen_count++;}
+        uint8_t lut[256];
+        for(int k=0;k<256;k++)lut[k]=(uint8_t)(text_tone(k,best_slope,best_offset)*255+0.5f);
+        // Correct residual raw weight only in the shader-saturated high range.
+        // This cannot move either modeled threshold edge or turn background on.
+        double raw=0,capacity_down=0,capacity_up=0;
+        for(int k=0;k<256;k++) {
+            float v=lut[k]/255.0f; unsigned count=base[best_fallback][k];
+            raw+=count*v;
+            if(v>0.6f){capacity_down+=count*(v-0.6f);capacity_up+=count*(1-v);}
+        }
+        double delta=target3-raw,capacity=delta<0?capacity_down:capacity_up;
+        if(capacity>0) {
+            float fraction=(float)(fabs(delta)/capacity);if(fraction>1)fraction=1;
+            for(int k=0;k<256;k++)if(lut[k]>153) {
+                float v=lut[k]/255.0f;
+                v=delta<0?v-fraction*(v-0.6f):v+fraction*(1-v);
+                lut[k]=(uint8_t)(v*255+0.5f);
+            }
+        }
+        for(int y=0;y<ch*scale;y++)for(int x=0;x<cw*scale;x++) {
+            size_t p=(size_t)(y0*scale+y)*ow+x0*scale+x;unsigned code=j->field[p];
+            if(code!=65535)c->dst[p]=lut[text_base(code,profile,scale,best_fallback)];
         }
     }
     return NULL;
 }
-static int text_sdf_sheet(const uint8_t *src,uint8_t *dst,int w,int h,int cw,int ch,int cols,int rows,int scale,const uint32_t *ink,int *sdf_count,int *sharpen_count) {
-    size_t pixels=(size_t)w*h*scale*scale;uint16_t *field=malloc(pixels*sizeof(*field));uint32_t *hist=calloc(4u*65536,sizeof(*hist));
-    if(!field||!hist){free(field);free(hist);return 0;}
+static int text_sdf_sheet(const uint8_t *src,uint8_t *dst,int w,int h,int cw,int ch,int cols,int rows,int scale,const uint32_t *ink,int force_bilinear,int *sdf_count,int *sharpen_count) {
+    size_t pixels=(size_t)w*h*scale*scale;uint16_t *field=malloc(pixels*sizeof(*field));
+    uint8_t *profiles=malloc((size_t)cols*rows*128);
+    if(!field||!profiles){free(field);free(profiles);return 0;}
     // A sentinel denotes padding or a truly empty cell, which keeps its existing output.
     memset(field,0xff,pixels*sizeof(*field));TextSdfJob jobs[4];pthread_t threads[3];int started[3]={0};
-    for(int i=0;i<4;i++)jobs[i]=(TextSdfJob){src,ink,field,hist+i*65536,w,h,cw,ch,cols,rows,scale,rows*i/4,rows*(i+1)/4,0,0,0,0};
+    for(int i=0;i<4;i++)jobs[i]=(TextSdfJob){src,ink,field,profiles,w,h,cw,ch,cols,rows,scale,rows*i/4,rows*(i+1)/4,force_bilinear,0,0,0};
     for(int i=1;i<4;i++){if(!pthread_create(&threads[i-1],NULL,text_sdf_rows,&jobs[i]))started[i-1]=1;else text_sdf_rows(&jobs[i]);}
     text_sdf_rows(&jobs[0]);for(int i=1;i<4;i++)if(started[i-1])pthread_join(threads[i-1],NULL);
-    double target=0;for(int i=0;i<4;i++){target+=jobs[i].target;if(jobs[i].failed){free(field);free(hist);return 0;}}
-    *sdf_count=0;*sharpen_count=0;
-    for(int i=0;i<4;i++){*sdf_count+=jobs[i].sdf_count;*sharpen_count+=jobs[i].sharpen_count;}
-    for(int i=1;i<4;i++)for(int k=0;k<65536;k++)hist[k]+=hist[i*65536+k];
-    float lo=-8,hi=8;for(int it=0;it<18;it++){float mid=(lo+hi)*0.5f;double sum=0;for(unsigned k=0;k<65536;k++)if(hist[k])sum+=hist[k]*text_coverage(k,mid);if(sum<target)lo=mid;else hi=mid;}
-    float offset=(lo+hi)*0.5f;uint8_t lut[65536];for(unsigned k=0;k<65536;k++)lut[k]=(uint8_t)(text_coverage(k,offset)*255+0.5f);
-    for(size_t p=0;p<pixels;p++)if(field[p]!=65535)dst[p]=lut[field[p]];
+    for(int i=0;i<4;i++)if(jobs[i].failed){free(field);free(profiles);return 0;}
     TextCorrection corrections[4]; memset(started,0,sizeof(started));
-    for(int i=0;i<4;i++)corrections[i]=(TextCorrection){&jobs[i],dst,offset};
+    for(int i=0;i<4;i++)corrections[i]=(TextCorrection){&jobs[i],dst};
     for(int i=1;i<4;i++){if(!pthread_create(&threads[i-1],NULL,text_sdf_correct,&corrections[i]))started[i-1]=1;else text_sdf_correct(&corrections[i]);}
     text_sdf_correct(&corrections[0]);for(int i=1;i<4;i++)if(started[i-1])pthread_join(threads[i-1],NULL);
-    free(field);free(hist);return 1;
+    *sdf_count=0;*sharpen_count=0;
+    for(int i=0;i<4;i++){*sdf_count+=jobs[i].sdf_count;*sharpen_count+=jobs[i].sharpen_count;}
+    free(field);free(profiles);return 1;
 }
