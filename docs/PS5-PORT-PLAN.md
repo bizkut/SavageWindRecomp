@@ -522,6 +522,14 @@ the three `test` conflicts. Re-qualify on PS5 at 1.9.0: their evidence is 1.8.2,
 (~0.7 ms/frame desktop), GPU cost, VRR/120 Hz pacing with FG, and image quality are all unmeasured here. Then A/B
 MihawkGen neural vs `mvwarp`/`mvsplat`, and choose defaults by measured image quality and GPU time.
 
+**FSR 4 candidate (`../ps5-fsr4`, FSR 4.1.1 INT8; requested 2026-10-28).** Gated, in order: (1) M8's motion vectors,
+depth and jitter exist (FSR 4 is temporal; it needs all three); (2) feasibility on RADV: the SDK is built for ps5vk
+with a diagnostic driver profile, while this port uses RADV (D3); (3) GPU time on the benchmark. Its own PS5 numbers
+(on ps5vk): 1920×1080→3840×2160 10.86 ms and 1280×720→3840×2160 10.94 ms, which with game (7.7 ms) and MihawkGen
+exceeds a 16.7 ms frame; 1280×720→1920×1080 2.95 ms and 1706×960→2560×1440 4.95 ms fit. So the candidates are 1080p
+and 1440p outputs, not 4K. GPL-3.0: PS5 build only (D10). Experimental upstream; one 4K static frame misses its own
+acceptance rule.
+
 ### M9 — Root storage broker (D12)
 Path-restricted payload, versioned client, direct RomFS reads and brokered atomic writes. **Done when:** broker A/B on
 .41 covers a cumulative 3 GiB write and save/cache-like atomic replacements without a 2 MiB/s collapse; direct reads
