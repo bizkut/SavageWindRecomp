@@ -1735,55 +1735,56 @@ static void stage_layouts(StageBuild *b, int stage);
 // at each texel's centre) is to the pixel's: the blur stays, the other side's colour doesn't come in. Found by its translated source (the two reads and the sky test), compiled as
 // a copy: the translation and its caches are untouched, and with another translation the blur is left as it is.
 // SAVAGEWIND_NO_BLUR_EDGE_FIX=1: the game's own read.
-#ifdef __PROSPERO__
-#define BLUR_READ "textureLod(t1, drsuv1(vec2(uintBitsToFloat(r4), uintBitsToFloat(r5)), vec2(0.0), uintBitsToFloat(r7)), uintBitsToFloat(r7))"
-#define BLUR_DEPTH "texture(t0, drsuv0(vec2(uintBitsToFloat(r4), uintBitsToFloat(r5))"
-#else
 #define BLUR_READ "textureLod(t1, vec2(uintBitsToFloat(r4), uintBitsToFloat(r5)), uintBitsToFloat(r7))"
 #define BLUR_DEPTH "texture(t0, vec2(uintBitsToFloat(r4), uintBitsToFloat(r5)))"
+#ifdef __PROSPERO__
+#define BLUR_READ_DRS "textureLod(t1, drsuv1(vec2(uintBitsToFloat(r4), uintBitsToFloat(r5)), vec2(0.0), uintBitsToFloat(r7)), uintBitsToFloat(r7))"
+#define BLUR_DEPTH_DRS "texture(t0, drsuv0(vec2(uintBitsToFloat(r4), uintBitsToFloat(r5))"
 #endif
 static char *blur_edge_source(const ShaderInfo *si, int stage) {
     static int on = -1;
     if (on < 0) on = getenv("SAVAGEWIND_NO_BLUR_EDGE_FIX") == NULL;
     if (!on || stage != STAGE_FRAGMENT || !si->msl || si->ntex != 2) return NULL;
-    const char *s = si->msl, *read = strstr(s, BLUR_READ), *body = strstr(s, "void main()");
-    if (!read || !body || strstr(read + 1, BLUR_READ) ||
-        !strstr(s, BLUR_DEPTH) ||
+    const char *s = si->msl, *pattern = BLUR_READ, *depth = BLUR_DEPTH;
+#ifdef __PROSPERO__
+    bool drs = strstr(s, BLUR_READ_DRS) != NULL;
+    if (drs) { pattern = BLUR_READ_DRS; depth = BLUR_DEPTH_DRS; }
+#endif
+    const char *read = strstr(s, pattern), *body = strstr(s, "void main()");
+    if (!read || !body || strstr(read + 1, pattern) || !strstr(s, depth) ||
         !strstr(s, ">= uintBitsToFloat(cb3[0][2])") || !strstr(s, "uniform sampler2D t1;"))
         return NULL;
-    static const char fn[] =
-        "// (SavageWind: the half-size copy's four texels around uv, weighted by their depth's nearness to this pixel's)\n"
+    static const char plain[] =
         "vec4 sw_blur_read(vec2 uv, float lod) {\n"
-#ifdef __PROSPERO__
-        "  vec2 hs = max(vec2(1.0), round(vec2(textureSize(t1, 0)) * rscale[2].zw)), p = uv * hs - 0.5, f = fract(p), base = (floor(p) + 0.5) / hs;\n"
-        "  float d0 = textureLod(t0, drsuv0(uv, vec2(0.0), 0.0), 0.0).x;\n"
-#else
         "  vec2 hs = vec2(textureSize(t1, 0)), p = uv * hs - 0.5, f = fract(p), base = (floor(p) + 0.5) / hs;\n"
         "  float d0 = textureLod(t0, uv, 0.0).x;\n"
-#endif
-        "  vec4 acc = vec4(0.0);\n"
-        "  float wsum = 0.0;\n"
-        "  for (int j = 0; j < 2; j++)\n"
-        "    for (int i = 0; i < 2; i++) {\n"
-        "      vec2 q = base + vec2(float(i), float(j)) / hs;\n"
-#ifdef __PROSPERO__
-        "      float r = abs(textureLod(t0, drsuv0(q, vec2(0.0), 0.0), 0.0).x - d0) / max(d0, 1e-6) / 0.03;\n"
-        "      float w = (i == 1 ? f.x : 1.0 - f.x) * (j == 1 ? f.y : 1.0 - f.y) / (1.0 + r * r);\n"
-        "      acc += w * textureLod(t1, drsuv1(q, vec2(0.0), lod), lod);\n"
-#else
-        "      float r = abs(textureLod(t0, q, 0.0).x - d0) / max(d0, 1e-6) / 0.03;\n"
-        "      float w = (i == 1 ? f.x : 1.0 - f.x) * (j == 1 ? f.y : 1.0 - f.y) / (1.0 + r * r);\n"
-        "      acc += w * textureLod(t1, q, lod);\n"
-#endif
-        "      wsum += w;\n"
-        "    }\n"
-#ifdef __PROSPERO__
-        "  return wsum > 1e-5 ? acc / wsum : textureLod(t1, drsuv1(uv, vec2(0.0), lod), lod);\n"
-#else
+        "  vec4 acc = vec4(0.0); float wsum = 0.0;\n"
+        "  for (int j = 0; j < 2; j++) for (int i = 0; i < 2; i++) {\n"
+        "    vec2 q = base + vec2(float(i), float(j)) / hs;\n"
+        "    float r = abs(textureLod(t0, q, 0.0).x - d0) / max(d0, 1e-6) / 0.03;\n"
+        "    float w = (i == 1 ? f.x : 1.0 - f.x) * (j == 1 ? f.y : 1.0 - f.y) / (1.0 + r * r);\n"
+        "    acc += w * textureLod(t1, q, lod); wsum += w;\n"
+        "  }\n"
         "  return wsum > 1e-5 ? acc / wsum : textureLod(t1, uv, lod);\n"
-#endif
         "}\n";
-    size_t n = strlen(s), nr = strlen(BLUR_READ), nfn = sizeof fn - 1;
+    const char *fn = plain;
+#ifdef __PROSPERO__
+    static const char remapped[] =
+        "vec4 sw_blur_read(vec2 uv, float lod) {\n"
+        "  vec2 hs = max(vec2(1.0), round(vec2(textureSize(t1, 0)) * rscale[2].zw)), p = uv * hs - 0.5, f = fract(p), base = (floor(p) + 0.5) / hs;\n"
+        "  float d0 = textureLod(t0, drsuv0(uv, vec2(0.0), 0.0), 0.0).x;\n"
+        "  vec4 acc = vec4(0.0); float wsum = 0.0;\n"
+        "  for (int j = 0; j < 2; j++) for (int i = 0; i < 2; i++) {\n"
+        "    vec2 q = base + vec2(float(i), float(j)) / hs;\n"
+        "    float r = abs(textureLod(t0, drsuv0(q, vec2(0.0), 0.0), 0.0).x - d0) / max(d0, 1e-6) / 0.03;\n"
+        "    float w = (i == 1 ? f.x : 1.0 - f.x) * (j == 1 ? f.y : 1.0 - f.y) / (1.0 + r * r);\n"
+        "    acc += w * textureLod(t1, drsuv1(q, vec2(0.0), lod), lod); wsum += w;\n"
+        "  }\n"
+        "  return wsum > 1e-5 ? acc / wsum : textureLod(t1, drsuv1(uv, vec2(0.0), lod), lod);\n"
+        "}\n";
+    if (drs) fn = remapped;
+#endif
+    size_t n = strlen(s), nr = strlen(pattern), nfn = strlen(fn);
     const char *call = "sw_blur_read(vec2(uintBitsToFloat(r4), uintBitsToFloat(r5)), uintBitsToFloat(r7))";
     char *o = malloc(n + nfn + strlen(call) + 1);
     if (!o) return NULL;
@@ -3993,16 +3994,22 @@ static VkDescriptorSet stage_set(Prog *p, VkDescriptorSetLayout layout, uint32_t
         if (b->binding == 18) {
             for (int t = 0; t < si->ntex && t < 64; t++) {
                 rs[1 + t][0] = tex_sc[sg][t][0]; rs[1 + t][1] = tex_sc[sg][t][1];
+            }
 #ifdef __PROSPERO__
-                if (!si->tex[t].is_image) {
-                    NvnTexture *tex = shader_texture_object(stage, &si->tex[t]);
-                    float f = tex && !(stage == 1 && tex == scene_up.t) &&
-                              vk_texture_scale_group(tex) == RS_SCENE ? dynamic_resolution_fraction() : 1.0f;
+            if (dynamic_resolution_mode()) {
+                float active = dynamic_resolution_fraction();
+                for (int t = 0; t < si->ntex && t < 64; t++) if (!si->tex[t].is_image) {
+                    float f = 1.0f;
+                    if (active < 1.0f) {
+                        NvnTexture *tex = shader_texture_object(stage, &si->tex[t]);
+                        if (tex && !(stage == 1 && tex == scene_up.t) && vk_texture_scale_group(tex) == RS_SCENE)
+                            f = active;
+                    }
                     rs[1 + t][0] *= f; rs[1 + t][1] *= f;
                     rs[1 + t][2] = rs[1 + t][3] = f;
                 }
-#endif
             }
+#endif
             bi[n] = ubo_span(copy_dedupe(sg ? DEDUPE_RSCALE_F : DEDUPE_RSCALE_V, rs, sizeof rs, 256), sizeof rs);
         } else {
             float zero[8] = {0};
@@ -4106,20 +4113,34 @@ static void build_compute(void *arg) {
     atomic_store(&cp->p.state, atomic_load(&c->state) == 2 ? 1 : 2);
 }
 
-static struct CsEnt { uint64_t addr; CsProg *cp; } g_cs_tab[256];  // compute programs by code address
+static struct CsEnt { uint64_t addr; CsProg *cp;
+#ifdef __PROSPERO__
+    bool drs;
+#endif
+} g_cs_tab[256];  // compute programs by code address and translation mode
 
 static CsProg *compute_program(NvnProgram *np) {
     NvnShaderStage *ss = &np->stages[5];
     if (!ss->code_addr) return NULL;
     struct CsEnt *tab = g_cs_tab;
     int n = g_cs_n;
-    for (int i = 0; i < n; i++) if (tab[i].addr == ss->code_addr) return tab[i].cp;
+    for (int i = 0; i < n; i++) if (tab[i].addr == ss->code_addr
+#ifdef __PROSPERO__
+        && tab[i].drs == dynamic_resolution_mode()
+#endif
+        ) return tab[i].cp;
     CsProg *cp = calloc(1, sizeof *cp);
     if (n < 256) { tab[n].addr = ss->code_addr; tab[n].cp = cp; g_cs_n = n + 1; }
+#ifdef __PROSPERO__
+    if (n < 256) tab[n].drs = dynamic_resolution_mode();
+#endif
     maxwell_gmem_base = HEAP_BASE;
     maxwell_gmem_size = HEAP_MAX;
     ShaderKey k = {0};
     k.glsl = 1;
+#ifdef __PROSPERO__
+    k.drs = dynamic_resolution_mode();
+#endif
     k.shared_size = ss->control ? *(const uint32_t *)(ss->control + 0x754) : 0;  // (next to the group size at 0x748)
     pthread_mutex_lock(&translate_lock);
     cp->si = vk_translate_cached((const uint8_t *)(uintptr_t)ss->code_addr, ss->const_offset ? ss->const_offset : 0x10000, STAGE_COMPUTE, &k);
@@ -4782,21 +4803,35 @@ static void draw_(CmdRec *r, bool indexed) {
     if (!st.program) { stat_skipped++; return; }
     static int no_key_gen = -1;
     if (no_key_gen < 0) no_key_gen = getenv("SAVAGEWIND_VK_NO_KEY_GEN") != NULL;
-    static struct { uint64_t gen; uint32_t origin, dmode; NvnProgram *np; Prog *pr; } pm;
+    static struct { uint64_t gen; uint32_t origin, dmode; NvnProgram *np; Prog *pr;
+#ifdef __PROSPERO__
+        bool drs;
+#endif
+    } pm;
     uint32_t origin = nvn_window_origin(), dmode = nvn_depth_mode();
     Prog *pr;
     bool vkey_flip = origin == 0;
-    if (!no_key_gen && pm.pr && pm.gen == key_gen && pm.np == st.program && pm.origin == origin && pm.dmode == dmode) {
+    if (!no_key_gen && pm.pr && pm.gen == key_gen && pm.np == st.program && pm.origin == origin && pm.dmode == dmode
+#ifdef __PROSPERO__
+        && pm.drs == dynamic_resolution_mode()
+#endif
+        ) {
         pr = pm.pr;
     } else {
         ShaderKey vkey = {0}, fkey = {0};
         vkey.glsl = fkey.glsl = 1;
+#ifdef __PROSPERO__
+        vkey.drs = fkey.drs = dynamic_resolution_mode();
+#endif
         vkey.flip_y = fkey.flip_y = origin == 0;
         vkey.depth_minus_one = dmode == 0;
         for (int i = 0; i < st.nattrib; i++) vkey.attr_kind[i] = (uint8_t)attr_kind(st.attrib[i] & 0xFF);
         for (int i = 0; i < st.rt.ncolor; i++) if (st.rt.color[i]) fkey.rt_kind[i] = (uint8_t)rt_kind(st.rt.color[i]->format);
         pr = get_program(st.program, &vkey, &fkey);
         pm.gen = key_gen; pm.np = st.program; pm.origin = origin; pm.dmode = dmode; pm.pr = pr;
+        #ifdef __PROSPERO__
+        pm.drs = vkey.drs;
+        #endif
     }
     if (pr && atomic_load(&pr->state) == 0 && (one_shot_target() || draw_must_happen())) wait_built(&pr->state);
     if (!pr || atomic_load(&pr->state) != 1) {
@@ -4975,6 +5010,9 @@ static void draw_(CmdRec *r, bool indexed) {
         if (pushed) {
             ShaderKey mvk = {0}, mfk = {0};
             mvk.glsl = mfk.glsl = 1;
+#ifdef __PROSPERO__
+            mvk.drs = mfk.drs = dynamic_resolution_mode();
+#endif
             mvk.flip_y = mfk.flip_y = origin == 0;
             mvk.depth_minus_one = dmode == 0;
             for (int i = 0; i < st.nattrib; i++) mvk.attr_kind[i] = (uint8_t)attr_kind(st.attrib[i] & 0xFF);
@@ -4996,6 +5034,9 @@ static void draw_(CmdRec *r, bool indexed) {
     if (pass_mvec >= 0 && ((!(st.ds[0] && st.ds[1]) && (st.color_state[0] & 1)) || (show_unmatched && st.ds[0] && st.ds[1] && !mvec_draw)) && !fullscreen) {
         ShaderKey mvk = {0}, mfk = {0};
         mvk.glsl = mfk.glsl = 1;
+#ifdef __PROSPERO__
+        mvk.drs = mfk.drs = dynamic_resolution_mode();
+#endif
         mvk.flip_y = mfk.flip_y = origin == 0;
         mvk.depth_minus_one = dmode == 0;
         for (int i = 0; i < st.nattrib; i++) mvk.attr_kind[i] = (uint8_t)attr_kind(st.attrib[i] & 0xFF);
@@ -6316,6 +6357,9 @@ static void scene_post(Prog *pr, CmdRec *r) {
             TexBackend *e = post_image(5, ow, oh, b->format), *o = post_image(6, ow, oh, b->format);
             float iw = (float)used_w, ih = (float)used_h;
             float pe[8] = {iw / ow, ih / oh, 0.5f * iw / ow - 0.5f, 0.5f * ih / oh - 0.5f, iw, ih};
+            #ifdef __PROSPERO__
+            pe[6] = used_w != b->width || used_h != b->height ? 1.0f : 0.0f;
+            #endif
             VkImageView in[3] = {src};
             post_pass(cb, "easu.frag", in, 1, e, pe, false);
             float pr_[8] = {exp2f(-0.2f), 0, 0, 0, (float)ow, (float)oh};  // (sharpness 0.2 stops: AMD's default)

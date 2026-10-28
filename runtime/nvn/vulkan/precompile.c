@@ -33,6 +33,7 @@
 #include "shaders.h"
 #include "vk.h"
 #ifdef __PROSPERO__
+#include "../../settings.h"
 #include "../../storage_ps5.h"
 #endif
 
@@ -421,11 +422,19 @@ bool shader_precompile_run(ShaderPrecompile *p, RomfsImage *img, const char *exe
     bool flip_y = origin[1] > origin[0], depth_minus_one = depth[1] >= depth[0];  // (BOTW: 0 and 1)
     // the jobs: per shader its predicted key, then the logged ones
     Jobs J = {0};
+#ifdef __PROSPERO__
+    // Precompilation may run before the renderer starts a frame; use the configured effective mode.
+    const bool drs = g_settings.dynamic_resolution && g_settings.antialias != AA_TAA &&
+                     g_settings.upscaler != UPSCALE_FSR3;
+#endif
     for (int i = 0; i < set.nshaders; i++) {
         const SaShader *s = &set.shaders[i];
         ShaderKey k;
         memset(&k, 0, sizeof k);
         k.glsl = 1;
+#ifdef __PROSPERO__
+        k.drs = drs;
+#endif
         if (s->stage == STAGE_VERTEX) {
             k.flip_y = flip_y;
             k.depth_minus_one = depth_minus_one;

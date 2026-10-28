@@ -27,8 +27,8 @@ int benchmark_gpu_load(void);  // requested GPU load in ms during the first 20 m
 // the game's shown early on a cut), and the frame generator's GPU time for each generated frame (MihawkGen)
 void benchmark_present(bool generated);
 void benchmark_fg_gpu(uint64_t ns);
-// vulkan/device.c, each presented frame: true once, when the fast-motion segment after the route wants frame
-// generation's captures (*count pairs, one every *every game frames)
+// vulkan/device.c, each presented frame: request pairs during the loaded 720p route (PS5) and fast motion;
+// *count pairs, one every *every game frames.
 bool benchmark_fg_capture(int *count, int *every);
 // vulkan/device.c, each game frame's present: the render thread's CPU time in it and, of that, in frame generation's
 // recording (vk_fg_generate); fg: the frame was presented with a generated one

@@ -32,6 +32,11 @@ ShaderInfo *old_maxwell_translate(const uint8_t *code, size_t max_size, int stag
 void old_maxwell_free(ShaderInfo *s);
 extern uint64_t old_maxwell_gmem_base, old_maxwell_gmem_size;
 #endif
+#ifdef GLSL_REF
+ShaderInfo *reference_maxwell_translate(const uint8_t *code, size_t max_size, int stage, const ShaderKey *key);
+void reference_maxwell_free(ShaderInfo *s);
+extern uint64_t reference_maxwell_gmem_base, reference_maxwell_gmem_size;
+#endif
 
 static uint64_t rng_state, g_seed;
 static uint64_t rnd64(void) {  // splitmix64
@@ -369,6 +374,59 @@ static bool surface_tests(void) {
     return ok == n;
 }
 
+// Exercise each DRS-sensitive instruction independently; the non-DRS build must retain the original spellings.
+static bool drs_tests(void) {
+    static uint8_t prog[0x80 + 8 * 8 + 64];
+    uint64_t sample = setf(0xd000000000070000ull, 53, 4, 1);
+    uint64_t fetch = setf(0xd200000000070000ull, 53, 4, 2);
+    uint64_t gather = 0xdf00000000070000ull;
+    uint64_t query = 0xdf48008180470204ull;
+    const uint64_t insns[] = { sample, fetch, gather, query };
+    const char *const on[] = { "drsuv0(", "drsfetch0(", "drsuv0(", "drs_size0(int(lv))" };
+    const char *const off[] = { "texture(t0,", "texelFetch(t0,", "textureGather(t0,", "tsize0(int(lv))" };
+    bool ok = true;
+    for (int i = 0; i < 4; i++) for (int mode = 0; mode < 2; mode++) {
+        memset(prog, 0, sizeof prog);
+        uint32_t omap = 0xf;
+        memcpy(prog + 0x30 + 0x48, &omap, 4);
+        uint64_t *code = (uint64_t *)(prog + 0x80);
+        code[0] = code[4] = 0x001f8000fc0007e0ull;
+        code[1] = insns[i];
+        code[2] = code[3] = 0x50b0000000070f00ull;
+        code[5] = 0xe30000000007000full;
+        code[6] = code[7] = 0xe2400fffff87000full;
+        ShaderKey key = {0}; key.glsl = 1; key.drs = mode;
+        ShaderInfo *si = maxwell_translate(prog, sizeof prog, STAGE_FRAGMENT, &key);
+#ifdef MAXWELL_DRS_TEST
+        bool enabled = mode != 0;
+#else
+        bool enabled = false;  // desktop ignores the PS5-only key
+#endif
+        const char *want = enabled ? on[i] : off[i];
+        const char *why = si->msl ? glsl_check(si->msl, STAGE_FRAGMENT) : si->error;
+        if (!si->msl || !strstr(si->msl, want) || why) {
+            printf("DRS case %d mode %d: FAILED (%s)\n", i, mode, why ? why : "missing instruction");
+            ok = false;
+        }
+        if (enabled && si->msl && i != 3 && (!strstr(si->msl, "rscale[1].zw") || !strstr(si->msl, "vec2(1.0)"))) ok = false;
+        if (!enabled && si->msl && strstr(si->msl, "drs")) ok = false;
+#ifdef GLSL_REF
+        if (!enabled) {
+            ShaderInfo *ref = reference_maxwell_translate(prog, sizeof prog, STAGE_FRAGMENT, &key);
+            if (!!si->msl != !!ref->msl || (si->msl && strcmp(si->msl, ref->msl))) {
+                printf("DRS case %d mode %d: reference mismatch\n", i, mode);
+                ok = false;
+            }
+            reference_maxwell_free(ref);
+        }
+#endif
+        maxwell_free(si);
+    }
+    printf("DRS translator: %s\n", ok ? "8 checks passed" : "FAILED");
+    return ok;
+}
+
+
 int main(int argc, char **argv) {
     if (argc < 4) { fprintf(stderr, "usage: %s <translate.c> <count> <seed> [msl|glsl|both] [dump_dir]\n", argv[0]); return 2; }
     load_patterns(argv[1]);
@@ -379,6 +437,10 @@ int main(int argc, char **argv) {
     bool do_msl = strcmp(mode, "glsl") != 0, do_glsl = strcmp(mode, "msl") != 0;
     maxwell_gmem_base = 0x80000000ull;
     maxwell_gmem_size = 0x10000000ull;
+#ifdef GLSL_REF
+    reference_maxwell_gmem_base = maxwell_gmem_base;
+    reference_maxwell_gmem_size = maxwell_gmem_size;
+#endif
 #ifdef MSL_REF
     old_maxwell_gmem_base = maxwell_gmem_base;
     old_maxwell_gmem_size = maxwell_gmem_size;
@@ -399,6 +461,7 @@ int main(int argc, char **argv) {
 #endif
     bool reach_ok = reach_tests();
     reach_ok &= surface_tests();
+    reach_ok &= drs_tests();
     static uint8_t prog[0x80 + 64 * 32 + 128];
     long msl_ok = 0, msl_fail = 0, msl_diff = 0, gl_ok = 0, gl_tfail = 0, gl_tfail_only = 0, gl_cfail = 0, gl_vfail = 0;
     long by_stage[3] = {0};
@@ -428,7 +491,21 @@ int main(int argc, char **argv) {
 #ifdef WITH_GLSL
         if (do_glsl) {
             key.glsl = 1;
+#ifdef MAXWELL_DRS_TEST
+            key.drs = 1;
+#endif
             ShaderInfo *g = maxwell_translate(prog, len, stage, &key);
+#ifdef GLSL_REF
+            if (!key.drs) {
+                ShaderInfo *reference = reference_maxwell_translate(prog, len, stage, &key);
+                if (!!g->msl != !!reference->msl || (g->msl && strcmp(g->msl, reference->msl)) ||
+                    (!g->msl && strcmp(g->error, reference->error))) {
+                    if (gl_cfail < 50) dump(dir, "desktop_diff", n, g->msl, reference->msl, prog, len);
+                    gl_cfail++;
+                }
+                reference_maxwell_free(reference);
+            }
+#endif
             if (!g->msl) {
                 gl_tfail++;
                 if (msl_good && do_msl) gl_tfail_only++;

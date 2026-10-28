@@ -334,6 +334,19 @@ void benchmark_gpu(uint64_t frame, uint64_t ns) {
 }
 
 bool benchmark_fg_capture(int *count, int *every) {
+#ifdef __PROSPERO__
+    static bool load_asked;
+    if (!load_asked && benchmark_gpu_load()) {
+        unsigned w = 0, h = 0;
+        dynamic_resolution_size(&w, &h);
+        if (w && h == 720) {
+            load_asked = true;
+            *count = 1, *every = 1;
+            LOG("[bench] capturing a generated/real pair at %ux%u during gpu_load (capture stalls the GPU)\n", w, h);
+            return true;
+        }
+    }
+#endif
     static bool asked;
     if (g_on != 1 || asked || __atomic_load_n(&g_state, __ATOMIC_RELAXED) != B_PAN ||
         plat_now_ns() - g_state_t < S * 3 / 2)

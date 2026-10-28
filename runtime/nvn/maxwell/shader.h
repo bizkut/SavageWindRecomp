@@ -13,7 +13,7 @@
 //    byte / short stores are atomicAnd + atomicOr on the containing word.
 //  - rscale table -> binding 18: `uniform RScale { vec4 rscale[65]; };` (std140, the MSL buffer 18 contents).
 //    On PS5, sampled 2D slots use rscale[1 + i].zw as the used allocation fraction (1,1 for unscaled
-//    textures); storage-image slots retain .z as the image kind. The PS5 translator has a distinct cache ID.
+//    textures); storage-image slots retain .z as the image kind. ShaderKey.drs selects this PS5-only variant.
 //  - per-draw tint -> binding 19: `uniform Tint { vec4 ltint[2]; };` (fragment, when uses_tint).
 //  - texture slot i (ShaderInfo.tex[i]) -> binding 32 + i, a combined image sampler: sampler1D/2D/3D/Cube/
 //    1DArray/2DArray/CubeArray/2DMS, or its *Shadow variant when tex[i].shadow.
@@ -61,6 +61,7 @@ typedef struct {
                             // the key's size and layout are unchanged)
     uint32_t vs_out_mask;   // fragment: varyings the vertex shader provides
     uint8_t glsl;           // emit Vulkan GLSL (see the contract above) instead of MSL
+    uint8_t drs;            // PS5 GLSL: used-rectangle remap (occupies former padding; part of the cache key)
     uint32_t shared_size;   // compute: shared memory bytes (from the program's control section)
 } ShaderKey;
 

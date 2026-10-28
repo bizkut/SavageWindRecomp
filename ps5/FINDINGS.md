@@ -966,3 +966,14 @@ stepped down to 720p (21.5 s at 1280×720, 2.1 s at 1600×900) and back up to 25
 **Cost with DRS compiled in but off is above the agreed 2 %:** GPU 10.33–10.36 ms and render thread 10.02–10.04 ms,
 against 9.95–9.98 ms GPU and 9.05–9.17 ms render in the builds just before (99.6–99.8 % on time either way). Edge
 artifacts at 720p are not yet captured (the fast-motion captures run after the route, at full size).
+
+## 2026-10-28 — PS5 dynamic resolution, build 2 (.41, ps5/evidence/m7/ab-drs2-*.klog, captures-drs2/)
+
+Eboot `406db332…`. **Compiled in but off, the cost is now within noise:** 100.0 / 99.9 % on time, render thread
+8.94–8.96 ms, GPU 9.96 ms (before DRS: 99.6–99.8 %, render 9.01–9.17, GPU 9.95–9.98). With DRS on at 1440p and
+`gpu_load = 8` for 20 s: the size steps to 1600×900 (2.1 s) and 1280×720 (21.8 s), then back to 2560×1440 (36.1 s).
+Under the load the run is 78.6 % on time (game 54.6 fps), and the steps cause 12 shader-compile and 13
+pipeline-creation hitches (first use of each size's variants). The 720p capture shows a full, unstretched frame with a
+sharp HUD; a green/blue arc and glow near the sun side look like the game's sun lens flare, not confirmed (the DRS-off
+run captured a different frame). The run tool's control payload timed out twice during DRS-on runs (the title kept
+running; the klog was captured directly).

@@ -6,7 +6,8 @@
 #include "../settings.h"
 
 enum { VIDEO_HAS_FG = 1, VIDEO_HAS_UPSCALER = 2, VIDEO_HAS_QUALITY = 4,
-       VIDEO_HAS_SIZE = 8, VIDEO_HAS_FPS = 16, VIDEO_HAS_ALL = 31 };
+       VIDEO_HAS_SIZE = 8, VIDEO_HAS_FPS = 16, VIDEO_HAS_HDR = 32, VIDEO_HAS_ALL = 63 };
+typedef enum { VIDEO_HDR_UNKNOWN, VIDEO_HDR_NOT_CAPABLE, VIDEO_HDR_CAPABLE } VideoHdrCapability;
 
 static unsigned video_defaults_present(FILE *f) {
     unsigned present = 0;
@@ -18,12 +19,15 @@ static unsigned video_defaults_present(FILE *f) {
         else if (!strcmp(key, "upscaler_quality")) present |= VIDEO_HAS_QUALITY;
         else if (!strcmp(key, "window_size")) present |= VIDEO_HAS_SIZE;
         else if (!strcmp(key, "frame_rate")) present |= VIDEO_HAS_FPS;
+        else if (!strcmp(key, "hdr")) present |= VIDEO_HAS_HDR;
     }
     return present;
 }
 
-static bool video_defaults_apply(Settings *s, unsigned present, int width, int height, unsigned refresh_mhz) {
+static bool video_defaults_apply(Settings *s, unsigned present, int width, int height, unsigned refresh_mhz,
+                                 VideoHdrCapability hdr) {
     if (!(present & VIDEO_HAS_FG)) s->frame_gen = refresh_mhz >= 119000;
+    if (!(present & VIDEO_HAS_HDR)) s->hdr = hdr == VIDEO_HDR_CAPABLE ? HDR_ON : HDR_OFF;
     if ((present & VIDEO_HAS_ALL) == VIDEO_HAS_ALL) return false;
     if (!(present & VIDEO_HAS_UPSCALER))
         s->upscaler = width >= 3840 && height >= 2160 ? UPSCALE_FSR1 : UPSCALE_OFF;

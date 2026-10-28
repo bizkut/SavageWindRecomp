@@ -18,7 +18,8 @@ mkdir -p "$OUT/old" "$OUT/dump"
 CC=${CC:-clang}
 OBJS="$OUT/new.o"
 DEFS=""
-$CC -O2 -Wall -c runtime/nvn/maxwell/translate.c -o "$OUT/new.o"
+if [ "${DRS_TEST:-0}" = 1 ]; then DEFS="-DMAXWELL_DRS_TEST"; fi
+$CC -O2 -Wall $DEFS -c runtime/nvn/maxwell/translate.c -o "$OUT/new.o"
 if [ "$MODE" != glsl ]; then
   if [ -z "$REF" ]; then
     echo "mode $MODE compares the MSL with a reference translator: set REF (see the top of this script)" >&2
@@ -32,7 +33,7 @@ if [ "$MODE" != glsl ]; then
   case "$(uname -s)" in MINGW*|MSYS*) PRE="-include malloc.h";; esac
   $CC -O2 -w $PRE $RENAME -c "$OUT/old/translate.c" -o "$OUT/old.o"
   OBJS="$OBJS $OUT/old.o"
-  DEFS="-DMSL_REF"
+  DEFS="$DEFS -DMSL_REF"
 fi
 if [ "${GLSL:-1}" = 1 ]; then
   # shaderc is libshaderc_shared (MSYS2, Arch, from source) or libshaderc (Debian / Ubuntu, Homebrew); SPIRV-Tools is

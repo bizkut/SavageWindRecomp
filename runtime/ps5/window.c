@@ -26,8 +26,51 @@
 #include "video_defaults.h"
 
 #define HIGH_REFRESH_MHZ 119880
+// The startup mode is diagnostic until a system-HDR-off comparison confirms it.
+#define HDR_AUTO_DEFAULT 0
 
 int64_t sceKernelGetDirectMemorySize(void);  // libkernel
+// The RADV VideoOut WSI uses these same entry points and output-status layout.
+int sceVideoOutOpen(int32_t user, int32_t bus, int32_t index, const void *parameter);
+int sceVideoOutClose(int32_t handle);
+int sceVideoOutGetOutputStatus(int32_t handle, void *status);
+int sceVideoOutGetCurrentOutputMode_(int32_t handle, void *mode);
+
+static VideoHdrCapability probe_hdr_capability(void) {
+    // Query before RADV opens VideoOut. These calls report current output, not TV capability.
+    // The WSI's status and mode buffers are 48 and 32 bytes respectively.
+    _Alignas(8) unsigned char status[192] = {0}, mode[128] = {0};
+    VideoHdrCapability hdr = VIDEO_HDR_UNKNOWN;
+    int handle = sceVideoOutOpen(0xff, 0, 0, NULL);
+    ps5_logf("[ps5] HDR probe: VideoOut open=%#x\n", (unsigned)handle);
+    if (handle >= 0) {
+        int sr = sceVideoOutGetOutputStatus(handle, status);
+        int mr = sceVideoOutGetCurrentOutputMode_(handle, mode);
+        ps5_logf("[ps5] HDR probe: output status=%#x current mode=%#x\n", (unsigned)sr, (unsigned)mr);
+        uint32_t dynamic_range, mode_size;
+        memcpy(&dynamic_range, status + 4, sizeof dynamic_range);
+        memcpy(&mode_size, mode, sizeof mode_size);
+        ps5_logf("[ps5] HDR probe: startup dynamic_range=%u mode_size=%u mode_color=%u\n",
+                 dynamic_range, mode_size, mode[6]);
+        // RADV's explicit output-mode setup writes 12 at byte 6 for BT.2020 PQ.
+        if (mr == 0 && mode_size == 32)
+            hdr = mode[6] == 12 ? VIDEO_HDR_CAPABLE : VIDEO_HDR_NOT_CAPABLE;
+        for (unsigned i = 0; i < sizeof status; i += 16)
+            ps5_logf("[ps5] HDR probe: status +%03x %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
+                     i, status[i], status[i+1], status[i+2], status[i+3], status[i+4], status[i+5], status[i+6], status[i+7],
+                     status[i+8], status[i+9], status[i+10], status[i+11], status[i+12], status[i+13], status[i+14], status[i+15]);
+        for (unsigned i = 0; i < sizeof mode; i += 16)
+            ps5_logf("[ps5] HDR probe: mode +%03x %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
+                     i, mode[i], mode[i+1], mode[i+2], mode[i+3], mode[i+4], mode[i+5], mode[i+6], mode[i+7],
+                     mode[i+8], mode[i+9], mode[i+10], mode[i+11], mode[i+12], mode[i+13], mode[i+14], mode[i+15]);
+        ps5_logf("[ps5] HDR probe: VideoOut close=%#x\n", (unsigned)sceVideoOutClose(handle));
+    }
+    ps5_logf("[ps5] HDR at start: %s; default stays off until confirmed (TV capability not queried)\n",
+             hdr == VIDEO_HDR_CAPABLE ? "yes" : hdr == VIDEO_HDR_NOT_CAPABLE ? "no" : "unknown");
+    if (hdr == VIDEO_HDR_UNKNOWN) ps5_logf("[ps5] HDR capability unknown\n");
+    return hdr;
+}
+static VideoHdrCapability g_hdr_capability = VIDEO_HDR_UNKNOWN;
 
 struct SDL_Window { int w, h; };  // the chosen mode's extent (0 x 0 until the surface is made)
 static SDL_Window g_window;
@@ -55,6 +98,7 @@ SDL_Window *SDL_CreateWindow(const char *title, int w, int h, SDL_WindowFlags fl
         ps5_logf("[ps5] window: the display plane is already the window\n");
         return NULL;
     }
+    g_hdr_capability = probe_hdr_capability();
     // FIFO: VideoOut flips at vblank whatever the mode asked (its WSI), and framepace.c keeps the frame rate just
     // under the refresh rate with VSync On, which keeps a VRR TV inside its range (D4)
     if (g_settings.vsync != VSYNC_ON)
@@ -217,11 +261,15 @@ bool SDL_Vulkan_CreateSurface(SDL_Window *window, VkInstance instance, const VkA
             unsigned present = video_defaults_present(f);
             bool readable = !f || !ferror(f);
             if (f) fclose(f);
-            if (readable && video_defaults_apply(&g_settings, present, window->w, window->h,
-                                                  mode->parameters.refreshRate)) {
-                settings_save();
-                ps5_logf("[ps5] first-launch video defaults: FG %d, upscaler %d, quality %d\n",
-                         g_settings.frame_gen, g_settings.upscaler, g_settings.upscale_quality);
+            if (readable) {
+                bool changed = video_defaults_apply(&g_settings, present, window->w, window->h,
+                                                    mode->parameters.refreshRate,
+                                                    HDR_AUTO_DEFAULT ? g_hdr_capability : VIDEO_HDR_UNKNOWN);
+                if (changed) settings_save();
+                ps5_logf("[ps5] first-launch video defaults: FG %d, upscaler %d, quality %d, HDR %s (%s)\n",
+                         g_settings.frame_gen, g_settings.upscaler, g_settings.upscale_quality,
+                         g_settings.hdr == HDR_ON ? "on" : g_settings.hdr == HDR_OFF ? "off" : "auto",
+                         present & VIDEO_HAS_HDR ? "saved choice" : "default");
             }
         }
     }

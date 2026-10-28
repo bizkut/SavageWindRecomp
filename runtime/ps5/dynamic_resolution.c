@@ -38,12 +38,17 @@ int dynamic_resolution_update(DynamicResolution *dr, bool enabled, bool temporal
 static DynamicResolution state;
 static uint64_t last_sample;
 static double fg_ms;
-static float fraction = 1.0f;
+float g_dynamic_resolution_fraction = 1.0f;
+bool g_dynamic_resolution_mode;
 static unsigned internal_w, internal_h;
 
 void dynamic_resolution_fg_gpu(uint64_t ns) { fg_ms = ns / 1e6; }
 
 void dynamic_resolution_gpu(uint64_t ns) {
+    if (!g_settings.dynamic_resolution || g_settings.antialias == AA_TAA || g_settings.upscaler == UPSCALE_FSR3) {
+        if (last_sample) { state = (DynamicResolution){0}; last_sample = 0; }
+        return;
+    }
     uint64_t now = plat_now_ns();
     double dt = last_sample && now > last_sample ? (now - last_sample) / 1e9 : 1.0 / 60.0;
     last_sample = now;
@@ -57,16 +62,15 @@ void dynamic_resolution_gpu(uint64_t ns) {
 }
 
 void dynamic_resolution_begin_frame(float sx, float sy) {
-    int step = g_settings.dynamic_resolution && g_settings.antialias != AA_TAA &&
-               g_settings.upscaler != UPSCALE_FSR3 ? state.step : 0;
+    g_dynamic_resolution_mode = g_settings.dynamic_resolution && g_settings.antialias != AA_TAA && g_settings.upscaler != UPSCALE_FSR3;
+    int step = g_dynamic_resolution_mode ? state.step : 0;
     float height = 900.0f * sy;
     float target = step == 1 ? 900.0f : step == 2 ? 720.0f : height;
-    fraction = height > 0 && target < height ? target / height : 1.0f;
-    __atomic_store_n(&internal_w, (unsigned)lroundf(1600.0f * sx * fraction), __ATOMIC_RELAXED);
-    __atomic_store_n(&internal_h, (unsigned)lroundf(height * fraction), __ATOMIC_RELAXED);
+    g_dynamic_resolution_fraction = height > 0 && target < height ? target / height : 1.0f;
+    __atomic_store_n(&internal_w, (unsigned)lroundf(1600.0f * sx * g_dynamic_resolution_fraction), __ATOMIC_RELAXED);
+    __atomic_store_n(&internal_h, (unsigned)lroundf(height * g_dynamic_resolution_fraction), __ATOMIC_RELAXED);
 }
 
-float dynamic_resolution_fraction(void) { return fraction; }
 void dynamic_resolution_size(unsigned *w, unsigned *h) {
     *w = __atomic_load_n(&internal_w, __ATOMIC_RELAXED);
     *h = __atomic_load_n(&internal_h, __ATOMIC_RELAXED);

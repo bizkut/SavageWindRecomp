@@ -1875,10 +1875,15 @@ static struct {
     uint64_t last;
 } cap;
 
-static void fg_capture_poll(uint64_t frame) {
+static void fg_capture_poll(uint64_t frame, bool generated) {
     int n = 0, every = 30;
     long run = 0;
+#ifdef __PROSPERO__
+    if (generated && benchmark_fg_capture(&n, &every)) {
+#else
+    (void)generated;
     if (benchmark_fg_capture(&n, &every)) {
+#endif
         run = (long)time(NULL);
     } else {
         static long seen_mtime = -1, seen_size = -1;
@@ -1919,7 +1924,7 @@ static void present_locked(NvnTexture *t) {
     if (g_fg_backend.kind == FG_BACKEND_MIHAWK) {
         g_fg_counts_game = 1;
         if (gen) present_thread_shared();
-        fg_capture_poll(total_frames);
+        fg_capture_poll(total_frames, gen && gen != b);
         // capture this pair (fg_capture_poll)?
         if (gen && gen != b && cap.left > 0 && total_frames >= cap.last + (uint64_t)cap.every) {
             cap.last = total_frames, cap.left--, cap.k++;

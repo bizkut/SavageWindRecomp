@@ -304,9 +304,15 @@ void vk_key_normalize(const uint8_t *code, int stage, ShaderKey *k) {
     } else {
         uint32_t shared = k->shared_size;
         bool glsl = k->glsl;
+#ifdef __PROSPERO__
+        uint8_t drs = k->drs;
+#endif
         memset(k, 0, sizeof *k);
         k->shared_size = shared;
         k->glsl = glsl;
+        #ifdef __PROSPERO__
+        k->drs = drs;
+        #endif
     }
 }
 
@@ -1178,7 +1184,7 @@ static const char *builtin_src(const char *name, int *stage) {
                "void main() {\n"
                "  vec2 pp = floor(gl_FragCoord.xy) * pc.a.xy + pc.a.zw;\n"
 #ifdef __PROSPERO__
-               "  float alpha = texture(t, clamp(pp + 0.5, vec2(0.5), pc.b.xy - 0.5) / vec2(textureSize(t, 0))).a;\n"
+               "  float alpha = pc.b.z == 0.0 ? texture(t, (pp + 0.5) / pc.b.xy).a : texture(t, clamp(pp + 0.5, vec2(0.5), pc.b.xy - 0.5) / vec2(textureSize(t, 0))).a;\n"
 #else
                "  float alpha = texture(t, (pp + 0.5) / pc.b.xy).a;\n"
 #endif

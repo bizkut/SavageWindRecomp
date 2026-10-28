@@ -18,6 +18,9 @@ int dynamic_resolution_update(DynamicResolution *dr, bool enabled, bool temporal
 void dynamic_resolution_gpu(uint64_t ns);
 void dynamic_resolution_fg_gpu(uint64_t ns);
 void dynamic_resolution_begin_frame(float scene_sx, float scene_sy);
-float dynamic_resolution_fraction(void);
+extern bool g_dynamic_resolution_mode;
+extern float g_dynamic_resolution_fraction;
+static inline bool dynamic_resolution_mode(void) { return g_dynamic_resolution_mode; }
+static inline float dynamic_resolution_fraction(void) { return g_dynamic_resolution_fraction; }
 void dynamic_resolution_size(unsigned *w, unsigned *h);
 #endif

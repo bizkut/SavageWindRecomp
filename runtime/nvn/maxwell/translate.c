@@ -99,6 +99,7 @@ typedef struct {
     // (GLSL, key->mvec) glsl_rewrite for the previous frame's copy of a vertex body: the game's constant buffers
     // (cb3..cb16) read from the motion history (ph, at the push constants' pb offsets), the outputs to locals
     bool rw_prev;
+    bool drs;               // this translation's PS5 used-rectangle variant
 } Ctx;
 
 static uint64_t bits(uint64_t w, int lo, int n) { return (w >> lo) & ((n == 64) ? ~0ull : ((1ull << n) - 1)); }
@@ -675,7 +676,7 @@ static void glsl_sample(Ctx *c, char *out, int slot, const char *const *co, cons
         if (off && !cube) snprintf(xs, sizeof xs, "vec3(vec2(%s, %s) + vec2(%s)%s / vec2(tsize%d(%s).xy), %s)", co[0], co[1], off, off_scale(c, slot, 2), slot, L, co[2]);
         else snprintf(xs, sizeof xs, "vec3(%s, %s, %s)", co[0], co[1], co[2]);  // cube lookups take no offset
     }
-    if (MAXWELL_DRS && n == 2) {
+    if (c->drs && n == 2) {
         char uv[1600], level[800];
         if (lod_kind == 1) snprintf(level, sizeof level, "%s", lod);
         else if (c->stage == STAGE_FRAGMENT)
@@ -760,11 +761,11 @@ static bool glsl_texs(Ctx *c, uint64_t w, bool fetch, int *slot_out, char *call,
         case 1: slot = tex_slot(c, index, TEXTYPE_1D, false, false);
             sprintf(call, "texelFetch(t%d, int(%s), int(%s))", slot, A, Bv); break;
         case 2: slot = tex_slot(c, index, TEXTYPE_2D, false, false);
-            sprintf(call, MAXWELL_DRS ? "drsfetch%d(ivec2(%s), 0)" : "texelFetch(t%d, ivec2(%s), 0)", slot, RSC2(c, slot, "uint2(%s, %s)", A, Bv)); break;
+            sprintf(call, c->drs ? "drsfetch%d(ivec2(%s), 0)" : "texelFetch(t%d, ivec2(%s), 0)", slot, RSC2(c, slot, "uint2(%s, %s)", A, Bv)); break;
         case 4: slot = tex_slot(c, index, TEXTYPE_2D, false, false);
-            sprintf(call, MAXWELL_DRS ? "drsfetch%d(ivec2(%s), 0)" : "texelFetch(t%d, ivec2(%s), 0)", slot, RSC2(c, slot, "uint2(int2(%s, %s) + int2(int(%s << 28) >> 28, int(%s << 24) >> 28))", A, A1, Bv, Bv)); break;
+            sprintf(call, c->drs ? "drsfetch%d(ivec2(%s), 0)" : "texelFetch(t%d, ivec2(%s), 0)", slot, RSC2(c, slot, "uint2(int2(%s, %s) + int2(int(%s << 28) >> 28, int(%s << 24) >> 28))", A, A1, Bv, Bv)); break;
         case 5: slot = tex_slot(c, index, TEXTYPE_2D, false, false);
-            sprintf(call, MAXWELL_DRS ? "drsfetch%d(ivec2(%s), int(%s))" : "texelFetch(t%d, ivec2(%s), int(%s))", slot, RSC2(c, slot, "uint2(%s, %s)", A, A1), Bv); break;
+            sprintf(call, c->drs ? "drsfetch%d(ivec2(%s), int(%s))" : "texelFetch(t%d, ivec2(%s), int(%s))", slot, RSC2(c, slot, "uint2(%s, %s)", A, A1), Bv); break;
         // 2D multisampled, level 0: x Ra, y Ra + 1, the sample Rb (Ryujinx TldsTarget.Texture2DLodZeroMultisample).
         // Multisampled images are never scaled (textures.c tex_scale_group): no rsc.
         case 6: slot = tex_slot(c, index, TEXTYPE_2D_MS, false, false);
@@ -772,9 +773,9 @@ static bool glsl_texs(Ctx *c, uint64_t w, bool fetch, int *slot_out, char *call,
         case 7: slot = tex_slot(c, index, TEXTYPE_3D, false, false);
             sprintf(call, "texelFetch(t%d, ivec3(%s, %s, %s), 0)", slot, A, A1, Bv); break;
         case 8: slot = tex_slot(c, index, TEXTYPE_2D_ARRAY, false, true);
-            sprintf(call, MAXWELL_DRS ? "drsfetch%d(ivec3(ivec2(%s), int(%s)), 0)" : "texelFetch(t%d, ivec3(ivec2(%s), int(%s)), 0)", slot, RSC2(c, slot, "uint2(%s, %s)", A1, Bv), A); break;
+            sprintf(call, c->drs ? "drsfetch%d(ivec3(ivec2(%s), int(%s)), 0)" : "texelFetch(t%d, ivec3(ivec2(%s), int(%s)), 0)", slot, RSC2(c, slot, "uint2(%s, %s)", A1, Bv), A); break;
         case 12: slot = tex_slot(c, index, TEXTYPE_2D, false, false);
-            sprintf(call, MAXWELL_DRS ? "drsfetch%d(ivec2(%s), int(%s))" : "texelFetch(t%d, ivec2(%s), int(%s))", slot, RSC2(c, slot, "uint2(int2(%s, %s) + int2(int(%s << 28) >> 28, int(%s << 24) >> 28))", A, A1, B1, B1), Bv); break;
+            sprintf(call, c->drs ? "drsfetch%d(ivec2(%s), int(%s))" : "texelFetch(t%d, ivec2(%s), int(%s))", slot, RSC2(c, slot, "uint2(int2(%s, %s) + int2(int(%s << 28) >> 28, int(%s << 24) >> 28))", A, A1, B1, B1), Bv); break;
         default: fail(c, "tlds info %d", info); return false;
         }
     }
@@ -939,7 +940,7 @@ static void glsl_gather(Ctx *c, char *out, int slot, const char *const *co, cons
         if (cube) snprintf(xy, sizeof xy, "vec3(%s, %s, %s)", co[0], co[1], co[2]);
         else if (noff) snprintf(xy, sizeof xy, "(vec2(%s, %s) + vec2(%s)%s / vec2(tsize%d(0).xy))", co[0], co[1], off[i], off_scale(c, slot, 2), slot);
         else snprintf(xy, sizeof xy, "vec2(%s, %s)", co[0], co[1]);
-        if (MAXWELL_DRS && !cube) {
+        if (c->drs && !cube) {
             char level[300], uv[500];
             if (c->stage == STAGE_FRAGMENT)
                 snprintf(level, sizeof level, "textureQueryLod(t%d, vec2(%s, %s)).x", slot, co[0], co[1]);
@@ -1422,7 +1423,7 @@ static void emit_insn(Ctx *c, uint64_t w, uint32_t pc) {
         if (qt == 1 && c->glsl) {  // tsize<slot>() / tlevels<slot>() are emitted with the slot's final type
             c->uses_rscale = true;
             c->tex_levels_query |= 1ull << slot;
-            sp(&c->body, MAXWELL_DRS
+            sp(&c->body, c->drs
                ? "    { uint lv = %s; uvec4 q = uvec4(uint(floor(float(drs_size%d(int(lv)).x) / rscale[%d].x + 0.5f)), "
                  "uint(floor(float(drs_size%d(int(lv)).y) / rscale[%d].y + 0.5f)), 1u, uint(tlevels%d()));\n"
                : "    { uint lv = %s; uvec4 q = uvec4(uint(floor(float(tsize%d(int(lv)).x) / rscale[%d].x + 0.5f)), "
@@ -2415,7 +2416,7 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
         if (info->tex[i].shadow && info->tex[i].type == TEXTYPE_3D) fail(c, "3d shadow texture");
         if (info->tex[i].type == TEXTYPE_2D_MS && ((c->tex_lod_query >> i) & 1)) fail(c, "lod query on a multisampled texture");
     }
-    if (MAXWELL_DRS)
+    if (c->drs)
         for (int i = 0; i < info->ntex; i++)
             if (!info->tex[i].is_image) c->uses_rscale = true;
     if (c->fail) { free(body.buf); free(pbody.buf); free(c->body.buf); free(c); return info; }
@@ -2455,7 +2456,7 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
         case TEXTYPE_2D_MS: sp(&s, "ivec3 tsize%d(int l) { return ivec3(textureSize(t%d), 1); }\n", i, i); break;  // (one level)
         default: sp(&s, "ivec3 tsize%d(int l) { return ivec3(textureSize(t%d, l), 1); }\n", i, i);
         }
-        if (MAXWELL_DRS) {
+        if (c->drs) {
             bool drs2 = t->type == TEXTYPE_2D || t->type == TEXTYPE_2D_ARRAY;
             if (drs2) {
                 sp(&s, "ivec3 drs_size%d(int l) { ivec3 s = tsize%d(l); s.xy = max(ivec2(1), ivec2(floor(vec2(s.xy) * rscale[%d].zw + 0.5))); return s; }\n", i, i, i + 1);
@@ -3145,6 +3146,7 @@ ShaderInfo *maxwell_translate(const uint8_t *blob, size_t max_size, int stage, c
     c->stage = stage;
     c->ipa_mode = -1;
     c->glsl = key && key->glsl;
+    c->drs = MAXWELL_DRS && c->glsl && key->drs;
     // shared memory: the size the control section gives (1 KB if none), as a power of two up to 32 KB
     uint32_t sw = key && key->shared_size ? (key->shared_size + 3) / 4 : 256;
     for (c->smem_words = 1; c->smem_words < sw && c->smem_words < 8192; c->smem_words *= 2) {}
