@@ -560,3 +560,32 @@ time; frame times p50 16.75, p95 16.75–17.00, p99 17.00–17.25 ms. Per frame:
 guest threads 43.5 ms summed. The 3 hitches (44–47 ms) all came in the first minute, exactly 119 frames apart, and were
 logged as command translation on the render thread, with no compiles or uploads. These are title-screen figures;
 gameplay CPU/GPU (S6, the M6 target) needs a player or the benchmark route.
+
+## 2026-10-28 — M6 measure1: per-frame CPU/GPU on the title screen (.41, ps5/evidence/m6/measure1.klog)
+
+Eboot `cf832101…` adds `runtime/frametime.c`: GPU timestamps around every submission (always on), the render
+thread's CPU time, the guest threads' waits (kernel waits, core waits, sleeps, backend, RomFS reads) and a `[hitch]`
+line with its cause for each frame over 1.5 periods (25 ms at 60 fps); `[perf]` lines per minute and per 10 minutes.
+200 s idle at the title screen: 99.0–99.2 % of frames on time (≤ 17.5 ms), p95 16.75–17.00 ms, p99 ≤ 17.25 ms;
+render thread 1.1 ms CPU per frame, GPU 1.8 ms per frame. Findings:
+- The only three hitches (44–47 ms, frames 124/243/362) were the first three 2 s stats windows: "[vk] command counts"
+  went out as ~31 separate klog writes, ~1.4 ms each on the render thread. Now one write. Every `LOG` on the render
+  thread costs about that much: the logs stay one line per event.
+- The PS5's `pthread_getcpuclockid` gives every thread the same clock, the calling thread's: every guest thread read
+  the render thread's CPU time (their "43.5 ms per frame summed" is ~40 × 1.1 ms). Guest threads now record their
+  own `CLOCK_THREAD_CPUTIME_ID` at each of their waits (`plat_thread_cpu_ns`); the render thread's figure was right.
+- S6 (CPU headroom): on the title screen the render thread uses 1.1 of 16.68 ms and the GPU 1.8 ms. That is not
+  the game's load; the guest threads' CPU and in-game numbers need measure2 (fixed clocks) and the benchmark.
+
+Eboot `4b70bf98…` (measure2, host-built, not yet run) adds the fixes above, D6's first-start precompilation on the
+PS5 (`runtime/platform/main_ps5.c`: the existing `precompile.c` over the package RomFS, before the game runs, with
+the pre-warm's progress bar and a klog line every 5 s; caches through the broker as before) and the built-in
+benchmark (`runtime/benchmark.c`, below in the plan's M6).
+
+## 2026-10-28 — M6: first-start shader precompile on .41 (ps5/evidence/m6/precompile-first*.klog)
+
+Eboot `4b70bf98…` (measure2), with no shader caches: **880.5 s in total**. Reading the shader archives took 29 s,
+translating and compiling 13,997 shaders took 29–400 s (13,350 translated, 623 cached, 24 failed), and 13,973
+pipeline libraries took 400–880 s. The pipeline-library rate starts at ~660/s and falls to ~10/s by the end; the
+cause is under investigation. Title heap peaked at 1,148 MB. The game started afterwards. The on-screen indicator is a
+bar with no text yet.
