@@ -543,3 +543,12 @@ Shared input: the wheel pulses d-pad Up/Down (scope, AppCamera id 4) or right st
 only while that screen's open-state byte (new optional site `screen_state`, 0xfe on 1.9.0) is 2; otherwise dropped.
 Toggle `mouse_wheel_zoom`, default on. Eboot `87c68e8a…` runs ~60 fps with audio, no fault. Scope/map zoom on hardware
 needs a USB mouse (deferred with the USB checks). 1.8.2 site unresolved (no 1.8.2 main here).
+
+## 2026-10-28 — M5: real game audio during the user's session (.41, ps5/evidence/m5/user-cutscene.klog)
+
+Captured while the user played (title → the opening, a real-time rendered cutscene; no `[movie]` line, so no FFmpeg
+movie played). Audio: the renderer went from 0–2 voice sources at the title screen to **up to 40** in play
+(render 127 → ~520 us per frame); output level peaks −10 to −38 dBFS, rms −31 to −64 dBFS; **0 underruns, 0
+errors, 0 dropped frames** in every 10 s window. Video: 59.9 fps in most 2 s windows, dips to 37–53 fps with up to
+312 ms frames as the world first loads (draws rise to ~470k per 2 s). Pending: the user's listening check, and a
+pre-rendered movie for the FFmpeg path.

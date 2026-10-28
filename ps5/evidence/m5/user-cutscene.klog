@@ -1,0 +1,624 @@
+savagewind:  19:1758savagewind:  20:2726savagewind:  21:2726savagewind:  22:2726savagewind:  23:1378savagewind:  28:816savagewind:  33:359savagewind:  35:168savagewind:  38:1668savagewind:  48:2008savagewind:  51:2812savagewind:  54:610savagewind:  61:816savagewind: 
+savagewind: [vk] t=56040.3 frame 122 60.3 fps max 17ms (1668 draws, 0 skipped, 1519 passes, 0 dispatches, 244 flushes, wait 0ms, compile 0 (warm 18), fbcopy 0 (+0 live), upload 4.0MB, sets 3336 (1968 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 2008 (1679 same), gcopy 2697 hit 1653 miss (0.5 MB))
+savagewind: [time] StandardUserSystemClock::GetCurrentTime (host clock)
+savagewind: [kernel] CreateThread entry=700264c470 stack=7214b95fe0 prio=48 core -2 -> 148
+savagewind: [kernel] CreateThread entry=700264c470 stack=722bf2bfe0 prio=48 core -2 -> 149
+savagewind: [vk] command counts:savagewind:  0:2822savagewind:  1:377savagewind:  2:2580savagewind:  3:8647savagewind:  4:27423savagewind:  5:6797savagewind:  6:6797savagewind:  7:3136savagewind:  9:3136savagewind:  10:8647savagewind:  11:8647savagewind:  12:6711savagewind:  13:60931savagewind:  14:605savagewind:  15:8647savagewind:  17:242savagewind:  18:242savagewind:  19:7038savagewind:  20:8726savagewind:  21:8726savagewind:  22:8726savagewind:  23:6797savagewind:  28:3136savagewind:  33:939savagewind:  35:1312savagewind:  38:8647savagewind:  48:9188savagewind:  51:8592savagewind:  54:1210savagewind:  61:3136savagewind: 
+savagewind: [vk] t=56042.3 frame 242 59.9 fps max 34ms (6979 draws, 0 skipped, 5944 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 5), fbcopy 0 (+0 live), upload 7.1MB, sets 13958 (8917 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 7180 (5340 same), gcopy 12494 hit 7278 miss (5.5 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4362 reads, 4313 empty, largest batch 1, 200.2-210.9 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [vk] command counts:savagewind:  0:4142savagewind:  1:737savagewind:  2:3780savagewind:  3:18801savagewind:  4:57977savagewind:  5:15391savagewind:  6:15391savagewind:  7:6496savagewind:  9:6496savagewind:  10:18801savagewind:  11:18801savagewind:  12:14385savagewind:  13:110639savagewind:  14:1925savagewind:  15:18801savagewind:  17:362savagewind:  18:362savagewind:  19:13878savagewind:  20:16286savagewind:  21:16286savagewind:  22:16286savagewind:  23:15391savagewind:  28:6496savagewind:  33:1779savagewind:  35:3232savagewind:  38:18801savagewind:  48:18188savagewind:  51:15672savagewind:  54:1810savagewind:  61:6496savagewind: 
+savagewind: [vk] t=56044.3 frame 362 59.9 fps max 35ms (10154 draws, 0 skipped, 8280 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 11.4MB, sets 20308 (13215 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 18074 hit 11548 miss (10.8 MB))
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Cross | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: B
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56046.3 frame 482 59.9 fps max 36ms (10200 draws, 0 skipped, 8280 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 11.5MB, sets 20400 (13292 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 18120 hit 11640 miss (10.8 MB))
+savagewind: [input] DualSense: Circle | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: A
+savagewind: [options] Savage Wind's pages added to the Options screen (83 entries)
+savagewind: [glyphs] button glyph sheet 727dd68000: PlayStation icons, 19 glyphs redrawn
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [audren-sdk] 2000 frames: render 130 us (max 303), mutex wait max 21 us, 0 underruns, peak 0.241; 2000 with the sink, voice sources 1 (max 1), command ids 0x218a9c0, mix buffers peak 0.241, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1879 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -12.4 dBFS rms -44.1 dBFS
+savagewind: [audio] streams in: 2008 puts, 481920 frames, 82910 nonzero samples, peak -12.4 dBFS; ring read peak -12.4 dBFS; 1 resumed, lowest gain 1.00
+savagewind: radv/ps5 submissions: window count=1300 kwords=10496 claim_ms=2.6 copy_ms=4.3 flush_ms=2.4 agc_ms=21.3 suspend_ms=247.4
+savagewind: [vk] t=56048.3 frame 602 59.9 fps max 17ms (33480 draws, 0 skipped, 8332 passes, 0 dispatches, 339 flushes, wait 0ms, compile 0 (warm 25), fbcopy 0 (+0 live), upload 26.3MB, sets 66960 (56144 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9071 (6169 same), gcopy 62972 hit 42455 miss (23.4 MB))
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56050.3 frame 722 59.9 fps max 17ms (38400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 28.0MB, sets 76800 (65258 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 72420 hit 49020 miss (26.0 MB))
+savagewind: [input] DualSense: Circle | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: A
+savagewind: [sm] GetService prepo:u
+savagewind: [ipc] no HLE implementation for service 'prepo:u', using logging stub
+savagewind: [ipc] control 3 on prepo:u (handle 14a)
+savagewind: [ipc] control 0 on prepo:u (handle 14a)
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Circle | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: A
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56052.3 frame 842 59.9 fps max 17ms (23979 draws, 0 skipped, 8320 passes, 0 dispatches, 251 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 19.7MB, sets 47958 (37174 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9071 (6169 same), gcopy 45203 hit 30134 miss (18.2 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 7 samples/s (4364 reads, 4298 empty, largest batch 1, 4.8-205.3 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [input] DualSense: Cross | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: B
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56054.3 frame 962 59.9 fps max 17ms (24616 draws, 0 skipped, 8345 passes, 0 dispatches, 256 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 20.0MB, sets 49232 (38432 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9089 (6181 same), gcopy 46406 hit 30955 miss (18.5 MB))
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56056.4 frame 1082 59.9 fps max 17ms (38400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 28.0MB, sets 76800 (65265 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 72420 hit 49020 miss (26.0 MB))
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [audren-sdk] 4000 frames: render 147 us (max 323), mutex wait max 9 us, 0 underruns, peak 0.052; 2000 with the sink, voice sources 0 (max 2), command ids 0x218a9c0, mix buffers peak 0.052, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -25.7 dBFS rms -58.8 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 112420 nonzero samples, peak -25.7 dBFS; ring read peak -25.7 dBFS; 1 resumed, lowest gain 1.00
+savagewind: radv/ps5 submissions: window count=1587 kwords=17067 claim_ms=3.3 copy_ms=6.3 flush_ms=3.3 agc_ms=17.4 suspend_ms=860.5
+savagewind: [vk] t=56058.4 frame 1202 59.9 fps max 17ms (38400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 28.0MB, sets 76800 (65174 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 72420 hit 49020 miss (26.0 MB))
+savagewind: [input] DualSense: Circle | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: A
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56060.4 frame 1322 59.9 fps max 17ms (36957 draws, 0 skipped, 8320 passes, 0 dispatches, 354 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 27.2MB, sets 73914 (62573 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9071 (6169 same), gcopy 69717 hit 47026 miss (25.2 MB))
+savagewind: [vk] t=56062.4 frame 1442 59.9 fps max 17ms (38400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 28.0MB, sets 76800 (65249 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 72420 hit 49020 miss (26.0 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 6 samples/s (4363 reads, 4300 empty, largest batch 1, 2.1-205.4 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [input] DualSense: Cross | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: B
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56064.4 frame 1562 59.9 fps max 17ms (36964 draws, 0 skipped, 8345 passes, 0 dispatches, 354 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 27.3MB, sets 73928 (62572 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9089 (6181 same), gcopy 69730 hit 47027 miss (25.3 MB))
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56066.4 frame 1682 59.9 fps max 17ms (38400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 28.0MB, sets 76800 (65212 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 72420 hit 49020 miss (26.0 MB))
+savagewind: [input] DualSense: Circle | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: A
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [audren-sdk] 6000 frames: render 136 us (max 309), mutex wait max 13 us, 0 underruns, peak 0.052; 2000 with the sink, voice sources 0 (max 2), command ids 0x218a9c0, mix buffers peak 0.052, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -25.7 dBFS rms -59.3 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 92305 nonzero samples, peak -25.7 dBFS; ring read peak -25.7 dBFS; 1 resumed, lowest gain 1.00
+savagewind: radv/ps5 submissions: window count=1782 kwords=18610 claim_ms=3.6 copy_ms=7.2 flush_ms=3.6 agc_ms=18.8 suspend_ms=1286.0
+savagewind: [vk] t=56068.4 frame 1802 59.9 fps max 17ms (55407 draws, 0 skipped, 8320 passes, 0 dispatches, 354 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 38.0MB, sets 110814 (97978 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9071 (6169 same), gcopy 104361 hit 71422 miss (35.3 MB))
+savagewind: [vk] t=56070.4 frame 1922 59.9 fps max 17ms (65400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.8MB, sets 130800 (116920 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 123120 hit 84720 miss (40.7 MB))
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [vk] t=56072.4 frame 2042 59.9 fps max 17ms (65400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.8MB, sets 130800 (116918 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 123120 hit 84720 miss (40.7 MB))
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 6 samples/s (4362 reads, 4299 empty, largest batch 1, 7.6-207.5 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+<118>[SceShellCore] Libc Heap Status: free 52%, in-use 3847.8 KB, trend +33.2 KB/min, peak 7758.7 KB, when 40047 [sec]
+savagewind: [vk] t=56074.4 frame 2162 59.9 fps max 17ms (65400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.8MB, sets 130800 (116942 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 123120 hit 84720 miss (40.7 MB))
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Cross | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: B
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56076.4 frame 2282 59.9 fps max 17ms (60814 draws, 0 skipped, 8345 passes, 0 dispatches, 354 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 41.2MB, sets 121628 (108193 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9089 (6181 same), gcopy 114514 hit 78563 miss (38.3 MB))
+savagewind: [audren-sdk] 8000 frames: render 135 us (max 327), mutex wait max 13 us, 0 underruns, peak 0.035; 2000 with the sink, voice sources 0 (max 1), command ids 0x218a9c0, mix buffers peak 0.035, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -29.1 dBFS rms -60.4 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 62374 nonzero samples, peak -29.0 dBFS; ring read peak -29.0 dBFS; 1 resumed, lowest gain 1.00
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: radv/ps5 submissions: window count=1794 kwords=21947 claim_ms=3.7 copy_ms=8.3 flush_ms=3.9 agc_ms=19.3 suspend_ms=1328.2
+savagewind: [vk] t=56078.4 frame 2402 59.9 fps max 17ms (38400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 28.0MB, sets 76800 (65198 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 72420 hit 49020 miss (26.0 MB))
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Circle | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: A
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56080.4 frame 2522 59.9 fps max 17ms (36957 draws, 0 skipped, 8320 passes, 0 dispatches, 354 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 27.2MB, sets 73914 (62549 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9071 (6169 same), gcopy 69717 hit 47026 miss (25.2 MB))
+savagewind: [vk] t=56082.4 frame 2642 59.9 fps max 17ms (38400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 28.0MB, sets 76800 (65267 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 72420 hit 49020 miss (26.0 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 7 samples/s (4362 reads, 4296 empty, largest batch 1, 15.0-205.1 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=56084.4 frame 2762 59.9 fps max 17ms (38400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 28.0MB, sets 76800 (65237 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 72420 hit 49020 miss (26.0 MB))
+savagewind: [input] DualSense: Cross | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: B
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56086.4 frame 2882 59.9 fps max 17ms (36964 draws, 0 skipped, 8345 passes, 0 dispatches, 354 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 27.2MB, sets 73928 (62585 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9089 (6181 same), gcopy 69731 hit 47026 miss (25.2 MB))
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [audren-sdk] 10000 frames: render 136 us (max 319), mutex wait max 8 us, 0 underruns, peak 0.052; 2000 with the sink, voice sources 0 (max 2), command ids 0x218a9c0, mix buffers peak 0.052, gain 1.00
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [audio] AudioOut 10.0 s: 1876 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -25.7 dBFS rms -58.6 dBFS
+savagewind: [audio] streams in: 2001 puts, 480240 frames, 124542 nonzero samples, peak -25.7 dBFS; ring read peak -25.7 dBFS; 1 resumed, lowest gain 1.00
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Circle | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: A
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: radv/ps5 submissions: window count=1782 kwords=18092 claim_ms=3.7 copy_ms=6.8 flush_ms=3.6 agc_ms=18.5 suspend_ms=1287.6
+savagewind: [vk] t=56088.4 frame 3002 59.9 fps max 17ms (41457 draws, 0 skipped, 8320 passes, 0 dispatches, 354 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 29.8MB, sets 82914 (71193 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9071 (6169 same), gcopy 78166 hit 52977 miss (27.7 MB))
+savagewind: [vk] t=56090.4 frame 3122 59.9 fps max 17ms (65400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.8MB, sets 130800 (117056 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 123120 hit 84720 miss (40.7 MB))
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [vk] t=56092.4 frame 3242 59.9 fps max 17ms (65400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.8MB, sets 130800 (117038 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 123120 hit 84720 miss (40.7 MB))
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 6 samples/s (4364 reads, 4299 empty, largest batch 1, 5.6-205.1 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Circle | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: A
+savagewind: [input] mouse free
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56094.4 frame 3362 59.9 fps max 17ms (65400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.8MB, sets 130800 (117086 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 123120 hit 84720 miss (40.7 MB))
+savagewind: [vk] t=56096.4 frame 3482 59.9 fps max 17ms (65400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.8MB, sets 130800 (117045 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 123120 hit 84720 miss (40.7 MB))
+savagewind: [audren-sdk] 12000 frames: render 139 us (max 331), mutex wait max 9 us, 0 underruns, peak 0.052; 2000 with the sink, voice sources 0 (max 2), command ids 0x218a9c0, mix buffers peak 0.052, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -25.7 dBFS rms -63.7 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 94571 nonzero samples, peak -25.7 dBFS; ring read peak -25.7 dBFS; 1 resumed, lowest gain 1.00
+savagewind: radv/ps5 submissions: window count=1800 kwords=23107 claim_ms=3.6 copy_ms=8.8 flush_ms=4.0 agc_ms=19.7 suspend_ms=1346.4
+savagewind: [vk] t=56098.4 frame 3602 59.9 fps max 17ms (65400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.8MB, sets 130800 (116962 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 123120 hit 84720 miss (40.7 MB))
+savagewind: [input] mouse held in the window (camera)
+savagewind: [input] mouse free
+savagewind: [input] DualSense: Cross | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: B
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] mouse held in the window (camera)
+savagewind: [input] DualSense: Cross | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: B
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56100.4 frame 3722 59.9 fps max 17ms (60814 draws, 0 skipped, 8345 passes, 0 dispatches, 354 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 41.2MB, sets 121628 (108340 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9089 (6181 same), gcopy 114514 hit 78563 miss (38.3 MB))
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56102.4 frame 3842 59.9 fps max 17ms (38400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 28.0MB, sets 76800 (65151 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 72420 hit 49020 miss (26.0 MB))
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 6 samples/s (4364 reads, 4301 empty, largest batch 2, 0.2-205.1 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56104.4 frame 3962 59.9 fps max 17ms (38400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 28.0MB, sets 76800 (65228 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 72420 hit 49020 miss (26.0 MB))
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+<118>[SceShellCore] Libc Heap Status: free 52%, in-use 3831.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 40078 [sec]
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [vk] t=56106.4 frame 4082 59.9 fps max 17ms (38400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 28.0MB, sets 76800 (65136 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 72420 hit 49020 miss (26.0 MB))
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [audren-sdk] 14000 frames: render 142 us (max 300), mutex wait max 10 us, 0 underruns, peak 0.035; 2000 with the sink, voice sources 0 (max 2), command ids 0x218a9c0, mix buffers peak 0.035, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -29.1 dBFS rms -57.2 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 193574 nonzero samples, peak -29.0 dBFS; ring read peak -29.0 dBFS; 1 resumed, lowest gain 1.00
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: radv/ps5 submissions: window count=1794 kwords=18947 claim_ms=3.7 copy_ms=7.2 flush_ms=3.7 agc_ms=18.8 suspend_ms=1319.6
+savagewind: [vk] t=56108.4 frame 4202 59.9 fps max 17ms (38400 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 28.0MB, sets 76800 (65250 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 72420 hit 49020 miss (26.0 MB))
+savagewind: [input] DualSense: Cross | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: B
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56110.4 frame 4322 59.9 fps max 17ms (16050 draws, 0 skipped, 8294 passes, 0 dispatches, 265 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 14.9MB, sets 32100 (24063 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9018 (6132 same), gcopy 29415 hit 19363 miss (14.0 MB))
+savagewind: [input] DualSense: Circle | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: A
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Circle | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: A
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56112.4 frame 4442 59.9 fps max 17ms (32772 draws, 0 skipped, 8372 passes, 0 dispatches, 326 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 25.3MB, sets 65544 (55062 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9142 (6218 same), gcopy 61048 hit 41698 miss (23.6 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 8 samples/s (4364 reads, 4282 empty, largest batch 2, 0.6-205.6 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56114.4 frame 4562 59.9 fps max 17ms (58800 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.9MB, sets 117600 (104643 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 106200 hit 78360 miss (41.5 MB))
+savagewind: [input] DualSense: Right | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Right
+savagewind: [options] Frame rate = 2 (Off) at 56115.095 s
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Left | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Left
+savagewind: [options] Frame rate = 1 (60 FPS) at 56116.148 s
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56116.4 frame 4741 89.0 fps max 19ms (87710 draws, 0 skipped, 12351 passes, 0 dispatches, 537 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 65.6MB, sets 175420 (156088 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13425 (9129 same), gcopy 158415 hit 116887 miss (62.0 MB))
+savagewind: [input] DualSense: Left | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Left
+savagewind: [options] Frame rate = 0 (30 FPS) at 56116.556 s
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Left | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Left
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Left | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Left
+savagewind: [audren-sdk] 16000 frames: render 140 us (max 315), mutex wait max 12 us, 0 underruns, peak 0.241; 2000 with the sink, voice sources 0 (max 2), command ids 0x218a9c0, mix buffers peak 0.241, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -12.4 dBFS rms -44.0 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 134637 nonzero samples, peak -12.4 dBFS; ring read peak -12.4 dBFS; 1 resumed, lowest gain 1.00
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Right | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Right
+savagewind: [options] Frame rate = 1 (60 FPS) at 56118.175 s
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: radv/ps5 submissions: window count=1698 kwords=20447 claim_ms=3.4 copy_ms=7.7 flush_ms=3.7 agc_ms=20.6 suspend_ms=1072.4
+savagewind: [vk] t=56118.4 frame 4812 35.5 fps max 34ms (34790 draws, 0 skipped, 4899 passes, 0 dispatches, 213 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 26.0MB, sets 69580 (61966 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 5325 (3621 same), gcopy 62835 hit 46363 miss (24.5 MB))
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [vk] t=56120.4 frame 4932 59.9 fps max 17ms (58800 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.9MB, sets 117600 (104717 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 106200 hit 78360 miss (41.5 MB))
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56122.4 frame 5052 59.9 fps max 17ms (58800 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.9MB, sets 117600 (104668 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 106200 hit 78360 miss (41.5 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 8 samples/s (4365 reads, 4289 empty, largest batch 1, 6.8-212.0 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [vk] t=56124.4 frame 5172 59.9 fps max 17ms (58800 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.9MB, sets 117600 (104646 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 106200 hit 78360 miss (41.5 MB))
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56126.4 frame 5292 59.9 fps max 17ms (58800 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.9MB, sets 117600 (104669 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 106200 hit 78360 miss (41.5 MB))
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [audren-sdk] 18000 frames: render 135 us (max 266), mutex wait max 14 us, 0 underruns, peak 0.035; 2000 with the sink, voice sources 1 (max 1), command ids 0x218a9c0, mix buffers peak 0.035, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -29.1 dBFS rms -61.1 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 101636 nonzero samples, peak -29.0 dBFS; ring read peak -29.0 dBFS; 1 resumed, lowest gain 1.00
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: radv/ps5 submissions: window count=1800 kwords=23330 claim_ms=3.7 copy_ms=8.9 flush_ms=4.0 agc_ms=19.5 suspend_ms=1368.5
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [vk] t=56128.4 frame 5412 59.9 fps max 17ms (58800 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.9MB, sets 117600 (104711 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 106200 hit 78360 miss (41.5 MB))
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56130.4 frame 5532 59.9 fps max 17ms (58800 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.9MB, sets 117600 (104625 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 106200 hit 78360 miss (41.5 MB))
+savagewind: [vk] t=56132.4 frame 5652 59.9 fps max 17ms (58800 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.9MB, sets 117600 (104352 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 106200 hit 78360 miss (41.5 MB))
+savagewind: [input] DualSense: Right | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Right
+savagewind: [options] Upscaler = 1 (AMD FSR 1) at 56132.923 s
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Right | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Right
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 8 samples/s (4364 reads, 4286 empty, largest batch 1, 3.2-206.2 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56134.4 frame 5772 59.9 fps max 17ms (58800 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.9MB, sets 117600 (104557 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 106200 hit 78360 miss (41.5 MB))
+savagewind: [vk] t=56136.4 frame 5892 59.9 fps max 17ms (58800 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.9MB, sets 117600 (104724 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 106200 hit 78360 miss (41.5 MB))
+savagewind: [audren-sdk] 20000 frames: render 134 us (max 303), mutex wait max 11 us, 0 underruns, peak 0.035; 2000 with the sink, voice sources 0 (max 2), command ids 0x218a9c0, mix buffers peak 0.035, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -29.1 dBFS rms -61.5 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 94976 nonzero samples, peak -29.0 dBFS; ring read peak -29.0 dBFS; 1 resumed, lowest gain 1.00
+savagewind: radv/ps5 submissions: window count=1800 kwords=23330 claim_ms=3.7 copy_ms=8.8 flush_ms=4.0 agc_ms=19.6 suspend_ms=1303.7
+savagewind: [vk] t=56138.4 frame 6012 59.9 fps max 17ms (58800 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.9MB, sets 117600 (104719 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 106200 hit 78360 miss (41.5 MB))
+savagewind: [input] DualSense: Left | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Left
+savagewind: [options] Upscaler = 0 (Off) at 56138.478 s
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Right | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Right
+savagewind: [options] Upscaler = 1 (AMD FSR 1) at 56140.213 s
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56140.4 frame 6132 59.9 fps max 17ms (58800 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.9MB, sets 117600 (104669 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 106200 hit 78360 miss (41.5 MB))
+savagewind: [vk] t=56142.4 frame 6252 59.9 fps max 17ms (58800 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.9MB, sets 117600 (104308 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 106200 hit 78360 miss (41.5 MB))
+savagewind: [input] DualSense: Right | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Right
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 6 samples/s (4362 reads, 4306 empty, largest batch 1, 17.3-214.4 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56144.4 frame 6372 59.9 fps max 17ms (58800 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.9MB, sets 117600 (104628 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 106200 hit 78360 miss (41.5 MB))
+savagewind: [input] DualSense: Right | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Right
+savagewind: [options] Video > Resolution: 4K, at the next start
+savagewind: [options] Resolution = 1 (4K) at 56144.635 s
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56146.5 frame 6492 59.9 fps max 17ms (58800 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.9MB, sets 117600 (104660 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 106200 hit 78360 miss (41.5 MB))
+savagewind: [input] DualSense: Right | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Right
+savagewind: [options] Frame rate = 2 (Off) at 56146.620 s
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Right | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Right
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [audren-sdk] 22000 frames: render 134 us (max 301), mutex wait max 9 us, 0 underruns, peak 0.035; 2000 with the sink, voice sources 0 (max 2), command ids 0x218a9c0, mix buffers peak 0.035, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -29.1 dBFS rms -64.1 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 51740 nonzero samples, peak -29.0 dBFS; ring read peak -29.0 dBFS; 1 resumed, lowest gain 1.00
+savagewind: [input] DualSense: Right | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Right
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Left | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Left
+savagewind: [options] Frame rate = 1 (60 FPS) at 56148.086 s
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Left | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Left
+savagewind: [options] Frame rate = 0 (30 FPS) at 56148.362 s
+savagewind: radv/ps5 submissions: window count=2040 kwords=26423 claim_ms=4.2 copy_ms=9.9 flush_ms=4.5 agc_ms=24.7 suspend_ms=1410.5
+savagewind: [vk] t=56148.5 frame 6692 98.7 fps max 34ms (98000 draws, 0 skipped, 13800 passes, 0 dispatches, 600 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 73.2MB, sets 196000 (174409 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 15000 (10200 same), gcopy 177000 hit 130600 miss (69.2 MB))
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Right | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Right
+savagewind: [options] Frame rate = 1 (60 FPS) at 56149.379 s
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56150.5 frame 6784 46.0 fps max 34ms (45080 draws, 0 skipped, 6348 passes, 0 dispatches, 276 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 33.7MB, sets 90160 (80280 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 6900 (4692 same), gcopy 81420 hit 60076 miss (31.8 MB))
+savagewind: [input] DualSense: Left | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Left
+savagewind: [options] Video > Resolution: Auto, at the next start
+savagewind: [options] Resolution = 0 (Auto) at 56150.631 s
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56152.5 frame 6904 59.9 fps max 17ms (58800 draws, 0 skipped, 8280 passes, 0 dispatches, 360 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 43.9MB, sets 117600 (104692 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 106200 hit 78360 miss (41.5 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 8 samples/s (4369 reads, 4289 empty, largest batch 1, 6.1-208.5 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [input] DualSense: Cross | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: B
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56154.5 frame 7024 59.9 fps max 17ms (54608 draws, 0 skipped, 8345 passes, 0 dispatches, 354 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 41.0MB, sets 109216 (96671 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9089 (6181 same), gcopy 98952 hit 72401 miss (38.7 MB))
+savagewind: [input] DualSense: Circle | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: A
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56156.5 frame 7144 59.9 fps max 17ms (35197 draws, 0 skipped, 8320 passes, 0 dispatches, 334 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 26.2MB, sets 70394 (59068 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9071 (6169 same), gcopy 66357 hit 44766 miss (24.3 MB))
+savagewind: [audren-sdk] 24000 frames: render 134 us (max 302), mutex wait max 11 us, 0 underruns, peak 0.241; 2000 with the sink, voice sources 0 (max 1), command ids 0x218a9c0, mix buffers peak 0.241, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1876 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -12.4 dBFS rms -44.4 dBFS
+savagewind: [audio] streams in: 2001 puts, 480240 frames, 82762 nonzero samples, peak -12.4 dBFS; ring read peak -12.4 dBFS; 1 resumed, lowest gain 1.00
+savagewind: radv/ps5 submissions: window count=1562 kwords=19431 claim_ms=3.2 copy_ms=7.1 flush_ms=3.4 agc_ms=17.1 suspend_ms=843.5
+savagewind: [vk] t=56158.5 frame 7264 59.9 fps max 17ms (27840 draws, 0 skipped, 8280 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 21.9MB, sets 55680 (44381 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 52260 hit 35460 miss (20.2 MB))
+savagewind: [input] DualSense: Cross | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: B
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56160.5 frame 7384 59.9 fps max 17ms (34928 draws, 0 skipped, 8345 passes, 0 dispatches, 331 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 26.0MB, sets 69856 (58574 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9089 (6181 same), gcopy 65849 hit 44409 miss (24.1 MB))
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Down | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Down
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Circle | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: A
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56162.5 frame 7504 59.9 fps max 17ms (34563 draws, 0 skipped, 8326 passes, 0 dispatches, 335 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 25.8MB, sets 69126 (57866 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9071 (6169 same), gcopy 65195 hit 43910 miss (23.9 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 6 samples/s (4363 reads, 4302 empty, largest batch 1, 6.7-210.9 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [input] DualSense: Cross | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: B
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [vk] t=56164.5 frame 7624 59.9 fps max 17ms (23280 draws, 0 skipped, 8280 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 19.2MB, sets 46560 (35628 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 43860 hit 29340 miss (17.8 MB))
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Cross | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: B
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56166.5 frame 7744 59.9 fps max 17ms (35273 draws, 0 skipped, 8359 passes, 0 dispatches, 346 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 26.3MB, sets 70546 (59415 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9107 (6193 same), gcopy 66516 hit 44759 miss (24.4 MB))
+savagewind: [audren-sdk] 26000 frames: render 135 us (max 298), mutex wait max 14 us, 0 underruns, peak 0.052; 2000 with the sink, voice sources 0 (max 2), command ids 0x218a9c0, mix buffers peak 0.052, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -25.7 dBFS rms -56.3 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 124743 nonzero samples, peak -25.7 dBFS; ring read peak -25.7 dBFS; 1 resumed, lowest gain 1.00
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: radv/ps5 submissions: window count=1492 kwords=16023 claim_ms=3.1 copy_ms=5.8 flush_ms=3.1 agc_ms=16.6 suspend_ms=556.6
+savagewind: [vk] t=56168.5 frame 7864 59.9 fps max 17ms (10200 draws, 0 skipped, 8280 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 11.5MB, sets 20400 (13304 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 18120 hit 11640 miss (10.8 MB))
+savagewind: [input] DualSense: Cross | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: B
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [input] DualSense: Circle | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: A
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56170.5 frame 7984 59.9 fps max 17ms (11177 draws, 0 skipped, 8302 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 12.1MB, sets 22354 (15012 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9035 (6144 same), gcopy 19954 hit 12919 miss (11.4 MB))
+savagewind: [input] DualSense: Up | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: Up
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [vk] t=56172.5 frame 8104 59.9 fps max 17ms (15120 draws, 0 skipped, 8280 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 14.4MB, sets 30240 (21934 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9000 (6120 same), gcopy 27240 hit 18240 miss (13.5 MB))
+savagewind: [input] DualSense: Circle | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: A
+savagewind: [input] DualSense: (no button) | L stick 00 R stick 00 (128,128 128,128) | L2 0 R2 0 | Switch: (none)
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 6 samples/s (4362 reads, 4299 empty, largest batch 1, 8.7-216.2 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [vk] t=56174.5 frame 8224 59.9 fps max 17ms (11432 draws, 0 skipped, 6605 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 11.0MB, sets 22864 (16293 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 7150 (4870 same), gcopy 20977 hit 13364 miss (10.3 MB))
+savagewind: [vk] linear render target 1x1 format 0x25 stride 128 at 72e7da7d60: copied back to guest memory
+savagewind: [vk] linear render target 1x1 format 0x2e stride 128 at 72e7da7de0: copied back to guest memory
+savagewind: [fs] romfs reads: 32 (208785 KB)
+savagewind: [vk] linear render target 192x192 format 0x6 stride 384 at 72dc239000: copied back to guest memory
+savagewind: [vk] linear render target 1x1 format 0x2e stride 128 at 72dbebdee0: copied back to guest memory
+savagewind: [vk] linear render target 1x1 format 0x2e stride 128 at 72dbebdf60: copied back to guest memory
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 22962 not deferred
+savagewind: [vk] linear render target 192x192 format 0x6 stride 384 at 72dc253000: copied back to guest memory
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 22964 not deferred
+savagewind: [vk] linear render target 256x256 format 0xd stride 512 at 72e8388000: copied back to guest memory
+savagewind: [vk] linear render target 512x512 format 0x25 stride 2048 at 72e83a9000: copied back to guest memory
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 22974 not deferred
+savagewind: [vk] linear render target 128x128 format 0x25 stride 512 at 7265594000: copied back to guest memory
+savagewind: [vk] linear render target 128x128 format 0x25 stride 512 at 72655a4000: copied back to guest memory
+savagewind: [vk] linear render target 128x128 format 0x25 stride 512 at 72655b4000: copied back to guest memory
+savagewind: [vk] linear render target 128x128 format 0x25 stride 512 at 72655c4000: copied back to guest memory
+savagewind: [vk] linear render target 128x128 format 0x25 stride 512 at 72655d4000: copied back to guest memory
+savagewind: [vk] linear render target 128x128 format 0x25 stride 512 at 72655e4000: copied back to guest memory
+savagewind: [vk] linear render target 128x128 format 0x25 stride 512 at 72655f4000: copied back to guest memory
+savagewind: [vk] linear render target 128x128 format 0x25 stride 512 at 7265604000: copied back to guest memory
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 22976 not deferred
+savagewind: [fs] romfs reads: 64 (214606 KB)
+<118>[SceShellCore] Libc Heap Status: free 52%, in-use 3832.2 KB, trend +0.4 KB/min, peak 7758.7 KB, when 40148 [sec]
+savagewind: [fs] romfs reads: 128 (224376 KB)
+savagewind: [fs] romfs reads: 256 (239372 KB)
+savagewind: [vk] t=56176.5 frame 8340 57.7 fps max 104ms (12294 draws, 63 skipped, 4380 passes, 0 dispatches, 238 flushes, wait 1ms, compile 1 (warm 67), fbcopy 0 (+2873 live), upload 122.0MB, sets 24588 (21729 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 30087 (13424 same), gcopy 56377 hit 12372 miss (8.5 MB))
+savagewind-import: session=package-runtime step=reader-open errno=0 type=info what=readers=2
+savagewind: [kernel] CreateThread entry=700264c470 stack=720878efe0 prio=48 core -2 -> 14b
+savagewind: [kernel] CreateThread entry=700264c470 stack=722edecfe0 prio=48 core -2 -> 14c
+savagewind: [kernel] CreateThread entry=700264c470 stack=7213060fe0 prio=48 core -2 -> 14d
+savagewind: [kernel] CreateThread entry=700264c470 stack=723929bfe0 prio=49 core -2 -> 14e
+savagewind: [fs] romfs reads: 512 (254213 KB)
+savagewind: [audren-sdk] 28000 frames: render 183 us (max 368), mutex wait max 10 us, 0 underruns, peak 0.259; 2000 with the sink, voice sources 9 (max 9), command ids 0x4218a9c0, mix buffers peak 0.259, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1872 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -11.7 dBFS rms -30.9 dBFS
+savagewind: [audio] streams in: 1997 puts, 479280 frames, 541124 nonzero samples, peak -11.7 dBFS; ring read peak -11.7 dBFS; 1 resumed, lowest gain 1.00
+savagewind: radv/ps5 submissions: window count=1175 kwords=9442 claim_ms=2.5 copy_ms=3.9 flush_ms=2.3 agc_ms=14.4 suspend_ms=33.3
+savagewind: [vk] t=56178.5 frame 8447 53.3 fps max 84ms (4084 draws, 0 skipped, 3586 passes, 0 dispatches, 214 flushes, wait 0ms, compile 0 (warm 12), fbcopy 0 (+144 live), upload 5.7MB, sets 8168 (6406 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 16443 (10446 same), gcopy 4278 hit 5255 miss (5.5 MB))
+savagewind: [vk] t=56180.5 frame 8550 51.2 fps max 40ms (2707 draws, 0 skipped, 2686 passes, 0 dispatches, 206 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 7.4MB, sets 5414 (4186 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 11791 (7495 same), gcopy 2604 hit 3656 miss (7.3 MB))
+savagewind: [fs] romfs reads: 1024 (368009 KB)
+savagewind: [vk] t=56182.5 frame 8667 58.5 fps max 40ms (3159 draws, 0 skipped, 3136 passes, 0 dispatches, 234 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 8.5MB, sets 6318 (4920 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13859 (8850 same), gcopy 3042 hit 4234 miss (8.3 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4360 reads, 4311 empty, largest batch 1, 200.2-205.1 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=56184.5 frame 8787 59.9 fps max 17ms (3108 draws, 0 skipped, 3084 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 2.9MB, sets 6216 (4968 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13992 (8916 same), gcopy 2988 hit 3936 miss (2.7 MB))
+savagewind: [vk] t=56186.5 frame 8907 59.9 fps max 17ms (3200 draws, 0 skipped, 3176 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 8.7MB, sets 6400 (4968 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13992 (8916 same), gcopy 3080 hit 4304 miss (8.5 MB))
+savagewind: [audren-sdk] 30000 frames: render 267 us (max 470), mutex wait max 9 us, 0 underruns, peak 0.054; 2000 with the sink, voice sources 7 (max 13), command ids 0x4218adc0, mix buffers peak 0.054, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -25.4 dBFS rms -49.0 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 309412 nonzero samples, peak -25.4 dBFS; ring read peak -25.4 dBFS; 1 resumed, lowest gain 1.00
+savagewind: radv/ps5 submissions: window count=1155 kwords=3022 claim_ms=2.4 copy_ms=2.7 flush_ms=1.9 agc_ms=13.3 suspend_ms=27.6
+savagewind: [vk] t=56188.5 frame 9027 59.9 fps max 17ms (3200 draws, 0 skipped, 3176 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 8.7MB, sets 6400 (4968 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13992 (8916 same), gcopy 3080 hit 4304 miss (8.5 MB))
+savagewind: [vk] t=56190.5 frame 9147 59.9 fps max 17ms (3112 draws, 0 skipped, 3088 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 3.1MB, sets 6224 (4954 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13992 (8916 same), gcopy 2992 hit 3952 miss (3.0 MB))
+savagewind: [vk] t=56192.5 frame 9267 59.9 fps max 17ms (3196 draws, 0 skipped, 3172 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 8.4MB, sets 6392 (4968 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13992 (8916 same), gcopy 3076 hit 4288 miss (8.2 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4361 reads, 4312 empty, largest batch 1, 200.1-205.3 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [nvn] CommandBufferSetRasterizerDiscard called: not implemented
+savagewind: [vk] t=56194.5 frame 9387 59.9 fps max 17ms (3494 draws, 0 skipped, 3176 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 12), fbcopy 0 (+0 live), upload 10.2MB, sets 6988 (4968 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13992 (8916 same), gcopy 3325 hit 5529 miss (9.6 MB))
+savagewind: [vk] t=56196.5 frame 9507 59.9 fps max 17ms (3862 draws, 0 skipped, 3176 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 7.8MB, sets 7724 (4968 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13992 (8916 same), gcopy 3622 hit 7072 miss (7.5 MB))
+savagewind: [audren-sdk] 32000 frames: render 262 us (max 442), mutex wait max 8 us, 0 underruns, peak 0.027; 2000 with the sink, voice sources 9 (max 9), command ids 0x4218adc0, mix buffers peak 0.027, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -31.3 dBFS rms -50.3 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 354250 nonzero samples, peak -31.3 dBFS; ring read peak -31.3 dBFS; 1 resumed, lowest gain 1.00
+savagewind: radv/ps5 submissions: window count=1200 kwords=3328 claim_ms=2.4 copy_ms=2.8 flush_ms=2.0 agc_ms=13.5 suspend_ms=17.0
+savagewind: [vk] t=56198.5 frame 9627 59.9 fps max 17ms (3800 draws, 0 skipped, 3176 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 3.9MB, sets 7600 (4968 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13992 (8916 same), gcopy 3560 hit 6824 miss (3.6 MB))
+savagewind: [vk] t=56200.5 frame 9747 59.9 fps max 17ms (3800 draws, 0 skipped, 3176 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 3.9MB, sets 7600 (4968 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13992 (8916 same), gcopy 3560 hit 6824 miss (3.6 MB))
+savagewind: [vk] t=56202.6 frame 9867 59.9 fps max 17ms (3800 draws, 0 skipped, 3176 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 3.9MB, sets 7600 (4968 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13992 (8916 same), gcopy 3560 hit 6824 miss (3.6 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4362 reads, 4312 empty, largest batch 1, 200.6-208.6 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=56204.6 frame 9987 59.9 fps max 17ms (4007 draws, 0 skipped, 3188 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 10.2MB, sets 8014 (4977 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 14007 (8926 same), gcopy 3776 hit 7424 miss (9.9 MB))
+<118>[SceShellCore] Libc Heap Status: free 52%, in-use 3831.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 40179 [sec]
+savagewind: [vk] t=56206.6 frame 10107 59.9 fps max 17ms (3912 draws, 0 skipped, 3176 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 7.5MB, sets 7824 (4968 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13992 (8916 same), gcopy 3672 hit 7160 miss (7.2 MB))
+savagewind: [audren-sdk] 34000 frames: render 291 us (max 471), mutex wait max 11 us, 0 underruns, peak 0.053; 2000 with the sink, voice sources 11 (max 11), command ids 0x4218adc0, mix buffers peak 0.053, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -25.5 dBFS rms -41.6 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 958727 nonzero samples, peak -25.5 dBFS; ring read peak -25.5 dBFS; 1 resumed, lowest gain 1.00
+savagewind: radv/ps5 submissions: window count=1200 kwords=3526 claim_ms=2.4 copy_ms=2.8 flush_ms=2.0 agc_ms=13.7 suspend_ms=15.2
+savagewind: [vk] t=56208.6 frame 10227 59.9 fps max 17ms (3800 draws, 0 skipped, 3176 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 3.9MB, sets 7600 (4968 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13992 (8916 same), gcopy 3560 hit 6824 miss (3.6 MB))
+savagewind: [vk] t=56210.6 frame 10347 59.9 fps max 17ms (3927 draws, 0 skipped, 3185 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 7.7MB, sets 7854 (4977 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 14007 (8926 same), gcopy 3696 hit 7184 miss (7.4 MB))
+savagewind: [vk] t=56212.6 frame 10467 59.9 fps max 17ms (4040 draws, 0 skipped, 3176 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 11.6MB, sets 8080 (4968 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13992 (8916 same), gcopy 3800 hit 7544 miss (11.2 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4360 reads, 4311 empty, largest batch 1, 200.2-205.3 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=56214.6 frame 10587 59.9 fps max 17ms (3812 draws, 0 skipped, 3176 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 4.3MB, sets 7624 (4954 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13992 (8916 same), gcopy 3572 hit 6860 miss (4.0 MB))
+savagewind: [vk] t=56216.6 frame 10707 59.9 fps max 17ms (3871 draws, 0 skipped, 3176 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 2), fbcopy 0 (+0 live), upload 4.0MB, sets 7742 (4968 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13992 (8916 same), gcopy 3570 hit 7047 miss (3.7 MB))
+savagewind: [audren-sdk] 36000 frames: render 292 us (max 479), mutex wait max 7 us, 0 underruns, peak 0.162; 2000 with the sink, voice sources 9 (max 11), command ids 0x4218adc0, mix buffers peak 0.162, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -15.8 dBFS rms -37.6 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 958745 nonzero samples, peak -15.8 dBFS; ring read peak -15.8 dBFS; 1 resumed, lowest gain 1.00
+savagewind: radv/ps5 submissions: window count=1200 kwords=3563 claim_ms=2.5 copy_ms=2.8 flush_ms=2.0 agc_ms=13.8 suspend_ms=15.1
+savagewind: [vk] t=56218.6 frame 10827 59.9 fps max 17ms (4000 draws, 0 skipped, 3176 passes, 0 dispatches, 240 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 4.3MB, sets 8000 (4968 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13992 (8916 same), gcopy 3640 hit 7504 miss (4.0 MB))
+savagewind: [nvn] SetDepthClamp on (depth clamp supported)
+savagewind: [upsample] 800x450 target at 1.60x1.60: texel grid 1600x900 -> 2560x1440 (vertex constant buffer 72dbf95000 row 18)
+savagewind: [upsample] 1600x900 target at 1.60x1.60: texel grid 1600x900 -> 2560x1440 (vertex constant buffer 72dbf95000 row 18)
+savagewind: [upsample] 1600x900 target at 1.60x1.60: texel grid 800x450 -> 1280x720 (vertex constant buffer 72dbefb100 row 2)
+savagewind: [upsample] 800x450 texture at 1280x720: fragment texel size 0.00125 0.00222222 -> 0.00078125 0.00138889 (constant buffer 72dbefb100 word 10)
+savagewind: [post] scene 2560x1440 fsr1 -> 3840x2160 (format 64)
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 28304 not deferred
+savagewind: [upsample] 800x450 target at 1.60x1.60: texel grid 1600x900 -> 2560x1440 (vertex constant buffer 72dbf95a00 row 18)
+savagewind: [upsample] 800x450 texture at 1280x720: fragment texel size 0.00125 0.00222222 -> 0.00078125 0.00138889 (constant buffer 72dbefb000 word 10)
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 28310 not deferred
+savagewind: [upsample] 800x450 texture at 1280x720: fragment texel size 0.00125 0.00222222 -> 0.00078125 0.00138889 (constant buffer 72dbefb100 word 10)
+savagewind: [upsample] 800x450 texture at 1280x720: fragment texel size 0.00125 0.00222222 -> 0.00078125 0.00138889 (constant buffer 72dbefb000 word 10)
+savagewind: [vk] t=56220.6 frame 10925 49.0 fps max 312ms (87528 draws, 0 skipped, 7175 passes, 35 dispatches, 344 flushes, wait 3ms, compile 0 (warm 407), fbcopy 0 (+9733 live), upload 72.0MB, sets 175546 (158387 shared), fbloop 6650 (6580 barriers), gmem waits 0 holds 0, uub 24906 (9904 same), gcopy 475915 hit 52324 miss (18.7 MB))
+savagewind: [am] ISelfController cmd 62 (unhandled, ok; logged once)
+savagewind: [time] StandardUserSystemClock::GetCurrentTime (host clock)
+savagewind: [vk] t=56222.6 frame 11000 37.2 fps max 88ms (147574 draws, 0 skipped, 10577 passes, 409 dispatches, 458 flushes, wait 0ms, compile 0 (warm 145), fbcopy 0 (+23275 live), upload 52.4MB, sets 296532 (264812 shared), fbloop 16509 (16359 barriers), gmem waits 0 holds 0, uub 33031 (7911 same), gcopy 845584 hit 91845 miss (34.7 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4358 reads, 4309 empty, largest batch 1, 200.1-207.0 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=56224.6 frame 11106 53.0 fps max 70ms (188505 draws, 0 skipped, 15254 passes, 742 dispatches, 636 flushes, wait 0ms, compile 0 (warm 34), fbcopy 0 (+45399 live), upload 46.3MB, sets 379130 (337530 shared), fbloop 29875 (29663 barriers), gmem waits 0 holds 0, uub 43385 (8723 same), gcopy 1137153 hit 110244 miss (41.2 MB))
+savagewind: [vk] t=56226.6 frame 11196 44.5 fps max 69ms (161322 draws, 0 skipped, 13013 passes, 697 dispatches, 540 flushes, wait 0ms, compile 0 (warm 13), fbcopy 0 (+40398 live), upload 46.3MB, sets 324511 (287705 shared), fbloop 26386 (26206 barriers), gmem waits 0 holds 0, uub 36724 (7203 same), gcopy 975682 hit 93930 miss (39.8 MB))
+savagewind: [audio] AudioOut 10.0 s: 1868 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -17.9 dBFS rms -37.0 dBFS
+savagewind: [audio] streams in: 1992 puts, 478080 frames, 954199 nonzero samples, peak -17.9 dBFS; ring read peak -17.9 dBFS; 1 resumed, lowest gain 1.00
+savagewind: [audren-sdk] 38000 frames: render 472 us (max 969), mutex wait max 60 us, 0 underruns, peak 0.128; 2000 with the sink, voice sources 21 (max 40), command ids 0x4218adc0, mix buffers peak 0.128, gain 1.00
+savagewind: radv/ps5 submissions: window count=2589 kwords=35036 claim_ms=5.4 copy_ms=14.1 flush_ms=5.9 agc_ms=150.0 suspend_ms=1174.7
+savagewind: [vk] t=56228.6 frame 11303 53.3 fps max 88ms (193265 draws, 0 skipped, 15002 passes, 1152 dispatches, 646 flushes, wait 0ms, compile 1 (warm 14), fbcopy 0 (+48935 live), upload 48.9MB, sets 389073 (344810 shared), fbloop 32035 (31821 barriers), gmem waits 0 holds 0, uub 43045 (8178 same), gcopy 1180797 hit 107607 miss (41.6 MB))
+savagewind: [vk] t=56230.6 frame 11408 52.3 fps max 81ms (194882 draws, 0 skipped, 14736 passes, 1283 dispatches, 657 flushes, wait 0ms, compile 0 (warm 22), fbcopy 0 (+50231 live), upload 57.2MB, sets 392412 (347989 shared), fbloop 32931 (32721 barriers), gmem waits 0 holds 0, uub 43061 (8673 same), gcopy 1197369 hit 107613 miss (39.3 MB))
+savagewind: [vk] t=56232.6 frame 11526 58.8 fps max 59ms (225993 draws, 0 skipped, 16448 passes, 1534 dispatches, 744 flushes, wait 0ms, compile 0 (warm 11), fbcopy 0 (+59212 live), upload 56.7MB, sets 455054 (404408 shared), fbloop 39094 (38858 barriers), gmem waits 0 holds 0, uub 48052 (9557 same), gcopy 1407241 hit 123415 miss (51.1 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4358 reads, 4309 empty, largest batch 1, 200.2-206.0 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+<118>[SceSystemStateMgr] No user input for 60 seconds
+savagewind: [vk] t=56234.6 frame 11646 59.9 fps max 17ms (234795 draws, 0 skipped, 16583 passes, 1428 dispatches, 756 flushes, wait 0ms, compile 0 (warm 4), fbcopy 0 (+63431 live), upload 49.1MB, sets 472578 (425003 shared), fbloop 42070 (41830 barriers), gmem waits 0 holds 0, uub 48602 (9600 same), gcopy 1488066 hit 122857 miss (45.1 MB))
+savagewind: [vk] t=56236.6 frame 11766 59.9 fps max 17ms (217349 draws, 0 skipped, 16648 passes, 1286 dispatches, 722 flushes, wait 0ms, compile 0 (warm 5), fbcopy 0 (+57758 live), upload 47.8MB, sets 437544 (390012 shared), fbloop 38793 (38552 barriers), gmem waits 0 holds 0, uub 48554 (9606 same), gcopy 1355716 hit 122394 miss (43.6 MB))
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -16.1 dBFS rms -31.6 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 959086 nonzero samples, peak -16.1 dBFS; ring read peak -16.1 dBFS; 1 resumed, lowest gain 1.00
+savagewind: [audren-sdk] 40000 frames: render 521 us (max 727), mutex wait max 161 us, 0 underruns, peak 0.156; 2000 with the sink, voice sources 21 (max 22), command ids 0x4218a9c0, mix buffers peak 0.156, gain 1.00
+savagewind: radv/ps5 submissions: window count=3516 kwords=46742 claim_ms=7.2 copy_ms=18.6 flush_ms=8.0 agc_ms=81.8 suspend_ms=1040.4
+savagewind: [vk] t=56238.6 frame 11886 59.9 fps max 18ms (154746 draws, 0 skipped, 16523 passes, 811 dispatches, 636 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+38259 live), upload 53.1MB, sets 311863 (265044 shared), fbloop 27286 (27046 barriers), gmem waits 0 holds 0, uub 48491 (9611 same), gcopy 883051 hit 116616 miss (49.8 MB))
+savagewind: [vk] t=56240.6 frame 12006 59.9 fps max 17ms (156290 draws, 0 skipped, 16533 passes, 720 dispatches, 636 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+38257 live), upload 54.5MB, sets 314860 (268069 shared), fbloop 27180 (26940 barriers), gmem waits 0 holds 0, uub 48490 (9606 same), gcopy 891392 hit 117455 miss (51.2 MB))
+savagewind: [vk] t=56242.6 frame 12126 59.9 fps max 17ms (157069 draws, 0 skipped, 16525 passes, 720 dispatches, 636 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+38814 live), upload 47.9MB, sets 316418 (270110 shared), fbloop 27664 (27424 barriers), gmem waits 0 holds 0, uub 48490 (9606 same), gcopy 901053 hit 116501 miss (44.7 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4358 reads, 4307 empty, largest batch 2, 0.1-205.2 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=56244.6 frame 12246 59.9 fps max 17ms (156909 draws, 0 skipped, 16490 passes, 720 dispatches, 636 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+39132 live), upload 46.5MB, sets 316098 (270080 shared), fbloop 27858 (27618 barriers), gmem waits 0 holds 0, uub 48462 (9594 same), gcopy 901585 hit 115639 miss (43.3 MB))
+savagewind: [vk] t=56246.6 frame 12366 59.9 fps max 18ms (171838 draws, 0 skipped, 16526 passes, 720 dispatches, 670 flushes, wait 0ms, compile 0 (warm 14), fbcopy 0 (+36845 live), upload 49.2MB, sets 345956 (297935 shared), fbloop 26193 (25953 barriers), gmem waits 0 holds 0, uub 48541 (9612 same), gcopy 960387 hit 121276 miss (45.3 MB))
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -16.3 dBFS rms -39.5 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 958641 nonzero samples, peak -18.8 dBFS; ring read peak -16.3 dBFS; 1 resumed, lowest gain 1.00
+savagewind: [audren-sdk] 42000 frames: render 508 us (max 654), mutex wait max 90 us, 0 underruns, peak 0.115; 2000 with the sink, voice sources 19 (max 21), command ids 0x4218a9c0, mix buffers peak 0.115, gain 1.00
+savagewind: radv/ps5 submissions: window count=3321 kwords=43912 claim_ms=6.9 copy_ms=17.8 flush_ms=7.7 agc_ms=54.7 suspend_ms=897.1
+savagewind: [vk] t=56248.6 frame 12486 59.9 fps max 17ms (208885 draws, 0 skipped, 16551 passes, 720 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+31323 live), upload 52.8MB, sets 420050 (367892 shared), fbloop 22408 (22168 barriers), gmem waits 0 holds 0, uub 48568 (9588 same), gcopy 1125570 hit 129393 miss (49.2 MB))
+savagewind: [vk] t=56250.6 frame 12606 59.9 fps max 18ms (211343 draws, 0 skipped, 16593 passes, 720 dispatches, 756 flushes, wait 0ms, compile 0 (warm 3), fbcopy 0 (+31244 live), upload 53.2MB, sets 424966 (372257 shared), fbloop 22605 (22365 barriers), gmem waits 0 holds 0, uub 48610 (9606 same), gcopy 1142355 hit 131238 miss (49.6 MB))
+<118>[SceShellCore] Libc Heap Status: free 52%, in-use 3847.8 KB, trend +16.3 KB/min, peak 7758.7 KB, when 40225 [sec]
+savagewind: [vk] t=56252.6 frame 12726 59.9 fps max 18ms (213314 draws, 0 skipped, 16594 passes, 720 dispatches, 756 flushes, wait 0ms, compile 0 (warm 6), fbcopy 0 (+31206 live), upload 54.0MB, sets 428908 (376438 shared), fbloop 22796 (22556 barriers), gmem waits 0 holds 0, uub 48610 (9606 same), gcopy 1157004 hit 134346 miss (50.3 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4358 reads, 4309 empty, largest batch 1, 200.1-209.3 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=56254.6 frame 12846 59.9 fps max 17ms (213450 draws, 0 skipped, 16596 passes, 720 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+30610 live), upload 54.1MB, sets 429180 (376422 shared), fbloop 22614 (22374 barriers), gmem waits 0 holds 0, uub 48627 (9612 same), gcopy 1157848 hit 135714 miss (50.6 MB))
+savagewind: [vk] t=56256.6 frame 12966 59.9 fps max 17ms (214359 draws, 0 skipped, 16553 passes, 720 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+31286 live), upload 54.4MB, sets 430998 (378385 shared), fbloop 22780 (22540 barriers), gmem waits 0 holds 0, uub 48582 (9594 same), gcopy 1164442 hit 136045 miss (50.8 MB))
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -30.5 dBFS rms -45.2 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 957362 nonzero samples, peak -30.5 dBFS; ring read peak -30.5 dBFS; 1 resumed, lowest gain 1.00
+savagewind: [audren-sdk] 44000 frames: render 504 us (max 662), mutex wait max 100 us, 0 underruns, peak 0.030; 2000 with the sink, voice sources 19 (max 20), command ids 0x4218a9c0, mix buffers peak 0.030, gain 1.00
+savagewind: radv/ps5 submissions: window count=3780 kwords=48821 claim_ms=7.7 copy_ms=20.2 flush_ms=9.1 agc_ms=53.9 suspend_ms=634.6
+savagewind: [vk] t=56258.7 frame 13086 59.9 fps max 17ms (214463 draws, 0 skipped, 16498 passes, 720 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+31320 live), upload 54.2MB, sets 431206 (378648 shared), fbloop 22800 (22560 barriers), gmem waits 0 holds 0, uub 48484 (9552 same), gcopy 1166159 hit 135295 miss (50.6 MB))
+savagewind: [vk] t=56260.7 frame 13206 59.9 fps max 17ms (214468 draws, 0 skipped, 16505 passes, 720 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+31320 live), upload 54.2MB, sets 431216 (378676 shared), fbloop 22800 (22560 barriers), gmem waits 0 holds 0, uub 48498 (9558 same), gcopy 1166048 hit 135404 miss (50.7 MB))
+savagewind: [vk] t=56262.7 frame 13326 59.9 fps max 19ms (289780 draws, 0 skipped, 16663 passes, 1020 dispatches, 756 flushes, wait 0ms, compile 0 (warm 26), fbcopy 0 (+45604 live), upload 67.9MB, sets 582140 (524040 shared), fbloop 25979 (25739 barriers), gmem waits 0 holds 0, uub 48596 (9548 same), gcopy 1548760 hit 163639 miss (60.2 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4358 reads, 4309 empty, largest batch 1, 200.1-208.0 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(458) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(252) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(84) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(90) Notified error:(0x8041013d)
+savagewind: [vk] t=56264.7 frame 13446 59.9 fps max 18ms (294894 draws, 0 skipped, 16601 passes, 1320 dispatches, 756 flushes, wait 0ms, compile 0 (warm 1), fbcopy 0 (+46278 live), upload 65.1MB, sets 592668 (533587 shared), fbloop 26126 (25886 barriers), gmem waits 0 holds 0, uub 48576 (9540 same), gcopy 1576586 hit 164428 miss (60.5 MB))
+savagewind: [vk] t=56266.7 frame 13566 59.9 fps max 19ms (297649 draws, 0 skipped, 16602 passes, 1320 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+46521 live), upload 65.5MB, sets 598178 (538913 shared), fbloop 25997 (25757 barriers), gmem waits 0 holds 0, uub 48576 (9540 same), gcopy 1587173 hit 165624 miss (60.9 MB))
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -37.8 dBFS rms -51.2 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 955723 nonzero samples, peak -37.8 dBFS; ring read peak -37.8 dBFS; 1 resumed, lowest gain 1.00
+savagewind: [audren-sdk] 46000 frames: render 500 us (max 668), mutex wait max 10 us, 0 underruns, peak 0.013; 2000 with the sink, voice sources 20 (max 20), command ids 0x4218a9c0, mix buffers peak 0.013, gain 1.00
+savagewind: radv/ps5 submissions: window count=3780 kwords=57613 claim_ms=7.8 copy_ms=23.8 flush_ms=9.9 agc_ms=52.9 suspend_ms=752.9
+savagewind: [vk] t=56268.7 frame 13686 59.9 fps max 17ms (300707 draws, 0 skipped, 16601 passes, 1320 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+46815 live), upload 65.6MB, sets 604294 (545020 shared), fbloop 26062 (25822 barriers), gmem waits 0 holds 0, uub 48576 (9540 same), gcopy 1603212 hit 166559 miss (61.1 MB))
+savagewind: [vk] t=56270.7 frame 13806 59.9 fps max 17ms (303440 draws, 0 skipped, 16601 passes, 1320 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+47257 live), upload 65.7MB, sets 609760 (550373 shared), fbloop 26193 (25953 barriers), gmem waits 0 holds 0, uub 48576 (9540 same), gcopy 1619025 hit 167195 miss (61.1 MB))
+savagewind: [vk] t=56272.7 frame 13926 59.9 fps max 17ms (304517 draws, 0 skipped, 16600 passes, 1320 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+47423 live), upload 65.7MB, sets 611914 (552556 shared), fbloop 26175 (25935 barriers), gmem waits 0 holds 0, uub 48576 (9540 same), gcopy 1625475 hit 167423 miss (61.2 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4357 reads, 4308 empty, largest batch 1, 200.2-205.1 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=56274.7 frame 14046 59.9 fps max 17ms (304393 draws, 0 skipped, 16641 passes, 1320 dispatches, 756 flushes, wait 0ms, compile 0 (warm 2), fbcopy 0 (+47456 live), upload 67.1MB, sets 611666 (552285 shared), fbloop 26195 (25934 barriers), gmem waits 0 holds 0, uub 48646 (9570 same), gcopy 1622506 hit 168695 miss (61.5 MB))
+savagewind: [vk] t=56276.7 frame 14166 59.9 fps max 17ms (305906 draws, 0 skipped, 16700 passes, 1322 dispatches, 756 flushes, wait 0ms, compile 0 (warm 4), fbcopy 0 (+47823 live), upload 67.4MB, sets 614694 (553944 shared), fbloop 26552 (26192 barriers), gmem waits 0 holds 0, uub 48744 (9612 same), gcopy 1614869 hit 171862 miss (62.6 MB))
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -25.2 dBFS rms -51.1 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 955723 nonzero samples, peak -25.2 dBFS; ring read peak -25.2 dBFS; 1 resumed, lowest gain 1.00
+savagewind: [audren-sdk] 48000 frames: render 505 us (max 669), mutex wait max 60 us, 0 underruns, peak 0.055; 2000 with the sink, voice sources 20 (max 20), command ids 0x4218a9c0, mix buffers peak 0.055, gain 1.00
+savagewind: radv/ps5 submissions: window count=3780 kwords=61038 claim_ms=7.9 copy_ms=25.1 flush_ms=9.9 agc_ms=53.1 suspend_ms=768.1
+savagewind: [vk] t=56278.7 frame 14286 59.9 fps max 17ms (307651 draws, 0 skipped, 16832 passes, 1440 dispatches, 756 flushes, wait 0ms, compile 0 (warm 6), fbcopy 0 (+48719 live), upload 69.3MB, sets 618302 (556287 shared), fbloop 26758 (26398 barriers), gmem waits 0 holds 0, uub 48744 (9612 same), gcopy 1619931 hit 175489 miss (64.3 MB))
+savagewind: [vk] t=56280.7 frame 14406 59.9 fps max 18ms (308081 draws, 0 skipped, 16811 passes, 1440 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+49562 live), upload 70.2MB, sets 619162 (556318 shared), fbloop 27220 (26860 barriers), gmem waits 0 holds 0, uub 48733 (9606 same), gcopy 1627630 hit 175020 miss (64.5 MB))
+savagewind: [vk] t=56282.7 frame 14526 59.9 fps max 24ms (373741 draws, 0 skipped, 16169 passes, 1440 dispatches, 852 flushes, wait 0ms, compile 0 (warm 36), fbcopy 0 (+70737 live), upload 90.7MB, sets 750482 (680466 shared), fbloop 38793 (38433 barriers), gmem waits 0 holds 0, uub 47859 (9696 same), gcopy 2001005 hit 223157 miss (79.6 MB))
+<118>[SceShellCore] Libc Heap Status: free 52%, in-use 3831.8 KB, trend +0.0 KB/min, peak 7758.7 KB, when 40256 [sec]
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4359 reads, 4309 empty, largest batch 1, 200.2-208.1 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=56284.7 frame 14646 59.9 fps max 18ms (390384 draws, 0 skipped, 15977 passes, 1050 dispatches, 876 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+77488 live), upload 87.0MB, sets 783378 (712218 shared), fbloop 42344 (41984 barriers), gmem waits 0 holds 0, uub 47664 (9732 same), gcopy 2105140 hit 233362 miss (82.6 MB))
+savagewind: [vk] t=56286.7 frame 14766 60.0 fps max 30ms (472168 draws, 0 skipped, 16862 passes, 840 dispatches, 850 flushes, wait 0ms, compile 0 (warm 48), fbcopy 0 (+67972 live), upload 93.3MB, sets 946736 (873734 shared), fbloop 36012 (35688 barriers), gmem waits 0 holds 0, uub 50341 (11426 same), gcopy 2663411 hit 253778 miss (84.4 MB))
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -35.2 dBFS rms -51.4 dBFS
+savagewind: [audio] streams in: 2000 puts, 480000 frames, 955603 nonzero samples, peak -35.2 dBFS; ring read peak -35.2 dBFS; 1 resumed, lowest gain 1.00
+savagewind: [audren-sdk] 50000 frames: render 508 us (max 688), mutex wait max 79 us, 0 underruns, peak 0.017; 2000 with the sink, voice sources 20 (max 20), command ids 0x4218a9c0, mix buffers peak 0.017, gain 1.00
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [ipc] STUB prepo:u cmd 10107 (in 48 bytes, x1 a1 b0 c0) -> ok
+savagewind: radv/ps5 submissions: window count=4098 kwords=75252 claim_ms=8.5 copy_ms=29.5 flush_ms=11.2 agc_ms=91.3 suspend_ms=960.0
+savagewind: [vk] t=56288.7 frame 14886 59.9 fps max 21ms (569605 draws, 0 skipped, 17264 passes, 840 dispatches, 765 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+42687 live), upload 80.7MB, sets 1141610 (1071084 shared), fbloop 21547 (21307 barriers), gmem waits 0 holds 0, uub 51060 (11349 same), gcopy 3391256 hit 256798 miss (77.4 MB))
+savagewind: [vk] t=56290.7 frame 15006 59.9 fps max 18ms (382654 draws, 0 skipped, 16397 passes, 840 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+38507 live), upload 63.1MB, sets 767708 (707757 shared), fbloop 24114 (23874 barriers), gmem waits 0 holds 0, uub 48553 (9541 same), gcopy 2257477 hit 181918 miss (60.1 MB))
+savagewind: [vk] t=56292.7 frame 15126 59.9 fps max 18ms (386212 draws, 0 skipped, 16335 passes, 840 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+38378 live), upload 63.4MB, sets 774824 (714914 shared), fbloop 23984 (23744 barriers), gmem waits 0 holds 0, uub 48490 (9538 same), gcopy 2280953 hit 183165 miss (60.4 MB))
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4357 reads, 4308 empty, largest batch 1, 199.6-209.7 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=56294.7 frame 15246 59.9 fps max 19ms (493487 draws, 0 skipped, 16435 passes, 862 dispatches, 756 flushes, wait 0ms, compile 0 (warm 4), fbcopy 0 (+42409 live), upload 73.9MB, sets 989396 (922625 shared), fbloop 24931 (24691 barriers), gmem waits 0 holds 0, uub 48410 (9589 same), gcopy 2970734 hit 221745 miss (70.6 MB))
+savagewind: [glyphs] 256x1024 BC4 texture 72b483b000 is not the button glyph sheet (hash c58bf43d06b2e6f6)
+savagewind: [vk] t=56296.7 frame 15366 59.9 fps max 22ms (498085 draws, 0 skipped, 17249 passes, 975 dispatches, 757 flushes, wait 0ms, compile 0 (warm 77), fbcopy 0 (+49309 live), upload 119.5MB, sets 998705 (914083 shared), fbloop 27449 (27209 barriers), gmem waits 0 holds 0, uub 49596 (10198 same), gcopy 2859570 hit 274255 miss (92.3 MB))
+savagewind: [audio] AudioOut 10.0 s: 1874 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams, queue peak 2512 frames, level peak -10.4 dBFS rms -31.1 dBFS
+savagewind: [audio] streams in: 1999 puts, 479760 frames, 956379 nonzero samples, peak -10.4 dBFS; ring read peak -10.4 dBFS; 1 resumed, lowest gain 1.00
+savagewind: [audren-sdk] 52000 frames: render 518 us (max 746), mutex wait max 133 us, 0 underruns, peak 0.302; 2000 with the sink, voice sources 23 (max 26), command ids 0x4218adc0, mix buffers peak 0.302, gain 1.00
