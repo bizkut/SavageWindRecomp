@@ -16,6 +16,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <sys/stat.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,6 +35,16 @@ static inline bool rt_data_path(const char *path, char *out, size_t size) {
     int n = absolute || !root || !*root ? snprintf(out, size, "%s", path)
                                          : snprintf(out, size, "%s/%s", root, path);
     return n >= 0 && (size_t)n < size;
+}
+// fopen / stat of a data-root-relative path for reading (rt_data_path): the same file the working directory gives on
+// desktop, and the absolute one on the PS5, whose title cannot make the data root its working directory
+static inline FILE *rt_data_fopen(const char *path, const char *mode) {
+    char host[1024];
+    return rt_data_path(path, host, sizeof host) ? fopen(host, mode) : NULL;
+}
+static inline int rt_data_stat(const char *path, struct stat *st) {
+    char host[1024];
+    return rt_data_path(path, host, sizeof host) ? stat(host, st) : -1;
 }
 bool rt_dev_mode(void);           // dev / portable mode (rule 2 above): e.g. a source checkout
 

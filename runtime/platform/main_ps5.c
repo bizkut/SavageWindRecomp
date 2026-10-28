@@ -1,4 +1,4 @@
-// PS5 M2 game entry: stop at the first NVN call, before creating a renderer.
+// PS5 game entry: the game on its guest thread, the VideoOut window and renderer on the main thread (ui_run).
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "../gamelib.h"
 #include "../hle.h"
@@ -20,21 +20,10 @@ static void exit_title(void) {
     sceSystemServiceLoadExec("exit", NULL);
     for (;;) sleep(1);
 }
-HLE_FUNC("nvnBootstrapLoader", first_nvn) {
-    char name[129] = "<invalid>";
-    uint64_t address = c->x[0];
-    if (address >= GUEST_LO && address < GUEST_HI) {
-        size_t n = 0;
-        while (n < sizeof name - 1 && n < GUEST_HI - address) {
-            unsigned char ch = *(const unsigned char *)(uintptr_t)(address + n);
-            if (!ch) break;
-            name[n++] = ch >= 32 && ch < 127 ? (char)ch : '?';
-        }
-        name[n] = 0;
-    }
-    ps5_logf("first NVN call: nvnBootstrapLoader requested=%s\n", name);
-    exit_title();
-}
+// No in-place reboot (runtime/main.c: back to the start screen, or the game again): the title has no start screen,
+// and nothing on the PS5 asks for one. SAVAGEWIND_REBOOT_AT is a desktop test (a title has no environment).
+int rt_reboot_requested(void) { return 0; }
+void reboot_test_frame(uint64_t frame) { (void)frame; }
 
 static void module_init(Cpu *c, Module *m) {
     if (m->init) guest_call(c, m->init);
@@ -61,7 +50,7 @@ static void fini_main(Cpu *c) {
 }
 
 int main(void) {
-    sceKernelDebugOutText(0, "savagewind: PPSA90212 M2 1.9.0 startup\n");
+    sceKernelDebugOutText(0, "savagewind: PPSA90212 M3 1.9.0 startup\n");
     if (ps5_klog_capture_stderr("savagewind: ") != 0) {
         sceKernelDebugOutText(0, "savagewind: cannot capture stderr\n");
         exit_title();
@@ -71,7 +60,7 @@ int main(void) {
         exit_title();
     }
     plat_init();
-    ps5_logf("[input] no PS5 controller backend in M2; HID exposes no connected host controller\n");
+    ps5_logf("[input] no PS5 controller backend before M4; HID exposes no connected host controller\n");
     rt_paths_init();
     char why[512] = "";
     if (!gamelib_load(NULL, why, sizeof why) || !ps5_exefs_init("/data/savagewind/import", why, sizeof why)) {
@@ -110,5 +99,7 @@ int main(void) {
     KThread *thread = kernel_create_main_thread(start, stack_size, prio);
     fprintf(stderr, "[ps5] entering linked game code at %llx\n", (unsigned long long)start);
     kernel_run_main(thread, thread->handle, 0, sdk, game, fini);
-    for (;;) sleep(1);
+    extern int ui_run(void);  // runtime/nvn/vulkan/device.c: the display plane and device, then the window loop
+    ui_run();
+    exit_title();
 }

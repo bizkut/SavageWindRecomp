@@ -20,6 +20,12 @@
 #define CHUNK (1ull << 20)
 #define STACK_BYTES (256ull << 20)
 #define MAX_STACKS 256
+// Guest stacks are reserved at fixed addresses in [STACK_AREA, STACK_AREA + MAX_STACKS * STACK_BYTES): 64 GiB below
+// the platform heap (0x2000000000), above where the kernel places mappings given no address. Left to the kernel,
+// 256 MiB reservations filled RADV's 4 GiB shader address window [0x200000000, 0x300000000), where every descriptor
+// pool, push constant and shader buffer must go (PS5_Mesa radv_ps5_platform.h), and descriptor pools failed with
+// VK_ERROR_OUT_OF_DEVICE_MEMORY (ps5/evidence/m3/run2.klog: a guest stack at 0x210000000).
+#define STACK_AREA 0x1000000000ull
 #define MAX_GUEST_CHUNKS (16 * 1024)
 
 typedef struct {
@@ -104,9 +110,14 @@ int plat_guest_thread_create(pthread_t *thread, void *(*entry)(void *), void *ar
     pthread_mutex_lock(&stack_lock);
     unsigned n = atomic_load(&stack_count);
     if (n == MAX_STACKS) { pthread_mutex_unlock(&stack_lock); return EAGAIN; }
-    void *base = NULL;
-    int rc = sceKernelReserveVirtualRange(&base, STACK_BYTES, 0, STACK_BYTES);
-    if (rc) { pthread_mutex_unlock(&stack_lock); return EAGAIN; }
+    void *base = (void *)(uintptr_t)(STACK_AREA + (uint64_t)n * STACK_BYTES);
+    int rc = sceKernelReserveVirtualRange(&base, STACK_BYTES, PS5_KERNEL_MAP_FIXED, 0);
+    if (rc || base != (void *)(uintptr_t)(STACK_AREA + (uint64_t)n * STACK_BYTES)) {
+        ps5_logf("[ps5] guest stack %u: reserving %#llx failed (%d)\n", n,
+                 (unsigned long long)(STACK_AREA + (uint64_t)n * STACK_BYTES), rc);
+        pthread_mutex_unlock(&stack_lock);
+        return EAGAIN;
+    }
     StackRange *s = &stacks[n];
     s->lo = (uintptr_t)base;
     if (!map_chunk(s->lo + STACK_BYTES - CHUNK, &s->chunks[STACK_BYTES / CHUNK - 1])) {
@@ -149,8 +160,9 @@ static void crash_handler(int sig, siginfo_t *si, void *context) {
     uint64_t pc = uc->uc_mcontext.mc_rip;
     g_fault_is_write = !!(uc->uc_mcontext.mc_err & 2);
     if (rt_fault_watch(a, pc)) return;
-    char what[32];
-    snprintf(what, sizeof what, "signal %d", sig);
+    char what[64];  // (si_code: SEGV_MAPERR 1 / SEGV_ACCERR 2; err: the CPU's page-fault error code, bit 1 a write)
+    snprintf(what, sizeof what, "signal %d (si_code %d, err %#llx)", sig, si->si_code,
+             (unsigned long long)uc->uc_mcontext.mc_err);
     rt_fault_report(what, a, pc, 0);
 }
 

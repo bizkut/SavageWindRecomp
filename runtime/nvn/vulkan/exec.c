@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "../../kernel.h"
+#include "../../paths.h"
 #include "shaders.h"
 #include "vk.h"
 #include "../renderer.h"
@@ -4086,7 +4087,7 @@ static void pso_load(void) {
     pso_seed = hash_words(0xcbf29ce484222325ull, &want, sizeof want);
     char path[512];
     vk_cache_path(path, sizeof path, "vk_pipelines.list");
-    FILE *f = fopen(path, "rb");
+    FILE *f = rt_data_fopen(path, "rb");
     const char *why = f ? NULL : "no file yet";
     int bad = 0, dup = 0;
     bool rewrite = false;

@@ -16,6 +16,7 @@
 // ---- what shaders.c needs from the rest of the runtime
 VkG g_vk;
 void rt_fatal_trace(void) { abort(); }
+const char *rt_data_root(void) { return ""; }  // (cache paths stay relative to the working directory)
 ShaderInfo *old_maxwell_translate(const uint8_t *c, size_t m, int s, const ShaderKey *k) { (void)c, (void)m, (void)s, (void)k; return NULL; }
 void old_maxwell_free(ShaderInfo *s) { (void)s; }
 uint64_t old_maxwell_gmem_base, old_maxwell_gmem_size;

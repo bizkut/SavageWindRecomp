@@ -73,6 +73,7 @@ static inline IpcBuf *in_buf(IpcReq *req, int i) {
 Service *service_new(const char *name, ServiceHandler h, void *state);
 Service *service_lookup(const char *name);  // from the registry (services/*.c)
 void ipc_return_object(IpcResp *resp, Service *s);
+void ipc_log_in_flight(void);  // (crash reports) the service and command whose handler this thread is running
 
 typedef struct { const char *name; ServiceHandler handler; } ServiceDef;
 #ifdef __APPLE__

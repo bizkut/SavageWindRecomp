@@ -465,6 +465,17 @@ static void create_device(void) {
     VkDeviceCreateInfo di = {.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, .pNext = &f, .queueCreateInfoCount = 1,
                              .pQueueCreateInfos = &qi, .enabledExtensionCount = n_ext, .ppEnabledExtensionNames = ext};
     VK_CHECK(vkCreateDevice(g_vk.phys, &di, NULL, &g_vk.dev));
+    {   // what the device was made with: its extensions and the optional core features taken
+        char list[1024];
+        size_t k = 0;
+        for (uint32_t i = 0; i < n_ext && k < sizeof list; i++)
+            k += (size_t)snprintf(list + k, sizeof list - k, "%s%s", i ? " " : "", ext[i]);
+        LOG("[vk] device created: %u queue(s), extensions: %s\n", qi.queueCount, n_ext ? list : "none");
+        LOG("[vk] device features: anisotropy %d, BC %d, int64 %d, depth clamp %d, wide lines %d, precise occlusion %d, "
+            "custom border %d, attribute divisor %d, host import %d\n", b->samplerAnisotropy, b->textureCompressionBC,
+            b->shaderInt64, b->depthClamp, b->wideLines, b->occlusionQueryPrecise, g_vk.custom_border, g_vk.divisor,
+            g_vk.host_import);
+    }
     vkGetDeviceQueue(g_vk.dev, g_vk.qfam, 0, &g_vk.queue);
     g_vk.present_queue = g_vk.queue;
     if (qi.queueCount == 2) vkGetDeviceQueue(g_vk.dev, g_vk.qfam, 1, &g_vk.present_queue);
@@ -586,7 +597,7 @@ static VkPipelineCache pc_open(const char *name, bool load, bool open_only, char
     vk_cache_path(path, npath, name);
     *size = 0;
     void *data = NULL;
-    FILE *fp = load ? fopen(path, "rb") : NULL;
+    FILE *fp = load ? rt_data_fopen(path, "rb") : NULL;
     if (fp) {
         *why = NULL;
         data = pc_read(fp, size, why);
@@ -651,7 +662,7 @@ bool vk_precompiled_cache_ok(void) {
     if (!g_vk.dev || !g_vk.gpl || pc_off) return true;
     char path[512];
     vk_cache_path(path, sizeof path, "vk_precompiled.bin");
-    FILE *f = fopen(path, "rb");
+    FILE *f = rt_data_fopen(path, "rb");
     PcHeader h, want;
     pc_header(&want);
     bool ok = f && fread(&h, sizeof h, 1, f) == 1 && !memcmp(h.magic, want.magic, 8) && h.version == want.version &&
@@ -1706,6 +1717,9 @@ presented:
         extern int framepace_target(void);
         if (ft) LOG("[ft] %.3f %llu %d\n", SDL_GetTicksNS() / 1e6, (unsigned long long)total_frames, framepace_target());
     }
+    if (!total_frames)
+        LOG("[vk] first game frame presented: game image %ux%u into the %ux%u swapchain (%s)\n", b->width, b->height,
+            g_vk.sc_extent.width, g_vk.sc_extent.height, present_mode_name(g_vk.sc_mode));
     frames++;
     total_frames++;
     g_frame_counter++;

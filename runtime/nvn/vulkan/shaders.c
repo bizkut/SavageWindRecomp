@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <zlib.h>
 
+#include "../../paths.h"
 #include "../shader_archive.h"
 #include "shaders.h"
 #ifdef __PROSPERO__
@@ -76,7 +77,7 @@ static void xlate_path(char *path, size_t n, uint64_t h) {
 static ShaderInfo *xlate_load(uint64_t h, const XlateHeader *want, int stage) {
     char path[512];
     xlate_path(path, sizeof path, h);
-    FILE *f = fopen(path, "rb");
+    FILE *f = rt_data_fopen(path, "rb");
     if (!f) return NULL;
     XlateHeader hd;
     ShaderInfo *si = NULL;
@@ -219,7 +220,8 @@ static void *cleanup_thread(void *arg) {
     for (int i = 0; i < 2; i++) {
         char dir[512];
         vk_cache_path(dir, sizeof dir, sub[i]);
-        DIR *d = opendir(dir);
+        char host[1024];  // (read through the data root's path; removed by dir's: the PS5's broker takes those)
+        DIR *d = rt_data_path(dir, host, sizeof host) ? opendir(host) : NULL;
         if (!d) continue;
         struct dirent *e;
         while ((e = readdir(d))) {
@@ -227,7 +229,7 @@ static void *cleanup_thread(void *arg) {
             char path[800];
             snprintf(path, sizeof path, "%s/%s", dir, e->d_name);
             struct stat st;
-            if (stat(path, &st)) continue;
+            if (rt_data_stat(path, &st)) continue;
 #ifdef __PROSPERO__
             if (S_ISDIR(st.st_mode) ? rt_storage_remove_tree(path) == 0 : rt_storage_unlink(path) == 0) removed++;
 #else
@@ -353,7 +355,7 @@ static void keylog_load(void) {  // (keylog_lock held)
     keylog_header(&want);
     char path[512];
     vk_cache_path(path, sizeof path, "vk_shader_keys.list");
-    FILE *f = fopen(path, "rb");
+    FILE *f = rt_data_fopen(path, "rb");
     if (!f) return;
     int bad = 0, dup = 0;
     bool ok = fread(&h, sizeof h, 1, f) == 1 && !memcmp(&h, &want, sizeof h);

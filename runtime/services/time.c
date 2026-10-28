@@ -73,7 +73,8 @@ static void to_calendar(int64_t t, IpcResp *resp, int utc) {
     memcpy(o + 16, utc ? "UTC" : "LCL", 4);
 #else
     long gmtoff = tm.tm_gmtoff;
-    memcpy(o + 16, utc ? "UTC" : tm.tm_zone, 4);
+    const char *zone = utc ? "UTC" : tm.tm_zone ? tm.tm_zone : "LCL";  // (the PS5 title libc leaves tm_zone NULL)
+    memcpy(o + 16, zone, strnlen(zone, 3) + 1);
 #endif
     *(uint32_t *)(o + 24) = (uint32_t)tm.tm_isdst;
     *(int32_t *)(o + 28) = utc ? 0 : (int32_t)gmtoff;

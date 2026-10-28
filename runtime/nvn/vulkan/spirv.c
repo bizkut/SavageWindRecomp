@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include "../../paths.h"
 #include "shaders.h"
 #ifdef __PROSPERO__
 #include "../../storage_ps5.h"
@@ -49,7 +50,7 @@ static void spirv_path(char *path, size_t n, uint64_t h) {
 static uint32_t *cache_load(uint64_t h, size_t *nwords) {
     char path[512];
     spirv_path(path, sizeof path, h);
-    FILE *f = fopen(path, "rb");
+    FILE *f = rt_data_fopen(path, "rb");
     if (!f) return NULL;
     fseek(f, 0, SEEK_END);
     long n = ftell(f);
@@ -168,7 +169,7 @@ int vk_spirv_ensure(const char *src, int stage) {
     char path[512];
     spirv_path(path, sizeof path, src_hash(src, stage));
     struct stat st;
-    if (!getenv("SAVAGEWIND_VK_NO_SPIRV_CACHE") && !stat(path, &st) && st.st_size > 20) return 0;
+    if (!getenv("SAVAGEWIND_VK_NO_SPIRV_CACHE") && !rt_data_stat(path, &st) && st.st_size > 20) return 0;
     size_t n = 0;
     uint32_t *spv = vk_glsl_to_spirv(src, stage, "precompile", &n);
     free(spv);

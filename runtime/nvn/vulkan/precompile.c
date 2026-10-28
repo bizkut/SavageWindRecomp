@@ -25,6 +25,7 @@
 #endif
 
 #include "../../kernel.h"
+#include "../../paths.h"
 #include "../precompile.h"
 #include "../shader_archive.h"
 #include "shaders.h"
@@ -227,7 +228,7 @@ int shader_precompile_status(int *shaders, char *date, int n) {
     char path[512], version[128] = "", day[32] = "";
     int count = 0;
     status_path(path, sizeof path);
-    FILE *f = fopen(path, "r");
+    FILE *f = rt_data_fopen(path, "r");
     if (!f) return 0;
     if (!fgets(version, sizeof version, f) || fscanf(f, "%d %31s", &count, day) != 2) version[0] = 0;
     fclose(f);

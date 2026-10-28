@@ -7,6 +7,7 @@
 
 #include "gamelib.h"
 #include "hle.h"
+#include "ipc.h"
 #include "kernel.h"
 
 typedef struct { const uint64_t *addrs; const GuestFn *fns; uint64_t count, lo, hi; } FnTable;
@@ -223,6 +224,7 @@ static const char *host_sym(uint64_t pc, uint64_t *offset) {
 void rt_fatal_trace(void) {
     LOG("host backtrace (guest functions are f_<addr>):\n");
     plat_print_backtrace();
+    ipc_log_in_flight();
     Cpu *c = kernel_current_cpu();
     if (c) {
         LOG("guest: sp=%llx lr=%llx\n", c->sp, c->x[30]);

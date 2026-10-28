@@ -418,3 +418,31 @@ The title found 2 modes (3840×2160 at 119.88 and 59.94 Hz) and chose 119.88 Hz.
 VRR(peg:120 range:48-120); the GPU is RADV NAVI21 with Vulkan 1.4.354; the swapchain is 3840×2160 with 4 images,
 FIFO, at 119.88 Hz. After that the host faults inside `ipc_handle_request` handling a guest request with a 270-byte
 buffer at 0x7090000000. No frame has been presented yet.
+
+## 2026-10-28 — M3 run 1: VideoOut 4K at 119.88 Hz with VRR, then a time-zone service fault (.41, ps5/evidence/m3/run1.klog)
+
+Eboot `51fc7cfe…`. The renderer came up: the display reported two modes (3840x2160 at 119.880 and 59.940 Hz), mode 0
+was chosen, the WSI logged `119.88 Hz selected with title VRR metadata` and AvControl `VRR(peg:120 range:48 - 120)`;
+RADV NAVI21 (API 1.4.354) made the device with maintenance5, graphics pipeline libraries and feedback loops, a
+3840x2160 swapchain of 4 FIFO images, and the game's NVN device initialized. The title then stopped on SIGSEGV at
+address 0 in `ITimeZoneService` command 101 (ToCalendarTimeWithMyRule): the title libc's `localtime_r` leaves
+`tm_zone` NULL, which `runtime/services/time.c` read. Fixed. The same run showed the shader and pipeline caches
+being looked up at cwd-relative paths, which a title cannot use (no `chdir`); their reads now resolve through the data
+root. The rebuilt eboot (`b1bb1921…`) needs a console run.
+
+## 2026-10-28 — M3 run 2: first frame presented, then RADV's shader address window was full (.41, ps5/evidence/m3/run2.klog)
+
+Eboot `b1bb1921…`: `[vk] first game frame presented: game image 1920x1080 into the 3840x2160 swapchain (fifo)`, then
+`vkCreateDescriptorPool` failed with -2 (VK_ERROR_OUT_OF_DEVICE_MEMORY, not host memory) about 0.5 s later. RADV's PS5
+winsys puts every descriptor pool, push-constant and shader buffer in a 4 GiB window at 0x200000000, where the kernel
+places mappings given no address; the runtime's 256 MiB guest-stack reservations (40 threads) were placed there too
+(a stack at 0x210000000 in this log) and filled it. Guest stacks are now reserved at fixed addresses from
+0x1000000000. Rebuilt eboot `b692af88…`; needs a console run.
+
+## 2026-10-28 — M3 run 3: the game renders on VideoOut at ~58.6 fps (.41, ps5/evidence/m3/run3)
+
+With guest stacks moved out of RADV's 32-bit BO window (run 2: `vkCreateDescriptorPool` -2), the game presents its
+1920×1080 image into the 3840×2160 FIFO swapchain at 119.88 Hz with VRR: `frame 109 53.8 fps max 252ms`, then
+`frame 227 58.6 fps max 75ms` (236 draws/2 s, 0 waits). After ~4 s the game's own sead assertion fires
+(`[lm] … seadRawPrintNin.cpp PrintStringImpl … SDK has been aborted or failed assertion with no message`) →
+`svcBreak(reason=0)` at guest 0x700267974c. Not yet seen on the TV by a person; title screen unconfirmed.

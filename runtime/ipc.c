@@ -16,6 +16,13 @@ __attribute__((section(".svc$a"), used)) static const ServiceDef __start_service
 __attribute__((section(".svc$z"), used)) static const ServiceDef __stop_services[1];
 #endif
 
+// The request this thread's handler is running (rt_fatal_trace names it when a handler faults)
+static __thread const char *ipc_in_flight_svc;
+static __thread uint32_t ipc_in_flight_cmd;
+void ipc_log_in_flight(void) {
+    if (ipc_in_flight_svc) LOG("in IPC handler: %s cmd %u\n", ipc_in_flight_svc, ipc_in_flight_cmd);
+}
+
 static void stub_handler(Service *s, IpcReq *req, IpcResp *resp) {
     LOG("[ipc] STUB %s cmd %u (in %u bytes, x%d a%d b%d c%d) -> ok\n", s->name, req->cmd, req->data_size, req->nx,
         req->na, req->nb, req->nc);
@@ -202,7 +209,9 @@ int ipc_handle_request(Cpu *c, uint32_t handle) {
             target = req.domain_obj < 256 ? sess->domain->objs[req.domain_obj] : NULL;
             if (!target) { LOG("[ipc] domain object %u missing\n", req.domain_obj); return 0xE401; }
         }
+        ipc_in_flight_svc = target->name, ipc_in_flight_cmd = req.cmd;
         target->handler(target, &req, &resp);
+        ipc_in_flight_svc = NULL;
     } else if (req.type == 5 || req.type == 7) {  // control
         req.cmd = *(uint32_t *)(payload + 8);
         LOG("[ipc] control %u on %s (handle %x)\n", req.cmd, sess->svc->name, handle);
