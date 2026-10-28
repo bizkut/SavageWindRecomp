@@ -452,7 +452,9 @@ it, so an explicit choice in the Video page always wins, also across updates:
   once M7's done-when passes; until then it stays Off.
 - Upscaler, by output resolution and measured with the benchmark with FG on: at 1080p, native 1080p without FSR;
   at 4K, FSR 1 from the highest internal resolution whose GPU time (game + MihawkGen) keeps the frame target. Start
-  candidates: 1440p (Quality), then 1080p (Performance), which M6 measured at 7.7 ms GPU without FG.
+  candidates: 1440p (Quality), then 1080p (Performance), which M6 measured at 7.7 ms GPU without FG. Until a higher
+  internal resolution is benchmarked, the 4K default stays the measured M6 configuration (1920×1080 internal →
+  3840×2160, `[post] 1920x1080 fsr1 -> 3840x2160`).
 
 Status 2026-10-28 (host-built, eboot `46779550…`, not yet run on the console): the backend choice is the build's
 (`runtime/nvn/vulkan/framegen.h` `g_fg_backend`: desktop links `framegen.cpp`, FSR 3; the PS5 links `mihawk.cpp`,
