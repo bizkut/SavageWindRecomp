@@ -455,8 +455,11 @@ it, so an explicit choice in the Video page always wins, also across updates:
   measured configuration is **2560×1440 internal → 3840×2160** (`[post] scene 2560x1440 fsr1 -> 3840x2160` in the
   M6/M7 benchmarks; the `1920x1080` `[post]` line is the title screen): GPU 7.7 ms per frame without FG, 11.6 ms with
   MihawkGen at 1440p (1.9 ms). That stays the 4K default; 1080p internal is the fallback if a heavier scene needs it.
+  Before M7 closes, the benchmark runs at 1080p and at 1440p internal (same route, same capture frames): GPU time and
+  the capture pairs side by side. BOTW's textures are Switch-resolution, so 1440p gains edges, distant detail and thin
+  geometry, not texture detail; if the 4K captures differ little, 1080p becomes the default and the GPU time is kept.
 
-Status 2026-10-28 (eboot `b3cca2a6…`, host-built; console runs of earlier builds in FINDINGS): the backend choice is
+Status 2026-10-28 (eboot `771afc26…`, host-built; console runs of earlier builds in FINDINGS): the backend choice is
 the build's (`runtime/nvn/vulkan/framegen.h` `g_fg_backend`: desktop links `framegen.cpp`, FSR 3; the PS5 links
 `mihawk.cpp`, MihawkGen, so no GPL code reaches the desktop build). MihawkGen is pinned in `ps5/deps.lock`
 (`c57232a9…`, weights `network.fgw` by SHA-256), exported with `git archive` into `.deps/ps5/mihawkgen` and compiled
@@ -467,9 +470,10 @@ two game frames (the scene composite before the HUD, as FSR 3 uses), scaled down
 up to the final image's 4K with FSR 1 EASU + RCAS as the scene does, and the newest frame's HUD is put over it
 (`fg_hud.frag`). `device.c` presents it as FSR 3's frame (crop, anti-aliasing) and the game's frame half a period
 later, on a grid of the game's period (late frames move it, early ones bring it back 1 ms a pair), from a present
-thread (on the one queue the PS5 has, under a queue lock; up to three queued presents). This replaces D7's "4K
-output" (the 4K generator measured 2.75 ms, FINDINGS). The frame-rate limit counts the game's frames
-(`framepace.c`: 60 gives 120 presents; capped at half the refresh rate, without VSync's VRR margin);
+thread (on the one queue the PS5 has, under a queue lock; up to three queued presents; a generated frame with no free
+window image is dropped rather than stalling the game). This replaces D7's "4K output" (the 4K generator measured
+2.75 ms, FINDINGS). The frame-rate limit counts the game's frames (`framepace.c`: 60 gives ~120 presents; held 0.5 %
+under half the refresh rate, 59.64 fps and 119.28 presents at 119.88 Hz, so FIFO can drain; not VSync's VRR margin);
 camera cuts and the first frame after FG was off show the game's frame twice. The generator's GPU time (its passes'
 timestamps, `fg_context_set_profile`) is in the 2 s `[fg]` line, each wait and the render thread's CPU in
 `[fgpipe]`; the benchmark summary adds presented fps, the present-interval distribution and FG GPU ms, and 10 s of
