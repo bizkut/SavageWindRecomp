@@ -16,6 +16,9 @@ enum { UPSCALE_OFF = 0, UPSCALE_METALFX = 1 /* macOS */, UPSCALE_FSR1 = 2 /* AMD
 // quality modes, AMD's scale factors (per axis): Ultra Quality 1.3, Quality 1.5, Balanced 1.7, Performance 2.0
 enum { UPQ_ULTRA = 0, UPQ_QUALITY = 1, UPQ_BALANCED = 2, UPQ_PERFORMANCE = 3, UPQ_COUNT };
 enum { AA_OFF = 0, AA_SMAA = 1 };
+// MihawkGen's generated frame up to the game image's size (savagewind.ini fg_upscale; vulkan/exec.c fg_mihawk): FSR 1
+// (EASU + RCAS, as the 3D scene) or bilinear filtering (no EASU pass at the game image's size; softer)
+enum { FG_UP_FSR1 = 0, FG_UP_BILINEAR = 1 };
 // Shadow resolution (Video > Shadow resolution; runtime/nvn/output_scale.c shadow_map_size): the sun's shadow maps at
 // the console's size (BOTW: 896 x 896) or made bigger, for sharper shadows at some GPU time.
 enum { SHADOW_CONSOLE = 0, SHADOW_HIGH = 1 /* 2048 */, SHADOW_ULTRA = 2 /* 4096 */, SHADOW_EXTREME = 3 /* 8192 */, SHADOW_COUNT };
@@ -30,6 +33,14 @@ enum { PERF_OFF = 0, PERF_FPS = 1, PERF_FULL = 2 };
 // Adaptive the frame rate stays a little under the display's refresh rate (runtime/hle/framepace.c).
 enum { VSYNC_ON = 0, VSYNC_FAST = 1, VSYNC_ADAPTIVE = 2, VSYNC_OFF = 3, VSYNC_COUNT };
 #define VSYNC_DEFAULT VSYNC_FAST
+// Vulkan calls on a recorder thread (vulkan/record.h, upstream PR #189): on by default on the PS5, where the benchmark
+// measured the render thread at 9.1 ms instead of 11.3 with frame generation (99 % of frames on time instead of 88 %);
+// off elsewhere until measured there
+#ifdef __PROSPERO__
+#define VK_RECORDER_DEFAULT true
+#else
+#define VK_RECORDER_DEFAULT false
+#endif
 // Video > HDR: Auto presents in HDR10 while Windows HDR is on for the window's monitor, On always (where the display
 // takes it), Off never (an SDR picture, which Windows shows dim and dull while its HDR is on)
 enum { HDR_AUTO = 0, HDR_ON = 1, HDR_OFF = 2, HDR_COUNT };
@@ -43,6 +54,10 @@ typedef struct {
     int sharpening;      // AMD CAS sharpening of the 3D image, 0 (off) .. 10 (100%) (vulkan/exec.c scene_post)
     bool frame_gen;      // frame generation: a frame made between each two the game draws (vulkan/framegen.h: AMD FSR 3 on
                          // desktop, PS5_MihawkGen on the PS5, there at 119.88 Hz only)
+    int fg_upscale;      // FG_UP_* (savagewind.ini only: fg_upscale = fsr1 | bilinear)
+    bool fg_separate;    // (A/B, savagewind.ini only: fg_passes = separate) MihawkGen's passes after it unfused, as before
+    bool fg_split_submits;  // (A/B, savagewind.ini only: fg_split_submits = 1) the game's frame and MihawkGen's passes
+                            // as submissions of their own (vulkan/exec.c fg_mihawk)
     float volume;        // master volume, 1 = 100%
     bool reverb;         // room reverb effect
     bool movie_audio;
@@ -69,6 +84,8 @@ typedef struct {
     int text_language;   // index in g_text_languages (runtime/language.h), 0: the host's
     int voice_language;  // index in g_voice_languages, 0: the text language's voices
     bool menu_tip_seen;  // the start screen's one-time "how to open the menu" note was shown (first PLAY ever)
+    bool render_profile; // (diagnostics) the render thread's time by command kind (vulkan/rprof.h); ini only
+    bool vk_recorder;    // (A/B) Vulkan calls on a recorder thread of their own (vulkan/record.h, upstream PR #189); ini only
 } Settings;
 
 #define STICK_DEADZONE_DEFAULT 0.10f  // (the Switch's own input service has one: the game expects 0 at rest)

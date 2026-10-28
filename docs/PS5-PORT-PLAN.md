@@ -469,8 +469,10 @@ into the title; the title folder ships `network.fgw` and MihawkGen's licence and
 119.88 Hz and in play, `exec.c fg_mihawk` records the neural method at t = 0.5 between the HUD-less images of the last
 two game frames (the scene composite before the HUD, as FSR 3 uses), scaled down to the 3D scene's internal size
 (2560×1440 at 4K with FSR 1 Quality), 3 slots = frames in flight, all barriers its own; the generated frame goes back
-up to the final image's 4K with FSR 1 EASU + RCAS as the scene does, and the newest frame's HUD is put over it
-(`fg_hud.frag`). `device.c` presents it as FSR 3's frame (crop, anti-aliasing) and the game's frame half a period
+up to the final image's 4K with FSR 1 EASU + RCAS as the scene does (or bilinearly: `fg_upscale = bilinear` in
+savagewind.ini), and the newest frame's HUD is put over it (`fg_out.frag`, RCAS fused into that pass, drawn straight
+into the window when the image is 1:1 there; `fg_passes = separate` keeps the passes apart, A/B; per-pass GPU time in
+the `[fg]` line). `device.c` presents it as FSR 3's frame (crop, anti-aliasing) and the game's frame half a period
 later, on a grid of the game's period (late frames move it, early ones bring it back 1 ms a pair), from a present
 thread (on the one queue the PS5 has, under a queue lock; up to three queued presents; a generated frame with no free
 window image is dropped rather than stalling the game). This replaces D7's "4K output" (the 4K generator measured

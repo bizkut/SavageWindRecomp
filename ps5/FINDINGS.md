@@ -833,3 +833,40 @@ state preparation, descriptor sets, textures and fragment-stage sets ~1–1.6 ms
 driver time inside it: 6.29 ms with FG (13,321 calls; `vkQueueSubmit2` 2.07 ms for 7 calls, `vkAcquireNextImageKHR`
 1.06, `vkCmdDrawIndexed` 1.13) vs 3.35 ms without (`vkQueueSubmit2` 0.34 ms). So FG adds ~1.7 ms of submit cost on the
 render thread, and ~3.3 ms of per-draw driver calls are what PR #189's recorder thread would move off it.
+
+## 2026-10-28 — M7: frame generation's 4K passes cut, per-pass timestamps (eboot `4df894cb…`, host-built, not yet run)
+
+Per generated frame the FG path ran, after MihawkGen at the internal size: the HUD-less blit (4K), its scale-down,
+EASU into a 4K image, RCAS into another, `fg_hud.frag` into a third (FG_MH_OUT), then the present's 4K copy of that
+into the window. Now (`exec.c fg_mihawk`, `vk_present_draw`, `shaders.c fg_out.frag`): RCAS and the HUD composite are
+one pass, and that pass is drawn straight into the window image at the present when the game image is 1:1 there (the
+PS5 at 4K, no SMAA) — two 4K images written and read fewer (RCAS's and FG_MH_OUT), the present's copy gone. In FSR 1
+mode the bytes are the old ones: the same RCAS code reads the same EASU image, and its result goes into an 8-bit UNORM
+target as rcas.frag's went into its RGBA8 image (the window must be 8-bit UNORM, else FG_MH_OUT is drawn first and
+presented; a non-8-bit game image keeps RCAS's own image). Not fused: the HUD-less blit and its scale-down, since the
+scale-down reads the blit's sRGB-encoded bytes and a shader can't reproduce the hardware's encode exactly (the
+generator's input would change). savagewind.ini: `fg_upscale = bilinear` (EASU skipped, the generated frame sampled
+bilinearly in the last pass; softer, default `fsr1`), `fg_passes = separate` (the old passes, for A/B),
+`fg_split_submits = 1` (A/B, off: the game's frame and FG's passes each a submission of its own, so the game's fences
+are signalled before FG's passes and those don't wait for the window image's acquire; two vkQueueSubmit2 more a frame,
+which cost ~0.3 ms each on the render thread while the GPU is busy, rprof-fg1.klog). The `[fg]` line adds each pass's
+GPU time (timestamps before and after it, mean over the frames that had it): HUD-less copy, down, EASU, RCAS, HUD
+(separate mode or the not-1:1 case), present (the generated frame's into the window: with the fusion it includes RCAS
+and the HUD).
+
+## 2026-10-28 — Recorder thread (PR #189 port) and fused FG passes: A/B on .41 (ps5/evidence/m7/ab-*.klog)
+
+Eboot `4df894cb…` (1080p internal, benchmark route), each a single run unless noted:
+
+| | on time | render thread ms | GPU ms | game / presented fps |
+|---|---|---|---|---|
+| FG on, recorder off (2 runs) | 88.3 / 88.2 % | 11.22 / 11.33 | 10.34 / 9.99 | 58.3 / 116.6 |
+| **FG on, recorder on (2 runs)** | **98.6 / 99.0 %** | **9.14 / 9.12** | 9.97 / 10.02 | 58.8 / 117.7 |
+| FG off, recorder off | 99.0 % | 10.51 | 6.72 | 59.9 / 59.9 |
+| FG off, recorder on | 98.8 % | 8.61 | 6.80 | 59.9 / 59.9 |
+
+The recorder thread takes ~2 ms off the render thread and lifts FG-on frames on time from 88 % to 99 %. Fused FG
+passes (RCAS + HUD drawn straight into the window): GPU 9.99 ms vs 10.34 with `fg_passes = separate`. No fatal lines.
+**Recorder now on by default on the PS5** (`VK_RECORDER_DEFAULT`; desktop unchanged); eboot `83284089…` confirms
+"recorder thread on" with no ini key: 98.8 %, render 9.22 ms. Presented 117.7 fps vs the 119.28 cap: the game averages
+58.8, not 59.64.

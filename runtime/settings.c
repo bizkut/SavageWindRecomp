@@ -41,6 +41,7 @@ Settings g_settings = {
     .vsync = VSYNC_DEFAULT,
     .wide_view = true,
     .fov = 100,
+    .vk_recorder = VK_RECORDER_DEFAULT,
 };
 
 static const char *const k_vsync[VSYNC_COUNT] = {"on", "fast", "adaptive", "off"};  // (VSYNC_*: the ini's words)
@@ -111,6 +112,9 @@ void settings_load(void) {
             g_settings.anisotropy = a >= 16 ? 4 : a >= 8 ? 3 : a >= 4 ? 2 : a >= 2 ? 1 : 0;
         }
         else if (!strcmp(key, "frame_generation")) g_settings.frame_gen = atoi(val) != 0;
+        else if (!strcmp(key, "fg_upscale")) g_settings.fg_upscale = !strcmp(val, "bilinear") ? FG_UP_BILINEAR : FG_UP_FSR1;
+        else if (!strcmp(key, "fg_passes")) g_settings.fg_separate = !strcmp(val, "separate");
+        else if (!strcmp(key, "fg_split_submits")) g_settings.fg_split_submits = atoi(val) != 0;
         else if (!strcmp(key, "sharpening")) {  // (percent, in steps of 10)
             int p = atoi(val);
             g_settings.sharpening = p < 0 ? 0 : p > 100 ? 10 : (p + 5) / 10;
@@ -159,6 +163,8 @@ void settings_load(void) {
                 if (!strcmp(val, g_voice_languages[i].folder)) g_settings.voice_language = i;
         }
         else if (!strcmp(key, "menu_tip_seen")) g_settings.menu_tip_seen = atoi(val) != 0, tip_key = true;
+        else if (!strcmp(key, "render_profile")) g_settings.render_profile = atoi(val) != 0;
+        else if (!strcmp(key, "vk_recorder")) g_settings.vk_recorder = atoi(val) != 0;
         else bind_settings_load(key, val);  // bind_pad_* / bind_key_*: runtime/hle/bindings.c
     }
     fclose(f);
@@ -238,6 +244,9 @@ void settings_save(void) {
     else fprintf(f, "anisotropy = game\n");
     fprintf(f, "sharpening = %d\n", g_settings.sharpening * 10);
     fprintf(f, "frame_generation = %d\n", g_settings.frame_gen ? 1 : 0);
+    fprintf(f, "fg_upscale = %s\n", g_settings.fg_upscale == FG_UP_BILINEAR ? "bilinear" : "fsr1");
+    if (g_settings.fg_separate) fprintf(f, "fg_passes = separate\n");  // (A/B only: written while set)
+    if (g_settings.fg_split_submits) fprintf(f, "fg_split_submits = 1\n");
     fprintf(f, "dpad_move = %d\n", g_settings.dpad_move);
     fprintf(f, "left_stick_deadzone = %.0f\n", g_settings.stick_deadzone[0] * 100);
     fprintf(f, "right_stick_deadzone = %.0f\n", g_settings.stick_deadzone[1] * 100);
@@ -264,6 +273,9 @@ void settings_save(void) {
     fprintf(f, "text_language = %s\n", tl > 0 && tl < g_ntext_languages ? g_text_languages[tl].folder : "auto");
     fprintf(f, "voice_language = %s\n", vl > 0 && vl < g_nvoice_languages ? g_voice_languages[vl].folder : "text");
     fprintf(f, "menu_tip_seen = %d\n", g_settings.menu_tip_seen);
+    if (g_settings.render_profile) fprintf(f, "render_profile = 1\n");  // (diagnostics: kept only while on)
+    if (g_settings.vk_recorder != VK_RECORDER_DEFAULT)  // (written only when it differs from the platform's default)
+        fprintf(f, "vk_recorder = %d\n", g_settings.vk_recorder ? 1 : 0);
     bind_settings_save(f);
 #ifdef __PROSPERO__
     if (fclose(f) || rt_storage_replace(SETTINGS_FILE, contents, contents_size) < 0)

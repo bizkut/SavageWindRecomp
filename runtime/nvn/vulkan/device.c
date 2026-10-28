@@ -19,6 +19,8 @@
 #include "../../settings.h"
 #include "../../ui/menu.h"
 #include "../../window_size.h"
+#include "record.h"
+#include "rprof.h"
 #include "vk.h"
 #include "framegen.h"
 #include "../glyphs.h"
@@ -1040,7 +1042,7 @@ static void create_swapchain(void) {
         VkWriteDescriptorSet w = {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = hdr_sets[i], .dstBinding = 0,
                                   .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                                   .pImageInfo = &ii};
-        vkUpdateDescriptorSets(g_vk.dev, 1, &w, 0, NULL);
+        rec_UpdateDescriptorSets(1, &w);
     }
     if (g_hdr) LOG("[vk] HDR10 output (%s), SDR white at %.0f nits\n",
                    g_settings.hdr == HDR_ON ? "Video > HDR is On" : "Windows HDR is on for this display", g_hdr_white);
@@ -1195,6 +1197,7 @@ static void pt_retire(void) {
 static void recreate_swapchain(void) {
     vk_present_idle();
     pt_retire();
+    rec_drain();
     vkDeviceWaitIdle(g_vk.dev);
     create_swapchain();
 }
@@ -1304,6 +1307,7 @@ static void *present_thread(void *arg) {
         uint64_t depth = (uint64_t)presq_n;
         pthread_mutex_unlock(&pres_m);
         if (depth > atomic_load(&pp_depth_max)) atomic_store(&pp_depth_max, depth);
+        rec_wait_submitted(q.seq);  // (its semaphore's signal must be submitted first: record.c may not have yet)
         if (pres_shared && q.kind == PRES_PLAIN) {  // (drawn first: the present then holds the shared queue only briefly)
             VkSemaphoreWaitInfo wi = {.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO, .semaphoreCount = 1,
                                       .pSemaphores = &g_vk.timeline, .pValues = &q.seq};
@@ -1393,8 +1397,12 @@ static bool present_image(uint32_t img, VkSemaphore sem, int kind, uint64_t seq)
     if (!present_threaded()) {
         VkPresentInfoKHR pi = {.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, .waitSemaphoreCount = 1, .pWaitSemaphores = &sem,
                                .swapchainCount = 1, .pSwapchains = &g_vk.swapchain, .pImageIndices = &img};
+        rec_wait_submitted(seq);  // (as present_thread)
         present_wait_turn(kind, seq);
+        bool lock = rec_on();  // (the recorder thread submits on this queue meanwhile)
+        if (lock) vk_queue_lock();
         VkResult r = queue_present(g_vk.queue, &pi);
+        if (lock) vk_queue_unlock();
         benchmark_present(kind == PRES_GEN);
         return !(r == VK_ERROR_OUT_OF_DATE_KHR || r == VK_SUBOPTIMAL_KHR);
     }
@@ -1432,7 +1440,7 @@ static void image_barrier(VkCommandBuffer cb, VkImage img, VkImageLayout from, V
                                .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
                                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED};
     VkDependencyInfo di = {.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO, .imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &b};
-    vkCmdPipelineBarrier2(cb, &di);
+    rec_CmdPipelineBarrier2(cb, &di);
 }
 
 static void hdr_write(VkCommandBuffer cb, uint32_t i) {
@@ -1443,19 +1451,19 @@ static void hdr_write(VkCommandBuffer cb, uint32_t i) {
                                     .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .storeOp = VK_ATTACHMENT_STORE_OP_STORE};
     VkRenderingInfo ri = {.sType = VK_STRUCTURE_TYPE_RENDERING_INFO, .renderArea = {{0, 0}, g_vk.sc_extent}, .layerCount = 1,
                           .colorAttachmentCount = 1, .pColorAttachments = &ca};
-    vkCmdBeginRendering(cb, &ri);
+    rec_CmdBeginRendering(cb, &ri);
     VkViewport vp = {0, 0, (float)g_vk.sc_extent.width, (float)g_vk.sc_extent.height, 0, 1};
     VkRect2D sc = {{0, 0}, g_vk.sc_extent};
-    vkCmdSetViewport(cb, 0, 1, &vp);
-    vkCmdSetScissor(cb, 0, 1, &sc);
-    vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, hdr_pipe);
-    vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, hdr_layout, 0, 1, &hdr_sets[i], 0, NULL);
+    rec_CmdSetViewport(cb, 0, 1, &vp);
+    rec_CmdSetScissor(cb, 0, 1, &sc);
+    rec_CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, hdr_pipe);
+    rec_CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, hdr_layout, 0, 1, &hdr_sets[i], 0, NULL);
     static int srgb = -1;
     if (srgb < 0) srgb = getenv("SAVAGEWIND_HDR_SRGB") != NULL;
     float pc[2] = {g_hdr_white, (float)srgb};
-    vkCmdPushConstants(cb, hdr_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof pc, pc);
-    vkCmdDraw(cb, 3, 1, 0, 0);
-    vkCmdEndRendering(cb);
+    rec_CmdPushConstants(cb, hdr_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof pc, pc);
+    rec_CmdDraw(cb, 3, 1, 0, 0);
+    rec_CmdEndRendering(cb);
     vk_dyn_forget();
     image_barrier(cb, hdr_sc_images[i], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 }
@@ -1474,11 +1482,11 @@ static void frame_render_begin(const float *clear) {
     if (clear) memcpy(ca.clearValue.color.float32, clear, sizeof ca.clearValue.color.float32);
     VkRenderingInfo ri = {.sType = VK_STRUCTURE_TYPE_RENDERING_INFO, .renderArea = {{0, 0}, g_vk.sc_extent}, .layerCount = 1,
                           .colorAttachmentCount = 1, .pColorAttachments = &ca};
-    vkCmdBeginRendering(cb, &ri);
+    rec_CmdBeginRendering(cb, &ri);
     VkViewport vp = {0, 0, (float)g_vk.sc_extent.width, (float)g_vk.sc_extent.height, 0, 1};
     VkRect2D sc = {{0, 0}, g_vk.sc_extent};
-    vkCmdSetViewport(cb, 0, 1, &vp);
-    vkCmdSetScissor(cb, 0, 1, &sc);
+    rec_CmdSetViewport(cb, 0, 1, &vp);
+    rec_CmdSetScissor(cb, 0, 1, &sc);
     vk_dyn_forget();
 }
 
@@ -1531,6 +1539,11 @@ static bool frame_acquire(bool now_only, bool *busy) {
 // nothing to draw into (minimised window).
 static bool frame_begin(const float clear[4], bool now_only, bool *busy) {
     if (!frame_acquire(now_only, busy)) return false;
+    // With the recorder thread (record.h): the window pass reads the game's image, written by an earlier submission's
+    // passes; only the full barrier that ends an upload command buffer made those writes visible, when this
+    // submission had uploads (upstream PR #189's validation: READ_AFTER_WRITE on the present draw once the recorder
+    // changed when they come). Off, as before.
+    if (rec_on()) vk_full_barrier(vk_cmd());
     image_barrier(vk_cmd(), g_vk.sc_images[cur_frame.image], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     frame_render_begin(clear);
     return true;
@@ -1540,14 +1553,18 @@ bool vk_frame_begin(const float clear[4]) { return frame_begin(clear, false, NUL
 // Passes of their own between vk_frame_begin and vk_frame_end (exec.c post passes): end the window image's
 // rendering, and begin it again keeping what was drawn.
 void vk_frame_suspend(void) {
-    if (cur_frame.ok) vkCmdEndRendering(vk_cmd());
+    if (cur_frame.ok) rec_CmdEndRendering(vk_cmd());
 }
 void vk_frame_resume(void) {
     if (cur_frame.ok) frame_render_begin(NULL);
 }
 
 VkExtent2D vk_frame_extent(void) { return g_vk.sc_extent; }
-void *vk_frame_cmd(void) { return (void *)vk_cmd(); }
+void *vk_frame_cmd(void) {  // (the start screen's ImGui records into it itself: what was queued before goes first)
+    VkCommandBuffer cb = vk_cmd();
+    rec_drain();
+    return (void *)cb;
+}
 
 static void save_window_image(VkCommandBuffer cb, VkSpan *out) {
     uint32_t w = g_vk.sc_extent.width, h = g_vk.sc_extent.height;
@@ -1555,7 +1572,7 @@ static void save_window_image(VkCommandBuffer cb, VkSpan *out) {
     image_barrier(cb, g_vk.sc_images[cur_frame.image], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     VkBufferImageCopy rg = {.bufferOffset = out->off, .imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
                             .imageExtent = {w, h, 1}};
-    vkCmdCopyImageToBuffer(cb, g_vk.sc_images[cur_frame.image], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, out->buf, 1, &rg);
+    rec_CmdCopyImageToBuffer(cb, g_vk.sc_images[cur_frame.image], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, out->buf, 1, &rg);
     image_barrier(cb, g_vk.sc_images[cur_frame.image], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 }
 
@@ -1614,7 +1631,7 @@ static int frame_kind;  // (frame generation: PRES_GEN / PRES_AFTER_GEN for the 
 void vk_frame_end(const char *shot_path) {
     if (!cur_frame.ok) return;
     VkCommandBuffer cb = vk_cmd();
-    vkCmdEndRendering(cb);
+    rec_CmdEndRendering(cb);
     VkSpan shot = {0};
     bool capture = frame_capture[0] != 0;
     if (shot_path || capture) save_window_image(cb, &shot);
@@ -1740,7 +1757,7 @@ static void progress_text(VkCommandBuffer cb, const char *const *lines, int32_t 
     VkImage img = g_vk.sc_images[cur_frame.image];
     vk_frame_suspend();
     image_barrier(cb, img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    for (int i = 0; i < n; i++) vkCmdCopyBufferToImage(cb, buf[i], img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &rg[i]);
+    for (int i = 0; i < n; i++) rec_CmdCopyBufferToImage(cb, buf[i], img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &rg[i]);
     image_barrier(cb, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     vk_frame_resume();
 }
@@ -1760,7 +1777,7 @@ void vk_present_progress(float done, const char *const *lines) {
         VkClearAttachment a = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .colorAttachment = 0,
                                .clearValue.color.float32 = {parts[i].c, parts[i].c, parts[i].c, 1}};
         VkClearRect cr = {parts[i].r, 0, 1};
-        vkCmdClearAttachments(cb, 1, &a, 1, &cr);
+        rec_CmdClearAttachments(cb, 1, &a, 1, &cr);
     }
     if (lines) progress_text(cb, lines, w, h);
     static int shot;  // (SAVAGEWIND_PSO_SLOW_MS, exec.c: the first bar frame past a quarter)
@@ -1796,6 +1813,7 @@ static char fg_real_shot[256];  // (SAVAGEWIND_FG_SHOT_AT: the game's frame afte
 
 void vk_fg_wait_idle(void) {
     vk_present_idle();
+    rec_drain();
     vkDeviceWaitIdle(g_vk.dev);
 }
 
@@ -1927,6 +1945,7 @@ static void present_locked(NvnTexture *t) {
         memcpy(g_shot_crop, crop, sizeof crop);
         if (gen) {  // the generated frame, as the game's are (crop, anti-aliasing, menu), then this one half a frame later
             vk_present_draw(cb, gen, (float)vx, (float)vy, (float)vw, (float)vh, pv);
+            if (menu_render_needed()) rec_drain();  // (ImGui records into cb itself, and may upload its fonts on the queue)
             menu_render((void *)cb, g_vk.sc_extent.width, g_vk.sc_extent.height);
             // SAVAGEWIND_FG_SHOT_AT=<frame>,... (counted as SAVAGEWIND_SHOT_AT): the window at two presents in a row
             // from there, each generated frame and the game's after it -> build/frames/window_N_<0|1>_<gen|real>.png
@@ -1963,6 +1982,7 @@ static void present_locked(NvnTexture *t) {
         static long menu_at = -1;
         if (menu_at < 0) menu_at = getenv("SAVAGEWIND_MENU_AT") ? atol(getenv("SAVAGEWIND_MENU_AT")) : 0;
         if (menu_at && (long)total_frames + 1 == menu_at) { extern void menu_test_open(void); menu_test_open(); }
+        if (menu_render_needed()) rec_drain();  // (ImGui records into cb itself, and may upload its fonts on the queue)
         menu_render((void *)cb, g_vk.sc_extent.width, g_vk.sc_extent.height);
         static long win_shot = -1;
         if (win_shot < 0) win_shot = getenv("SAVAGEWIND_WINDOW_SHOT") ? atol(getenv("SAVAGEWIND_WINDOW_SHOT")) : 0;
@@ -1998,6 +2018,7 @@ presented:
     benchmark_render_cpu(present_cpu, fg_cpu, gen != NULL);
     g_fg_want = fg_wanted();  // (for the next frame's draws)
     ft_frame();
+    rprof_frame();
     extern void vk_list_stats_frame(void);
     vk_list_stats_frame();
     {   // SAVAGEWIND_FRAME_LOG=1: "[ft] <ms> <frame> <target fps>" at every present (frame time statistics)
@@ -2149,7 +2170,7 @@ presented:
         if ((gen_frames || gen_twice || gen_dropped) && last_fps_time > 0) {
             // (one klog write each: a render-thread LOG costs ~1.4 ms on the PS5)
             double s = now - last_fps_time;
-            char extra[320] = "";
+            char extra[640] = "";
             if (g_fg_backend.kind == FG_BACKEND_MIHAWK) vk_fg_mihawk_window(extra, sizeof extra);
             LOG("[fg] %.1f generated frames/s: %.1f presented%s; %llu dropped (no window image free)\n", gen_frames / s,
                 (frames + gen_frames + gen_twice) / s, extra, (unsigned long long)gen_dropped);
@@ -2191,6 +2212,7 @@ static void quick_exit_handler(void) {
     if (trace) LOG("[vk] exit: waiting for the GPU\n");
     if (g_vk.dev) {
         vk_present_idle();
+        rec_drain();
         vkDeviceWaitIdle(g_vk.dev);
         if (trace) LOG("[vk] exit: saving the pipeline cache\n");
         vk_pipeline_cache_save();
@@ -2251,6 +2273,7 @@ void backend_init(void) {
 void backend_reset(void) {
     if (!g_vk.dev) return;
     vk_present_idle();
+    rec_drain();
     vkDeviceWaitIdle(g_vk.dev);
     extern void vk_textures_reset(void);
     extern void vk_exec_reset(void);

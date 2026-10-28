@@ -338,6 +338,15 @@ void benchmark_render_cpu(uint64_t present_ns, uint64_t fg_ns, bool fg) {
     g_present_cpu += present_ns / 1e6, g_fg_cpu += fg_ns / 1e6, g_ncpu++, g_nfg_frames += fg;
 }
 
+int benchmark_segment(void) {
+    if (!measuring()) return -1;
+    double t = (plat_now_ns() - __atomic_load_n(&g_state_t, __ATOMIC_RELAXED)) / 1e9;
+    return t >= 5 && t < 51;  // (benchmark_input: right 5-25 s, up / down 25-31, left 31-51)
+}
+
+static void (*g_extra)(char *out, size_t n);
+void benchmark_extra(void (*lines)(char *out, size_t n)) { g_extra = lines; }
+
 static int cmp_float(const void *a, const void *b) {
     float x = *(const float *)a, y = *(const float *)b;
     return x < y ? -1 : x > y;
@@ -359,7 +368,7 @@ static Dist dist(const float *v, int n) {
 static void finish(const char *failure) {
     if (g_state == B_DONE || g_state == B_PAN) return;
     g_state = B_DONE;  // (the presents stop being measured)
-    char text[4096];
+    char text[8192];
     size_t at = 0;
     time_t now = time(NULL);
     char when[32];
@@ -422,6 +431,10 @@ static void finish(const char *failure) {
         else
             at += (size_t)snprintf(text + at, sizeof text - at, "frame generation: %s\n",
                                    g_npresents_gen ? "on, its GPU time not measured" : "off");
+        if (g_extra && at < sizeof text) {
+            g_extra(text + at, sizeof text - at);
+            at += strlen(text + at);
+        }
         // the run before this one, from its last.txt
         size_t n = 0;
         char *prev = read_file("benchmark/last.txt", &n);

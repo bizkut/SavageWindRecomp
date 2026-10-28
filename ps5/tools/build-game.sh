@@ -8,8 +8,11 @@ set -euo pipefail
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$root"
 sdk=$(bash ps5/tools/setup-deps.sh)
-game="$root/build/ps5/gamecode/libgamecode.a"
-[[ -f $game ]] || { echo 'Build the user game code first with ps5/tools/build-gamecode.sh' >&2; exit 1; }
+# PS5_GAMECODE_OPT=-O2 (A/B; default -O1): the game code build-gamecode.sh made with that flag
+gamecode_opt=${PS5_GAMECODE_OPT:--O1}
+game="$root/build/ps5/gamecode$([[ $gamecode_opt == -O1 ]] || printf '%s' "$gamecode_opt")/libgamecode.a"
+[[ -f $game ]] || { echo "Build the user game code first with PS5_GAMECODE_OPT=$gamecode_opt ps5/tools/build-gamecode.sh" >&2; exit 1; }
+echo "game code: $game" >&2
 package="$root/build/ps5/importer/ps5-build"
 [[ -f $package/build.ninja ]] || bash ps5/tools/build-importer.sh
 PS5_PAYLOAD_SDK="$sdk" cmake --build "$package" -j1 --target savagewind-package
@@ -79,7 +82,8 @@ app=$(bash ps5/tools/build-title.sh game \
     runtime/nvn/astc.c runtime/nvn/cmdbuf.c runtime/nvn/formats.c runtime/nvn/objects.c runtime/nvn/output_scale.c \
     runtime/nvn/shader_archive.c runtime/nvn/smaa_data.c runtime/nvn/tegra.c runtime/nvn/maxwell/translate.c \
     runtime/nvn/vulkan/cache_pack.c runtime/nvn/vulkan/device.c runtime/nvn/vulkan/exec.c runtime/nvn/vulkan/textures.c \
-    runtime/nvn/vulkan/shaders.c runtime/nvn/vulkan/spirv.c runtime/nvn/vulkan/precompile.c runtime/nvn/vulkan/vma.cpp \
+    runtime/nvn/vulkan/shaders.c runtime/nvn/vulkan/spirv.c runtime/nvn/vulkan/precompile.c runtime/nvn/vulkan/rprof.c \
+    runtime/nvn/vulkan/record.c runtime/nvn/vulkan/vma.cpp \
     runtime/nvn/vulkan/mihawk.cpp "${mh_sources[@]}" \
     runtime/services/acc.c runtime/services/am.c runtime/services/audio.c runtime/services/fs.c runtime/services/hid_set.c \
     runtime/services/misc.c runtime/services/time.c runtime/services/test_warp.c | tee /dev/stderr | tail -n 1)

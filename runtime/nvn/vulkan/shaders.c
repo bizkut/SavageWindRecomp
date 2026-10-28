@@ -913,19 +913,39 @@ static const char *builtin_src(const char *name, int *stage) {
                "  if (pc.b.w > 1.5) o = vec2(inbox ? 1.0 : 0.0, inbox && z >= pc.lk.x && z <= pc.lk.y ? 1.0 : 0.0);  // (debug)\n"
                "}\n";
     }
-    // MihawkGen's generated frame with the newest game frame's HUD (exec.c fg_mihawk): g = the frame generated from the
-    // HUD-less images, f = the newest game image, h = its HUD-less version, all at the game image's size. a.x = the
-    // difference over which a pixel is the HUD's (any channel, anywhere in its 3 x 3 neighbourhood), b.xy = size.
-    if (!strcmp(name, "fg_hud.frag")) {
+    // MihawkGen's generated frame with the newest game frame's HUD (exec.c fg_mihawk, fg_out): f = the newest game
+    // image, h = its HUD-less version (both at the game image's size b.xy); a.x = the difference over which a pixel is
+    // the HUD's (any channel, anywhere in its 3 x 3 neighbourhood: f there), elsewhere the generated frame from g by
+    // a.z: 0 g at the game image's size, 1 FSR 1 RCAS of g (its EASU output at that size; a.y = sharpness, the same
+    // code as rcas.frag), 2 g (the generator's output) scaled up bilinearly. Drawn into an image of the game image's
+    // size, or straight into the window (c.xy: the viewport's origin there; a.w = 1: rows flipped as present.vert does).
+    // Into an 8-bit UNORM target, RCAS's result is converted as rcas.frag's into its RGBA8 image was: the same bytes.
+    if (!strcmp(name, "fg_out.frag")) {
         *stage = STAGE_FRAGMENT;
         return "#version 450\n"
                "layout(set = 0, binding = 0) uniform sampler2D g;\n"
                "layout(set = 0, binding = 1) uniform sampler2D f;\n"
                "layout(set = 0, binding = 2) uniform sampler2D h;\n"
-               "layout(push_constant) uniform P { vec4 a; vec4 b; } pc;\n"
+               "layout(push_constant) uniform P { vec4 a; vec4 b; vec4 c; } pc;\n"
                "layout(location = 0) out vec4 o;\n"
+               "float lum(vec3 c) { return c.g + 0.5 * (c.r + c.b); }\n"
+               "vec3 tap(ivec2 p) { return texelFetch(g, clamp(p, ivec2(0), ivec2(pc.b.xy) - 1), 0).rgb; }\n"
+               "vec3 rcas(ivec2 ip) {\n"
+               "  vec3 b = tap(ip + ivec2(0, -1)), d = tap(ip + ivec2(-1, 0)), e = tap(ip), f = tap(ip + ivec2(1, 0)), h = tap(ip + ivec2(0, 1));\n"
+               "  float bL = lum(b), dL = lum(d), eL = lum(e), fL = lum(f), hL = lum(h);\n"
+               "  float nz = 0.25 * (bL + dL + fL + hL) - eL;\n"
+               "  float rng = max(max(max(bL, dL), max(eL, fL)), hL) - min(min(min(bL, dL), min(eL, fL)), hL);\n"
+               "  nz = 1.0 - 0.5 * clamp(abs(nz) / max(rng, 1.0 / 65536.0), 0.0, 1.0);\n"
+               "  vec3 mn4 = min(min(b, d), min(f, h)), mx4 = max(max(b, d), max(f, h));\n"
+               "  vec3 hitMin = min(mn4, e) / max(4.0 * mx4, vec3(1.0 / 65536.0));\n"
+               "  vec3 hitMax = (1.0 - max(mx4, e)) / min(4.0 * mn4 - 4.0, vec3(-1.0 / 65536.0));\n"
+               "  vec3 lobeRGB = max(-hitMin, hitMax);\n"
+               "  float lobe = max(-(0.25 - 1.0 / 16.0), min(max(lobeRGB.r, max(lobeRGB.g, lobeRGB.b)), 0.0)) * pc.a.y * nz;\n"
+               "  return (lobe * (b + d + f + h) + e) / (4.0 * lobe + 1.0);\n"
+               "}\n"
                "void main() {\n"
-               "  ivec2 ip = ivec2(gl_FragCoord.xy), mx = ivec2(pc.b.xy) - 1;\n"
+               "  ivec2 ip = ivec2(gl_FragCoord.xy - pc.c.xy), mx = ivec2(pc.b.xy) - 1;\n"
+               "  if (pc.a.w > 0.5) ip.y = mx.y - ip.y;\n"
                "  float d = 0.0;\n"
                "  for (int y = -1; y <= 1; y++)\n"
                "    for (int x = -1; x <= 1; x++) {\n"
@@ -933,7 +953,12 @@ static const char *builtin_src(const char *name, int *stage) {
                "      vec3 e = abs(texelFetch(f, p, 0).rgb - texelFetch(h, p, 0).rgb);\n"
                "      d = max(d, max(e.r, max(e.g, e.b)));\n"
                "    }\n"
-               "  o = vec4(d > pc.a.x ? texelFetch(f, ip, 0).rgb : texelFetch(g, ip, 0).rgb, 1.0);\n"
+               "  vec3 r;\n"
+               "  if (d > pc.a.x) r = texelFetch(f, ip, 0).rgb;\n"
+               "  else if (pc.a.z < 0.5) r = texelFetch(g, ip, 0).rgb;\n"
+               "  else if (pc.a.z < 1.5) r = rcas(ip);\n"
+               "  else r = texture(g, (vec2(ip) + 0.5) / pc.b.xy).rgb;\n"
+               "  o = vec4(r, 1.0);\n"
                "}\n";
     }
     // MihawkGen's input (exec.c fg_mihawk): the HUD-less image at the generator's size, bilinear (at half the size, the
