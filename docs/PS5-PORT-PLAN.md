@@ -110,6 +110,11 @@ FrameGen Lab both use `0x80040`, which **turns system VRR off** (fixed 120 Hz) �
 FIFO; with VRR the panel follows the presents between 48 and 120 Hz. Replace `runtime/window_size.c`'s desktop mode
 list with "4K, 119.88 Hz if granted, else 59.94 Hz".
 
+Other displays (unmeasured): S4 on .41's 4K TV saw one display, one plane and two modes, both 3840×2160
+(119.88/59.94 Hz). A 1080p TV has not been tested. The window code enumerates the modes the display reports and
+picks the largest extent, preferring 119.88 Hz; the swapchain and internal resolution follow that extent. On a 60 Hz
+display, frame generation is off.
+
 **D5. Game code is built on the user's PC, never shipped.** The project's rule is that no build contains game code,
 generated C included (`docs/SAVAGE-WIND.md` "Reglas legales"). The PS5 has no compiler, and `runtime/gamebuild.c`
 spawns one. Flow:
@@ -362,7 +367,9 @@ D9. **Done when:** 10-minute run with zero AudioOut errors/underruns logged, int
 
 ### M6 — Performance to a 60 fps base
 Measure CPU/GPU per frame on the Great Plateau; tune internal resolution / FSR 1 defaults; shader precompile on
-first start; fix hitches. **Done when:** ≥ 95 % of real frames within 16.68 ms over a 10-minute route, recorded.
+first start; fix hitches. Defaults per output resolution: at 1080p, native or supersampled internal resolution
+without FSR; at 4K, the resolution/FSR mode the measurement supports. **Done when:** ≥ 95 % of real frames within
+16.68 ms over a 10-minute route, recorded, at 4K and on a 1080p display.
 
 ### M7 — MihawkGen 2× and VRR at 120
 D7 backend; frame pacing in `runtime/hle/framepace.c` for real + generated presents under VRR.
@@ -394,6 +401,11 @@ specific errors on the TV. No key material appears in logs; unsupported compress
 
 ### M11 — Release
 Settings persistence, save/load, DLC, 1-hour soak, README for the setup/import flow, notices (D10), release ZIP.
+
+### After M11 (optional) — Community texture packs
+High-resolution texture packs dropped into the existing overlay folder (`runtime/services/fs.c`); never shipped by
+the project. **Done when:** one pack loads, with GPU/flexible memory and load-time cost logged against the M6
+budget, and the frame target still holds.
 
 ## Risks
 
