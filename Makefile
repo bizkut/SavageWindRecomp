@@ -419,3 +419,13 @@ test-ps5-input: $(B)/test_ps5_input
 	$(B)/test_ps5_input
 
 .PHONY: test-ps5-input
+
+# runtime/ps5/audio.c on the host, against the PS5 SDL shim's headers and a scripted SceAudioOut
+$(B)/test_ps5_audio: tools/test_ps5_audio.c runtime/ps5/audio.c runtime/ps5/sdl_shim.h
+	@mkdir -p $(B)
+	$(CC) -O1 -Iruntime -Iruntime/ps5/include -o $@ tools/test_ps5_audio.c -lpthread
+
+test-ps5-audio: $(B)/test_ps5_audio
+	$(B)/test_ps5_audio
+
+.PHONY: test-ps5-audio

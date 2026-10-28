@@ -221,6 +221,10 @@ void build_items(void) {
     v.push_back(toggle(P_CONTROLS, "Invert mouse Y", "Only the mouse. The camera Y-axis option inverts both.",
                        [](const Item &) { return (int)g_settings.mouse_invert_y; },
                        [](const Item &, int x) { g_settings.mouse_invert_y = x; }, 0));
+    v.push_back(toggle(P_CONTROLS, "Mouse wheel zooms (scope, map)",
+                       "Each notch zooms the scope or the map in or out. Elsewhere the wheel does nothing.",
+                       [](const Item &) { return (int)g_settings.wheel_zoom; },
+                       [](const Item &, int x) { g_settings.wheel_zoom = x; }, 1));
     // motion controls (runtime/hle/motion.c; the game's own Motion Controls option turns motion aiming on and off)
     v.push_back(choice(P_CONTROLS, "Motion sensitivity", "How far turning the controller turns the aim.",
                        [](const Item &) { return N(k_motion_sens); },

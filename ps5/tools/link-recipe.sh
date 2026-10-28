@@ -60,7 +60,9 @@ link_recipe() {
     done
     local platform_symbols
     platform_symbols=$("$sdk_root/bin/llvm-nm" --defined-only "$platform" 2>/dev/null || true)
-    for name in localeconv strcasestr mkstemp readlink link symlink; do
+    # (isatty, getnameinfo, gai_strerror: only libScePosixForWebKit's stub has them, and that module gives a title null
+    # imports; pacbrew's FFmpeg calls isatty from av_log's default callback)
+    for name in localeconv strcasestr mkstemp readlink link symlink isatty getnameinfo gai_strerror; do
         if grep -q " T ps5_$name$" <<<"$platform_symbols"; then
             link_flags+=("--defsym=$name=ps5_$name")
         fi

@@ -7,3 +7,7 @@ nstool2              ../nstool2                                      7e0a49b61ae
 radv-archive          .deps/ps5/radv/libvulkan_radeon.ps5.a           sha256:9d12cff020676c3533f25842827f768b71fea4de4d32d68105523efbc1476929
 # ^ PS5_Mesa f10c4bac9b + ps5-wow patches 0001 HDR10/immediate, 0002 cache DB, 0003 VRR (Forever build cache, 2026-10-23)
 pacbrew-repo          ../forever/pacbrew-repo (ffmpeg/ for M5 movies)  2e3eaf9c5fda03535d0b5e5c3f807a38acdac452
+pacbrew-ffmpeg        /opt/ps5-payload-sdk/target/user/homebrew       sha256:cbd2373f1d2b9457540538bf8529e3fc883783d11bba0ae50fff41102225f41a
+# ^ the installed pacbrew packages (absolute prefix): ps5-payload-ffmpeg 7.0.1-1, openssl 3.5.2-1, bzip2 1.0.8-1, xz 5.4.6-1,
+#   libiconv 1.17-1; SHA-256 of the archives' sha256sum listing (ps5/tools/setup-ffmpeg.sh). This FFmpeg was configured
+#   LGPL-3 (--enable-version3 --enable-openssl), without the recipe's --enable-gpl --enable-libx264 (an encoder only).

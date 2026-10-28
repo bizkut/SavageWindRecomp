@@ -1,6 +1,6 @@
 // The SDL calls the kept runtime code still makes on the PS5 (D2: a symbol needs a caller). The window is the
 // VideoOut display plane of runtime/ps5/window.c; the input devices (DualSense, USB keyboard and mouse) are
-// runtime/ps5/input.c; there is no audio device (M5).
+// runtime/ps5/input.c; the audio streams play on SceAudioOut (runtime/ps5/audio.c).
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include <stdbool.h>

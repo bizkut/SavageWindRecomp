@@ -24,10 +24,13 @@ static bool loaded;
 
 bool gamelib_load(const char *game_dir, char *why, size_t why_size) {
     (void)game_dir;
-    static const struct { const char *name; size_t offset; } wanted[] = {
-#define GAME_SITE_ENTRY(n) {#n, offsetof(GameSites, n)},
+    static const struct { const char *name; size_t offset; bool optional; } wanted[] = {
+#define GAME_SITE_ENTRY(n) {#n, offsetof(GameSites, n), false},
+#define GAME_SITE_OPTIONAL_ENTRY(n) {#n, offsetof(GameSites, n), true},
         GAME_SITES(GAME_SITE_ENTRY)
+        GAME_SITES_OPTIONAL(GAME_SITE_OPTIONAL_ENTRY)
 #undef GAME_SITE_ENTRY
+#undef GAME_SITE_OPTIONAL_ENTRY
     };
     if (strcmp(game_version, "1.9.0")) {
         if (why && why_size) snprintf(why, why_size, "linked game code is not version 1.9.0");
@@ -36,11 +39,11 @@ bool gamelib_load(const char *game_dir, char *why, size_t why_size) {
     for (size_t i = 0; i < sizeof wanted / sizeof *wanted; i++) {
         uint32_t j = 0;
         while (j < game_site_count && strcmp(game_sites[j].name, wanted[i].name)) j++;
-        if (j == game_site_count) {
+        if (j == game_site_count && !wanted[i].optional) {
             if (why && why_size) snprintf(why, why_size, "linked game code has no address for %s", wanted[i].name);
             return false;
         }
-        *(uint64_t *)((char *)&g_site + wanted[i].offset) = game_sites[j].addr;
+        *(uint64_t *)((char *)&g_site + wanted[i].offset) = j < game_site_count ? game_sites[j].addr : 0;
     }
     g_game_version = game_version;
     loaded = true;

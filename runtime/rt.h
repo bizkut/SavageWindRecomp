@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <sys/types.h>
 
 #include "cpu.h"
 #include "platform.h"
@@ -100,3 +101,7 @@ extern const char *g_romfs_dir;
 extern uint64_t g_program_id;     // from main.npdm's ACI0 (runtime/main.c); 0 before boot
 uint64_t fs_aoc_base_id(void);    // add-on content: the base id, and whether index's image is set up (services/fs.c)
 bool fs_aoc_present(int index);
+// A file of the opened RomFS images by its path ("Movie/Demo101_0.webm"), and its bytes (services/fs.c): for host code
+// that reads game files the game itself names, where no host file has them (the PS5 reads the user's packages)
+bool fs_romfs_file(const char *path, int *image, uint64_t *off, uint64_t *size);
+ssize_t fs_romfs_pread(int image, void *dst, uint64_t n, uint64_t off);

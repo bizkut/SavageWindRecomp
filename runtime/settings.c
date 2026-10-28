@@ -31,6 +31,7 @@ Settings g_settings = {
     .upscaler = UPSCALE_DEFAULT,  // (Off: the window's resolution; MetalFX on macOS)
     .upscale_quality = UPQ_QUALITY,
     .mouse_camera = true,
+    .wheel_zoom = true,
     .mouse_sens = MOUSE_SENS_DEFAULT,
     .mouse_sens_y = 1.0f,
     .motion_sens = 1.0f,
@@ -121,6 +122,7 @@ void settings_load(void) {
         else if (!strcmp(key, "mouse_sensitivity")) g_settings.mouse_sens = (float)atof(val);
         else if (!strcmp(key, "mouse_vertical_sensitivity")) g_settings.mouse_sens_y = (float)atof(val);
         else if (!strcmp(key, "mouse_invert_y")) g_settings.mouse_invert_y = atoi(val) != 0;
+        else if (!strcmp(key, "mouse_wheel_zoom")) g_settings.wheel_zoom = atoi(val) != 0;
         else if (!strcmp(key, "motion_sensitivity")) g_settings.motion_sens = (float)atof(val);
         else if (!strcmp(key, "motion_invert")) {  // (off, up_down, left_right, both)
             g_settings.motion_invert = !strcmp(val, "both") ? MOTION_INVERT_UD | MOTION_INVERT_LR :
@@ -243,6 +245,7 @@ void settings_save(void) {
     fprintf(f, "mouse_sensitivity = %.2f\n", g_settings.mouse_sens);
     fprintf(f, "mouse_vertical_sensitivity = %.2f\n", g_settings.mouse_sens_y);
     fprintf(f, "mouse_invert_y = %d\n", g_settings.mouse_invert_y);
+    fprintf(f, "mouse_wheel_zoom = %d\n", g_settings.wheel_zoom);
     fprintf(f, "motion_sensitivity = %.2f\n", g_settings.motion_sens);
     static const char *const inv[4] = {"off", "up_down", "left_right", "both"};
     fprintf(f, "motion_invert = %s\n", inv[g_settings.motion_invert & 3]);

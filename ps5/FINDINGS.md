@@ -499,3 +499,28 @@ unplug/replug evidence needs a device plugged into the console (not yet done). T
 the game and returns to the PS5 home screen.
 
 **Deferred by the user (2026-10-28):** USB keyboard/mouse hands-on checks (keys, clicks, motion, unplug/replug).
+
+## 2026-10-28 — M5 audio and movies linked on the host (not yet run)
+
+Eboot `e2b5c156…`. `runtime/ps5/audio.c` serves the SDL audio-stream calls of `runtime/services/audio.c` with one
+SceAudioOut main port (48 kHz stereo S16, 256-frame periods, `sceAudioOutOpen(0xff, MAIN, 0, 256, 48000, 1)` as
+PS5_vkQuake's `src/audio_ps5.cpp`) and one worker; `make test-ps5-audio` passes (also under ASan/UBSan). Movies link
+`runtime/hle/movie.c` on pacbrew's installed FFmpeg (ps5-payload-ffmpeg 7.0.1-1; vp9/vp8/h264 decoders, matroska and
+mov demuxers, vorbis/opus/aac present in the title map); with no host RomFS folder a movie is read from the RomFS image
+the game opened. Two link findings:
+- The installed package is not exactly the pinned recipe's build: its configure line has `--enable-version3
+  --enable-openssl` but not the recipe's `--enable-gpl --enable-libx264` (an encoder only; LGPL-3 FFmpeg). The archives
+  are pinned by digest in `ps5/deps.lock` (`pacbrew-ffmpeg`).
+- The archives reach libc names no title module exports: `_setjmp`/`_longjmp` (OpenSSL ASYNC), `___mb_cur_max`
+  (libiconv) — tail jumps in `runtime/ps5/libc_aliases.S` — and `isatty` (av_log's default callback), `getnameinfo`,
+  `gai_strerror`, which only libScePosixForWebKit's stub defines (null imports in a title, `../forever/PS5_Vulkan/tools/
+  radv-link.sh`); `ps5/tools/link-recipe.sh` binds them to the platform layer's `ps5_*`. NEEDED adds only
+  libSceAudioOut.sprx. Still to see on the console: the AudioOut port, 10 s counter lines with zero underruns/errors,
+  the intro movie, and the user's listening check.
+
+## 2026-10-28 — M5 run 1: game audio on SceAudioOut (.41, ps5/evidence/m5/run1)
+
+Eboot `e2b5c156…`: AudioOut port open at 48 kHz stereo S16 (256-frame outputs); the game's renderer stream (F32
+stereo) plays through it. Over 90 s, every 10 s window: ~1875 periods, **0 underruns, 0 errors, 0 dropped frames**,
+queue peak 2512 frames. No `[movie]` line in this run: with nobody at the controller the game stayed at the title
+screen, so the intro movie path is not yet exercised. Listening check and the 10-minute run pending (user away).

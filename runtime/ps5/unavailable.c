@@ -1,4 +1,4 @@
-// Boundaries for subsystems not linked into the PS5 title yet: the overlay menu, frame generation (M7), movies (M5) and
+// Boundaries for subsystems not linked into the PS5 title yet: the overlay menu, frame generation (M7) and
 // the desktop's performance overlay. Each answers as the desktop runtime does with no such device or feature.
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "../rt.h"
@@ -42,8 +42,3 @@ void fg_destroy(void) {}
 void perfmon_frame(void) {}
 void perfmon_generated_frame(void) {}
 void perfmon_set_gpu_hint(const char *name) { (void)name; }
-
-// ---- movies (M5: runtime/hle/movie.c, FFmpeg): no video decoder runs, so framepace.c never holds a movie's rate
-volatile int g_movie_playing;
-volatile int g_movie_fps = 30;
-bool movie_paced(void) { return true; }

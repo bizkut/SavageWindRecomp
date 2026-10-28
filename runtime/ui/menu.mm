@@ -824,6 +824,8 @@ static void tab_about(void) {
                    "Up and down, as a percentage of the mouse sensitivity."))
         g_settings.mouse_sens_y = sens_y / 100.0f;
     toggle("Invert mouse Y", &g_settings.mouse_invert_y);
+    toggle("Mouse wheel zooms (scope, map)", &g_settings.wheel_zoom);
+    hint("Each notch zooms the scope or the map in or out. Elsewhere the wheel does nothing.");
     ImGui::Spacing();
     header("Controls");
     controls_bindings_draw(ImGui::GetFontSize() / 34);

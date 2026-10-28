@@ -796,6 +796,26 @@ const char *romfs_file_at(uint64_t off) {
     return NULL;
 }
 
+// A file of the game's RomFS by its path ("Movie/Demo101_0.webm"): its image (0 the game's, else the add-on content
+// index; the first opened image that has it) and its place there. false: no opened image has it.
+bool fs_romfs_file(const char *path, int *image, uint64_t *off, uint64_t *size) {
+    for (int k = 0; k <= AOC_MAX; k++) {
+        const RomImage *m = &images[k];
+        for (int i = 0; m->img && i < m->rom_nfiles; i++) {
+            if (strcmp(m->rom_files[i].path, path)) continue;
+            *image = k, *off = m->rom_files[i].off, *size = m->rom_files[i].size;
+            return true;
+        }
+    }
+    return false;
+}
+
+// n bytes of an image fs_romfs_file named, at off (the bytes the game's own reads see); -1 when it can't be read.
+ssize_t fs_romfs_pread(int image, void *dst, uint64_t n, uint64_t off) {
+    if (image < 0 || image > AOC_MAX || !images[image].img) return -1;
+    return romfs_read(&images[image], dst, n, off);
+}
+
 // ------------------------------------------------------------------ IStorage (raw RomFS image)
 typedef struct { RomImage *img; uint64_t size; } Storage;
 
