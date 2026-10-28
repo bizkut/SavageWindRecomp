@@ -824,3 +824,12 @@ fps. 1440p: 79.4 %, GPU 11.62 ms, 57.8 / 115.6.** The capture PNGs are halved to
 difference at 4K (their detail measure is equal: 11.16 vs 11.22). Default chosen: 1080p internal with FG on, 1440p
 with FG off. Per the agent's analysis (bench5 entry), the FG-on misses are GPU time in the camera-turning half
 (~7.5 → ~11.5 ms per game frame: MihawkGen 1.9 ms + ~1.8 ms of 4K passes), not render-thread CPU.
+
+## 2026-10-28 — Render-thread profile (.41, ps5/evidence/m7/rprof-fg0/1.klog)
+
+Diag eboot `c5bc5951…` (`render_profile = 1`), 1080p internal, the benchmark route. Render thread CPU per frame while
+turning: **11.76 ms with FG, 11.01 without.** Of it: draw translation 9.65 / 8.89 ms over ~3,500 draws (per draw:
+state preparation, descriptor sets, textures and fragment-stage sets ~1–1.6 ms each), present 2.57 / 0.18 ms. Vulkan
+driver time inside it: 6.29 ms with FG (13,321 calls; `vkQueueSubmit2` 2.07 ms for 7 calls, `vkAcquireNextImageKHR`
+1.06, `vkCmdDrawIndexed` 1.13) vs 3.35 ms without (`vkQueueSubmit2` 0.34 ms). So FG adds ~1.7 ms of submit cost on the
+render thread, and ~3.3 ms of per-draw driver calls are what PR #189's recorder thread would move off it.
