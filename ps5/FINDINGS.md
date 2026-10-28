@@ -589,3 +589,40 @@ translating and compiling 13,997 shaders took 29–400 s (13,350 translated, 623
 pipeline libraries took 400–880 s. The pipeline-library rate starts at ~660/s and falls to ~10/s by the end; the
 cause is under investigation. Title heap peaked at 1,148 MB. The game started afterwards. The on-screen indicator is a
 bar with no text yet.
+
+## 2026-10-28 — M6: first-start precompile, where the 880 s went (host measurements, build/pcbench)
+
+Host harness: the real `shader_precompile_run` over `build/romfs-reference` on RADV's null NAVI21 device (Mesa 25.2.8,
+`RADV_FORCE_FAMILY=navi21`), Xeon Silver 4116.
+- **Translation step: the storage broker, not the CPU.** On the host the same 13,997 translations take 47 s on 7
+  threads (CPU-bound, 662 %); on .41 they took 370 s on 16 threads. Each made two files (cache/xlate, cache/spirv:
+  ~26,700), at the measured 11–15 ms per file creation on /data, one broker request at a time (`request_lock`):
+  ~13.9 ms per file observed. Fix: `runtime/nvn/vulkan/cache_pack.c` — the precompilation's entries go into one
+  `precompiled.pack` + `precompiled.idx` per cache folder, appended 8 MiB at a time by a writer thread; readers
+  (`xlate_load`, `spirv.c cache_load`) look in the pack first, the same bytes and checks as the files.
+- **Pipeline-library step:** the host builds all 13,973 libraries in 59 s on 7 threads and 49–51 s on 13 (CPU-bound;
+  the memory budget costs ~4 % at 13 threads; peak RSS 0.44–0.82 GB, far below the 1.3 GB-per-shader estimate). The
+  rate curve's shape (fast small shaders first, then ~100/s) is the take order; on .41 the first 7,400 libraries
+  tracked the host's 7-thread run, then fell to ~10/s, so the console-only slowdown is in the largest shaders. Large
+  allocations in that step: 84,000 of ≥256 KiB (39 GB churned, ~20 per large shader) and 309 million in all.
+  RADV's own disk cache (`/app0/radv-shader-cache` database, default on PS5) costs the host 10 % (65.3 vs 59.1 s);
+  the title now turns it off (`MESA_SHADER_CACHE_DISABLE`), since it keeps the driver's binaries itself. The
+  remaining console-only cause is not identified yet: a new 5 s klog line splits the workers' time (work wall vs
+  its thread CPU, reads, budget waits; process CPU; title heap segments and libc fallbacks; RADV buffers).
+- **The 24 failed translations** are the translator's, identical on desktop (the host build fails the same 24):
+  20 compute shaders of `agl_technique_pfx.sharcb` (16 × unknown instruction `eb1804a000470000` at 0x18, 2 ×
+  `eb28048600f70600` at 0x450, 1 × `eb28048600f70400` at 0x3f0, 1 × `eb18048000470300` at 0x10) and 4 fragment shaders
+  of `agl_common.sharcb` (`tlds info 6`); now logged once, grouped, after the step.
+- Packs on the host: 92 MB (xlate, 13,973 entries) + 267 MB (SPIR-V, 13,899) in two files each; all 13,973 libraries
+  built from them; a second run found every translation in the packs (13,973 cached in 3.1 s).
+- Eboot `9d7ed132…` (this build) also draws text on the precompile screen (heading, percentage, step, "only on the
+  first start and after an update") in Fira Sans through `glyphs_text_line`, copied into the window image.
+
+## 2026-10-28 — First-start precompile, run 2: 276 s (.41, ps5/evidence/m6/precompile-first2.klog)
+
+Eboot `9d7ed132…`: pack files instead of ~26,700 broker file creations, and RADV's own disk cache off. Total
+**276.2 s** (run 1: 880.5 s): translation 189.5 s, pipeline libraries ~85 s; the TV shows "Compiling shaders" with
+percentage and step. The same 24 shaders failed as on desktop (a translator gap). Every 5 s line reports **process CPU
+1.0 cores** while 16 worker threads are busy: the title's threads appear to share one core. Under investigation
+(thread affinity); this would also limit the game. The xlate pack was written empty (0 entries) although 13,909
+translations were made.
