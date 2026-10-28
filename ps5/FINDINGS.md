@@ -677,3 +677,5 @@ The runs agree within 2 % (mean −0.14 %, p95 +0.02 %): the benchmark meets its
 on time is met on this route. **S6 / headroom:** the GPU uses ~47 % of a 60 fps frame; the render thread (translating
 NVN commands to Vulkan) uses 62 % on average and 86 % at p95, so it is the limit and the source of the remaining
 hitches. Guest-thread CPU figures are summed per-thread self-reports and are indicative only.
+
+**Deferred by the user (2026-10-28):** the M6 10-minute played route (4K and 1080p) and freeing the precompile heap; M7 started.
