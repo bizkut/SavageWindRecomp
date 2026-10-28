@@ -398,13 +398,16 @@ modes the display reports (4K TV now, a 1080p display before M6 closes).
 ### M5 — Audio and movies
 D9. **Done when:** 10-minute run with zero AudioOut errors/underruns logged, intro movie plays; user listening check.
 
-`runtime/ps5/audio.c` answers the SDL audio-stream calls of `runtime/services/audio.c` (unchanged) with one SceAudioOut
+`runtime/ps5/audio.c` answers the SDL audio-stream calls of `runtime/services/audio.c` with one SceAudioOut
 main port (48 kHz stereo S16, 256-frame periods) and one worker thread: each stream (the SDK renderer's F32 stereo, an
 IAudioOut's S16 1/2/6 channels per movie) is a ring of stereo frames, mixed with its gain every period; streams are told
 1024-frame device periods (SDL3's default at 48 kHz) for their queue targets, as on desktop. Other rates are refused
 (the service's no-device path), not resampled. The klog has one line per device open and stream, and every 10 s the
-window's underruns (frames short), AudioOut errors (last result), dropped frames and deepest queue; host check
-`make test-ps5-audio`. Movies are `runtime/hle/movie.c` on pacbrew's installed FFmpeg 7.0.1 (`ps5/tools/setup-ffmpeg.sh`
+window's underruns (frames short), AudioOut errors (last result), dropped frames, deepest queue, and the level at each
+stage (what the streams were given, what the mix read from their rings, the resumed streams' lowest gain, the output);
+the SDK renderer's own 10 s line (`[audren-sdk]`, always on in the title) adds the voices' data-source commands per
+frame and the sink's peak before the gain, so a silent output tells "the game plays no voice" from a lost signal; host
+check `make test-ps5-audio`. Movies are `runtime/hle/movie.c` on pacbrew's installed FFmpeg 7.0.1 (`ps5/tools/setup-ffmpeg.sh`
 checks the pinned pacbrew-repo revision, the packages' recipe versions and the archives' digest in `ps5/deps.lock`);
 with no host RomFS folder, a movie is read from the RomFS image the game opened (`fs_romfs_file` / `fs_romfs_pread`,
 an AVIOContext). `runtime/ps5/libc_aliases.S` maps the FreeBSD names those archives use (`_setjmp`, `_longjmp`,

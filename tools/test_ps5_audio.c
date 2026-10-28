@@ -182,7 +182,12 @@ int main(void) {
     audio_account(0, now_ns + 10000000000ull);
     unlock();
     assert(logged("[audio] AudioOut 10.0 s: 3 periods, 4 underruns (") && logged("1 errors (last 0x80260008), 10 frames dropped, 2 streams"));
+    // the stages before the output: what the streams were given (the mono stream's 30000 the loudest), what the mix
+    // read back from the rings before the gains, and the gains of the resumed streams
+    assert(logged("2 streams (2 resumed, lowest gain 1.00), queue peak 24000 frames; in 7 puts, 25390 frames, "
+                  "peak -0.8 dBFS; ring read peak -0.8 dBFS; level peak "));
     assert(g.underruns == 0 && g.errors == 0 && g.dropped == 0 && g.periods == 0);
+    assert(g.puts == 0 && g.in_frames == 0 && g.in_peak == 0 && g.ring_peak == 0);
 
     // ---- at most AUDIO_STREAMS streams
     SDL_AudioStream *more[AUDIO_STREAMS];

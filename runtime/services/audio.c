@@ -1078,12 +1078,26 @@ typedef struct {
     uint32_t wav_bytes;
     float out[2 * 1024];  // the last frame, stereo, from the device sink (sdk_take_sink)
     uint32_t out_n;
-    uint64_t frames, render_ns, render_max, lock_max;  // (SAVAGEWIND_AUDIO_LOG)
+    uint64_t frames, render_ns, render_max, lock_max;  // (sdk_audio_log)
     float peak;
+    // The voices behind the sink, per log window (sdk_take_sink): frames whose list had the device sink, voice
+    // data-source commands in a frame (the sdk generates them only for voices in use with wave buffers queued: none
+    // means the game plays nothing), and the ids of the enabled commands seen.
+    uint64_t sink_frames, cmd_ids;
+    uint32_t sources_max, sources_last;
 } SdkRen;
 static SdkRen g_sdkren;
 static GuestFn g_sdk_process;  // the recompiled CommandListProcessor::Process, under our hook
-static _Atomic uint32_t g_sdk_short;  // device requests the stream couldn't fill: underruns (SAVAGEWIND_AUDIO_LOG)
+static _Atomic uint32_t g_sdk_short;  // device requests the stream couldn't fill: underruns (sdk_audio_log)
+
+// The renderer's 10 s line: SAVAGEWIND_AUDIO_LOG; always on the PS5 (a title has no environment).
+static bool sdk_audio_log(void) {
+#ifdef __PROSPERO__
+    return true;
+#else
+    return ENV("SAVAGEWIND_AUDIO_LOG") != NULL;
+#endif
+}
 
 static void SDLCALL sdk_stream_get(void *u, SDL_AudioStream *st, int additional, int total) {
     (void)u, (void)st, (void)total;
@@ -1105,19 +1119,25 @@ RT_ON_RESET(sdkren_reset) {
 // The command list a processor ran (CommandListProcessor::Setup, sdk 0x710024a9fc): +0x04 command count, +0x14
 // samples per buffer, commands from +0x20, each with +0x04 bit 0 enabled, +0x05 id, +0x06 size. DeviceSinkCommand
 // (id 0x14, 0x148 bytes, written by sdk 0x71002333f0): +0x128 its sample buffers (int32 samples on the int16
-// scale, as CircularBufferSinkCommand reads them), +0x130 the input count, +0x134 the input buffer indices (int16),
-// FL FR FC LFE BL BR. Stereo goes to r->out.
+// scale, as CircularBufferSinkCommand reads them: the mix buffers, back to back), +0x130 the input count, +0x134 the
+// input buffer indices (int16), FL FR FC LFE BL BR. Stereo goes to r->out. Ids 1-6 are the voices' data sources
+// (PcmInt16, PcmFloat, Adpcm, versions 1 and 2: the sdk's TDataSourceCommandVersion2<CommandId 2/4/6>).
 static void sdk_take_sink(SdkRen *r, uint64_t list) {
     r->out_n = 0;
     if (!in_guest(list, 0x20)) return;
     uint32_t count = *(const uint32_t *)(uintptr_t)(list + 4), n = *(const uint32_t *)(uintptr_t)(list + 0x14);
     if (!n || n > 1024) return;
     uint64_t cmd = list + 0x20;
+    uint32_t sources = 0;
     for (uint32_t i = 0; i < count && in_guest(cmd, 8); i++) {
         const uint8_t *p = (const uint8_t *)(uintptr_t)cmd;
         int16_t size = *(const int16_t *)(p + 6);
+        if (p[4] & 1) {
+            if (p[5] < 64) r->cmd_ids |= 1ull << p[5];
+            sources += p[5] >= 1 && p[5] <= 6;
+        }
         if (p[5] == 0x14 && (p[4] & 1) && in_guest(cmd, 0x148)) {
-            uint64_t buf = *(const uint64_t *)(p + 0x128);
+            uint64_t buf = *(const uint64_t *)(uintptr_t)(p + 0x128);
             uint32_t inputs = *(const uint32_t *)(p + 0x130);
             if (inputs > 6) inputs = 6;
             const int32_t *ch[6] = {0};
@@ -1138,6 +1158,9 @@ static void sdk_take_sink(SdkRen *r, uint64_t list) {
                 r->out[s * 2 + 1] = clampf(R / 32768.f, -1, 1);
             }
             r->out_n = n;
+            r->sink_frames++;
+            r->sources_last = sources;
+            if (sources > r->sources_max) r->sources_max = sources;
             return;
         }
         if (size <= 0) break;
@@ -1205,19 +1228,25 @@ static void sdk_render_thread(Cpu *c) {
         if (!r->out_n) memset(r->out, 0, sizeof(float) * 2 * n);
         int bytes = (int)(n * 2 * sizeof(float));
         if (r->stream) { apply_gain(r->stream); SDL_PutAudioStreamData(r->stream, r->out, bytes); }
-        // SAVAGEWIND_AUDIO_LOG: every 10 s, the time a frame took (the renderer's mutex, then rendering) and the
-        // times the device ran dry.
+        // sdk_audio_log: every 10 s, the time a frame took (the renderer's mutex, then rendering), the times the
+        // device ran dry, and what was rendered: frames with the device sink, the voices' data sources, the enabled
+        // command ids, and the sink's peak (before the stream's gain, also shown).
         r->frames++;
         r->render_ns += t2 - t1;
         if (t2 - t1 > r->render_max) r->render_max = t2 - t1;
         if (t1 - t0 > r->lock_max) r->lock_max = t1 - t0;
         for (uint32_t i = 0; i < 2 * n; i++) r->peak = fmaxf(r->peak, fabsf(r->out[i]));
-        if (ENV("SAVAGEWIND_AUDIO_LOG") && r->frames % 2000 == 0) {
-            LOG("[audren-sdk] %llu frames: render %.0f us (max %.0f), mutex wait max %.0f us, %u underruns, peak %.3f\n",
+        if (sdk_audio_log() && r->frames % 2000 == 0) {
+            LOG("[audren-sdk] %llu frames: render %.0f us (max %.0f), mutex wait max %.0f us, %u underruns, peak %.3f; "
+                "%llu with the sink, voice sources %u (max %u), command ids %#llx, gain %.2f\n",
                 (unsigned long long)r->frames, r->render_ns / 2000 / 1e3, r->render_max / 1e3, r->lock_max / 1e3,
-                atomic_exchange(&g_sdk_short, 0), r->peak);
+                atomic_exchange(&g_sdk_short, 0), r->peak, (unsigned long long)r->sink_frames, r->sources_last,
+                r->sources_max, (unsigned long long)r->cmd_ids,
+                r->stream ? SDL_GetAudioStreamGain(r->stream) : -1.f);
             r->render_ns = r->render_max = r->lock_max = 0;
             r->peak = 0;
+            r->sink_frames = r->cmd_ids = 0;
+            r->sources_max = 0;
         }
         if (r->wav) {
             fwrite(r->out, 1, bytes, r->wav);

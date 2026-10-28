@@ -525,6 +525,18 @@ stereo) plays through it. Over 90 s, every 10 s window: ~1875 periods, **0 under
 queue peak 2512 frames. No `[movie]` line in this run: with nobody at the controller the game stayed at the title
 screen, so the intro movie path is not yet exercised. Listening check and the 10-minute run pending (user away).
 
+## 2026-10-28 — M5 run 4: the title screen's silence is the game's (.41, ps5/evidence/m5/run4)
+
+Runs 2-3 logged an exact -120 dBFS output for 90 s at the title screen. Eboot `b0d0d4e5…` added stage meters: the
+SDK renderer renders all 2000 frames per 10 s (127 us each) and finds its device sink in every one, but **0 voice
+data-source commands (max 0)** and sink peak 0.000 (enabled command ids 0x2188880: none of 1-6, the PCM/ADPCM
+sources); the PS5 side passes it on unchanged (2000 puts, 480000 frames, all zero, 1 stream resumed, gain 1.00). The
+RomFS read count also stops at 16 (boot) for the whole run, as in M4 runs 2-4: nothing from `Sound/Resource` is read.
+Desktop showed the same (docs/SAVAGE-WIND.md, 2026-10-16: no `AcquireVoiceSlot` in 50 s at the title and menu, no
+`Sound/Resource` read; the first sound is the `Continue` jingle `Sys_GameStart.bfstm`). So silence is correct there;
+the listening check needs Continue or gameplay. The meters stay, one line each per 10 s: eboot `b8495e03…` folds the
+PS5 side's stage levels into the `[audio] AudioOut` line and drops the mix-buffer scan (not yet run on the console).
+
 ## 2026-10-28 — Mouse-wheel zoom for scope and map (.41, ps5/evidence/m4/wheel-run1)
 
 Shared input: the wheel pulses d-pad Up/Down (scope, AppCamera id 4) or right stick up/down (map, AppMap id 0x2a)

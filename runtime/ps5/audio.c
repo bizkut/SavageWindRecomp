@@ -11,11 +11,14 @@
 //
 // The klog: one line when the device opens or fails, then every 10 s the window's counters: underruns (a stream that
 // had data ran short in a period: silence was played for its missing frames), AudioOut errors (with the last result),
-// frames dropped because a stream's ring was full, and the deepest queue seen.
+// frames dropped because a stream's ring was full, the deepest queue seen, and the level at each stage, so a silent
+// output shows where the samples became zero: what the streams were given (SDL_PutAudioStreamData), what the mix read
+// back from their rings, the gains of the resumed streams, and what went to AudioOut.
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "sdl_shim.h"
 #include "../platform.h"
 
+#include <math.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -62,6 +65,16 @@ static struct {
     uint32_t underruns, short_frames, errors, dropped, queue_peak;
     int32_t last_error;
     uint64_t periods;
+    // Output level over the window (what actually went to AudioOut): peak |sample| and sum of squares for RMS, so a
+    // klog shows whether the game is audible without listening. dBFS: 0 = full scale, below -90 = silence.
+    uint32_t level_peak;
+    double level_sumsq;
+    uint64_t level_samples;
+    // Where silence would come from, stage by stage: what the streams were given (SDL_PutAudioStreamData: calls,
+    // frames, peak), what the mix read back from their rings before the gain.
+    uint32_t puts;
+    uint64_t in_frames;
+    float in_peak, ring_peak;
 } g = {.once = PTHREAD_ONCE_INIT};
 
 static void lock_init(void) {
@@ -89,6 +102,7 @@ static void audio_mix(int16_t *out, uint32_t frames) {
         uint32_t n = s->count < frames ? s->count : frames;
         for (uint32_t f = 0; f < n; f++) {
             const float *src = s->ring + 2 * ((s->head + f) % AUDIO_RING);
+            g.ring_peak = fmaxf(g.ring_peak, fmaxf(fabsf(src[0]), fabsf(src[1])));
             mix[2 * f] += src[0] * s->gain;
             mix[2 * f + 1] += src[1] * s->gain;
         }
@@ -101,23 +115,49 @@ static void audio_mix(int16_t *out, uint32_t frames) {
             if (s->get) s->get(s->get_data, s, need, need);
         }
     }
-    for (uint32_t k = 0; k < 2 * frames; k++) out[k] = (int16_t)(clamp1(mix[k]) * 32767.f);
+    for (uint32_t k = 0; k < 2 * frames; k++) {
+        out[k] = (int16_t)(clamp1(mix[k]) * 32767.f);
+        uint32_t a = (uint32_t)(out[k] < 0 ? -(int32_t)out[k] : out[k]);
+        if (a > g.level_peak) g.level_peak = a;
+        g.level_sumsq += (double)out[k] * out[k];
+    }
+    g.level_samples += 2 * frames;
 }
+
+static double dbfs(double peak, double full) { return peak > 0 ? 20 * log10(peak / full) : -120; }
 
 // The window's counters, once per AUDIO_WINDOW_NS. lock held.
 static void audio_window(uint64_t now) {
     if (!g.window_start) g.window_start = now;
     if (now - g.window_start < AUDIO_WINDOW_NS) return;
-    int streams = 0;
-    for (int i = 0; i < AUDIO_STREAMS; i++) streams += g.streams[i] != NULL;
+    int streams = 0, resumed = 0;
+    float gain = -1;  // (the lowest gain of a resumed stream: 0 would silence it)
+    for (int i = 0; i < AUDIO_STREAMS; i++) {
+        const SDL_AudioStream *s = g.streams[i];
+        if (!s) continue;
+        streams++;
+        if (!s->resumed) continue;
+        resumed++;
+        if (gain < 0 || s->gain < gain) gain = s->gain;
+    }
+    double rms = g.level_samples ? sqrt(g.level_sumsq / (double)g.level_samples) : 0;
     ps5_logf("[audio] AudioOut %.1f s: %llu periods, %u underruns (%u frames short), %u errors (last %#x), "
-             "%u frames dropped, %d streams, queue peak %u frames\n",
+             "%u frames dropped, %d streams (%d resumed, lowest gain %.2f), queue peak %u frames; in %u puts, %llu "
+             "frames, peak %.1f dBFS; ring read peak %.1f dBFS; level peak %.1f dBFS rms %.1f dBFS\n",
              (now - g.window_start) / 1e9, (unsigned long long)g.periods, g.underruns, g.short_frames, g.errors,
-             (unsigned)g.last_error, g.dropped, streams, g.queue_peak);
+             (unsigned)g.last_error, g.dropped, streams, resumed, gain, g.queue_peak, g.puts,
+             (unsigned long long)g.in_frames, dbfs(g.in_peak, 1), dbfs(g.ring_peak, 1), dbfs(g.level_peak, 32767),
+             dbfs(rms, 32767));
     g.window_start = now;
     g.periods = 0;
     g.underruns = g.short_frames = g.errors = g.dropped = g.queue_peak = 0;
     g.last_error = 0;
+    g.level_peak = 0;
+    g.level_sumsq = 0;
+    g.level_samples = 0;
+    g.puts = 0;
+    g.in_frames = 0;
+    g.in_peak = g.ring_peak = 0;
 }
 
 // One period's bookkeeping after sceAudioOutOutput returned `result`. lock held.
@@ -278,11 +318,14 @@ bool SDL_PutAudioStreamData(SDL_AudioStream *stream, const void *data, int n) {
     uint32_t room = AUDIO_RING - stream->count, take = frames < room ? frames : room;
     const uint8_t *in = data;
     for (uint32_t f = 0; f < take; f++) {
-        to_stereo(stream, in + (size_t)f * (size_t)stream->frame_bytes,
-                  stream->ring + 2 * ((stream->head + stream->count + f) % AUDIO_RING));
+        float *lr = stream->ring + 2 * ((stream->head + stream->count + f) % AUDIO_RING);
+        to_stereo(stream, in + (size_t)f * (size_t)stream->frame_bytes, lr);
+        g.in_peak = fmaxf(g.in_peak, fmaxf(fabsf(lr[0]), fabsf(lr[1])));
     }
     stream->count += take;
     if (take) stream->primed = true;
+    g.puts++;
+    g.in_frames += frames;
     g.dropped += frames - take;
     if (stream->count > g.queue_peak) g.queue_peak = stream->count;
     unlock();
