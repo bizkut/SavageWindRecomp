@@ -725,3 +725,41 @@ Present intervals: 75 % in 6.5–10 ms, 10 % under 6.5, 12 % in 10–15. FG off 
 ms). The HUD-less capture is not yet used on the PS5 ("from the final images"). Six generated/real capture pairs
 (1920×1080) were taken on the benchmark route; the hearts look clean in them, but that route's camera turns too slowly
 to show the ghosting the user saw in play.
+
+## 2026-10-28 — M7 benchmark 2, read closer, and MihawkGen at the game image's size (host-built, not yet run)
+
+From bench2-fg1.klog:
+- **The HUD-less path was used in play.** The `[fg]` lines in settling and the route say "0 of them from the final
+  images"; the one "from the final images" line was the first generated frame, at start-up/loading, where there is no
+  3D scene composite (68 per 2 s there).
+- **57.9 game fps is late frames, not a cap:** frame time p50 16.687 ms (the 59.94 grid; framepace.c applies no VSync
+  margin under MihawkGen, `make test-framepace-fg`), mean 17.27 from 21 % late frames. In the route the render thread's
+  acquire wait was 0.02 ms per frame (the 6.16 ms whole-run mean comes from start-up and loading), but its CPU rose to
+  13.6 ms per frame (10.7 with FG off), and the late frames follow it.
+- **GPU 11.43 ms per game frame includes MihawkGen** (the frame's GPU time sums every submission of that frame): 7.72
+  game + 2.78 generator + ~0.9 for the 4K HUD-less draw (with its FSR 1 passes), the composite and the copies.
+- **Uneven intervals:** a generated frame was presented as soon as the GPU finished it, sometimes under half a period
+  after the game frame before it (9.8 % under 6.5 ms); late game frames make the 10–15 ms ones.
+
+Changes (eboot `be3a1081…`): MihawkGen now runs at the game image's size (1920×1080: the
+4K window image adds no detail, it is this image upscaled by the present) on the two HUD-less images
+(`exec.c fg_mihawk`; the copy alternates between two images), puts the HUD over the result there, and the generated
+frame is presented as FSR 3's is, through the same crop and upscale: no 4K final/HUD-less images, no copies, no 4K
+composite (a quarter of the generator's pixels). A generated frame now waits until half a period after the last game
+frame's present. `[fgpipe]` adds the render thread's CPU in the present and in frame generation's recording. The
+benchmark gains 10 s of unmeasured fast motion after the summary (Link runs forward while the camera turns at full
+speed right, then left), where 8 generated/real pairs are captured with FG on.
+
+For the input owner (not frame generation): in the captures the button prompts show keyboard keys (Move WASD,
+Controls Tab) although a DualSense is connected; the benchmark sends no pad input, so the prompts may follow the last
+device that sent input.
+
+## 2026-10-28 — M7 benchmark 3: HUD-less generation, fast-motion captures (.41, ps5/evidence/m7/bench3-*, captures3/)
+
+Eboot `be3a1081…`. FG on: presented 114.1 fps, game 57.1 fps, 73.9 % on time; present intervals now 94.0 % in
+6.5–10 ms (p95 9.97). The render thread waits 6.86 ms per frame for room in the present queue (max depth 2). The
+intended 1080p MihawkGen did not take effect: it still ran at 3840×2160 (2.75 ms). FG off unchanged (98.9 %).
+**HUD:** generation now uses the HUD-less images with the newest HUD composited over them. In 8 generated/real pairs
+captured during a fast camera turn with Link running, the hearts are clean and sharp in every generated frame (the
+pixels around them differ by the motion itself), so the ghosting the user reported is gone in these captures; the
+user's own check in play is still pending.
