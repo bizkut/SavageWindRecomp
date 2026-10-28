@@ -1119,15 +1119,49 @@ void ConvertUTF16ToUTF8(const wchar_t* inputName, char* outputBuffer, size_t out
 #else
 void ConvertUTF8ToUTF16(const char* inputName, wchar_t* outputBuffer, size_t outputLen)
 {
+    // Savage Wind: reflected shader binding names are ASCII. Avoid libc++
+    // wide-string operations for them: the PS5 libc uses 16-bit wchar_t,
+    // while this backend is compiled with the FreeBSD 32-bit wchar_t ABI.
+    size_t asciiLength = 0;
+    while (inputName[asciiLength] && (unsigned char)inputName[asciiLength] < 0x80) ++asciiLength;
+    if (!inputName[asciiLength]) {
+        if (outputLen) {
+            size_t i = 0;
+            for (; i + 1 < outputLen && i < asciiLength; ++i) outputBuffer[i] = (unsigned char)inputName[i];
+            outputBuffer[i] = 0;
+        }
+        return;
+    }
     memset(outputBuffer, 0, outputLen * sizeof(wchar_t));
     std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
     wcscpy_s(outputBuffer, outputLen, converter.from_bytes(inputName).c_str());
 }
 void ConvertUTF16ToUTF8(const wchar_t* inputName, char* outputBuffer, size_t outputLen)
 {
-    memset(outputBuffer, 0, outputLen * sizeof(char));
-    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-    strcpy_s(outputBuffer, outputLen, converter.to_bytes(inputName).c_str());
+    // Savage Wind: labels are wchar_t code points from the compiler ABI,
+    // not SCE libc's 16-bit wide strings. Encode without libc++ wide traits.
+    if (!outputLen) return;
+    size_t out = 0;
+    while (*inputName) {
+        uint32_t c = (uint32_t)*inputName++;
+        if (sizeof(wchar_t) == 2 && c >= 0xd800 && c <= 0xdbff) {
+            uint32_t low = (uint32_t)*inputName;
+            if (low >= 0xdc00 && low <= 0xdfff) {
+                ++inputName;
+                c = 0x10000 + ((c - 0xd800) << 10) + low - 0xdc00;
+            }
+        }
+        if (c > 0x10ffff || (c >= 0xd800 && c <= 0xdfff)) c = 0xfffd;
+        size_t n = c < 0x80 ? 1 : c < 0x800 ? 2 : c < 0x10000 ? 3 : 4;
+        if (n >= outputLen - out) break;
+        if (n == 1) outputBuffer[out++] = (char)c;
+        else {
+            outputBuffer[out++] = (char)((n == 2 ? 0xc0 : n == 3 ? 0xe0 : 0xf0) | (c >> (6 * (n - 1))));
+            for (size_t i = n - 1; i; --i)
+                outputBuffer[out++] = (char)(0x80 | ((c >> (6 * (i - 1))) & 0x3f));
+        }
+    }
+    outputBuffer[out] = 0;
 }
 #endif  // _WIN32
 

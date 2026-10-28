@@ -34,3 +34,7 @@ Changes to the SDK's files (marked "Savage Wind" in them):
 - `sdk/src/backends/vk/ffx_vk.cpp`: the global descriptor pool is created with all six of the sizes it lists. It passed
   five, leaving out the storage buffers, which the FSR 3 upscaler's passes allocate from it (the Vulkan validation
   layer reports it; NVIDIA's driver allocates them anyway).
+- The PS5 toolchain uses 32-bit `wchar_t` while SCE's libc ABI declares it 16-bit. `ffx_compat.h` copies wide strings
+  by code unit, the Vulkan backend widens ASCII shader binding names directly and encodes debug labels without libc
+  wide-string functions, and the FSR 3 upscaler compares binding names by code unit. Unknown bindings are logged
+  with their pipeline and kind.

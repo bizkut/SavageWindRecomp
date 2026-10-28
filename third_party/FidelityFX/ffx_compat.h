@@ -23,14 +23,15 @@ template <typename T, size_t N> constexpr size_t ffx_countof_(T (&)[N]) { return
 #include <stddef.h>
 #include <wchar.h>
 static inline int wcscpy_s(wchar_t *d, size_t n, const wchar_t *s) {
-    size_t l = wcslen(s);
-    if (l >= n) l = n - 1;
-    wmemcpy(d, s, l);
+    if (!n) return 0;
+    size_t l = 0;
+    while (l + 1 < n && s[l]) { d[l] = s[l]; ++l; }
     d[l] = 0;
     return 0;
 }
 static inline int wcscat_s(wchar_t *d, size_t n, const wchar_t *s) {
-    size_t l = wcslen(d);
+    size_t l = 0;
+    while (l < n && d[l]) ++l;
     return l < n ? wcscpy_s(d + l, n - l, s) : 0;
 }
 static inline int strcpy_s(char *d, size_t n, const char *s) {

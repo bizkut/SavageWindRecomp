@@ -314,6 +314,26 @@ static void fsr3upscalerDebugCheckDispatch(FfxFsr3UpscalerContext_Private* conte
     }
 }
 
+// The PS5 title's FreeBSD toolchain uses 32-bit wchar_t, while the console's
+// libc wide-string functions use the SCE 16-bit ABI. Compare code units here.
+static bool sameBindingName(const wchar_t* a, const wchar_t* b)
+{
+    while (*a && *a == *b) { ++a; ++b; }
+    return *a == *b;
+}
+
+static void logUnknownBinding(const FfxPipelineState* pipeline, const char* kind, const wchar_t* name)
+{
+    char pass[FFX_RESOURCE_NAME_SIZE], binding[FFX_RESOURCE_NAME_SIZE];
+    size_t i = 0;
+    for (; i + 1 < sizeof(pass) && pipeline->name[i]; ++i) pass[i] = (char)pipeline->name[i];
+    pass[i] = 0;
+    i = 0;
+    for (; i + 1 < sizeof(binding) && name[i]; ++i) binding[i] = (char)name[i];
+    binding[i] = 0;
+    fprintf(stderr, "[fsr3] patchResourceBindings %s: unknown %s binding '%s'\n", pass, kind, binding);
+}
+
 static FfxErrorCode patchResourceBindings(FfxPipelineState* inoutPipeline)
 {
     for (uint32_t srvIndex = 0; srvIndex < inoutPipeline->srvTextureCount; ++srvIndex)
@@ -321,11 +341,13 @@ static FfxErrorCode patchResourceBindings(FfxPipelineState* inoutPipeline)
         int32_t mapIndex = 0;
         for (mapIndex = 0; mapIndex < _countof(srvTextureBindingTable); ++mapIndex)
         {
-            if (0 == wcscmp(srvTextureBindingTable[mapIndex].name, inoutPipeline->srvTextureBindings[srvIndex].name))
+            if (sameBindingName(srvTextureBindingTable[mapIndex].name, inoutPipeline->srvTextureBindings[srvIndex].name))
                 break;
         }
-        if (mapIndex == _countof(srvTextureBindingTable))
+        if (mapIndex == _countof(srvTextureBindingTable)) {
+            logUnknownBinding(inoutPipeline, "SRV texture", inoutPipeline->srvTextureBindings[srvIndex].name);
             return FFX_ERROR_INVALID_ARGUMENT;
+        }
 
         inoutPipeline->srvTextureBindings[srvIndex].resourceIdentifier = srvTextureBindingTable[mapIndex].index;
     }
@@ -335,11 +357,13 @@ static FfxErrorCode patchResourceBindings(FfxPipelineState* inoutPipeline)
         int32_t mapIndex = 0;
         for (mapIndex = 0; mapIndex < _countof(uavTextureBindingTable); ++mapIndex)
         {
-            if (0 == wcscmp(uavTextureBindingTable[mapIndex].name, inoutPipeline->uavTextureBindings[uavIndex].name))
+            if (sameBindingName(uavTextureBindingTable[mapIndex].name, inoutPipeline->uavTextureBindings[uavIndex].name))
                 break;
         }
-        if (mapIndex == _countof(uavTextureBindingTable))
+        if (mapIndex == _countof(uavTextureBindingTable)) {
+            logUnknownBinding(inoutPipeline, "UAV texture", inoutPipeline->uavTextureBindings[uavIndex].name);
             return FFX_ERROR_INVALID_ARGUMENT;
+        }
 
         inoutPipeline->uavTextureBindings[uavIndex].resourceIdentifier = uavTextureBindingTable[mapIndex].index;
     }
@@ -349,11 +373,13 @@ static FfxErrorCode patchResourceBindings(FfxPipelineState* inoutPipeline)
         int32_t mapIndex = 0;
         for (mapIndex = 0; mapIndex < _countof(constantBufferBindingTable); ++mapIndex)
         {
-            if (0 == wcscmp(constantBufferBindingTable[mapIndex].name, inoutPipeline->constantBufferBindings[cbIndex].name))
+            if (sameBindingName(constantBufferBindingTable[mapIndex].name, inoutPipeline->constantBufferBindings[cbIndex].name))
                 break;
         }
-        if (mapIndex == _countof(constantBufferBindingTable))
+        if (mapIndex == _countof(constantBufferBindingTable)) {
+            logUnknownBinding(inoutPipeline, "constant buffer", inoutPipeline->constantBufferBindings[cbIndex].name);
             return FFX_ERROR_INVALID_ARGUMENT;
+        }
 
         inoutPipeline->constantBufferBindings[cbIndex].resourceIdentifier = constantBufferBindingTable[mapIndex].index;
     }
