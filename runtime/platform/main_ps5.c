@@ -60,7 +60,6 @@ int main(void) {
         exit_title();
     }
     plat_init();
-    ps5_logf("[input] no PS5 controller backend before M4: player 1's controller is connected with nothing pressed\n");
     rt_paths_init();
     char why[512] = "";
     if (!gamelib_load(NULL, why, sizeof why) || !ps5_exefs_init("/data/savagewind/import", why, sizeof why)) {

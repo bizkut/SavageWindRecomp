@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the user's generated 1.9.0 game code into the PS5 title: runtime, NVN renderer on RADV (VideoOut display
-# plane, runtime/ps5/window.c) and shaderc, package library.
+# plane, runtime/ps5/window.c), the input devices (runtime/ps5/input.c) and shaderc, package library.
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
@@ -41,12 +41,13 @@ export PS5_LINK_INPUTS="--gc-sections --wrap=exit --wrap=_exit --wrap=_Exit --wr
 bash ps5/tools/build-title.sh game \
     runtime/platform/main_ps5.c runtime/platform/ps5.c runtime/platform/gamelib_ps5.c \
     runtime/platform/exefs_ps5.c runtime/ps5/sdl_shim.c runtime/ps5/log.c runtime/ps5/unavailable.c runtime/ps5/diagnostics.cpp \
-    runtime/ps5/window.c build/ps5/game-gen/vk_globals.c \
+    runtime/ps5/window.c runtime/ps5/input.c build/ps5/game-gen/vk_globals.c \
     runtime/dispatch.c runtime/fnprof.c runtime/ipc.c runtime/kernel.c runtime/loader.c runtime/imageload.c \
     runtime/platform/paths_ps5.c runtime/settings.c runtime/language.c runtime/storage_ps5.c \
     runtime/romfs_build.c runtime/romfs_image.c ps5/storagebroker/client.c \
     runtime/hle/heaps.c runtime/hle/setjmp.c runtime/hle/pl.c runtime/hle/yaz0.c runtime/hle/vibration.c runtime/hle/vi.c \
     runtime/hle/nvn_boot.c runtime/hle/framepace.c runtime/hle/npad.c runtime/hle/motion.c \
+    runtime/hle/input.c runtime/hle/bindings.c \
     runtime/nvn/astc.c runtime/nvn/cmdbuf.c runtime/nvn/formats.c runtime/nvn/objects.c runtime/nvn/output_scale.c \
     runtime/nvn/shader_archive.c runtime/nvn/smaa_data.c runtime/nvn/tegra.c runtime/nvn/maxwell/translate.c \
     runtime/nvn/vulkan/device.c runtime/nvn/vulkan/exec.c runtime/nvn/vulkan/textures.c runtime/nvn/vulkan/shaders.c \

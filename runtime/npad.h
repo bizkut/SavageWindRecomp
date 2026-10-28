@@ -1,5 +1,5 @@
-// Player 1's controller for the guest's nn::hid Npad calls (runtime/hle/npad.c), read from the host's input devices:
-// runtime/hle/input.c on desktop, runtime/ps5/unavailable.c on the PS5 until its input (M4).
+// Player 1's controller for the guest's nn::hid Npad calls (runtime/hle/npad.c), read from the host's input devices
+// by runtime/hle/input.c (SDL's devices on desktop, runtime/ps5/input.c's on the PS5).
 #pragma once
 #include <stdint.h>
 

@@ -57,7 +57,7 @@ fi
 
 objects=()
 for source in "$@"; do
-    object="$build/obj/$(basename "$source").o"
+    object="$build/obj/${source//\//_}.o"  # (the path: runtime/ps5/input.c and runtime/hle/input.c are both linked)
     case $source in *.c) std=(-std=gnu11) ;; *.S) std=() ;; *) std=(-std=c++20) ;; esac
     # shellcheck disable=SC2086
     cc "${std[@]}" -O2 -g1 -Wall -Wextra -fno-omit-frame-pointer -ffunction-sections -fdata-sections \

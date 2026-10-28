@@ -1,5 +1,5 @@
-// The SDL audio and controller calls of the kept code: no host audio device (M5) or controller (M4) yet. The window,
-// timer and events are runtime/ps5/window.c.
+// The SDL audio calls of the kept code: no host audio device (M5) yet. The window, timer and events are
+// runtime/ps5/window.c; the input devices runtime/ps5/input.c.
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "sdl_shim.h"
 #include "../platform.h"
@@ -7,13 +7,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static _Atomic(const char *) g_error = "PS5 audio device unavailable before M5";
+void ps5_sdl_error(const char *text) { atomic_store(&g_error, text); }
+const char *SDL_GetError(void) { return atomic_load(&g_error); }
+
 static atomic_flag audio_reported = ATOMIC_FLAG_INIT;
 static void audio_unavailable(void) {
     if (!atomic_flag_test_and_set(&audio_reported))
         ps5_logf("[audio] PS5 audio device unavailable before M5; the audio service uses its no-device path\n");
 }
-bool SDL_InitSubSystem(uint32_t flags) { (void)flags; audio_unavailable(); return false; }
-const char *SDL_GetError(void) { return "PS5 audio (M5) or controller (M4) device unavailable"; }
+bool SDL_InitSubSystem(uint32_t flags) {
+    (void)flags;
+    audio_unavailable();
+    ps5_sdl_error("PS5 audio device unavailable before M5");
+    return false;
+}
 SDL_AudioStream *SDL_OpenAudioDeviceStream(SDL_AudioDeviceID id, const SDL_AudioSpec *spec,
                                           SDL_AudioStreamCallback callback, void *data) {
     (void)id; (void)spec; (void)callback; (void)data; audio_unavailable(); return NULL;
@@ -39,9 +47,3 @@ bool SDL_SetAudioStreamGetCallback(SDL_AudioStream *stream, SDL_AudioStreamCallb
 void SDL_DestroyAudioStream(SDL_AudioStream *stream) { (void)stream; invalid_audio_stream(); }
 
 uint64_t SDL_GetTicks(void) { return plat_now_ns() / 1000000ull; }
-bool SDL_RumbleGamepad(SDL_Gamepad *pad, uint16_t low, uint16_t high, uint32_t milliseconds) {
-    (void)pad; (void)low; (void)high; (void)milliseconds;
-    static atomic_flag reported = ATOMIC_FLAG_INIT;
-    if (!atomic_flag_test_and_set(&reported)) ps5_logf("[input] controller rumble unavailable before M4\n");
-    return false;
-}

@@ -6,10 +6,11 @@
 // (runtime/nvn/output_scale.c), follow that extent; only a 4K TV (.41) has been measured. Presents are FIFO
 // (Video > VSync On): VideoOut flips at vblank, and with VRR the TV follows the presents between 48 and 120 Hz. Also
 // the output-mode half of runtime/window_size.c (one size: the display's), the timer and the event queue the kept code
-// polls (only a quit request comes through it; input devices are M4).
+// polls (a quit request, and the input devices' events from runtime/ps5/input.c).
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
+#include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -212,17 +213,47 @@ void winsize_apply(void *sdl_window) {
              "do not apply)\n");
 }
 
-// ---- events: a quit request (game_options.mm Quit) is the only event before input devices exist (M4)
+// ---- events: a quit request (game_options.mm Quit) and the input devices' events (runtime/ps5/input.c, read as the
+// window loop asks for events). A quit never waits behind a full queue.
+#define EVENT_QUEUE 1024
+static pthread_mutex_t g_events_lock = PTHREAD_MUTEX_INITIALIZER;
+static SDL_Event g_events[EVENT_QUEUE];
+static unsigned g_events_head, g_events_count;
 bool SDL_PushEvent(SDL_Event *event) {
-    if (event->type != SDL_EVENT_QUIT) return false;
-    atomic_store(&g_quit, true);
-    return true;
+    if (event->type == SDL_EVENT_QUIT) {
+        atomic_store(&g_quit, true);
+        return true;
+    }
+    pthread_mutex_lock(&g_events_lock);
+    bool room = g_events_count < EVENT_QUEUE;
+    if (room) g_events[(g_events_head + g_events_count++) % EVENT_QUEUE] = *event;
+    pthread_mutex_unlock(&g_events_lock);
+    if (!room) {
+        static uint64_t said_ns;
+        uint64_t now = plat_now_ns();
+        if (now - said_ns > 1000000000ull) {
+            said_ns = now;
+            ps5_logf("[ps5] event queue full (%d events): event %#x dropped\n", EVENT_QUEUE, event->type);
+        }
+    }
+    return room;
 }
 bool SDL_PollEvent(SDL_Event *event) {
-    if (!atomic_exchange(&g_quit, false)) return false;
-    memset(event, 0, sizeof *event);
-    event->type = SDL_EVENT_QUIT;
-    return true;
+    if (atomic_exchange(&g_quit, false)) {
+        memset(event, 0, sizeof *event);
+        event->type = SDL_EVENT_QUIT;
+        return true;
+    }
+    ps5_input_poll();
+    pthread_mutex_lock(&g_events_lock);
+    bool any = g_events_count > 0;
+    if (any) {
+        *event = g_events[g_events_head];
+        g_events_head = (g_events_head + 1) % EVENT_QUEUE;
+        g_events_count--;
+    }
+    pthread_mutex_unlock(&g_events_lock);
+    return any;
 }
 bool SDL_WaitEventTimeout(SDL_Event *event, int32_t timeout_ms) {
     uint64_t until = plat_now_ns() + (uint64_t)(timeout_ms > 0 ? timeout_ms : 0) * 1000000ull;
