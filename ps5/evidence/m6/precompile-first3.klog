@@ -1,0 +1,1192 @@
+# launch PPSA90212: ok launched PPSA90212 result=0x00006016 via lncUtilApp/foreground as user 486509363 (the console reports the title running)
+<118>[SceLncService] launchApp(PPSA90212)
+<118>[SceLncService] category={gd} appCategoryType={0x00000000} VRMode={0,0}
+<118>[SceLncService] hnm,psnf,pc,tk,ns,pf,pn={1,0,0,0,0,1,0} appBootMode={2}
+<118>[SceLncService] appType={SCE_LNC_APP_TYPE_BIG_APP} [] appVer={} contentVersion={00.001.000} appCategoryType={0x00000000}
+<118>[SceLncService] Waiting for LoginMgr
+<118>[SceLncService] Num. of logged-in users is 1
+<118>[SceLncService] BigApp Launch Ready: Waiting
+<118>[SceLncService] BigApp Launch Ready: OK
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck()
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck() returned
+<118>[SceLncService] EnsureBigAppBudget()
+<118>[ResArbitrator][api      ]sceResourceArbitratorEnsureBigAppBudget[187ec](238)  : categoryType[0x0], titleId[PPSA90212], isConfirmed[false]
+<118>[ResArbitrator][TestId   ]EnsureBudget            [187ec]( 41)  : EnsureBudget()
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [187ec]( 38)  : Enqueue(id[0], t[1], user[0] state[RUNNING]) queue.size[1]
+<118>[ResArbitrator][App      ]GetExecutable           [18937](136)  : Target id[0] budgets{vcn[  0] acp[ 0] mem[  0]} prio[2(2)]
+<118>[ResArbitrator][App      ]SetVCNBudget            [18937](610)  : pid/appId is INVALID_ID.vcn budget not set.
+<118>[ResArbitrator][RA_main  ]cbResult                [18937](350)  : Callback id[0] type[RESULT] result[true] state[RUNNING]
+<118>[ResArbitrator][TestId   ]raCallback              [18937](128)  : BigApp[0xffffffff] Changed state"RUNNING"
+<118>[ResArbitrator][QUEUE    ]Remove                  [18937]( 69)  : Remove:(id[0] state[RUNNING] type[1]) queue.size[0]
+<118>[SceLncService] EnsureBigAppBudget() returned
+<118>[ResArbitrator][App      ]Dump                    [18937](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18937](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0xffffffff]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x208904780)] userData[0x0] pid[0x43]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -3: Id[180] state[RUNNING] vcn[ 20] acp[270] mem[  0] prio[5(5)] from[IPMI(0x208904680)] userData[0x200e1a388] pid[0x84]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -4: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x39]
+<118>[ResArbitrator][App      ]Dump                    [18937](819)  : -- No kicking Apps *************************
+<118>[SceSystemStateMgr] Power Mode Change: BIG_APP
+<118>[Syscore Umd] Set memory pstate (hasRunningGame=0, hasRunningMiniApp=0, isSplashDisplayed=0
+<118>[AvControl] Waiting for the pstate event 
+<118>[AvControl] Waiting for the pstate event : done
+<118>[SceSystemStateMgr] CPU                                     HLT GC   GFX  F    U   ID       FAN BAPM
+<118>[SceSystemStateMgr]  800  800  800  800 3200 3200 3200 3200   0 gen2  754 1200 875 00840f60   1 off
+<118>[SceLncService] sceApplicationSave() categoryType={0x00000000}, debuggerRequestId={0xffffffff}
+<118>[Syscore App] No App needs to save. BigApp does not exist on the memory.
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2687) getAppType: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] BeginAppMount()
+[KERNEL] INFO: begin_app_mount 00000000
+appmgr_create_app(), appid=6016 category=0
+[KERNEL] INFO: launch bigapp: category 0x00000000, container 1
+[Amm config] Page table memory : 64 MiB, VA range size 512 GiB, MultiMap VA range size 0 GiB
+wt_application_launch_callback:new target appid=0x6016
+<118>[SceLncService] is_pkgstep={0}
+<118>[SceLncService] PrepareProcessLaunchDebugger()
+<118>[sceProcessStarter] MountDownloadData() title_id = [PPSA90212] data_path = [**************/PPSA90212/download0.dat] mount_path = [************/download/PPSA90212] budget = [game]
+<118>[PS]Error: W:\Build\J02159366\vsh\shell\shell_core\process_starter\process_starter_util.cpp at 1027
+<118>num is 2
+<118>[SceLncService] PrepareProcessLaunchDebugger() returned
+<118>[SceLncService] sandboxType={0x00000002}
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2687) getAppType: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] spawnApp
+<118>[Syscore App] createApp PPSA90212
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[AvControl] onAppLaunch(appid=0x6016)
+<118>[AvControl] Entry appId(0x6016) supplementaryInfo: 0x0 
+<118>[AvControl] -- app[0](appid=0x6016 attr=0xaa0057)(GAME RUNNING)(HDR:x HFR:o VR:x VRR:TypeA) SpecialModeInBg(none) HDCP23(none) supInfo(0x0)
+<118>[AvControl] App Event[POST_BEGIN]: elapse 0[ms] 
+<118>[Syscore App] processSpawn(pid, 0x6016, 0x16016730, appParam, processParam, 1, 1, 1, param, debug, 0)
+<118>[Syscore App] appParam: appType = 0, titleId = PPSA90212
+<118>[Syscore App] new pid=0xca[Syscore App] attributeExe= 0
+<118>[AvControl] AudioOut: shared (pid=0xca)
+<118>[AvControl] VideoOut: shared (pid=0xca appId=0x6016)
+<118>[AvControl] video owner is switched to registered app(appId=0x6016) 
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+[KERNEL] INFO: Disable workaround PPRREQ55470_NO_ADDITIONAL_DMEM_192MB
+<118>[Syscore App] Add event : pid=0xca
+<118>[AppMgr Trace]: New Process, pid=0xca, created.
+<118>[AppMgr Trace]: New App, appId=0x6016, created
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_common.cpp(889) getCurrentTick: LNC_RTRACE::0x80b50001
+<118>[SceLncService] update: appId={0x00006016} appSessionId={63928764835000000}
+[KERNEL] INFO: pid 202
+[KERNEL] INFO: Application Category Type: 00000000
+[KERNEL] INFO: SDK vesion: PS4:08050001 PPR:02000009
+[KERNEL] INFO: Total Memory Size: 0x32d600000
+[KERNEL] INFO: DMEM size: 0x300000000
+<118>[SceLncUtil] blockAppSuspend: name={SceSaveData}, appId={0x00000006}, refCount={1}
+<118>[SceLncUtil] unblockAppSuspend: name={SceSaveData}, appId={0x00000006}, refCount={0}
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [187e2]( 38)  : Enqueue(id[0], t[1], user[0] state[RUNNING]) queue.size[1]
+<118>[ResArbitrator][TestId   ]lncEventCallback        [187e2]( 64)  : Set Target BigAppId[0x6016] pid[0xca]
+<118>[ResArbitrator][VA_main  ]GetMediaAppInfo         [187e2](122)  : sceKernelGetAppCategoryType(0xca) ret:SCE_OK categoryType[0x0]
+<118>[ResArbitrator][App      ]GetExecutable           [18937](136)  : Target id[0] budgets{vcn[  0] acp[ 0] mem[  0]} prio[2(2)]
+<118>[ResArbitrator][App      ]ChangeState             [18937]( 43)  : replace id[0] state:['RUNNING'->'RUNNING']
+<118>[ResArbitrator][App      ]SetVCNBudget            [18937](614)  : vcnType is TYPE_UNKNOWN.vcn budget not set.
+<118>[ResArbitrator][RA_main  ]cbResult                [18937](350)  : Callback id[0] type[RESULT] result[true] state[RUNNING]
+<118>[ResArbitrator][TestId   ]raCallback              [18937](128)  : BigApp[0x6016] Changed state"RUNNING"
+<118>[ResArbitrator][QUEUE    ]Remove                  [18937]( 69)  : Remove:(id[0] state[RUNNING] type[1]) queue.size[0]
+<118>[ResArbitrator][App      ]Dump                    [18937](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18937](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0x6016]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x208904780)] userData[0x0] pid[0x43]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -3: Id[180] state[RUNNING] vcn[ 20] acp[270] mem[  0] prio[5(5)] from[IPMI(0x208904680)] userData[0x200e1a388] pid[0x84]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -4: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x39]
+<118>[ResArbitrator][App      ]Dump                    [18937](819)  : -- No kicking Apps *************************
+[KERNEL] INFO: FMEM size: 0x1c000000
+[KERNEL] INFO: NDA Text size: 0
+[KERNEL] INFO: CPU/GPU page table count: 0x4000 0x4000
+[BAPM] CPU/GPU Frequency: Default
+<118>[SceLncUtil] blockAppSuspend: name={SceNpUds}, appId={0x00000006}, refCount={1}
+[BAPM] Param Set: 
+<118>[SceLncUtil] unblockAppSuspend: name={SceNpUds}, appId={0x00000006}, refCount={0}
+2 (Ver:02000009)
+<202> EXEC /app0/eboot.bin [user], vm#1, dmem#1 abi=native category=native_game <63526327 msec>
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3829.4 KB, trend +13.4 KB/min, peak 7758.7 KB, when 47497 [sec]
+<118>[SceShellCore] Stop Screen Saver
+### GFX(pipe0) Game. proc gen:2 vmid:1 pid:202
+ +++ num clients 2
+### gc_gfx_queue_status : in_frame=0 rptr=0x00000000 wptr=0x00000000 IBlist(rptr=0x0000 wptr=0x0000 i_wptr=0x0000)
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [18936]( 38)  : Enqueue(id[110], t[1], user[0] state[RUNNING]) queue.size[1]
+<118>[ResArbitrator][App      ]GetExecutable           [18937](136)  : Target id[110] budgets{vcn[ 20] acp[368] mem[  0]} prio[10(10)]
+<118>[ResArbitrator][IpcServer]Callback                [18937]( 78)  : S->C Callback Set(id[110] type[RESULT] result[true] state[RUNNING])
+<118>[ResArbitrator][QUEUE    ]Remove                  [18937]( 69)  : Remove:(id[110] state[RUNNING] type[1]) queue.size[0]
+<118>[ResArbitrator][App      ]Dump                    [18937](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18937](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0x6016]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x208904780)] userData[0x0] pid[0x43]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -3: Id[110] state[RUNNING] vcn[ 20] acp[368] mem[  0] prio[10(10)] from[IPMI(0x2089046a0)] userData[0x0] pid[0x83]*HB*
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -4: Id[180] state[RUNNING] vcn[ 20] acp[270] mem[  0] prio[5(5)] from[IPMI(0x208904680)] userData[0x200e1a388] pid[0x84]
+<118>[ResArbitrator][App      ]Dump                    [18937](518)  : -5: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x39]
+<118>[ResArbitrator][App      ]Dump                    [18937](819)  : -- No kicking Apps *************************
+<118>[TTS Arbitrator][INF]  FG App was changed. 2007 -> 6016
+<118>[ResArbitrator][IpcServer]GetCallbackDataInt      [18936](334)  : C->S Callback Get(id[110] type[RESULT] result[true] state[RUNNING] cb[966460])
+<118>[SceLncService] SetControllerFocus(0x00006016)
+<118>[NoticeScreenSkip] NoticeScreenSkipGetFlag(notice_screen_skip_flag= 1, appId= 0x00006016)
+<118>[SceLncService] SetAppFocus(): SetControllerFocus(-1)
+<118>* updateVibrationTriggerEffectWeak:L7804 getVibrationTriggerEffectWeakWhileEmbeddedMicInUse return MBUS_ERROR_NO_PROCESS_INFO. pid = 0xffffffff
+<118>[SceLncService] SetControllerFocus(0x00006016)
+savagewind: termination and allocation diagnostics installed
+savagewind: memory stage=startup heap_base=0 mapped=0 peak=0 segments=0 arenas=0 libc_fallbacks=0 flex_free=133169152 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12882804736 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=startup rc=0 base=7eedfc000 size=2097152 used=744
+savagewind: PPSA90212 M3 1.9.0 startup
+savagewind: guest reserved 0x7000000000-0x7320000000
+savagewind: [paths] permission repair: result=0 scanned=34 changed=0 skipped=0 failed=0
+savagewind: [paths] root=/data/savagewind stat=0 errno=0 is_dir=1 broker_write=1 chdir=-1 errno=1
+savagewind: [paths] data: /data/savagewind (absolute reads, broker writes)
+savagewind-import: session=package-runtime step=open-package errno=0 type=begin what=/data/savagewind/import/E [[redacted]][v1114112][UPD1.9.0][US].nsp
+savagewind: [ps5] package open worker started (requested stack 8 MiB)
+savagewind-import: session=package-runtime step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild[[redacted]][US][v0].nsp
+savagewind-import: session=package-runtime step=parse-keys errno=0 type=begin what=
+savagewind-import: session=package-runtime step=scan-cnmt errno=0 type=begin what=
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-import: session=package-runtime step=open-program-nca errno=0 type=begin what=
+savagewind: memory stage=open-program-nca heap_base=0x2000000000 mapped=33554432 peak=33554432 segments=2 arenas=2 libc_fallbacks=0 flex_free=124780544 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12847153152 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=open-program-nca rc=0 base=7ee5e4000 size=8388608 used=6840
+savagewind-import: session=package-runtime step=nca-construct errno=0 type=begin what=
+savagewind: memory stage=nca-construct heap_base=0x2000000000 mapped=33554432 peak=33554432 segments=2 arenas=2 libc_fallbacks=0 flex_free=124780544 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12847153152 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-construct rc=0 base=7ee5e4000 size=8388608 used=6840
+savagewind-import: session=package-runtime step=nca-set-keys errno=0 type=begin what=
+savagewind: memory stage=nca-set-keys heap_base=0x2000000000 mapped=33554432 peak=33554432 segments=2 arenas=2 libc_fallbacks=0 flex_free=124780544 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12847153152 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-set-keys rc=0 base=7ee5e4000 size=8388608 used=6840
+savagewind-import: session=package-runtime step=nca-keys-ready errno=0 type=begin what=
+savagewind: memory stage=nca-keys-ready heap_base=0x2000000000 mapped=33554432 peak=33554432 segments=2 arenas=2 libc_fallbacks=0 flex_free=124780544 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12847153152 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-keys-ready rc=0 base=7ee5e4000 size=8388608 used=6840
+savagewind-import: session=package-runtime step=nca-open-update errno=0 type=begin what=
+savagewind: memory stage=nca-open-update heap_base=0x2000000000 mapped=33554432 peak=33554432 segments=2 arenas=2 libc_fallbacks=0 flex_free=124780544 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12847153152 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-open-update rc=0 base=7ee5e4000 size=8388608 used=6840
+savagewind-import: session=package-runtime step=nca-open-base errno=0 type=begin what=
+savagewind: memory stage=nca-open-base heap_base=0x2000000000 mapped=33554432 peak=33554432 segments=2 arenas=2 libc_fallbacks=0 flex_free=124780544 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12847153152 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-open-base rc=0 base=7ee5e4000 size=8388608 used=6840
+savagewind-import: session=package-runtime step=nca-process errno=0 type=begin what=
+savagewind: memory stage=nca-process heap_base=0x2000000000 mapped=33554432 peak=33554432 segments=2 arenas=2 libc_fallbacks=0 flex_free=124780544 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12847153152 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-process rc=0 base=7ee5e4000 size=8388608 used=6840
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-begin partition=1
+savagewind-nca: step=base-open-begin partition=1
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-begin partition=1
+savagewind-nca: step=hash-setup-begin partition=1
+<118>@ mbusGetAudioOutDeviceInfoByBusType:L5950
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63628s:60us, p:0:1, 56164:0084, 36504:0042, m:0, d:0x0, 0x1110
+savagewind-nca: step=hash-setup-done partition=1
+savagewind-nca: step=partition-begin partition=2
+savagewind-nca: step=hash-setup-begin partition=2
+savagewind-nca: step=hash-setup-done partition=2
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-partition partition=1
+savagewind-nca: step=mount-partition partition=2
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=base-open-done partition=1
+savagewind-nca: step=bktr-open-begin partition=1
+savagewind-nca: step=bktr-open-done partition=1
+savagewind-nca: step=hash-setup-begin partition=1
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63629s: 2us, p:0:1, 56231:0946, 36571:0473, m:0, d:0x0, 0x1110
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63629s:59us, p:0:1, 56233:0078, 36573:0039, m:0, d:0x0, 0x1110
+savagewind-nca: step=hash-setup-done partition=1
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-partition partition=1
+<118>[SceShellCore] CPU Utilization: 0.15 0.00 0.61 0.00 0.04 0.00 0.03 0.00 0.00 0.00 0.00 0.00 0.00 0.35 0.96 0.96
+<118>[SceShellCore] CPU Top: timestamp 63524 to 63527 (3.0 sec)
+<118>[SceShellCore] 99% 1023 SceIdleCpu12
+<118>[SceShellCore] 99% 1023 SceIdleCpu1
+<118>[SceShellCore] 99% 1023 SceIdleCpu3
+<118>[SceShellCore] 99% 1023 SceIdleCpu5
+<118>[SceShellCore] 99% 1023 SceIdleCpu7
+<118>[SceShellCore] 99% 1023 SceIdleCpu8
+<118>[SceShellCore] 99% 1023 SceIdleCpu9
+<118>[SceShellCore] 99% 1023 SceIdleCpu10
+<118>[SceShellCore] 99% 1023 SceIdleCpu11
+<118>[SceShellCore] 97% 1023 SceIdleCpu6
+<118>[SceShellCore] 96% 1023 SceIdleCpu4
+<118>[SceShellCore] 85% 1023 SceIdleCpu0
+<118>[SceShellCore] 77%  700 NPXS40028 SceRedisServerMain
+<118>[SceShellCore] 65%   64 SceIdleCpuRv
+<118>[SceShellCore] 39% 1023 SceIdleCpu2
+<118>[SceShellCore] 36%  767 NPXS40085 SceSl2NQDipatch
+<118>[SceShellCore] 17%  615 NPXS40087 SceRnJs-rnps-home
+<118>[SceShellCore]  9%   64 SceA53IoCompletion0 2
+<118>[SceShellCore]  9%   64 SceA53IoCompletion0 0
+<118>[SceShellCore]  9%   64 SceA53IoCompletion0 1
+<118>[SceShellCore]  6%  605 NPXS40087 SceShellUIMain
+<118>[SceShellCore]  6%  700 PPSA90212 eboot.bin
+<118>[SceShellCore]  4% 1023 SceIdleCpu15
+<118>[SceShellCore]  4%  297 NPXS40096 SceAudioSystemMainThread
+<118>[SceShellCore]  4% 1021 SceCpuRv
+<118>[SceShellCore]  4%  700 NPXS40082 SceAppInfoServer
+<118>[SceShellCore]  4% 1023 SceIdleCpu14
+<118>[SceShellCore]  3%  615 NPXS40087 SceRnJs-rnps-control-center
+<118>[SceShellCore]  3%  620 NPXS40087 SceVideoRecordingWrapperJob
+<118>[SceShellCore]  3%  510 NPXS40102 SceRpdRRS
+<118>[SceShellCore]  3%  615 NPXS40087 SceRnNm-rnps-home
+<118>[SceShellCore]  2%  720 NPXS40087 Thread Pool Worker
+<118>[SceShellCore]  2%  615 NPXS40087 SceRnJs-rnps-game-hub
+<118>[SceShellCore]  2%  720 NPXS40087 Thread Pool Worker
+<118>[SceShellCore]  1%  720 NPXS40087 Thread Pool Worker
+<118>[SceShellCore]  1%  302 NPXS40096 SceAinIntvl
+<118>[SceShellCore]  1%  100 SceSvmd
+savagewind-nca: step=mount-done partition=0
+savagewind-import: session=package-runtime step=mount-romfs errno=0 type=begin what=
+savagewind: memory stage=mount-romfs heap_base=0x2000000000 mapped=167772160 peak=167772160 segments=9 arenas=2 libc_fallbacks=0 flex_free=124780544 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12712935424 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=mount-romfs rc=0 base=7ee5e4000 size=8388608 used=6840
+savagewind-import: session=package-runtime step=romfs-ready errno=0 type=begin what=
+savagewind: memory stage=romfs-ready heap_base=0x2000000000 mapped=167772160 peak=167772160 segments=9 arenas=2 libc_fallbacks=0 flex_free=124780544 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12712935424 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=romfs-ready rc=0 base=7ee5e4000 size=8388608 used=6840
+savagewind: [ps5] package RomFS opened: 15132662100 bytes in 2.791 s
+savagewind-import: session=package-exefs step=open-package errno=0 type=begin what=/data/savagewind/import/E [[redacted]][v1114112][UPD1.9.0][US].nsp
+savagewind-import: session=package-exefs step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild[[redacted]][US][v0].nsp
+savagewind-import: session=package-exefs step=parse-keys errno=0 type=begin what=
+savagewind-import: session=package-exefs step=scan-cnmt errno=0 type=begin what=
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-import: session=package-runtime step=exefs-nca-construct errno=0 type=begin what=
+savagewind: memory stage=exefs-nca-construct heap_base=0x2000000000 mapped=167772160 peak=167772160 segments=9 arenas=2 libc_fallbacks=0 flex_free=124780544 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12712935424 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=exefs-nca-construct rc=0 base=7ee5e4000 size=8388608 used=6792
+savagewind-import: session=package-runtime step=exefs-nca-set-keys errno=0 type=begin what=
+savagewind: memory stage=exefs-nca-set-keys heap_base=0x2000000000 mapped=167772160 peak=167772160 segments=9 arenas=2 libc_fallbacks=0 flex_free=124780544 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12712935424 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=exefs-nca-set-keys rc=0 base=7ee5e4000 size=8388608 used=6792
+savagewind-import: session=package-runtime step=exefs-nca-open-update errno=0 type=begin what=
+savagewind: memory stage=exefs-nca-open-update heap_base=0x2000000000 mapped=167772160 peak=167772160 segments=9 arenas=2 libc_fallbacks=0 flex_free=124780544 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12712935424 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=exefs-nca-open-update rc=0 base=7ee5e4000 size=8388608 used=6792
+savagewind-import: session=package-runtime step=exefs-nca-open-base errno=0 type=begin what=
+savagewind: memory stage=exefs-nca-open-base heap_base=0x2000000000 mapped=167772160 peak=167772160 segments=9 arenas=2 libc_fallbacks=0 flex_free=124780544 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12712935424 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=exefs-nca-open-base rc=0 base=7ee5e4000 size=8388608 used=6792
+savagewind-import: session=package-runtime step=exefs-nca-process errno=0 type=begin what=
+savagewind: memory stage=exefs-nca-process heap_base=0x2000000000 mapped=167772160 peak=167772160 segments=9 arenas=2 libc_fallbacks=0 flex_free=124780544 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12712935424 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=exefs-nca-process rc=0 base=7ee5e4000 size=8388608 used=6792
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-begin partition=1
+savagewind-nca: step=base-open-begin partition=1
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-begin partition=1
+savagewind-nca: step=hash-setup-begin partition=1
+savagewind-nca: step=hash-setup-done partition=1
+savagewind-nca: step=partition-begin partition=2
+savagewind-nca: step=hash-setup-begin partition=2
+savagewind-nca: step=hash-setup-done partition=2
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-partition partition=1
+savagewind-nca: step=mount-partition partition=2
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=base-open-done partition=1
+savagewind-nca: step=bktr-open-begin partition=1
+savagewind-nca: step=bktr-open-done partition=1
+savagewind-nca: step=hash-setup-begin partition=1
+savagewind-nca: step=hash-setup-done partition=1
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-partition partition=1
+savagewind-nca: step=mount-done partition=0
+savagewind-import: session=package-runtime step=exefs-mount errno=0 type=begin what=
+savagewind: memory stage=exefs-mount heap_base=0x2000000000 mapped=167772160 peak=167772160 segments=9 arenas=2 libc_fallbacks=0 flex_free=124780544 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12712935424 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=exefs-mount rc=0 base=7ee5e4000 size=8388608 used=6792
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63634s: 2us, p:0:1, 56496:0935, 36836:0467, m:0, d:0x0, 0x1110
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63634s:58us, p:0:1, 56498:0083, 36838:0041, m:0, d:0x0, 0x1110
+savagewind: loaded main     at 7000000000 size 1e98000 syms 510
+savagewind: loaded subsdk0  at 7001e98000 size 66c000 syms 10111
+savagewind: loaded sdk      at 7002504000 size c55000 syms 23066
+savagewind: relocated main     (223994 packed relative, 49 imports bound to host stubs)
+savagewind: relocated subsdk0  (3424 packed relative, 2 imports bound to host stubs)
+savagewind: relocated sdk      (15013 packed relative, 0 imports bound to host stubs)
+savagewind: [settings] loaded savagewind.ini
+savagewind: [ps5] window: VideoOut display plane, its size from the display mode (asked 0x0), no SDL video
+savagewind: [ps5] Video page (savagewind.ini): frame rate 60 (0: off), upscaler 2, upscaler mode 1, anti-aliasing 0, field of view 100%
+savagewind: [window] VideoOut display plane, fullscreen in the display's mode (Video > Resolution applies at the next start)
+savagewind: [vk] application version 0.3.103 (Savage Wind 0.3.1-alpha.3)
+savagewind: ac_compute_device_uuid's output is based on invalid pci bus info.
+<118>[AvControl] entry process(appid:0x6016 pid:0xca)
+<118>[AvControl] -- app[0](appid=0x6016 attr=0xaa0057)(GAME RUNNING)(HDR:x HFR:o VR:x VRR:TypeA) SpecialModeInBg(none) HDCP23(none) supInfo(0x0)
+<118>[AvControl]    process[0](0xca)
+<118>[AvControl] New session(appid=0x6016 pid=0xca) system:0 bc:0 attr:0xaa0057
+<118>[AvControl] change output mode(video:o voption:o audio:x)
+<118>[AvControl] v-request auto attr=0xaa0057: hdmi:vrr hdr usbc:cinema 
+<118>[AvControl VideoSetting:410] Enable allm since output format is vrr. 
+<118>[AvControl] 119.88Hz request is converted to VRR 119.88Hz
+<118>[AvControl] layout:HDMI
+<118>[AvControl] notify stop-scanin (idx:-1) dwb0(unusable) dwb1(unusable) dwb2(usable) cause(hdmi)
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 1)
+[si] stop  pipe[0] 63636s: 2us, p:0:1, 56648:1014, 36988:0507, m:0, d:0x0, 0x1110
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63636s: 1us, p:0:1, 56648:1211, 36988:0605, m:0, d:0x0, 0x1110
+<118>[AvControl] ** v:130200020000000002/a:00 **
+<118>[AvControl] ** set_default_metadata ** -1 
+<118>[AvControl] ** set_mode_soc(0) ** 0xca/-1 
+<118>[AvControl]  video: port:HDMI 2160P_11988 YUV422 limited YCC2100_PQ 30bpp 16:9 allm-nodata o--tv-f-2 
+<118>[AvControl]       : VRR(peg:120 range:48 - 120) capable(allm 1 mdelata 0 range 40 - 120) (-)
+<118>[AvControl]  audio: port:HDMI src:I2S 48k 2.0 24bit fmt:LPCM LPCM once sp:- 2.0
+[dce-proc:3729 Info]<49>peg count: 1 (=1  -1(202) +1(132))
+<118>[AvControl] notify ready-scanin(idx:-1) port0(res: 0xc ref:0x800d(48-120) col:0xe sup:0x421) port1(res:0xb ref:0x3 col:0x14 sup:0x0) vrType(0)
+<118>[AvControl] (pid = 0xca) has video owener.(hdmi:owner usbc:system)
+savagewind: [ps5] VideoOut: display "PS5 VideoOut" 3840x2160, 2 modes
+savagewind: wsi/videoout: 119.88 Hz selected with title VRR metadata
+savagewind: [ps5] VideoOut: mode 0: 3840x2160 at 119.880 Hz
+savagewind: [ps5] VideoOut: mode 1: 3840x2160 at 59.940 Hz
+savagewind: [ps5] Video > Resolution: Auto (the largest mode)
+savagewind: [ps5] VideoOut: chose mode 0: display plane surface 3840x2160 at 119.880 Hz, present mode FIFO
+savagewind: [ps5] VideoOut: 119.88 Hz; the TV follows the presents with VRR (48-120 Hz) (param.json attribute3 0x40040: VRR on, high frame rate declared)
+savagewind: [vk] gpu 0: PlayStation 5 GPU (RADV NAVI21) (api 1.4.354)
+savagewind: [vk] using PlayStation 5 GPU (RADV NAVI21)
+savagewind: [vk] maintenance5 on (unwritten point size is 1.0)
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 1 tapPoint = 0x3)
+[si] start pipe[0] 63637s:59us, savagewind: [vk] graphics pipeline libraries on (shaders compiled apart from the fixed state)
+p:0:1, 10:0752, 37004:0750, m:6d926db36d920000, d:0x0, 0x1110
+savagewind: [vk] attachment feedback loops on (feedback loop layout)
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63637s:59us, savagewind: [vk] device created: 1 queue(s), extensions: VK_KHR_swapchain VK_EXT_custom_border_color VK_EXT_vertex_attribute_divisor VK_EXT_external_memory_host VK_EXT_device_fault VK_KHR_maintenance5 VK_KHR_pipeline_library VK_EXT_graphics_pipeline_library VK_EXT_attachment_feedback_loop_layout VK_KHR_dynamic_rendering_local_read
+p:0:1, 13:0813, 37006:0203, m:6d926db36d920000, d:0x0, 0x1110
+savagewind: [vk] device features: anisotropy 1, BC 1, int64 1, depth clamp 1, wide lines 1, precise occlusion 1, custom border 1, attribute divisor 1, host import 1
+savagewind: [vk] pipeline cache: cache/vk_pipelines.bin, 1.0 MB
+savagewind: [vk] precompiled shaders: none (cache/vk_precompiled.bin: no file yet)
+savagewind: wsi/videoout: surface formats hdr_capable=0 (attribute=0x0 source=/app0/sce_sys/param.json read=ok) count=2: B8G8R8A8_UNORM/SRGB_NONLINEAR B8G8R8A8_SRGB/SRGB_NONLINEAR
+savagewind: [vk] swapchain 3840x2160, 4 images, present mode fifo (VSync fifo; surface has fifo, mailbox, immediate), exclusive fullscreen (its own display mode), display 119.88 Hz
+savagewind: wsi/videoout: create swapchain imageFormat=44 imageColorSpace=0 presentMode=2 extent=3840x2160 minImageCount=4
+savagewind: [pso] pipeline list: 18 pipelines (0 damaged and 0 repeated records dropped)
+savagewind: [pso] pre-warm: 18 pipelines on 12 threads
+savagewind: wsi/videoout: scanout attribute mode=register set=0 token=0x8000000000000000 result=0x00000000 status_before=0x00000000 dynamic_range=1 refresh=0x000000000000000d flags=0x0000000000000000 status_after=0x00000000 dynamic_range=1 refresh=0x000000000000000d flags=0x0000000000000000
+savagewind: [pso] pre-warm done in 6 ms: 0 pipelines built, 0 built first by draws, 18 skipped (shaders missing or state unsupported); pipeline cache 0 hits, 0 misses
+savagewind: [precompile] first start: every shader of the game is translated and compiled now, with its pipeline libraries
+savagewind: wsi/videoout: 3840x2160 framebuffers registered as set 0, buffers 0-4 pixel_format=0x8000000000000000
+savagewind: [vk] presents on the calling thread
+savagewind-import: session=package-runtime step=open-package errno=0 type=begin what=/data/savagewind/import/E [[redacted]][v1114112][UPD1.9.0][US].nsp
+savagewind: [precompile] 0 s: opening the game's packages, 0 of 0 (0% of the whole)
+savagewind-import: session=package-runtime step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild[[redacted]][US][v0].nsp
+savagewind-import: session=package-runtime step=parse-keys errno=0 type=begin what=
+savagewind-import: session=package-runtime step=scan-cnmt errno=0 type=begin what=
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-import: session=package-runtime step=open-program-nca errno=0 type=begin what=
+savagewind: memory stage=open-program-nca heap_base=0x2000000000 mapped=301989888 peak=301989888 segments=16 arenas=8 libc_fallbacks=0 flex_free=116391936 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12171870208 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=open-program-nca rc=0 base=7eddd8000 size=8388608 used=16056
+savagewind-import: session=package-runtime step=nca-construct errno=0 type=begin what=
+savagewind: memory stage=nca-construct heap_base=0x2000000000 mapped=301989888 peak=301989888 segments=16 arenas=8 libc_fallbacks=0 flex_free=116391936 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12171870208 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-construct rc=0 base=7eddd8000 size=8388608 used=16056
+savagewind-import: session=package-runtime step=nca-set-keys errno=0 type=begin what=
+savagewind: memory stage=nca-set-keys heap_base=0x2000000000 mapped=301989888 peak=301989888 segments=16 arenas=8 libc_fallbacks=0 flex_free=116391936 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12171870208 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-set-keys rc=0 base=7eddd8000 size=8388608 used=16056
+savagewind-import: session=package-runtime step=nca-keys-ready errno=0 type=begin what=
+savagewind: memory stage=nca-keys-ready heap_base=0x2000000000 mapped=301989888 peak=301989888 segments=16 arenas=8 libc_fallbacks=0 flex_free=116391936 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12171870208 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-keys-ready rc=0 base=7eddd8000 size=8388608 used=16056
+savagewind-import: session=package-runtime step=nca-open-update errno=0 type=begin what=
+savagewind: memory stage=nca-open-update heap_base=0x2000000000 mapped=301989888 peak=301989888 segments=16 arenas=8 libc_fallbacks=0 flex_free=116391936 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12171870208 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-open-update rc=0 base=7eddd8000 size=8388608 used=16056
+savagewind-import: session=package-runtime step=nca-open-base errno=0 type=begin what=
+savagewind: memory stage=nca-open-base heap_base=0x2000000000 mapped=301989888 peak=301989888 segments=16 arenas=8 libc_fallbacks=0 flex_free=116391936 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12171870208 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-open-base rc=0 base=7eddd8000 size=8388608 used=16056
+savagewind-import: session=package-runtime step=nca-process errno=0 type=begin what=
+savagewind: memory stage=nca-process heap_base=0x2000000000 mapped=301989888 peak=301989888 segments=16 arenas=8 libc_fallbacks=0 flex_free=116391936 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12171870208 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-process rc=0 base=7eddd8000 size=8388608 used=16056
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-begin partition=1
+savagewind-nca: step=base-open-begin partition=1
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-begin partition=1
+savagewind-nca: step=hash-setup-begin partition=1
+savagewind-nca: step=hash-setup-done partition=1
+savagewind-nca: step=partition-begin partition=2
+savagewind-nca: step=hash-setup-begin partition=2
+savagewind-nca: step=hash-setup-done partition=2
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-partition partition=1
+savagewind-nca: step=mount-partition partition=2
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=base-open-done partition=1
+savagewind-nca: step=bktr-open-begin partition=1
+savagewind-nca: step=bktr-open-done partition=1
+savagewind-nca: step=hash-setup-begin partition=1
+savagewind-nca: step=hash-setup-done partition=1
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-partition partition=1
+savagewind-nca: step=mount-done partition=0
+savagewind-import: session=package-runtime step=mount-romfs errno=0 type=begin what=
+savagewind: memory stage=mount-romfs heap_base=0x2000000000 mapped=436207616 peak=436207616 segments=23 arenas=8 libc_fallbacks=0 flex_free=116391936 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12036734976 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=mount-romfs rc=0 base=7eddd8000 size=8388608 used=16056
+savagewind-import: session=package-runtime step=romfs-ready errno=0 type=begin what=
+savagewind: memory stage=romfs-ready heap_base=0x2000000000 mapped=436207616 peak=436207616 segments=23 arenas=8 libc_fallbacks=0 flex_free=116391936 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12036734976 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=romfs-ready rc=0 base=7eddd8000 size=8388608 used=16056
+savagewind: [fs] romfs image IStorage(romfs): 14431 MB, opened in 3.15 s
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63640s: 2us, p:0:1, 425:1308, 37212:0327, m:9d67ae906d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63640s:48us, p:0:1, 431:0130, 37215:0032, m:9d67ae906d920000, d:0x2, 0x1100
+savagewind: [fs] HUD letters: 12 button letters use the icon font (archive 6348559 -> 6571550 bytes, pack +224 KB, 690 ms)
+savagewind: [fs] voices: 1 files bigger than the game's own, 1 ResourceSizeTable entries grown (17 KB in all)
+savagewind: [fs] overlay: 3 romfs files replaced
+savagewind: [fs] romfs index: 41062 files
+savagewind: [precompile] 4 s: reading the shader archives, 0 of 1000 (0% of the whole)
+savagewind: [precompile] 9 s: reading the shader archives, 106 of 1000 (1% of the whole)
+savagewind: radv/ps5 submissions: window count=101 kwords=167 claim_ms=0.2 copy_ms=0.2 flush_ms=0.1 agc_ms=1.3 suspend_ms=1.2
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63648s: 2us, p:0:1, 1309:1564, 37654:0391, m:fcd19e846d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63648s:48us, p:0:1, 1312:0137, 37655:0596, m:fcd19e846d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63648s: 2us, p:0:1, 1326:1383, 37662:0908, m:fcd19e846d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63648s:70us, p:0:1, 1329:0140, 37664:0035, m:d00e22b66d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63648s: 2us, p:0:1, 1343:0616, 37671:0154, m:9dd597426d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63648s:48us, p:0:1, 1346:0123, 37672:0593, m:9dd597426d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63648s: 2us, p:0:1, 1358:2045, 37678:1073, m:9dd597426d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63648s:48us, p:0:1, 1362:0108, 37680:0589, m:9dd597426d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63648s: 2us, p:0:1, 1374:1538, 37686:0947, m:4073a1146d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63648s:47us, p:0:1, 1377:0107, 37688:0027, m:e5c1280e6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63648s: 2us, p:0:1, 1391:0768, 37695:0192, m:e5c1280e6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63648s:50us, p:0:1, 1394:0086, 37696:0584, m:e5c1280e6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63648s: 2us, p:0:1, 1410:1440, 37704:0922, m:e5c1280e6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63648s:62us, p:0:1, 1413:0119, 37706:0029, m:547514756d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63649s: 2us, p:0:1, 1447:0733, 37723:0183, m:63c35e606d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63649s:47us, p:0:1, 1450:0125, 37724:0593, m:fd8fa1b96d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63649s: 2us, p:0:1, 1479:0049, 37739:0012, m:bfe6a366d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63649s:47us, p:0:1, 1482:0137, 37740:0596, m:bfe6a366d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63649s: 2us, p:0:1, 1498:1435, 37748:0921, m:28f9a72f6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63649s:53us, p:0:1, 1501:0137, 37750:0034, m:28f9a72f6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63649s: 2us, p:0:1, 1533:0622, 37766:0155, m:3aed55bd6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63649s:56us, p:0:1, 1536:0102, 37767:0588, m:3aed55bd6d920000, d:0x2, 0x1100
+<118>[SceShellCore] VM Stats: RSS 789.2, kernel 446.7, wire count 618.4, swap out 385.0, page table CPU 3004/8192 GPU 203/8192
+<118>[SceShellCore] FMEM   1.1/   4.1 NPXS40095 SceSysAvControl.elf
+<118>[SceShellCore] FMEM  11.0/  96.7 NPXS45091 SceSysCore.elf
+<118>[SceShellCore] FMEM  23.8/  53.8 NPXS40096 orbis_audiod.elf
+<118>[SceShellCore] FMEM   4.2/  27.2 NPXS40135 AgcCompositor.elf
+<118>[SceShellCore] FMEM  37.0/ 605.9 NPXS40082 SceShellCore
+<118>[SceShellCore] FMEM   9.8/  28.8 NPXS40100 SceAvCapture
+<118>[SceShellCore] FMEM   6.8/  46.5 NPXS40142 SceGameLiveStreaming
+<118>[SceShellCore] FMEM  16.6/ 105.6 NPXS40109 ScePartyDaemon
+<118>[SceShellCore] FMEM   4.1/  43.9 NPXS40039 SceMediaCoreServer
+<118>[SceShellCore] FMEM   6.1/  34.1 NPXS40153 ScePsNowClientDaemon
+<118>[SceShellCore] FMEM   3.3/  20.2 NPXS40112 SceSpZeroConf
+<118>[SceShellCore] FMEM   9.0/  82.1 NPXS40094 SceVoiceAndAgent
+<118>[SceShellCore] FMEM   3.4/  30.4 NPXS40028 SceRedisServer
+<118>[SceShellCore] FMEM  71.3/ 235.3 NPXS40000 SceJSCd
+<118>[SceShellCore] FMEM   9.9/  45.1 NPXS40085 SceSystemLogger2
+<118>[SceShellCore] FMEM  10.5/ 170.1 NPXS40109 webrtc_daemon.self
+<118>[SceShellCore] FMEM   2.7/  24.7 NPXS40173 SceVrTrackerDaemon
+<118>[SceShellCore] FMEM   1.7/  13.2 NPXS45093 fs_cleaner.elf
+<118>[SceShellCore] FMEM   2.4/  31.9 elfldr.elf
+<118>[SceShellCore] FMEM   5.0/  41.3 pldmgr.elf
+<118>[SceShellCore] FMEM   3.7/  20.2 kstuff.elf
+<118>[SceShellCore] FMEM   2.1/  16.1 klogsrv.elf
+<118>[SceShellCore] FMEM   2.1/  16.3 nanodns.elf
+<118>[SceShellCore] FMEM   3.5/  19.7 ps5upload.elf
+<118>[SceShellCore] FMEM  16.5/  37.3 shadowmountplus.elf
+<118>[SceShellCore] FMEM   3.2/  17.8 ftpsrv.elf
+<118>[SceShellCore] FMEM   2.3/  16.1 payload.elf
+<118>[SceShellCore] FMEM  18.8/  33.3 payload.elf
+<118>[SceShellCore] FMEM 447.2/1316.2 NPXS40087 SceShellUI
+<118>[SceShellCore] FMEM  25.4/  77.8 NPXS40102 SceRemotePlay
+<118>[SceShellCore] FMEM   3.0/  19.9 NPXS40101 SceSocialScreenMgr
+<118>[SceShellCore] FMEM   6.5/ 484.5 NPXS40039 SceVideoCore2K
+<118>[SceShellCore] FMEM   3.6/ 113.0 NPXS40087 SceNKUIProcess
+<118>[SceShellCore] FMEM   5.2/ 116.4 NPXS40087 SceNKNetworkProcess
+<118>[SceShellCore] FMEM   3.0/  16.9 payload.elf
+<118>[SceShellCore] FMEM   3.5/  18.0 payload.elf
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63650s: 2us, p:0:1, 1552:1562, 37775:0953, m:3aed55bd6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63650s:47us, p:0:1, 1555:0080, 37777:0020, m:3aed55bd6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63650s: 2us, p:0:1, 1571:0627, 37785:0156, m:c46e66636d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63650s:47us, p:0:1, 1574:0111, 37786:0590, m:c46e66636d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63650s: 2us, p:0:1, 1600:1457, 37799:0927, m:c46e66636d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63650s:48us, p:0:1, 1603:0142, 37801:0035, m:c46e66636d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63650s: 2us, p:0:1, 1629:0694, 37814:0173, m:479a50c36d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63650s:47us, p:0:1, 1632:0122, 37815:0593, m:479a50c36d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63650s: 2us, p:0:1, 1654:1335, 37826:0896, m:3517ec076d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63650s:54us, p:0:1, 1657:0147, 37828:0036, m:3517ec076d920000, d:0x2, 0x1100
+savagewind: [precompile] 14 s: reading the shader archives, 303 of 1000 (3% of the whole)
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63651s: 2us, p:0:1, 1703:0880, 37851:0220, m:e9d527856d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63651s:47us, p:0:1, 1706:0104, 37852:0588, m:e9d527856d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63651s: 2us, p:0:1, 1718:1373, 37858:0905, m:b8e864356d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63651s:52us, p:0:1, 1721:0093, 37860:0023, m:b8e864356d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63651s: 2us, p:0:1, 1735:0774, 37867:0193, m:b8e864356d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63651s:47us, p:0:1, 1738:0095, 37868:0586, m:609ffb7e6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63651s: 2us, p:0:1, 1768:1623, 37883:0968, m:848b81e36d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63651s:47us, p:0:1, 1771:0149, 37885:0037, m:848b81e36d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63652s: 9us, p:0:1, 1803:1170, 37901:0292, m:a78c4cfa6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63652s:47us, p:0:1, 1806:0174, 37902:0606, m:a78c4cfa6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63652s: 2us, p:0:1, 1835:0594, 37917:0148, m:fae7dc126d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63652s:48us, p:0:1, 1838:0134, 37918:0596, m:fae7dc126d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63652s: 2us, p:0:1, 1866:0444, 37932:0673, m:3f9c8f716d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63652s:48us, p:0:1, 1869:0100, 37934:0025, m:3f9c8f716d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63652s: 2us, p:0:1, 1900:1593, 37949:0960, m:f1b30c256d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63652s:48us, p:0:1, 1903:0108, 37951:0027, m:f1b30c256d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63653s: 2us, p:0:1, 1933:0992, 37966:0248, m:5e9886b76d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63653s:48us, p:0:1, 1936:0126, 37967:0594, m:5e9886b76d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63653s: 2us, p:0:1, 1948:1505, 37973:0938, m:5e9886b76d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63653s:47us, p:0:1, 1951:0130, 37975:0032, m:5e9886b76d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63653s: 2us, p:0:1, 1987:0858, 37993:0214, m:2ba535db6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63653s:54us, p:0:1, 1990:0121, 37994:0593, m:4d2e3c7e6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63653s: 2us, p:0:1, 2002:1634, 38000:0971, m:4d2e3c7e6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63653s:54us, p:0:1, 2005:0141, 38002:0035, m:bd4891406d920000, d:0x2, 0x1100
+[dce-otg:2684 ERR]<0>0
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63654s: 2us, p:0:1, 2030:1614, 38014:0966, m:9559a3356d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63654s:51us, p:0:1, 2033:0089, 38016:0022, m:9559a3356d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63654s: 1us, p:0:1, 2047:0724, 38023:0181, m:9559a3356d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63654s:47us, p:0:1, 2050:0093, 38024:0586, m:9559a3356d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63654s: 2us, p:0:1, 2077:0659, 38038:0164, m:bb5ff7f16d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63654s:45us, p:0:1, 2080:0126, 38039:0594, m:bb5ff7f16d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63654s: 2us, p:0:1, 2112:1227, 38055:0869, m:f9210c566d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63654s:48us, p:0:1, 2115:0138, 38057:0034, m:f9210c566d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63655s: 1us, p:0:1, 2146:1291, 38072:0885, m:4b48194f6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63655s:48us, p:0:1, 2149:0135, 38074:0033, m:3c5a5f356d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63655s: 2us, p:0:1, 2176:1505, 38087:0938, m:aade41de6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63655s:52us, p:0:1, 2179:0117, 38089:0029, m:aade41de6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63655s: 1us, p:0:1, 2193:1554, 38096:0388, m:aade41de6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63655s:56us, p:0:1, 2196:0106, 38097:0589, m:13e384f06d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63655s: 2us, p:0:1, 2211:0707, 38105:0176, m:70614d3a6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63655s:46us, p:0:1, 2214:0115, 38106:0591, m:70614d3a6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63655s: 2us, p:0:1, 2250:1453, 38124:0925, m:608e9fcf6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63655s:54us, p:0:1, 2253:0146, 38126:0036, m:608e9fcf6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63656s: 2us, p:0:1, 2284:1256, 38141:0876, m:a1a7e5ad6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63656s:47us, p:0:1, 2287:0121, 38143:0030, m:a1a7e5ad6d920000, d:0x2, 0x1100
+savagewind: [precompile] 19 s: reading the shader archives, 539 of 1000 (5% of the whole)
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63656s: 2us, p:0:1, 2313:0065, 38156:0016, m:c1d571416d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63656s:47us, p:0:1, 2316:0129, 38157:0594, m:51c148936d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63656s: 2us, p:0:1, 2328:1527, 38163:0944, m:51c148936d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63656s:47us, p:0:1, 2331:0123, 38165:0030, m:e9c443346d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63656s: 2us, p:0:1, 2355:0922, 38177:0230, m:9dc4007b6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63656s:47us, p:0:1, 2358:0096, 38178:0586, m:9dc4007b6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63657s: 2us, p:0:1, 2384:2059, 38191:1077, m:bc75f186d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63657s:45us, p:0:1, 2388:0134, 38193:0596, m:72c6858a6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63657s: 2us, p:0:1, 2420:1137, 38209:0847, m:a6bb214e6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63657s:48us, p:0:1, 2423:0142, 38211:0035, m:a6bb214e6d920000, d:0x2, 0x1100
+savagewind: radv/ps5 submissions: window count=100 kwords=169 claim_ms=0.2 copy_ms=0.2 flush_ms=0.2 agc_ms=1.5 suspend_ms=1.4
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63657s: 2us, p:0:1, 2458:0808, 38228:0764, m:d1a967346d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63657s:47us, p:0:1, 2461:0132, 38230:0033, m:d1a967346d920000, d:0x2, 0x1100
+<118>[SceShellCore] CPU Utilization: 0.16 0.00 0.38 0.00 0.04 0.00 0.01 0.00 0.01 0.00 0.00 0.00 0.00 0.58 0.95 0.94
+<118>[SceShellCore] CPU Top: timestamp 63551 to 63554 (3.0 sec)
+<118>[SceShellCore] 99% 1023 SceIdleCpu12
+<118>[SceShellCore] 99% 1023 SceIdleCpu11
+<118>[SceShellCore] 99% 1023 SceIdleCpu10
+<118>[SceShellCore] 99% 1023 SceIdleCpu9
+<118>[SceShellCore] 99% 1023 SceIdleCpu8
+<118>[SceShellCore] 99% 1023 SceIdleCpu7
+<118>[SceShellCore] 99% 1023 SceIdleCpu5
+<118>[SceShellCore] 99% 1023 SceIdleCpu3
+<118>[SceShellCore] 99% 1023 SceIdleCpu1
+<118>[SceShellCore] 99% 1023 SceIdleCpu6
+<118>[SceShellCore] 96% 1023 SceIdleCpu4
+<118>[SceShellCore] 84% 1023 SceIdleCpu0
+<118>[SceShellCore] 62% 1023 SceIdleCpu2
+<118>[SceShellCore] 55%  700 PPSA90212 
+<118>[SceShellCore] 47%  700 NPXS40028 SceRedisServerMain
+<118>[SceShellCore] 44%   64 SceA53IoCompletion0 0
+<118>[SceShellCore] 44%   64 SceA53IoCompletion0 1
+<118>[SceShellCore] 43%   64 SceA53IoCompletion0 2
+<118>[SceShellCore] 42% 1022 SceIdleCpuRv
+<118>[SceShellCore] 26%  767 NPXS40085 SceSl2NQDipatch
+<118>[SceShellCore]  9%  605 NPXS40087 SceShellUIMain
+<118>[SceShellCore]  6%  502 NPXS40100 SceAvcap2Ipc
+<118>[SceShellCore]  6% 1023 SceIdleCpu15
+<118>[SceShellCore]  5% 1023 SceIdleCpu14
+<118>[SceShellCore]  5% 1021 SceCpuRv
+<118>[SceShellCore]  3%  297 NPXS40096 SceAudioSystemMainThread
+<118>[SceShellCore]  2%   12 SceTaskQ: a53io int_taskq
+<118>[SceShellCore]  1%  510 NPXS40102 SceRpdRRS
+<118>[SceShellCore]  1%  700 PPSA90212 
+<118>[SceShellCore]  1%  600 NPXS40135 AgcCompositor.elf
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63657s: 2us, p:0:1, 2492:1232, 38245:0870, m:169d67236d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63657s:48us, p:0:1, 2495:0125, 38247:0031, m:169d67236d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63658s: 2us, p:0:1, 2509:0535, 38254:0133, m:5c566acc6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63658s:47us, p:0:1, 2512:0123, 38255:0593, m:5c566acc6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63658s: 2us, p:0:1, 2526:1386, 38262:0909, m:8b289f6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63658s:48us, p:0:1, 2529:0091, 38264:0022, m:8b289f6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63658s: 2us, p:0:1, 2547:0760, 38273:0190, m:5aaff7856d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63658s:45us, p:0:1, 2550:0102, 38274:0588, m:5aaff7856d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63658s: 2us, p:0:1, 2564:1607, 38281:0964, m:c1a252fd6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63658s:47us, p:0:1, 2567:0119, 38283:0029, m:c1a252fd6d920000, d:0x2, 0x1100
+<118>[SceShellCore] Libc Heap Status: free 52%, in-use 3832.4 KB, trend +16.5 KB/min, peak 7758.7 KB, when 47528 [sec]
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63658s: 2us, p:0:1, 2583:0687, 38291:0171, m:3add63696d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63658s:52us, p:0:1, 2586:0143, 38292:0598, m:3add63696d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63658s: 2us, p:0:1, 2602:1351, 38300:0900, m:3add63696d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63658s:47us, p:0:1, 2605:0133, 38302:0033, m:51b66b2f6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63659s: 1us, p:0:1, 2639:0639, 38319:0159, m:51b66b2f6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63659s:46us, p:0:1, 2642:0124, 38320:0593, m:25b628606d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63659s: 2us, p:0:1, 2693:1470, 38346:0367, m:5cb7f2f26d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63659s:48us, p:0:1, 2696:0110, 38347:0590, m:5cb7f2f26d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63659s: 2us, p:0:1, 2712:1192, 38355:0860, m:5cb7f2f26d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63659s:47us, p:0:1, 2715:0096, 38357:0024, m:420cf73b6d920000, d:0x2, 0x1100
+[dce-otg:2684 ERR]<0>0
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63660s: 2us, p:0:1, 2748:1945, 38373:1048, m:b809277d6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63660s:47us, p:0:1, 2752:0130, 38375:0595, m:530a009c6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63660s: 1us, p:0:1, 2784:1296, 38391:0886, m:3f8bce316d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63660s:54us, p:0:1, 2787:0125, 38393:0031, m:6db52cfe6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63660s: 2us, p:0:1, 2804:1748, 38401:0999, m:7540c3de6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63660s:47us, p:0:1, 2807:0125, 38403:0031, m:7540c3de6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63660s: 2us, p:0:1, 2833:0829, 38416:0207, m:31686ead6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63660s:46us, p:0:1, 2836:0135, 38417:0596, m:2f641cc46d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63661s: 1us, p:0:1, 2862:1383, 38430:0908, m:aa65cbd56d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63661s:47us, p:0:1, 2865:0094, 38432:0023, m:aa65cbd56d920000, d:0x2, 0x1100
+savagewind: [precompile] 24 s: reading the shader archives, 776 of 1000 (8% of the whole)
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63661s: 2us, p:0:1, 2927:0791, 38463:0197, m:c10ec3936d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63661s:53us, p:0:1, 2930:0165, 38464:0603, m:7752eb16d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63661s: 2us, p:0:1, 2970:1440, 38484:0922, m:f083ab546d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63661s:47us, p:0:1, 2973:0121, 38486:0030, m:f083ab546d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63662s: 2us, p:0:1, 2997:1369, 38498:0342, m:e897dc4a6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63662s:48us, p:0:1, 3000:0135, 38499:0596, m:e897dc4a6d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63662s: 2us, p:0:1, 3026:1386, 38512:0909, m:6c92cacf6d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63662s:54us, p:0:1, 3029:0096, 38514:0024, m:12920c0c6d920000, d:0x2, 0x1100
+<118>[SceWorkaroundCtl] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={47532} isFirstTime={1}
+<118>[SceWorkaroundCtl] start DownloadFile
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63662s: 1us, p:0:1, 3062:1937, 38530:1046, m:8791ed2e6d920000, d:0x2, 0x1100
+<118>[SceWorkaroundCtl] ifModifiedSince={Tue, 21 Apr 2026 02:49:43 +0000}
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63662s:48us, p:0:1, 3065:0118, 38532:0029, m:7e13c2a16d920000, d:0x2, 0x1100
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\http_client.cpp(141) Get: WC_ISOK::0x8041013d
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\workaround_ctl_manager.cpp(289) DownloadFile: WC_ISOK::0x8041013d
+<118>[SceWorkaroundCtl] W:\Build\J02159366\vsh\shell\shell_core\workaround_ctl\workaround_ctl_manager.cpp(452) Run: WC_CONTINUE::0x8041013d
+<118>[SceWorkaroundCtl] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63662s: 2us, p:0:1, 3091:0789, 38545:0197, m:d5af0fe16d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63662s:47us, p:0:1, 3094:0130, 38546:0595, m:d5af0fe16d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63663s: 2us, p:0:1, 3142:1471, 38570:0930, m:9187a2926d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63663s:48us, p:0:1, 3145:0131, 38572:0033, m:9187a2926d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63663s: 1us, p:0:1, 3171:0694, 38585:0173, m:148675836d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63663s:49us, p:0:1, 3174:0126, 38586:0594, m:148675836d920000, d:0x2, 0x1100
+<118>[SceShellCore] CPU Utilization: 0.16 0.00 0.37 0.00 0.05 0.00 0.02 0.00 0.00 0.00 0.00 0.00 0.00 0.59 0.97 0.96
+<118>[SceShellCore] CPU Top: timestamp 63557 to 63560 (3.0 sec)
+<118>[SceShellCore] 99% 1023 SceIdleCpu12
+<118>[SceShellCore] 99% 1023 SceIdleCpu11
+<118>[SceShellCore] 99% 1023 SceIdleCpu10
+<118>[SceShellCore] 99% 1023 SceIdleCpu9
+<118>[SceShellCore] 99% 1023 SceIdleCpu8
+<118>[SceShellCore] 99% 1023 SceIdleCpu7
+<118>[SceShellCore] 99% 1023 SceIdleCpu5
+<118>[SceShellCore] 99% 1023 SceIdleCpu3
+<118>[SceShellCore] 99% 1023 SceIdleCpu1
+<118>[SceShellCore] 98% 1023 SceIdleCpu6
+<118>[SceShellCore] 95% 1023 SceIdleCpu4
+<118>[SceShellCore] 84% 1023 SceIdleCpu0
+<118>[SceShellCore] 63% 1023 SceIdleCpu2
+<118>[SceShellCore] 55%  700 PPSA90212 
+<118>[SceShellCore] 48%  700 NPXS40028 SceRedisServerMain
+<118>[SceShellCore] 44%   64 SceA53IoCompletion0 1
+<118>[SceShellCore] 44%   64 SceA53IoCompletion0 0
+<118>[SceShellCore] 43%   64 SceA53IoCompletion0 2
+<118>[SceShellCore] 41%   64 SceIdleCpuRv
+<118>[SceShellCore] 30%  767 NPXS40085 SceSl2NQDipatch
+<118>[SceShellCore] 10%  605 NPXS40087 SceShellUIMain
+<118>[SceShellCore]  4%  502 NPXS40100 SceAvcap2Ipc
+<118>[SceShellCore]  4% 1023 SceIdleCpu15
+<118>[SceShellCore]  4% 1021 SceCpuRv
+<118>[SceShellCore]  3% 1023 SceIdleCpu14
+<118>[SceShellCore]  3%  297 NPXS40096 SceAudioSystemMainThread
+<118>[SceShellCore]  2%   12 SceTaskQ: a53io int_taskq
+<118>[SceShellCore]  2%  510 NPXS40102 SceRpdRRS
+<118>[SceShellCore]  1%  700 PPSA90212 
+<118>[SceShellCore]  1%  600 NPXS40135 AgcCompositor.elf
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63664s: 2us, p:0:1, 3224:1464, 38611:0928, m:738637786d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63664s:48us, p:0:1, 3227:0107, 38613:0026, m:738637786d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63664s: 2us, p:0:1, 3255:1081, 38627:0270, m:23fe85396d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63664s:124us, p:0:1, 3258:0183, 38628:0608, m:23fe85396d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63664s: 2us, p:0:1, 3282:1254, 38640:0876, m:cbfb22e56d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63664s:204us, p:0:1, 3288:0167, 38643:0604, m:cbfb22e56d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63664s: 1us, p:0:1, 3335:1250, 38667:0312, m:cbfb22e56d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63664s:47us, p:0:1, 3338:0130, 38668:0595, m:cbfb22e56d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63665s: 2us, p:0:1, 3385:0643, 38692:0160, m:cbfb22e56d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63665s:53us, p:0:1, 3388:0086, 38693:0584, m:cbfb22e56d920000, d:0x2, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 63666s: 2us, p:0:1, 3490:1243, 38744:0873, m:cd0ef086d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 63666s:57us, p:0:1, 3493:0118, 38746:0029, m:cd0ef086d920000, d:0x2, 0x1100
+savagewind: [precompile] 13997 shaders in 1005 archives (2030 files, 2056 MB) read in 25.1 s: 13997 translations to make
+savagewind: [precompile] 29 s: translating and compiling shaders, 0 of 13997 (10% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 0 done; their work 0.0 s (thread CPU in it 0.0 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: (not known); title heap 512 MB in 26 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: radv/ps5 submissions: window count=100 kwords=169 claim_ms=0.2 copy_ms=0.2 flush_ms=0.1 agc_ms=1.5 suspend_ms=1.4
+savagewind: [precompile] 34 s: translating and compiling shaders, 247 of 13997 (10% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 247 done; their work 52.8 s (thread CPU in it 35.7 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:16 1:21 2:49 3:16 4:22 5:20 6:19 7:16 8:16 9:9 10:15 11:16 12:12; title heap 624 MB in 33 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: [precompile] affinity masks (cpuset bits): this thread 0x1fff, workers 0x1fff 0x1fff 0x1fff 0x1fff 0x1fff 0x1fff 0x1fff 0x1fff 0x1fff 0x1fff 0x1fff 0x1fff 0x1fff 0x1fff 0x1fff 0x1fff 0x1fff
+savagewind: [precompile] 39 s: translating and compiling shaders, 551 of 13997 (11% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 304 done; their work 76.9 s (thread CPU in it 51.6 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:8 1:25 2:36 3:29 4:32 5:22 6:32 7:28 8:17 9:20 10:24 11:14 12:17; title heap 688 MB in 37 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: radv/ps5 submissions: window count=89 kwords=150 claim_ms=0.2 copy_ms=8.0 flush_ms=0.2 agc_ms=2.0 suspend_ms=2.2
+savagewind: [precompile] scaling: 1 worker 40 translations in 1.41 s (28/s); 16 workers 640 in 10.48 s (61/s): 2.1x
+savagewind: [precompile] 44 s: translating and compiling shaders, 871 of 13997 (12% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 320 done; their work 80.8 s (thread CPU in it 54.6 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:14 1:28 2:37 3:24 4:35 5:32 6:31 7:34 8:17 9:11 10:16 11:18 12:23; title heap 688 MB in 36 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: [precompile] 49 s: translating and compiling shaders, 1145 of 13997 (12% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 274 done; their work 81.3 s (thread CPU in it 54.1 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:9 1:29 2:19 3:24 4:34 5:23 6:29 7:24 8:14 9:14 10:18 11:13 12:24; title heap 704 MB in 35 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: radv/ps5 submissions: window count=88 kwords=148 claim_ms=0.2 copy_ms=7.9 flush_ms=0.2 agc_ms=1.8 suspend_ms=2.1
+savagewind: [precompile] 54 s: translating and compiling shaders, 1382 of 13997 (12% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 237 done; their work 77.8 s (thread CPU in it 51.9 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:9 1:26 2:22 3:29 4:17 5:33 6:17 7:12 8:14 9:15 10:20 11:15 12:8; title heap 736 MB in 36 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: [precompile] 59 s: translating and compiling shaders, 1653 of 13997 (13% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 271 done; their work 80.9 s (thread CPU in it 54.6 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:7 1:23 2:32 3:29 4:27 5:27 6:27 7:24 8:16 9:13 10:15 11:12 12:19; title heap 736 MB in 36 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: radv/ps5 submissions: window count=87 kwords=147 claim_ms=0.2 copy_ms=8.0 flush_ms=0.2 agc_ms=1.7 suspend_ms=2.3
+savagewind: [precompile] 64 s: translating and compiling shaders, 1983 of 13997 (14% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 330 done; their work 84.4 s (thread CPU in it 57.0 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:15 1:39 2:32 3:40 4:19 5:28 6:30 7:31 8:17 9:8 10:19 11:16 12:36; title heap 784 MB in 38 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: [precompile] 69 s: translating and compiling shaders, 2229 of 13997 (14% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 246 done; their work 74.9 s (thread CPU in it 49.9 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:11 1:29 2:24 3:21 4:22 5:18 6:20 7:28 8:14 9:13 10:14 11:20 12:12; title heap 784 MB in 38 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: radv/ps5 submissions: window count=87 kwords=147 claim_ms=0.2 copy_ms=7.8 flush_ms=0.2 agc_ms=1.8 suspend_ms=2.2
+<118>[SceShellCore] VM Stats: RSS 796.5, kernel 438.5, wire count 610.7, swap out 386.1, page table CPU 3004/8192 GPU 203/8192
+<118>[SceShellCore] FMEM   1.1/   4.1 NPXS40095 SceSysAvControl.elf
+<118>[SceShellCore] FMEM  10.9/  96.7 NPXS45091 SceSysCore.elf
+<118>[SceShellCore] FMEM  23.8/  53.8 NPXS40096 orbis_audiod.elf
+<118>[SceShellCore] FMEM   4.2/  27.2 NPXS40135 AgcCompositor.elf
+<118>[SceShellCore] FMEM  40.1/ 609.0 NPXS40082 SceShellCore
+<118>[SceShellCore] FMEM  13.3/  32.3 NPXS40100 SceAvCapture
+<118>[SceShellCore] FMEM   6.8/  46.5 NPXS40142 SceGameLiveStreaming
+<118>[SceShellCore] FMEM  16.6/ 105.6 NPXS40109 ScePartyDaemon
+<118>[SceShellCore] FMEM   4.1/  43.9 NPXS40039 SceMediaCoreServer
+<118>[SceShellCore] FMEM   6.1/  34.1 NPXS40153 ScePsNowClientDaemon
+<118>[SceShellCore] FMEM   3.3/  20.2 NPXS40112 SceSpZeroConf
+<118>[SceShellCore] FMEM   9.0/  82.1 NPXS40094 SceVoiceAndAgent
+<118>[SceShellCore] FMEM   3.4/  30.4 NPXS40028 SceRedisServer
+<118>[SceShellCore] FMEM  73.1/ 235.3 NPXS40000 SceJSCd
+<118>[SceShellCore] FMEM   9.9/  45.1 NPXS40085 SceSystemLogger2
+<118>[SceShellCore] FMEM  10.5/ 170.1 NPXS40109 webrtc_daemon.self
+<118>[SceShellCore] FMEM   2.7/  24.7 NPXS40173 SceVrTrackerDaemon
+<118>[SceShellCore] FMEM   1.7/  13.2 NPXS45093 fs_cleaner.elf
+<118>[SceShellCore] FMEM   2.3/  31.9 elfldr.elf
+<118>[SceShellCore] FMEM   5.0/  41.3 pldmgr.elf
+<118>[SceShellCore] FMEM   3.7/  20.2 kstuff.elf
+<118>[SceShellCore] FMEM   2.1/  16.1 klogsrv.elf
+<118>[SceShellCore] FMEM   2.1/  16.3 nanodns.elf
+<118>[SceShellCore] FMEM   3.5/  19.7 ps5upload.elf
+<118>[SceShellCore] FMEM  16.5/  37.3 shadowmountplus.elf
+<118>[SceShellCore] FMEM   3.2/  17.8 ftpsrv.elf
+<118>[SceShellCore] FMEM   2.3/  16.1 payload.elf
+<118>[SceShellCore] FMEM  18.8/  33.3 payload.elf
+<118>[SceShellCore] FMEM 446.1/1316.2 NPXS40087 SceShellUI
+<118>[SceShellCore] FMEM  25.4/  77.8 NPXS40102 SceRemotePlay
+<118>[SceShellCore] FMEM   3.0/  19.9 NPXS40101 SceSocialScreenMgr
+<118>[SceShellCore] FMEM   6.5/ 484.5 NPXS40039 SceVideoCore2K
+<118>[SceShellCore] FMEM   3.6/ 113.0 NPXS40087 SceNKUIProcess
+<118>[SceShellCore] FMEM   5.2/ 116.4 NPXS40087 SceNKNetworkProcess
+<118>[SceShellCore] FMEM   3.0/  16.9 payload.elf
+<118>[SceShellCore] FMEM   3.5/  18.0 payload.elf
+savagewind: [precompile] 74 s: translating and compiling shaders, 2472 of 13997 (14% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 243 done; their work 85.9 s (thread CPU in it 57.7 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:12 1:25 2:24 3:18 4:33 5:19 6:23 7:21 8:20 9:12 10:8 11:12 12:16; title heap 752 MB in 36 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: [precompile] 79 s: translating and compiling shaders, 2799 of 13997 (15% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 327 done; their work 79.3 s (thread CPU in it 53.7 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:7 1:26 2:33 3:34 4:34 5:33 6:34 7:34 8:21 9:12 10:19 11:15 12:25; title heap 784 MB in 37 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: radv/ps5 submissions: window count=87 kwords=147 claim_ms=0.2 copy_ms=7.9 flush_ms=0.2 agc_ms=1.7 suspend_ms=2.3
+savagewind: [precompile] 85 s: translating and compiling shaders, 3062 of 13997 (15% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 263 done; their work 81.1 s (thread CPU in it 53.8 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:8 1:23 2:24 3:26 4:35 5:26 6:18 7:27 8:16 9:20 10:14 11:14 12:12; title heap 784 MB in 37 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: [precompile] 90 s: translating and compiling shaders, 3359 of 13997 (16% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 297 done; their work 82.9 s (thread CPU in it 55.7 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:12 1:31 2:28 3:33 4:34 5:26 6:35 7:25 8:14 9:15 10:14 11:19 12:11; title heap 784 MB in 37 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: radv/ps5 submissions: window count=87 kwords=147 claim_ms=0.2 copy_ms=7.3 flush_ms=0.1 agc_ms=1.8 suspend_ms=2.2
+savagewind: [precompile] 95 s: translating and compiling shaders, 3683 of 13997 (17% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 324 done; their work 84.3 s (thread CPU in it 57.3 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:14 1:35 2:41 3:38 4:35 5:19 6:25 7:23 8:12 9:13 10:20 11:24 12:25; title heap 784 MB in 37 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: [precompile] 100 s: translating and compiling shaders, 3983 of 13997 (17% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 300 done; their work 77.6 s (thread CPU in it 52.9 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:7 1:28 2:21 3:31 4:24 5:33 6:30 7:29 8:17 9:20 10:24 11:11 12:25; title heap 752 MB in 36 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: radv/ps5 submissions: window count=87 kwords=147 claim_ms=0.2 copy_ms=8.3 flush_ms=0.1 agc_ms=1.8 suspend_ms=2.1
+savagewind: [precompile] 105 s: translating and compiling shaders, 4250 of 13997 (18% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 267 done; their work 79.1 s (thread CPU in it 53.2 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:8 1:28 2:26 3:26 4:22 5:33 6:20 7:27 8:14 9:15 10:17 11:15 12:16; title heap 752 MB in 36 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: [precompile] 110 s: translating and compiling shaders, 4505 of 13997 (18% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 255 done; their work 76.4 s (thread CPU in it 51.5 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:9 1:25 2:23 3:28 4:18 5:36 6:21 7:18 8:10 9:9 10:14 11:19 12:25; title heap 752 MB in 36 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: radv/ps5 submissions: window count=89 kwords=150 claim_ms=0.2 copy_ms=8.1 flush_ms=0.2 agc_ms=1.9 suspend_ms=2.3
+savagewind: [precompile] 115 s: translating and compiling shaders, 4832 of 13997 (19% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 327 done; their work 86.6 s (thread CPU in it 58.5 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:11 1:47 2:29 3:30 4:29 5:35 6:28 7:24 8:13 9:18 10:20 11:20 12:23; title heap 752 MB in 36 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: [precompile] 120 s: translating and compiling shaders, 5142 of 13997 (19% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 310 done; their work 83.5 s (thread CPU in it 56.1 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:12 1:25 2:23 3:33 4:36 5:25 6:30 7:34 8:15 9:19 10:16 11:20 12:22; title heap 752 MB in 36 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: radv/ps5 submissions: window count=87 kwords=147 claim_ms=0.2 copy_ms=8.1 flush_ms=0.1 agc_ms=1.8 suspend_ms=2.3
+savagewind: [precompile] 125 s: translating and compiling shaders, 5416 of 13997 (20% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 274 done; their work 79.4 s (thread CPU in it 53.3 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:11 1:25 2:26 3:30 4:40 5:28 6:28 7:25 8:7 9:11 10:17 11:10 12:16; title heap 752 MB in 36 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: [precompile] 130 s: translating and compiling shaders, 5694 of 13997 (20% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 278 done; their work 79.4 s (thread CPU in it 53.6 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:12 1:24 2:26 3:25 4:22 5:29 6:30 7:24 8:16 9:12 10:18 11:15 12:25; title heap 784 MB in 37 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: radv/ps5 submissions: window count=88 kwords=148 claim_ms=0.2 copy_ms=7.8 flush_ms=0.2 agc_ms=1.8 suspend_ms=2.1
+<118>[SceShellCore] VM Stats: RSS 795.9, kernel 442.2, wire count 614.3, swap out 386.2, page table CPU 3004/8192 GPU 203/8192
+<118>[SceShellCore] FMEM   1.1/   4.1 NPXS40095 SceSysAvControl.elf
+<118>[SceShellCore] FMEM  10.9/  96.7 NPXS45091 SceSysCore.elf
+<118>[SceShellCore] FMEM  23.8/  53.8 NPXS40096 orbis_audiod.elf
+<118>[SceShellCore] FMEM   4.2/  27.2 NPXS40135 AgcCompositor.elf
+<118>[SceShellCore] FMEM  40.1/ 609.0 NPXS40082 SceShellCore
+<118>[SceShellCore] FMEM  13.3/  32.3 NPXS40100 SceAvCapture
+<118>[SceShellCore] FMEM   6.8/  46.5 NPXS40142 SceGameLiveStreaming
+<118>[SceShellCore] FMEM  16.6/ 105.6 NPXS40109 ScePartyDaemon
+<118>[SceShellCore] FMEM   4.1/  43.9 NPXS40039 SceMediaCoreServer
+<118>[SceShellCore] FMEM   6.1/  34.1 NPXS40153 ScePsNowClientDaemon
+<118>[SceShellCore] FMEM   3.3/  20.2 NPXS40112 SceSpZeroConf
+<118>[SceShellCore] FMEM   9.0/  82.1 NPXS40094 SceVoiceAndAgent
+<118>[SceShellCore] FMEM   3.4/  30.4 NPXS40028 SceRedisServer
+<118>[SceShellCore] FMEM  72.0/ 235.3 NPXS40000 SceJSCd
+<118>[SceShellCore] FMEM   9.9/  45.1 NPXS40085 SceSystemLogger2
+<118>[SceShellCore] FMEM  10.5/ 170.1 NPXS40109 webrtc_daemon.self
+<118>[SceShellCore] FMEM   2.7/  24.7 NPXS40173 SceVrTrackerDaemon
+<118>[SceShellCore] FMEM   1.7/  13.2 NPXS45093 fs_cleaner.elf
+<118>[SceShellCore] FMEM   2.3/  31.9 elfldr.elf
+<118>[SceShellCore] FMEM   5.0/  41.3 pldmgr.elf
+<118>[SceShellCore] FMEM   3.7/  20.2 kstuff.elf
+<118>[SceShellCore] FMEM   2.1/  16.1 klogsrv.elf
+<118>[SceShellCore] FMEM   2.1/  16.3 nanodns.elf
+<118>[SceShellCore] FMEM   3.5/  19.7 ps5upload.elf
+<118>[SceShellCore] FMEM  16.5/  37.3 shadowmountplus.elf
+<118>[SceShellCore] FMEM   3.2/  17.8 ftpsrv.elf
+<118>[SceShellCore] FMEM   2.3/  16.1 payload.elf
+<118>[SceShellCore] FMEM  18.8/  33.3 payload.elf
+<118>[SceShellCore] FMEM 446.6/1316.3 NPXS40087 SceShellUI
+<118>[SceShellCore] FMEM  25.4/  77.8 NPXS40102 SceRemotePlay
+<118>[SceShellCore] FMEM   3.0/  19.9 NPXS40101 SceSocialScreenMgr
+<118>[SceShellCore] FMEM   6.5/ 484.5 NPXS40039 SceVideoCore2K
+<118>[SceShellCore] FMEM   3.6/ 113.0 NPXS40087 SceNKUIProcess
+<118>[SceShellCore] FMEM   5.2/ 116.4 NPXS40087 SceNKNetworkProcess
+<118>[SceShellCore] FMEM   3.0/  16.9 payload.elf
+<118>[SceShellCore] FMEM   3.5/  18.0 payload.elf
+savagewind: [precompile] 135 s: translating and compiling shaders, 6129 of 13997 (21% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 435 done; their work 83.8 s (thread CPU in it 56.6 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:11 1:51 2:37 3:41 4:44 5:42 6:44 7:37 8:27 9:20 10:23 11:26 12:32; title heap 768 MB in 37 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: [precompile] 140 s: translating and compiling shaders, 6844 of 13997 (22% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 715 done; their work 81.5 s (thread CPU in it 56.9 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:36 1:66 2:62 3:66 4:69 5:74 6:75 7:56 8:48 9:33 10:49 11:32 12:49; title heap 784 MB in 37 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: radv/ps5 submissions: window count=88 kwords=148 claim_ms=0.2 copy_ms=7.5 flush_ms=0.2 agc_ms=1.8 suspend_ms=2.3
+<118>[SceShellCore] Libc Heap Status: free 52%, in-use 3832.8 KB, trend +0.4 KB/min, peak 7758.7 KB, when 47648 [sec]
+savagewind: [precompile] 145 s: translating and compiling shaders, 7519 of 13997 (23% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 675 done; their work 79.3 s (thread CPU in it 55.2 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:28 1:65 2:56 3:66 4:64 5:52 6:63 7:71 8:32 9:39 10:35 11:53 12:51; title heap 784 MB in 37 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: [precompile] 150 s: translating and compiling shaders, 8277 of 13997 (25% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 758 done; their work 81.5 s (thread CPU in it 57.1 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:38 1:81 2:76 3:69 4:69 5:69 6:64 7:51 8:44 9:37 10:46 11:59 12:55; title heap 784 MB in 37 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: radv/ps5 submissions: window count=88 kwords=148 claim_ms=0.2 copy_ms=6.5 flush_ms=0.2 agc_ms=1.8 suspend_ms=2.3
+savagewind: [precompile] 155 s: translating and compiling shaders, 8966 of 13997 (26% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 689 done; their work 80.0 s (thread CPU in it 56.3 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:29 1:71 2:69 3:60 4:55 5:74 6:60 7:53 8:43 9:51 10:37 11:35 12:52; title heap 784 MB in 37 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: [precompile] 160 s: translating and compiling shaders, 9458 of 13997 (27% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 492 done; their work 81.5 s (thread CPU in it 56.4 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:23 1:64 2:43 3:39 4:48 5:45 6:36 7:34 8:37 9:34 10:28 11:28 12:33; title heap 784 MB in 37 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: radv/ps5 submissions: window count=89 kwords=150 claim_ms=0.2 copy_ms=6.5 flush_ms=0.2 agc_ms=1.8 suspend_ms=2.3
+savagewind: [precompile] 165 s: translating and compiling shaders, 10149 of 13997 (28% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 691 done; their work 81.6 s (thread CPU in it 57.1 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:30 1:60 2:65 3:57 4:70 5:49 6:60 7:70 8:42 9:46 10:43 11:43 12:56; title heap 784 MB in 37 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: [precompile] 170 s: translating and compiling shaders, 10864 of 13997 (29% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 715 done; their work 82.5 s (thread CPU in it 57.0 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:35 1:58 2:57 3:72 4:62 5:56 6:68 7:81 8:46 9:45 10:39 11:36 12:60; title heap 784 MB in 37 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: radv/ps5 submissions: window count=88 kwords=148 claim_ms=0.2 copy_ms=7.2 flush_ms=0.2 agc_ms=1.8 suspend_ms=2.3
+<118>[SceShellCore] Libc Heap Status: free 52%, in-use 3832.4 KB, trend +0.0 KB/min, peak 7758.7 KB, when 47679 [sec]
+savagewind: [precompile] 175 s: translating and compiling shaders, 12235 of 13997 (32% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 1371 done; their work 79.1 s (thread CPU in it 53.3 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:86 1:143 2:147 3:120 4:120 5:121 6:129 7:127 8:65 9:73 10:67 11:83 12:90; title heap 800 MB in 37 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: [precompile] 181 s: translating and compiling shaders, 12797 of 13997 (33% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 562 done; their work 63.1 s (thread CPU in it 43.4 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:27 1:56 2:56 3:58 4:56 5:41 6:44 7:44 8:34 9:33 10:39 11:26 12:48; title heap 912 MB in 43 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: radv/ps5 submissions: window count=87 kwords=147 claim_ms=0.2 copy_ms=7.6 flush_ms=0.1 agc_ms=1.8 suspend_ms=2.0
+savagewind: [precompile] 186 s: translating and compiling shaders, 13684 of 13997 (34% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 887 done; their work 99.3 s (thread CPU in it 69.6 s, a clock not trusted on the PS5), reading 0.0 s, waiting for the memory budget 0.0 s; items by core: 0:48 1:79 2:90 3:89 4:79 5:91 6:75 7:87 8:53 9:42 10:53 11:49 12:52; title heap 800 MB in 38 segments, 0 libc fallbacks; RADV buffers 129 MB
+savagewind: [precompile] cache/xlate/3a40dd4d749b964f/precompiled.pack: 13973 entries, 92 MB; 0 stores refused
+savagewind: [precompile] cache/spirv/e56cafa9d4495563/precompiled.pack: 13899 entries, 267 MB; 0 stores refused
+savagewind: [precompile] 13997 translations in 184.5 s on 16 threads: 13973 made, 0 were cached, 24 failed
+savagewind: [precompile] 24 translations failed, by archive, stage and reason:
+  Pack/Bootup_Graphics.pack/System/Agl/agl_resource.Nin_NX_NVN.release.ssarc/agl_technique_pfx.sharcb, compute: translation failed: unknown instruction eb28048600f70600 at 0x450: 34860580ffbfb737 f9071e47b56e197b
+  Pack/Bootup_Graphics.pack/System/Agl/agl_resource.Nin_NX_NVN.release.ssarc/agl_technique_pfx.sharcb, compute: translation failed: unknown instruction eb1804a000470000 at 0x18: 8f6b6f0ef7657ed7 1da5476c3e530892 d44be59109b510d7 949aef25a131e84e 8b1879bab1a33ae6 9f6c6d9ad1461107 a2c8fda147cdc32e 640f3f6e26aa3688 74e2149afcc16a3d 76d11783df358228 c2d4d1539192acec b4c96cf0e655c50f 523c27948521c9bf 7208b1dd2800bd84 a0a898486630fb6b 3f0237d41e9360da
+  Pack/Bootup_Graphics.pack/System/Agl/agl_resource.Nin_NX_NVN.release.ssarc/agl_technique_pfx.sharcb, compute: translation failed: unknown instruction eb28048600f70400 at 0x3f0: 36af2c9cbff0c175
+  Pack/Bootup_Graphics.pack/System/Agl/agl_resource.Nin_NX_NVN.release.ssarc/agl_technique_pfx.sharcb, compute: translation failed: unknown instruction eb18048000470300 at 0x10: c09bff9fcc2f3c3c
+  Pack/Bootup_Graphics.pack/System/Agl/agl_resource.Nin_NX_NVN.release.ssarc/agl_common.sharcb, fragment: translation failed: tlds info 6: e5bf5887372ef23f 3f0577a519c52b81 87aa61816b7b1740 35e9adce38bd677f
+savagewind: [precompile] direct memory free: 10931 MB
+savagewind: [precompile] memory budget for the driver's compiles: 9907 MB (estimates: 16 MB + 1 MB per 32 bytes of code)
+savagewind: [precompile] 188 s: building pipeline libraries, 80 of 13997 (35% of the whole)
+savagewind: radv/ps5 submissions: window count=89 kwords=150 claim_ms=0.2 copy_ms=6.3 flush_ms=0.2 agc_ms=1.8 suspend_ms=2.3
+savagewind: [vk] pipeline cache saved: 1.0 MB, 8 new pipelines, 57 ms
+savagewind: [precompile] 193 s: building pipeline libraries, 2101 of 13997 (41% of the whole)
+savagewind: [precompile] last 8 s on 16 threads: 2414 done; their work 105.7 s (thread CPU in it 73.2 s, a clock not trusted on the PS5), reading 0.3 s, waiting for the memory budget 0.0 s; items by core: 0:107 1:236 2:228 3:218 4:219 5:240 6:203 7:209 8:149 9:129 10:132 11:151 12:193; title heap 992 MB in 51 segments, 0 libc fallbacks; RADV buffers 132 MB
+savagewind: [precompile] 198 s: building pipeline libraries, 2296 of 13997 (43% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 195 done; their work 85.4 s (thread CPU in it 63.0 s, a clock not trusted on the PS5), reading 0.1 s, waiting for the memory budget 0.0 s; items by core: 0:24 1:13 2:22 3:15 4:24 5:8 6:10 7:18 8:11 9:13 10:9 11:13 12:15; title heap 1120 MB in 59 segments, 0 libc fallbacks; RADV buffers 136 MB
+savagewind: radv/ps5 submissions: window count=90 kwords=152 claim_ms=0.3 copy_ms=6.0 flush_ms=0.2 agc_ms=2.0 suspend_ms=2.5
+savagewind: [precompile] 203 s: building pipeline libraries, 2537 of 13997 (46% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 241 done; their work 80.9 s (thread CPU in it 60.3 s, a clock not trusted on the PS5), reading 0.1 s, waiting for the memory budget 0.0 s; items by core: 0:25 1:18 2:20 3:20 4:24 5:17 6:18 7:12 8:15 9:19 10:17 11:15 12:21; title heap 1168 MB in 62 segments, 0 libc fallbacks; RADV buffers 144 MB
+savagewind: [precompile] 208 s: building pipeline libraries, 2766 of 13997 (48% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 229 done; their work 81.2 s (thread CPU in it 57.7 s, a clock not trusted on the PS5), reading 0.1 s, waiting for the memory budget 0.0 s; items by core: 0:12 1:18 2:17 3:29 4:20 5:22 6:12 7:21 8:16 9:16 10:11 11:15 12:20; title heap 1168 MB in 62 segments, 0 libc fallbacks; RADV buffers 144 MB
+savagewind: radv/ps5 submissions: window count=89 kwords=150 claim_ms=0.3 copy_ms=6.2 flush_ms=0.2 agc_ms=2.0 suspend_ms=2.4
+savagewind: [precompile] 214 s: building pipeline libraries, 2975 of 13997 (50% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 209 done; their work 79.2 s (thread CPU in it 56.3 s, a clock not trusted on the PS5), reading 0.1 s, waiting for the memory budget 0.0 s; items by core: 0:21 1:16 2:22 3:14 4:14 5:8 6:21 7:15 8:17 9:17 10:12 11:17 12:15; title heap 1168 MB in 62 segments, 0 libc fallbacks; RADV buffers 144 MB
+savagewind: [precompile] 219 s: building pipeline libraries, 3274 of 13997 (52% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 299 done; their work 83.4 s (thread CPU in it 60.1 s, a clock not trusted on the PS5), reading 0.1 s, waiting for the memory budget 0.0 s; items by core: 0:27 1:29 2:29 3:19 4:23 5:19 6:22 7:18 8:18 9:26 10:16 11:17 12:36; title heap 1168 MB in 62 segments, 0 libc fallbacks; RADV buffers 144 MB
+savagewind: radv/ps5 submissions: window count=89 kwords=150 claim_ms=0.3 copy_ms=5.4 flush_ms=0.2 agc_ms=1.9 suspend_ms=2.6
+savagewind: [precompile] 224 s: building pipeline libraries, 3592 of 13997 (55% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 318 done; their work 78.9 s (thread CPU in it 56.5 s, a clock not trusted on the PS5), reading 0.1 s, waiting for the memory budget 0.0 s; items by core: 0:18 1:17 2:26 3:25 4:27 5:30 6:27 7:28 8:23 9:16 10:27 11:25 12:29; title heap 1168 MB in 62 segments, 0 libc fallbacks; RADV buffers 152 MB
+savagewind: [vk] pipeline cache saved: 1.0 MB, 44 new pipelines, 55 ms
+savagewind: [precompile] 229 s: building pipeline libraries, 3850 of 13997 (57% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 258 done; their work 73.0 s (thread CPU in it 51.1 s, a clock not trusted on the PS5), reading 0.1 s, waiting for the memory budget 0.0 s; items by core: 0:32 1:26 2:14 3:26 4:12 5:26 6:21 7:28 8:11 9:14 10:21 11:9 12:18; title heap 1168 MB in 62 segments, 0 libc fallbacks; RADV buffers 152 MB
+savagewind: radv/ps5 submissions: window count=87 kwords=147 claim_ms=0.2 copy_ms=6.9 flush_ms=0.2 agc_ms=1.9 suspend_ms=2.4
+savagewind: [precompile] 234 s: building pipeline libraries, 4104 of 13997 (58% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 254 done; their work 83.2 s (thread CPU in it 56.7 s, a clock not trusted on the PS5), reading 0.1 s, waiting for the memory budget 0.0 s; items by core: 0:18 1:20 2:22 3:30 4:30 5:22 6:17 7:29 8:8 9:14 10:11 11:15 12:18; title heap 1168 MB in 62 segments, 0 libc fallbacks; RADV buffers 152 MB
+savagewind: [precompile] 239 s: building pipeline libraries, 4360 of 13997 (60% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 256 done; their work 85.3 s (thread CPU in it 58.2 s, a clock not trusted on the PS5), reading 0.1 s, waiting for the memory budget 0.0 s; items by core: 0:19 1:25 2:23 3:13 4:25 5:21 6:21 7:18 8:25 9:18 10:20 11:15 12:13; title heap 1168 MB in 62 segments, 0 libc fallbacks; RADV buffers 152 MB
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(458) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client_request_for_ppr.cpp(252) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(84) Failed(ret=0x8041013d)
+<118>[PFAuthClient][ERROR]pf_auth_client.cpp(90) Notified error:(0x8041013d)
+savagewind: radv/ps5 submissions: window count=88 kwords=148 claim_ms=0.2 copy_ms=6.3 flush_ms=0.2 agc_ms=1.9 suspend_ms=2.4
+savagewind: [precompile] 244 s: building pipeline libraries, 4578 of 13997 (62% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 218 done; their work 81.6 s (thread CPU in it 55.3 s, a clock not trusted on the PS5), reading 0.1 s, waiting for the memory budget 0.0 s; items by core: 0:10 1:19 2:16 3:19 4:16 5:23 6:17 7:23 8:12 9:13 10:14 11:22 12:14; title heap 1168 MB in 62 segments, 0 libc fallbacks; RADV buffers 160 MB
+savagewind: [precompile] 249 s: building pipeline libraries, 4837 of 13997 (64% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 259 done; their work 78.8 s (thread CPU in it 53.5 s, a clock not trusted on the PS5), reading 0.1 s, waiting for the memory budget 0.0 s; items by core: 0:23 1:15 2:24 3:19 4:29 5:23 6:19 7:27 8:20 9:15 10:13 11:14 12:18; title heap 1168 MB in 62 segments, 0 libc fallbacks; RADV buffers 160 MB
+savagewind: radv/ps5 submissions: window count=86 kwords=145 claim_ms=0.2 copy_ms=6.7 flush_ms=0.1 agc_ms=1.9 suspend_ms=2.3
+savagewind: [precompile] 254 s: building pipeline libraries, 5124 of 13997 (65% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 287 done; their work 74.6 s (thread CPU in it 51.0 s, a clock not trusted on the PS5), reading 0.1 s, waiting for the memory budget 0.0 s; items by core: 0:20 1:28 2:29 3:31 4:25 5:24 6:33 7:17 8:18 9:18 10:13 11:15 12:16; title heap 1168 MB in 62 segments, 0 libc fallbacks; RADV buffers 160 MB
+savagewind: [precompile] 259 s: building pipeline libraries, 5442 of 13997 (67% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 318 done; their work 85.9 s (thread CPU in it 58.2 s, a clock not trusted on the PS5), reading 0.1 s, waiting for the memory budget 0.0 s; items by core: 0:36 1:22 2:36 3:26 4:23 5:29 6:29 7:26 8:15 9:19 10:14 11:14 12:29; title heap 1168 MB in 62 segments, 0 libc fallbacks; RADV buffers 160 MB
+savagewind: radv/ps5 submissions: window count=87 kwords=147 claim_ms=0.2 copy_ms=6.8 flush_ms=0.2 agc_ms=1.9 suspend_ms=2.3
+savagewind: [precompile] 264 s: building pipeline libraries, 5811 of 13997 (70% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 369 done; their work 84.0 s (thread CPU in it 58.0 s, a clock not trusted on the PS5), reading 0.1 s, waiting for the memory budget 0.0 s; items by core: 0:47 1:33 2:28 3:31 4:29 5:22 6:23 7:37 8:15 9:23 10:31 11:23 12:27; title heap 1168 MB in 62 segments, 0 libc fallbacks; RADV buffers 160 MB
+<118>[SceShellCore] Libc Heap Status: free 52%, in-use 3832.8 KB, trend +0.4 KB/min, peak 7758.7 KB, when 47771 [sec]
+savagewind: [precompile] 269 s: building pipeline libraries, 6200 of 13997 (72% of the whole)
+savagewind: [precompile] last 5 s on 16 threads: 389 done; their work 81.6 s (thread CPU in it 56.2 s, a clock not trusted on the PS5), reading 0.1 s, waiting for the memory budget 0.0 s; items by core: 0:30 1:42 2:33 3:33 4:27 5:34 6:48 7:28 8:20 9:17 10:22 11:28 12:27; title heap 1168 MB in 62 segments, 0 libc fallbacks; RADV buffers 168 MB
+savagewind: radv/ps5 submissions: window count=87 kwords=147 claim_ms=0.2 copy_ms=6.0 flush_ms=0.1 agc_ms=1.9 suspend_ms=2.5
+<118>MSG AutoMounter(void (anonymous namespace)::updateDiscKeyPeriodically() 173):
+<118>	discType(0) is not target.

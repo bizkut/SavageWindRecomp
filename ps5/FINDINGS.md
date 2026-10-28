@@ -626,3 +626,12 @@ percentage and step. The same 24 shaders failed as on desktop (a translator gap)
 1.0 cores** while 16 worker threads are busy: the title's threads appear to share one core. Under investigation
 (thread affinity); this would also limit the game. The xlate pack was written empty (0 entries) although 13,909
 translations were made.
+
+## 2026-10-28 — First-start precompile, run 3 (.41, ps5/evidence/m6/precompile-first3.klog)
+
+Eboot `059dd307…`: **done in 318.0 s** (translation 184.5 s, pipeline libraries 129.5 s). Both cache packs are
+filled; the memory-budget wait is 0 with the budget sized from free direct memory (10,931 MB free). **Affinity is
+ruled out**: every worker's mask is 0x1fff and the per-item `sceKernelGetCurrentCpu` histogram spreads over cores
+0–12. Wall-clock scaling is 28/s with 1 worker vs 61/s with 16 (**2.1x**; 6.6x on the host), so the workers contend
+on a shared lock. After start-up the AOC lookup re-opens the packages once per DLC index ("Add-on content not
+found" six or more times), and three ~28 ms render-thread hitches remain in the first 6 s.
