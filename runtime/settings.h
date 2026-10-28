@@ -86,6 +86,7 @@ typedef struct {
     bool menu_tip_seen;  // the start screen's one-time "how to open the menu" note was shown (first PLAY ever)
     bool render_profile; // (diagnostics) the render thread's time by command kind (vulkan/rprof.h); ini only
     bool vk_recorder;    // (A/B) Vulkan calls on a recorder thread of their own (vulkan/record.h, upstream PR #189); ini only
+    bool log_sync;       // PS5 klog A/B: write on the calling thread instead of the logger
 } Settings;
 
 #define STICK_DEADZONE_DEFAULT 0.10f  // (the Switch's own input service has one: the game expects 0 at rest)

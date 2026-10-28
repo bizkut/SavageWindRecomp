@@ -193,6 +193,7 @@ int main(void) {
     extern void language_booted(void);
     fs_title_version_patch();
     settings_load();
+    ps5_log_init(g_settings.log_sync);
     language_booted();
     kernel_init();
     dispatch_init();

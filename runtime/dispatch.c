@@ -269,6 +269,9 @@ static void log_guest_backtrace(const Cpu *c) {
 }
 
 void rt_fatal_trace(void) {
+#ifdef __PROSPERO__
+    ps5_log_fatal_mode();
+#endif
     LOG("host backtrace (guest functions are f_<addr>):\n");
     plat_print_backtrace();
     ipc_log_in_flight();
@@ -426,6 +429,9 @@ bool rt_fault_watch(uint64_t fa, uint64_t pc) {
 }
 
 void rt_fault_report(const char *what, uint64_t fa, uint64_t pc, uint64_t lr) {
+#ifdef __PROSPERO__
+    ps5_log_fatal_mode();
+#endif
     uint64_t po = 0, lo = 0;
     const char *ps = host_sym(pc, &po), *ls = host_sym(lr, &lo);
     LOG("\n*** %s accessing %#llx\n    host pc %llx (%s+%llx)\n    host lr %llx (%s)\n", what,

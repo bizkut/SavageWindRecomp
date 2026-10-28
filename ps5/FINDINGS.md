@@ -879,3 +879,42 @@ slightly lower p99; -O2 costs ~2.5× the PC compile time. Kept as a switch, -O1 
 The game still averages 58.8 fps with FG on (3,530 frames per 60 s vs 3,578 at the 59.64 cap). The klog shows one
 ~4 s stretch of 148 consecutive ~27 ms "command translation" frames (frames ~1340–1488, before the measured window)
 and 30 such hitches inside it.
+
+The three recorder-on runs each report 3,530 frames and 30 hitches in the measured minute. The configured game grid
+is 16.767 ms (59.64 fps); the O2 run's p50 is 16.754 ms and p95 16.846 ms, not a uniformly slower grid. Its two-second
+`[vk]` windows each show one ~61–63 ms render-CPU hitch, and the following frame of the earlier uncapped hitch logs
+occurs immediately after the `[vk]`/`[fg]`/`[fgpipe]` reports. Those reports run synchronously on the render thread.
+The game grid retains its target after a sub-period lateness, restarts after a full period, and the separate present
+grid's 1 ms correction cannot set the game's period. The reports are a strong suspect for the recurring lost time,
+not proof until an A/B run; the hitch time also includes ordinary rendering and grid catch-up.
+
+The earlier burst starts during the loading-screen transition to the world at 1440p, before the benchmark switches to
+1080p at 27.3 s, and continues into settling. Frame 1248 initializes MihawkGen and takes 358 ms; successive ~25–28 ms
+frames have about 17–18 ms in the guest present thread's backend and no significant acquire, queue-room, compile or
+upload wait. `ft_frame` writes each long `[hitch]` synchronously before its next CPU timestamp, so the logged
+\"command translation\" includes the preceding hitch log itself. The burst stops being logged at the 300-line limit;
+this is consistent with diagnostic feedback, not evidence of a specific game event.
+
+PS5 runtime `LOG` now queues klog messages to a bounded logger thread (drops are reported); fatal and fault diagnostics
+remain synchronous. `log_sync = 1` in savagewind.ini or `SAVAGEWIND_LOG_SYNC=1` restores synchronous writes for A/B.
+The change is host-built pending console measurement; compare the benchmark's frame count, p50/p95/p99, hitch count,
+two-second maxima and present cadence in both modes, and check for dropped log lines.
+
+## 2026-10-28 — Asynchronous klog: M7 frame-generation target met (.41, ps5/evidence/m7/ab-log-*.klog)
+
+Eboot `0b5a59cf…`: klog lines go to a 512-line queue drained by a logger thread; fatal/fault output stays synchronous;
+`log_sync = 1` restores the old path. Synchronous klog writes had cost ~61 ms after every 2 s report and fed a hitch
+loop (each hitch line made the next frame late).
+
+| FG on, 1080p internal | on time | game / presented fps | frame ms mean / p99 / max | measured hitches |
+|---|---|---|---|---|
+| async, run 1 | **100.0 %** | **59.6 / 119.3** | 16.767 / 16.984 / 18.4 | **0** |
+| async, run 2 | **100.0 %** | **59.6 / 119.3** | 16.767 / 16.979 | 0 |
+| log_sync = 1 | 98.8 % | 58.8 / 117.7 | 16.994 / 18.128 | 30 |
+| async, FG off | 100.0 % | 59.9 / 59.9 | 16.683 / 16.798 | 0 |
+
+Presented cadence 119.3 Hz with present-interval p95 8.51 ms, i.e. **M7's settled 119–120 Hz presented cadence is
+met on the benchmark** (render thread 8.7 ms, GPU 9.9 ms incl. MihawkGen 1.63 ms). The remaining hitches are all
+outside the measured route: loading-screen package reads on guest threads (65) and loading waits. "could not lower
+logger priority" is logged once (the logger runs at default priority). Every earlier benchmark's "command translation"
+hitches were largely this logging.

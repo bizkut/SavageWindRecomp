@@ -10,7 +10,7 @@
 
 #ifdef __PROSPERO__
 #define LOG(...) ps5_logf(__VA_ARGS__)
-#define FATAL(...) (ps5_logf("FATAL: " __VA_ARGS__), rt_fatal_trace())
+#define FATAL(...) (ps5_log_fatal_mode(), ps5_logf("FATAL: " __VA_ARGS__), rt_fatal_trace())
 #else
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #define FATAL(...) (fprintf(stderr, "FATAL: " __VA_ARGS__), rt_fatal_trace())

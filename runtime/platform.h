@@ -17,8 +17,10 @@ extern "C" {
 #endif
 
 #ifdef __PROSPERO__
-// Direct klog output, independent of the asynchronous stderr pipe.
+// PS5 klog: queued after initialization; fatal diagnostics bypass the queue.
 void ps5_logf(const char *format, ...);
+void ps5_log_init(bool sync);
+void ps5_log_fatal_mode(void);
 // Close the title (runtime/platform/main_ps5.c: sceSystemServiceLoadExec("exit")); stderr is flushed first
 __attribute__((noreturn)) void ps5_exit_title(void);
 #endif

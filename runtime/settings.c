@@ -165,6 +165,7 @@ void settings_load(void) {
         else if (!strcmp(key, "menu_tip_seen")) g_settings.menu_tip_seen = atoi(val) != 0, tip_key = true;
         else if (!strcmp(key, "render_profile")) g_settings.render_profile = atoi(val) != 0;
         else if (!strcmp(key, "vk_recorder")) g_settings.vk_recorder = atoi(val) != 0;
+        else if (!strcmp(key, "log_sync")) g_settings.log_sync = atoi(val) != 0;
         else bind_settings_load(key, val);  // bind_pad_* / bind_key_*: runtime/hle/bindings.c
     }
     fclose(f);
@@ -276,6 +277,7 @@ void settings_save(void) {
     if (g_settings.render_profile) fprintf(f, "render_profile = 1\n");  // (diagnostics: kept only while on)
     if (g_settings.vk_recorder != VK_RECORDER_DEFAULT)  // (written only when it differs from the platform's default)
         fprintf(f, "vk_recorder = %d\n", g_settings.vk_recorder ? 1 : 0);
+    if (g_settings.log_sync) fprintf(f, "log_sync = 1\n");
     bind_settings_save(f);
 #ifdef __PROSPERO__
     if (fclose(f) || rt_storage_replace(SETTINGS_FILE, contents, contents_size) < 0)
