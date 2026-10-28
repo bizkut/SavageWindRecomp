@@ -1,0 +1,82 @@
+FSR4_BEGIN
+FSR4_DEVICE PlayStation 5 GPU (RADV NAVI21) api=1.4 int16=1 int8=1 float16=1 dot=1 storage8=1 storage16=1 subgroup_ops=0x6ff subgroup_size=64 size_control=1 range=32-64 stages=0xf0 timestampPeriod=10
+FSR4_DOT packed_signed_accelerated=0 packed_unsigned_accelerated=0
+FSR4_FORMAT format=97 optimal=0x1dd83
+FSR4_FORMAT format=100 optimal=0x1dd87
+FSR4_FORMAT format=109 optimal=0x1dd83
+FSR4_CONTEXT_BEGIN wave64=1
+FSR4_PIPELINE_BEGIN index=0 count=1
+FSR4_PIPELINE index=0 count=1 result=0 create_ms=2.613
+FSR4_PIPELINE_BEGIN index=1 count=1
+FSR4_PIPELINE index=1 count=1 result=0 create_ms=18.381
+FSR4_PIPELINE_BEGIN index=2 count=1
+FSR4_PIPELINE index=2 count=1 result=0 create_ms=63.828
+FSR4_PIPELINE_BEGIN index=3 count=1
+FSR4_PIPELINE index=3 count=1 result=0 create_ms=61.787
+FSR4_PIPELINE_BEGIN index=4 count=1
+FSR4_PIPELINE index=4 count=1 result=0 create_ms=31.862
+FSR4_PIPELINE_BEGIN index=5 count=1
+FSR4_PIPELINE index=5 count=1 result=0 create_ms=1033.333
+FSR4_PIPELINE_BEGIN index=6 count=1
+FSR4_PIPELINE index=6 count=1 result=0 create_ms=960.133
+FSR4_PIPELINE_BEGIN index=7 count=1
+FSR4_PIPELINE index=7 count=1 result=0 create_ms=135.604
+FSR4_PIPELINE_BEGIN index=8 count=1
+FSR4_PIPELINE index=8 count=1 result=0 create_ms=198.884
+FSR4_PIPELINE_BEGIN index=9 count=1
+FSR4_PIPELINE index=9 count=1 result=0 create_ms=200.755
+FSR4_PIPELINE_BEGIN index=10 count=1
+FSR4_PIPELINE index=10 count=1 result=0 create_ms=706.687
+FSR4_PIPELINE_BEGIN index=11 count=1
+FSR4_PIPELINE index=11 count=1 result=0 create_ms=930.947
+FSR4_PIPELINE_BEGIN index=12 count=1
+FSR4_PIPELINE index=12 count=1 result=0 create_ms=110.992
+FSR4_PIPELINE_BEGIN index=13 count=1
+FSR4_PIPELINE index=13 count=1 result=0 create_ms=62.196
+FSR4_PIPELINE_BEGIN index=14 count=1
+FSR4_PIPELINE index=14 count=1 result=0 create_ms=85.041
+FSR4_PIPELINE_BEGIN index=15 count=1
+FSR4_PIPELINE index=15 count=1 result=0 create_ms=0.181
+FSR4_PIPELINE_BEGIN index=16 count=1
+FSR4_PIPELINE index=16 count=1 result=0 create_ms=0.007
+FSR4_PIPELINE_BEGIN index=17 count=1
+FSR4_PIPELINE index=17 count=1 result=0 create_ms=0.006
+FSR4_PIPELINE_BEGIN index=18 count=1
+FSR4_PIPELINE index=18 count=1 result=0 create_ms=64.276
+FSR4_PIPELINE_BEGIN index=19 count=1
+FSR4_PIPELINE index=19 count=1 result=0 create_ms=62.773
+FSR4_PIPELINE_BEGIN index=20 count=1
+FSR4_PIPELINE index=20 count=1 result=0 create_ms=31.835
+FSR4_PIPELINE_BEGIN index=21 count=1
+FSR4_PIPELINE index=21 count=1 result=0 create_ms=954.971
+FSR4_PIPELINE_BEGIN index=22 count=1
+FSR4_PIPELINE index=22 count=1 result=0 create_ms=951.499
+FSR4_PIPELINE_BEGIN index=23 count=1
+FSR4_PIPELINE index=23 count=1 result=0 create_ms=132.283
+FSR4_PIPELINE_BEGIN index=24 count=1
+FSR4_PIPELINE index=24 count=1 result=0 create_ms=197.570
+FSR4_PIPELINE_BEGIN index=25 count=1
+FSR4_PIPELINE index=25 count=1 result=0 create_ms=206.854
+FSR4_PIPELINE_BEGIN index=26 count=1
+FSR4_PIPELINE index=26 count=1 result=0 create_ms=678.705
+FSR4_PIPELINE_BEGIN index=27 count=1
+FSR4_PIPELINE index=27 count=1 result=0 create_ms=967.188
+FSR4_PIPELINE_BEGIN index=28 count=1
+FSR4_PIPELINE index=28 count=1 result=0 create_ms=109.328
+FSR4_PIPELINE_BEGIN index=29 count=1
+FSR4_PIPELINE index=29 count=1 result=0 create_ms=64.639
+FSR4_PIPELINE_BEGIN index=30 count=1
+FSR4_PIPELINE index=30 count=1 result=0 create_ms=81.630
+FSR4_PIPELINE_BEGIN index=31 count=1
+FSR4_PIPELINE index=31 count=1 result=0 create_ms=0.008
+FSR4_CONTEXT result=0 pipeline_create_ms=9169.238
+FSR4_FRAME frame=0 gpu_ms=15.417 checksum_fnv1a64=751f5a6f23e91a48 reference=unavailable
+FSR4_FRAME frame=1 gpu_ms=14.558 checksum_fnv1a64=f80bccb587ab5fae reference=unavailable
+FSR4_FRAME frame=2 gpu_ms=14.208 checksum_fnv1a64=bb8c73186846f961 reference=unavailable
+FSR4_FRAME frame=3 gpu_ms=15.139 checksum_fnv1a64=69fef5c7ceb04943 reference=unavailable
+FSR4_FRAME frame=4 gpu_ms=14.386 checksum_fnv1a64=4b76ba14c7d2206d reference=unavailable
+FSR4_FRAME frame=5 gpu_ms=14.338 checksum_fnv1a64=ebf0590d700d73af reference=unavailable
+FSR4_FRAME frame=6 gpu_ms=14.151 checksum_fnv1a64=1b696b0592ff6542 reference=unavailable
+FSR4_FRAME frame=7 gpu_ms=14.246 checksum_fnv1a64=ebe23f5dec2fb476 reference=unavailable
+FSR4_COMPLETE
+FSR4_END result=PASS

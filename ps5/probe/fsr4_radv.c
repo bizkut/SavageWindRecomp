@@ -16,10 +16,12 @@ void ps5_logf(const char *fmt, ...) {
     fputs(line, stdout); fflush(stdout); if (logfile) { fputs(line, logfile); fflush(logfile); }
 }
 #define CHECK(x) do { VkResult r_ = (x); if (r_ != VK_SUCCESS) { ps5_logf("FSR4_ERROR %s result=%d\n", #x, r_); return 1; } } while (0)
+#ifndef RW // render and output sizes; build with PS5_CFLAGS=-DRW=1920u -DRH=1080u -DOW=3840u -DOH=2160u for 4K
 #define RW 1280u
 #define RH 720u
 #define OW 1920u
 #define OH 1080u
+#endif
 static VkDevice dev;
 static VkPhysicalDeviceMemoryProperties mem;
 static uint32_t type(uint32_t bits, VkMemoryPropertyFlags flags) {

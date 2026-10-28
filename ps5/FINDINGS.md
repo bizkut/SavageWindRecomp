@@ -1080,3 +1080,20 @@ Console: workers 284–585 ms per sheet (was 2.3–4.5 s), sheets live by frame 
 119.3 fps. Native 4K prompt bar mean edge gradient 82.2 (sharpen 58.5, same route time). CJK glyphs take the sharpen
 path, so their output equals the previous default. Default `sdf` on PS5 (sharpen elsewhere); the ini writes
 `sharp_text_method` only when it differs. Default run with no ini key: all 6 sheets `method=sdf`, 99.9 % on time.
+
+## 2026-10-28 — FSR 4 on RADV: works, too slow for 4K (.41, ps5/evidence/fsr4/)
+
+The `../ps5-fsr4` SDK (FSR 4.1 INT8 model) runs on the PS5 RADV driver: all pipelines build and frames complete
+(probe `ps5/probe/fsr4_radv.c`, synthetic inputs). GPU time per upscaled frame, median of 8:
+
+| Render → output | GPU ms |
+|---|---|
+| 1280×720 → 1920×1080 | 3.8 |
+| 1920×1080 → 3840×2160 | 14.3 |
+| 2560×1440 → 3840×2160 | 14.8 |
+
+The first 4K attempt failed with `PS5FSR4_ERROR_UNSUPPORTED` (−2): the generated model tables held only the
+≤1080p band; the build script now refuses incomplete tables. For comparison, FSR 3.1 in game adds ~2.3 ms GPU over
+FSR 1 (both at 4K output). With the game's ~7.7 ms GPU per frame, 4K FSR 4 cannot hold 60 fps, so it is not
+integrated. No cheap 2× lever: RADV's accelerated integer dot product is unavailable on this GPU (gfx1013, and the
+PS5 winsys documents `v_dot4_u32_u8` as incorrect). FSR 4 stays a candidate only for 1080p output (3.8 ms).

@@ -1,0 +1,9 @@
+FSR4_BEGIN
+FSR4_DEVICE PlayStation 5 GPU (RADV NAVI21) api=1.4 int16=1 int8=1 float16=1 dot=1 storage8=1 storage16=1 subgroup_ops=0x6ff subgroup_size=64 size_control=1 range=32-64 stages=0xf0 timestampPeriod=10
+FSR4_DOT packed_signed_accelerated=0 packed_unsigned_accelerated=0
+FSR4_FORMAT format=97 optimal=0x1dd83
+FSR4_FORMAT format=100 optimal=0x1dd87
+FSR4_FORMAT format=109 optimal=0x1dd83
+FSR4_CONTEXT_BEGIN wave64=1
+FSR4_CONTEXT result=-2 pipeline_create_ms=0.618
+FSR4_END result=FAIL
