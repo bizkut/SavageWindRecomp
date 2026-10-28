@@ -419,12 +419,29 @@ first start; fix hitches. Defaults per output resolution: at 1080p, native or su
 without FSR; at 4K, the resolution/FSR mode the measurement supports. **Done when:** ≥ 95 % of real frames within
 16.68 ms over a 10-minute route, recorded, at 4K and on a 1080p display.
 
+**Built-in benchmark (new work, requested 2026-10-28).** Desktop lists it as roadmap only; nothing exists in the
+repo. A fixed camera route through the Great Plateau that runs without player input, records per-frame CPU/GPU times
+and hitch causes, and writes a summary through the broker, so console runs need no player. Shared code, so desktop
+gains it too. **Done when:** two consecutive runs on .41 of the same route agree within 2 % on mean and 95th-percentile
+frame time.
+
 ### M7 — MihawkGen 2× and VRR at 120
 D7 backend; frame pacing in `runtime/hle/framepace.c` for real + generated presents under VRR.
 **Done when:** settled 119–120 Hz presented cadence in play, `gpu_ms` of the generator logged per window, VRR
 confirmed on the TV, FG off in menus; A/B vs FG off for latency and artifacts (camera pan, Link running, HUD).
 The Video page's **Frame generation: On / Off** row drives MihawkGen instead of desktop FSR 3, offered only when the
 display runs at 119.88 Hz; with it on, the TV shows twice the frame-rate limit (60 → 120). Persisted like the rest.
+
+### After M7 (optional) — HDR10 output
+Requested 2026-10-28. Desktop has HDR10 presentation on `test` and lists colour grading/HDR as roadmap. On PS5 the
+only evidence is that the pinned RADV build carries Forever patch 0001 (HDR10/immediate); no HDR swapchain has run on
+this port. **Done when:** an HDR10 surface is created on .41, the TV reports HDR, a Video row turns it on/off, and SDR
+output is unchanged with it off.
+
+### After M6 (optional) — Draw distance and detail
+Requested 2026-10-28; desktop roadmap item, not yet built there. On PS5 it trades distance for fps within the
+headroom M6 measures. Take desktop's implementation when it lands; otherwise build it as shared code. **Done when:**
+each setting's CPU/GPU cost is measured with the benchmark and the default keeps the M6 frame target.
 
 ### M8 — Temporal upgrades (after PR #194/#195)
 Reuse PR #194's motion vectors, jitter, depth copy and reactive mask and PR #195's FSR 3.1 path; do not re-derive
