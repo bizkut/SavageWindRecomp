@@ -679,3 +679,26 @@ NVN commands to Vulkan) uses 62 % on average and 86 % at p95, so it is the limit
 hitches. Guest-thread CPU figures are summed per-thread self-reports and are indicative only.
 
 **Deferred by the user (2026-10-28):** the M6 10-minute played route (4K and 1080p) and freeing the precompile heap; M7 started.
+
+## 2026-10-28 — M7: MihawkGen frame generation linked on the host (not yet run)
+
+Eboot `46779550…` links PS5_MihawkGen `c57232a9…` (`ps5/deps.lock`; `.deps/ps5/mihawkgen` from `git archive`, weights
+SHA-256 checked) behind `runtime/nvn/vulkan/mihawk.cpp`, and ships `network.fgw` (1,757,240 bytes) with MihawkGen's
+licence and notices. Desktop `make runtime-objs` still builds without it (Makefile filter; its backend is FSR 3).
+Video > Frame generation (On / Off, `frame_generation` in savagewind.ini) is listed only at 119.88 Hz. Expected in
+klog with it on: `[fg] MihawkGen neural 3840x2160, 3 slots, … passes, weights /app0/network.fgw (1757240 bytes)`,
+`[fg] MihawkGen on the final 3840x2160 images …`, `[fg] first generated frame …`, then every 2 s
+`[fg] … generated frames/s: … presented (MihawkGen: gpu_ms … max … over … frames; … game frames shown twice …)`.
+The benchmark summary now also has `presents …: … presented fps (… in frame generation's slot); game frames … fps`,
+`present intervals ms: …` (times handed to the display, a 6-bucket histogram) and `frame generation gpu ms per
+generated frame …`. Host: `make test-framepace-fg` passes (9/9: 60 at 119.88 Hz keeps the game at 16.683 ms and
+spaces the presents 8.342 ms; FSR 3's period unchanged). Still needed: the FG-on and FG-off benchmarks on .41, VRR on
+the TV, and the user's eyes on artifacts (camera pan, Link running, HUD).
+
+## 2026-10-28 — M7 first benchmark: MihawkGen on the PS5 (.41, ps5/evidence/m7/bench-fg0/1.klog)
+
+Eboot `4677955…`. **FG off:** unchanged from M6 (59.9 fps, 98.7 % on time, GPU 7.7 ms). **FG on, broken pacing:**
+game 22.6 fps, presented 45.2 fps instead of 120; 0 % on time with 1,326 "render queue / GPU wait" hitches; present
+intervals mostly 18–25 ms. GPU is not the limit (10.5 ms per game frame + MihawkGen 2.8 ms per generated frame).
+User report (playing): the hearts and health bar leave ghosts, because MihawkGen gets frames with the HUD on; the
+HUD-less variant D7 deferred is now required.
