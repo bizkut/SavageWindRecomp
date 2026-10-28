@@ -958,3 +958,11 @@ every 10 s. HDR off: format 44, colour space 0 (SDR). AvControl reports the TV a
 a usable capability hint (the driver itself offers HDR from title metadata only). FG benchmark: HDR on 99.8 % on time,
 GPU 10.03 ms; off 99.6 %, 9.98 ms; both 59.6 / 119.3 fps, so HDR costs nothing measurable. Whether the TV shows HDR
 and how it looks needs the user. One HDR-off run produced no result (the first run after deploying; rerun was fine).
+
+## 2026-10-28 — PS5 dynamic resolution, first console runs (.41, ps5/evidence/m7/ab-drs-*.klog)
+
+Eboot `7bafc763…`. **Controller works:** with 1440p internal and `gpu_load = 8` ms for the first 20 s, the size
+stepped down to 720p (21.5 s at 1280×720, 2.1 s at 1600×900) and back up to 2560×1440 (36.4 s) once the load ended.
+**Cost with DRS compiled in but off is above the agreed 2 %:** GPU 10.33–10.36 ms and render thread 10.02–10.04 ms,
+against 9.95–9.98 ms GPU and 9.05–9.17 ms render in the builds just before (99.6–99.8 % on time either way). Edge
+artifacts at 720p are not yet captured (the fast-motion captures run after the route, at full size).
