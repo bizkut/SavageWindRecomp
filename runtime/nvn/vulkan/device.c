@@ -1604,6 +1604,8 @@ static int capture_x, capture_y, capture_w, capture_h;
 static long shot_seen_mtime = -1, shot_seen_size = -1;
 static int shot_x, shot_y, shot_w, shot_h, shot_armed;
 static double shot_at;
+static int shot_screen;  // 0 immediate / route, 1 title, 2 loading
+static uint64_t title_since, loading_since;
 typedef struct { char path[160]; uint8_t *rgba; int w, h; } CaptureJob;
 
 static void *capture_thread(void *arg) {
@@ -2047,6 +2049,12 @@ static void present_locked(NvnTexture *t) {
                 if (*wnext == ',') wnext++;
             }
         }
+        if (framepace_title_ui()) {
+            if (!title_since) title_since = SDL_GetTicksNS();
+        } else title_since = 0;
+        if (framepace_loading_ui()) {
+            if (!loading_since) loading_since = SDL_GetTicksNS();
+        } else loading_since = 0;
         // shot.txt: x y width height [measured-route seconds]. The optional time arms the crop at startup.
         // State is reset on in-place reboot as well as a fresh process start.
         if (!(total_frames % 60)) {
@@ -2057,8 +2065,17 @@ static void present_locked(NvnTexture *t) {
             } else if ((long)st.st_mtime != shot_seen_mtime || (long)st.st_size != shot_seen_size) {
                 shot_seen_mtime = (long)st.st_mtime; shot_seen_size = (long)st.st_size;
                 FILE *f = rt_data_fopen("shot.txt", "r");
-                shot_at = -1;
-                int n = f ? fscanf(f, "%d %d %d %d %lf", &shot_x, &shot_y, &shot_w, &shot_h, &shot_at) : 0;
+                char trigger[32] = "";
+                shot_at = -1; shot_screen = 0;
+                int n = f ? fscanf(f, "%d %d %d %d %31s", &shot_x, &shot_y, &shot_w, &shot_h, trigger) : 0;
+                if (n == 5 && (!strcmp(trigger, "title") || !strcmp(trigger, "loading"))) {
+                    shot_screen = !strcmp(trigger, "title") ? 1 : 2;
+                    n += f && fscanf(f, "%lf", &shot_at) == 1;
+                } else if (n == 5) {
+                    char *end;
+                    shot_at = strtod(trigger, &end);
+                    if (*end || end == trigger) n = 0;
+                }
                 if (f) fclose(f);
                 shot_armed = n >= 4 && shot_x >= 0 && shot_y >= 0 && shot_w > 0 && shot_h > 0 &&
                              (uint64_t)shot_x + shot_w <= g_vk.sc_extent.width && (uint64_t)shot_y + shot_h <= g_vk.sc_extent.height &&
@@ -2066,12 +2083,15 @@ static void present_locked(NvnTexture *t) {
                 if (!shot_armed) LOG("[shot] invalid crop in shot.txt\n");
             }
         }
-        double route = shot_armed && shot_at >= 0 ? benchmark_route_seconds() : -1;
-        if (shot_armed && (shot_at < 0 || (route >= 0 && route >= shot_at))) {
+        double route = shot_armed && !shot_screen && shot_at >= 0 ? benchmark_route_seconds() : -1;
+        uint64_t since = shot_screen == 1 ? title_since : loading_since;
+        double screen_elapsed = since ? (SDL_GetTicksNS() - since) / 1e9 : -1;
+        if (shot_armed && (shot_screen ? screen_elapsed >= shot_at :
+                           shot_at < 0 || (route >= 0 && route >= shot_at))) {
             capture_x = shot_x; capture_y = shot_y; capture_w = shot_w; capture_h = shot_h;
             snprintf(frame_capture, sizeof frame_capture, "screenshots/shot-%ld.png", (long)time(NULL));
-            LOG("[shot] crop %d %d %d %d at route %.3f frame %d\n",
-                shot_x, shot_y, shot_w, shot_h, route, benchmark_route_frame());
+            LOG("[shot] crop %d %d %d %d at route %.3f screen %d elapsed %.3f frame %d\n",
+                shot_x, shot_y, shot_w, shot_h, route, shot_screen, screen_elapsed, benchmark_route_frame());
             shot_armed = 0;
         }
         const char *path = shot ? "build/window.png" : wpath[0] ? wpath : fg_real_shot[0] ? fg_real_shot : NULL;
@@ -2358,6 +2378,8 @@ void backend_init(void) {
 void backend_reset(void) {
     shot_seen_mtime = shot_seen_size = -1;
     shot_armed = 0;
+    shot_screen = 0;
+    title_since = loading_since = 0;
     if (!g_vk.dev) return;
     vk_present_idle();
     rec_drain();

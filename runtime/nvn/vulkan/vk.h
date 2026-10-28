@@ -122,6 +122,8 @@ typedef struct TexBackend {
     uint8_t glyph_output_scale;  // requested scale, including allocation fallback
     bool font_logged;            // first font-like upload logged for this backend
     int font_pending;             // worker-cache slot awaiting publication, 0 when none
+    int ui_pending;               // selected artwork worker slot
+    bool ui_replaced;             // RGBA8 replacement, retaining guest component swizzle
     // textures.c: one image per memory and shape, shared by every texture made there
     uint64_t key_addr;           // 0: not shared
     uint32_t key[7];             // target, format, width, height, depth, levels, samples

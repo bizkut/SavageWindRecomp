@@ -92,6 +92,7 @@ void video_page(std::vector<Item> &v) {
     v.push_back(video_anisotropy());
     v.push_back(video_sharpening());
     v.push_back(video_sharp_text());
+    v.push_back(video_sharp_ui());
     // AMD FSR 3 frame generation (vulkan/framegen.cpp)
     v.push_back(toggle(P_VIDEO, "Frame generation (AMD FSR 3)", "Twice the frames on screen. Adds a little delay.",
                        [](const Item &) { return (int)g_settings.frame_gen; },

@@ -1045,3 +1045,13 @@ worker thread, then swapped in (title fonts live ~1 frame after the worker finis
 are 2-layer arrays, both layers 4×, live at frame 524 during loading). Render-thread cost per hit 0.4–1.5 ms; workers
 156–328 ms in the background. Native 4K crop of the prompt bar: "Move / Controls / Camera" edges are crisper (the
 method narrows the coverage ramp; not a true vector reconstruction). The title/loading layout art is still original.
+
+## 2026-10-28 — Layout-art upscale (`sharp_ui`) measured, default off (.41, ps5/evidence/m8/*logo*, load-*, ab-ui-default)
+
+Named BNTX entries from the user's Title archive (Logo_W_00^l etc.) are matched by size/format/content hash and
+enlarged 2× edge-directed on a worker. Native-4K captures with it on vs off: the logo is essentially unchanged; the
+loading screen is identical (its frame pieces are 8×8, its text is font, already covered by `sharp_text`), so those
+entries were removed. An apparent grey background in the first comparison was not reproducible as a colour fault: the
+title screen animates between art, so fixed-time captures differ in background. Default off on all platforms; with it
+off no archive is indexed (0 `[sharp-ui]` lines) and the benchmark is unchanged: 99.9 % on time, 59.6 / 119.3 fps.
+Captures of the game's art were kept outside the repository and deleted.

@@ -147,6 +147,7 @@ void settings_load(void) {
                 if (!strcmp(val, k_icons[i])) g_settings.button_icons = i;
         }
         else if (!strcmp(key, "sharp_text")) g_settings.sharp_text = atoi(val) != 0;
+        else if (!strcmp(key, "sharp_ui")) g_settings.sharp_ui = atoi(val) != 0;
         else if (!strcmp(key, "async_shaders")) g_settings.async_shaders = atoi(val) != 0;
         else if (!strcmp(key, "precompile_shaders")) g_settings.precompile_shaders = atoi(val) != 0;
         else if (!strcmp(key, "wide_view")) g_settings.wide_view = atoi(val) != 0;
@@ -277,6 +278,7 @@ void settings_save(void) {
     fprintf(f, "button_icons = %s\n", k_icons[g_settings.button_icons >= 0 && g_settings.button_icons < ICONS_COUNT ?
                                                 g_settings.button_icons : ICONS_AUTO]);
     fprintf(f, "sharp_text = %d\n", g_settings.sharp_text);
+    fprintf(f, "sharp_ui = %d\n", g_settings.sharp_ui);
     fprintf(f, "async_shaders = %d\n", g_settings.async_shaders);
     fprintf(f, "precompile_shaders = %d\n", g_settings.precompile_shaders);
     static const char *const shadow[SHADOW_COUNT] = {"console", "high", "ultra", "extreme"};

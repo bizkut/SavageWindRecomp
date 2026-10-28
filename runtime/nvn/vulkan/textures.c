@@ -16,6 +16,7 @@
 #include "../../window_size.h"
 #include "../astc.h"
 #include "../glyphs.h"
+#include "../sharp_ui.h"
 #include "../renderer.h"
 #include "../texture_size.h"
 
@@ -879,6 +880,50 @@ static bool glyph_image(NvnTexture *t, TexBackend *b, uint32_t scale) {
     return true;
 }
 
+// Allocate before discarding the guest image, so failures keep its original contents.
+static bool ui_image(NvnTexture *t, TexBackend *b) {
+    if (b->ui_replaced) return true;
+    if (t->width > g_vk.props.limits.maxImageDimension2D / 2 ||
+        t->height > g_vk.props.limits.maxImageDimension2D / 2) return false;
+    VkFormat format = t->format == 0x38 || t->format == 0x45 || t->format == 0x46 || t->format == 0x48
+                    ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM;
+    if (!format_supports(format, VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT |
+                                 VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) return false;
+    VkImageCreateInfo ci = {.sType=VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, .imageType=VK_IMAGE_TYPE_2D,
+        .format=format, .extent={t->width*2,t->height*2,1}, .mipLevels=b->levels, .arrayLayers=1,
+        .samples=VK_SAMPLE_COUNT_1_BIT, .tiling=VK_IMAGE_TILING_OPTIMAL,
+        .usage=VK_IMAGE_USAGE_SAMPLED_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT};
+    VmaAllocationCreateInfo ai = {.usage=VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE};
+    VkImage image; VmaAllocation mem;
+    if (vmaCreateImage(g_vk.vma, &ci, &ai, &image, &mem, NULL) != VK_SUCCESS) return false;
+    destroy_image(b);
+    b->image=image; b->mem=mem; b->format=format; b->usage=ci.usage;
+    b->width=ci.extent.width; b->height=ci.extent.height; b->ui_replaced=true;
+    vk_image_init_layout(vk_upload_cmd(), image, VK_IMAGE_ASPECT_COLOR_BIT);
+    return true;
+}
+
+static void ui_restore(NvnTexture *t, TexBackend *b) {
+    if (!b->ui_replaced) return;
+    destroy_image(b); b->ui_replaced=false; create_image(t,b);
+}
+
+static void ui_upload(VkCommandBuffer cb, TexBackend *b, const uint8_t *rgba) {
+    VkSpan s=vk_transient_copy(rgba,(uint64_t)b->width*b->height*4,16);
+    VkBufferImageCopy copy={.bufferOffset=s.off, .imageSubresource={VK_IMAGE_ASPECT_COLOR_BIT,0,0,1},
+                            .imageExtent={b->width,b->height,1}};
+    rec_CmdCopyBufferToImage(cb,s.buf,b->image,VK_IMAGE_LAYOUT_GENERAL,1,&copy);
+    for (uint32_t lv=1; lv<b->levels; lv++) {
+        vk_full_barrier(cb);
+        uint32_t sw=b->width>>(lv-1), sh=b->height>>(lv-1), dw=b->width>>lv, dh=b->height>>lv;
+        if (!sw) sw=1; if (!sh) sh=1; if (!dw) dw=1; if (!dh) dh=1;
+        VkImageBlit bl={.srcSubresource={VK_IMAGE_ASPECT_COLOR_BIT,lv-1,0,1}, .srcOffsets={{0,0,0},{(int32_t)sw,(int32_t)sh,1}},
+                        .dstSubresource={VK_IMAGE_ASPECT_COLOR_BIT,lv,0,1}, .dstOffsets={{0,0,0},{(int32_t)dw,(int32_t)dh,1}}};
+        rec_CmdBlitImage(cb,b->image,VK_IMAGE_LAYOUT_GENERAL,b->image,VK_IMAGE_LAYOUT_GENERAL,1,&bl,VK_FILTER_LINEAR);
+    }
+    vk_full_barrier(cb);
+}
+
 
 // Guest memory -> image for the levels in level_mask (bit per level), every layer or slice.
 static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask);
@@ -893,12 +938,32 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
     const FormatInfo *fi = t->layout.fmt;
     VkFmt mf = fmt_of(t->format);
     if (!t->addr || t->target == 10 || !fi || !fi->bpb || !storage_readable(t, storage_size(t))) return;
-    if (b->format != mf.vf && !b->astc_bw && !b->glyph_scale) return;  // unsupported format
+    if (b->format != mf.vf && !b->astc_bw && !b->glyph_scale && !b->ui_replaced) return;  // unsupported format
     VkCommandBuffer cb = vk_upload_cmd();
     uint32_t layers = t->layout.layers ? t->layout.layers : 1;
     if (layers > b->layers && b->depth == 1) layers = b->layers;
     bool linear = nvn_texture_flags_pitch(t->flags);
     uint64_t layer_size = linear ? t->stride * (t->layout.height ? t->layout.height : 1) : tegra_layer_size(&t->layout);
+    if (g_settings.sharp_ui && !b->gpu_owned && !b->storage && !b->scalable &&
+        t->target == 1 && layers == 1 && t->samples <= 1 && !linear &&
+        (level_mask & 1) && sharp_ui_candidate(t->format,t->width,t->height)) {
+        LevelLayout l=tegra_level(&t->layout,0);
+        size_t bytes=(size_t)l.wb*l.hb*fi->bpb;
+        uint8_t *pixels=malloc(bytes), *rgba=NULL;
+        int pending=0;
+        if (pixels) {
+            tegra_deswizzle((const uint8_t *)(uintptr_t)t->addr+l.offset,pixels,l.wb,l.hb,1,fi->bpb,l.block_height_log2,l.block_depth_log2);
+            bool matched=sharp_ui_request(t->format,l.w,l.h,pixels,&rgba,&pending);
+            free(pixels);
+            b->ui_pending=pending;
+            if (matched && rgba && ui_image(t,b)) {
+                ui_upload(cb,b,rgba);
+                LOG("[sharp-ui] %ux%u live_frame=%llu levels=%u\n",l.w,l.h,(unsigned long long)framepace_game_frame(),b->levels);
+                return;
+            }
+        }
+    }
+    if (b->ui_replaced) { ui_restore(t,b); level_mask=~0u; }
     // Array fonts switch all layers together; until every worker finishes, retain the original image.
     if (t->target == 4 && t->pool && !linear && t->levels == 1 && t->samples <= 1 &&
         (t->format == 0x49 || t->format == 0x01) && layers > 1 && layers <= 32 && (level_mask & 1)) {
@@ -1186,6 +1251,10 @@ void vk_trace_dump(NvnTexture *t) {
 
 TexBackend *vk_tex(NvnTexture *t, bool for_render) {
     TexBackend *b = tex_backend(t);
+    if (for_render && (b->ui_replaced || b->ui_pending)) {
+        b->gpu_owned=true; b->ui_pending=0;
+        if (b->ui_replaced) upload_levels(t,b,~0u);
+    }
     if (!for_render && !b->gpu_owned && vk_trace_tex(t))  // (CPU-owned: guest memory is uploaded when it changed)
         vk_trace_event(t, 1, NULL, 0, "use: CPU-owned, uploaded %d dynamic %d", b->uploaded, b->dynamic);
     if (b->pending_rgba) upload_pending(b);
@@ -1194,6 +1263,10 @@ TexBackend *vk_tex(NvnTexture *t, bool for_render) {
     if ((b->glyph_gen && (b->glyph_gen != glyphs_generation() || b->glyph_output_scale != glyph_scale)) ||
         glyphs_text_ready(b->font_pending))
         upload_levels(t, b, 1);
+    if (sharp_ui_ready(b->ui_pending) || (b->ui_replaced && !g_settings.sharp_ui)) {
+        b->ui_pending=0;
+        upload_levels(t,b,~0u);
+    }
     // Levels nvnTextureWriteTexels filled go up now, also into an image the GPU draws into: BOTW writes level 0 of its
     // 32x32x32 noise that way and then renders the smaller levels from it (the noise stayed black: GPU-owned images
     // never read guest memory again).
@@ -1388,7 +1461,7 @@ VkImageView vk_view(NvnTexture *t, const NvnTextureView *v, bool has_view, bool 
     VkFormat fmt = b->format;
     if (v && (v->setmask & 4) && !(b->aspect & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT))) {
         VkFormat vf = fmt_of(v->format).vf;
-        if (vk_format(t->format) == b->format) fmt = vf;  // (fallback images keep their own format)
+        if (vk_format(t->format) == b->format && !b->ui_replaced) fmt = vf;  // (fallback images keep their own format)
     }
     uint32_t lv0 = v && (v->setmask & 1) ? v->base_level : 0;
     uint32_t nlv = v && (v->setmask & 1) && v->num_levels ? v->num_levels : b->levels - (lv0 < b->levels ? lv0 : 0);

@@ -491,8 +491,9 @@ CPU; `internal = 1080p` / `1440p` in benchmark.txt picks a run's internal resolu
 For a native-pixel crop of the real output, write `x y width height [route_seconds]` (output pixels, top-left origin)
 to `/data/savagewind/shot.txt`; the request is saved as `screenshots/shot-<time>.png`, and re-arms on each start. The rectangle must
 fit the output. The optional route time (0–60, exclusive) arms one capture at that measured benchmark time; omit it for
-the next frame. The log includes elapsed route time and measured-frame count. Captures use the SDR intermediate before
-HDR encoding and wait for GPU readback.
+the next frame. Alternatively append `title N` or `loading N` to capture N seconds after that screen appears (N from
+0 to less than 60). The selected screen must still be visible when the delay expires. The log includes elapsed route
+and screen times and measured-frame count. Captures use the SDR intermediate before HDR encoding and wait for GPU readback.
 Identified button sheets and HUD icon masks use 2× R8 replacements at 1440p output and 4× at 4K, with the same
 normalized cell layout; allocation failure or multi-level textures retain the original-size upload path. The game's
 unchanged bitmap letters and icons that are not redrawn remain limited by their original artwork.

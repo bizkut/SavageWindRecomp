@@ -2,6 +2,11 @@
 
 What changed in each Savage Wind release. The `test` branch holds what the next one will contain.
 
+Unreleased: Vulkan can sharpen identified game font sheets at 4K using the player's own game files.
+The Video setting **Sharp game text** defaults on for PS5 and off on desktop; unknown sheets stay unchanged.
+Vulkan also offers **Sharp layout artwork**, which enlarges selected title artwork from the player's own archive.
+It defaults off on all platforms; restart after changing it. Unrecognized textures stay unchanged.
+
 ## Alpha 3 hotfix (0.3.1-alpha.3, Windows) - 2026-10-25
 
 **For AMD and Intel graphics on Windows.** Since Alpha 3, AMD's and Intel's Windows drivers showed only a black window,

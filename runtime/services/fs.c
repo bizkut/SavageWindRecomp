@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <zlib.h>
+#include <SDL3/SDL_timer.h>
 
 #include "../benchmark.h"
 #include "../game_sites.h"
@@ -20,6 +21,7 @@
 #include "../paths.h"
 #include "../settings.h"
 #include "../nvn/glyphs.h"
+#include "../nvn/sharp_ui.h"
 #include "../romfs_image.h"
 #ifdef ROMFS_PACKAGE
 #include <strings.h>
@@ -479,6 +481,50 @@ static void index_text_fonts(void) {
     }
 }
 
+static void index_layout_art(void) {
+    static const struct { const char *pack, *layout; } paths[] = {
+        {"Pack/Title.pack", "Layout/Title.sblarc"}
+    };
+    if (R != &images[0]) return;
+    uint64_t started = SDL_GetTicksNS();
+    for (size_t k = 0; k < sizeof paths / sizeof *paths; k++) {
+        for (int i = 0; i < R->rom_nfiles; i++) {
+            RomFile *f = &R->rom_files[i];
+            if (strcmp(f->path, paths[k].pack)) continue;
+            char host[1200]; size_t sz = f->size; uint8_t *pack = NULL;
+            if (overlay_file(f->path, host, sizeof host)) {
+                FILE *fp = fopen(host, "rb");
+                if (fp) {
+                    if (!fseek(fp, 0, SEEK_END)) {
+                        long len = ftell(fp);
+                        if (len > 0 && !fseek(fp, 0, SEEK_SET)) {
+                            sz = (size_t)len; pack = malloc(sz);
+                            if (pack && fread(pack, 1, sz, fp) != sz) { free(pack); pack = NULL; }
+                        }
+                    }
+                    fclose(fp);
+                }
+            } else {
+                pack = malloc(sz);
+                if (pack && romfs_image_pread(R->img, pack, sz, f->off) != (ssize_t)sz) { free(pack); pack = NULL; }
+            }
+            if (!pack) break;
+            uint32_t base, start, end;
+            if (sarc_find(pack, sz, paths[k].layout, &base, &start, &end) >= 0) {
+                size_t an = 0; uint8_t *arc = yaz0_unpack(pack + base + start, end - start, &an);
+                if (arc) {
+                    if (sarc_find(arc, an, "timg/__Combined.bntx", &base, &start, &end) >= 0)
+                        sharp_ui_register(arc + base + start, end - start);
+                    free(arc);
+                }
+            }
+            free(pack);
+            break;
+        }
+    }
+    LOG("[sharp-ui] archive indexing %.2f ms\n", (SDL_GetTicksNS() - started) / 1000000.0);
+}
+
 // The HUD's prompt with its diamond of the other buttons (Layout/Common.sblarc, PaDoCommandA/B/X/Y_00: "Pick up",
 // "Talk", the rune's "Activate", the paraglider) writes the dim A / B / X / Y around it as text in the HUD's normal
 // font: the Switch's letters with any button icons. They become the button characters of the icon font
@@ -724,6 +770,7 @@ static void rom_index(void) {
         o += 0x20 + ((namelen + 3) & ~3u);
     }
     if (g_settings.sharp_text) index_text_fonts();
+    if (g_settings.sharp_ui) index_layout_art();
     voice_redirect(fmeta, foff, fsz);
     // Overlay: replacement files are served from the overlay folder. The file-meta table is patched
     // (in a copy) to point them at data appended past the end of the image; reads there go to host files.

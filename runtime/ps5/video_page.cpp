@@ -114,6 +114,7 @@ void video_page(std::vector<Item> &v) {
     v.push_back(video_anisotropy());
     v.push_back(video_sharpening());
     v.push_back(video_sharp_text());
+    v.push_back(video_sharp_ui());
     v.push_back(video_async_shaders());
     v.push_back(video_shadows());
 }

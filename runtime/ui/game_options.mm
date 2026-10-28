@@ -920,6 +920,12 @@ Item video_sharp_text() {
 #endif
 }
 
+Item video_sharp_ui() {
+    return toggle(P_VIDEO, "Sharp layout artwork", "Enlarges selected title artwork. Restart after changing.",
+                  [](const Item &) { return (int)g_settings.sharp_ui; },
+                  [](const Item &, int x) { g_settings.sharp_ui = x != 0; }, 0);
+}
+
 Item video_async_shaders() {
     return toggle(P_VIDEO, "Asynchronous shaders", "On: no stutter, but some effects appear late.",
                   [](const Item &) { return (int)g_settings.async_shaders; },
