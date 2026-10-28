@@ -11,3 +11,7 @@ pacbrew-ffmpeg        /opt/ps5-payload-sdk/target/user/homebrew       sha256:cbd
 # ^ the installed pacbrew packages (absolute prefix): ps5-payload-ffmpeg 7.0.1-1, openssl 3.5.2-1, bzip2 1.0.8-1, xz 5.4.6-1,
 #   libiconv 1.17-1; SHA-256 of the archives' sha256sum listing (ps5/tools/setup-ffmpeg.sh). This FFmpeg was configured
 #   LGPL-3 (--enable-version3 --enable-openssl), without the recipe's --enable-gpl --enable-libx264 (an encoder only).
+mihawkgen             ../PS5_MihawkGen (framegen/, git archive)        c57232a9f16bcb6df5fe07c9bb631518f2b1cc0e
+mihawkgen-network     framegen/models/network.fgw of that revision     sha256:31ecc7d69af1e9defd62b9abad71bc3430cd8a0a4d2f4eafcabaafa48c34bf6b
+# ^ M7 frame generation (runtime/nvn/vulkan/mihawk.cpp, plan D7/D10): GPL-3.0-or-later, linked into the PS5 title only;
+#   ps5/tools/build-game.sh exports the revision into .deps/ps5/mihawkgen and refuses another one or other weights.

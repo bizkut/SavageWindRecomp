@@ -1,8 +1,8 @@
 // Savage Wind's pages of the game's Options screen (runtime/ui/game_options.mm): their row model, and the Video page's
 // rows every platform has. Each platform composes its own Video page from them and its own rows, and words the Quit
-// question for what its answers do (D2: the desktop's window, VSync, HDR and frame generation, and quitting to the
-// desktop or the start screen, in runtime/ui/video_page.mm; the PS5's display resolution, and both answers closing the
-// title, in runtime/ps5/video_page.cpp).
+// question for what its answers do (D2: the desktop's window, VSync, HDR and frame generation (AMD FSR 3), and
+// quitting to the desktop or the start screen, in runtime/ui/video_page.mm; the PS5's display resolution, frame
+// generation (MihawkGen, at 119.88 Hz only), and both answers closing the title, in runtime/ps5/video_page.cpp).
 #pragma once
 #include <string>
 #include <vector>

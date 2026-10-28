@@ -913,6 +913,29 @@ static const char *builtin_src(const char *name, int *stage) {
                "  if (pc.b.w > 1.5) o = vec2(inbox ? 1.0 : 0.0, inbox && z >= pc.lk.x && z <= pc.lk.y ? 1.0 : 0.0);  // (debug)\n"
                "}\n";
     }
+    // MihawkGen's generated frame with the newest game frame's HUD (exec.c vk_fg_hud_draw): g = the frame generated
+    // from the HUD-less images, f = the newest final image, h = its HUD-less version, all at the window's size. a.x =
+    // the difference over which a pixel is the HUD's (any channel, anywhere in its 3 x 3 neighbourhood), b.xy = size.
+    if (!strcmp(name, "fg_hud.frag")) {
+        *stage = STAGE_FRAGMENT;
+        return "#version 450\n"
+               "layout(set = 0, binding = 0) uniform sampler2D g;\n"
+               "layout(set = 0, binding = 1) uniform sampler2D f;\n"
+               "layout(set = 0, binding = 2) uniform sampler2D h;\n"
+               "layout(push_constant) uniform P { vec4 a; vec4 b; } pc;\n"
+               "layout(location = 0) out vec4 o;\n"
+               "void main() {\n"
+               "  ivec2 ip = ivec2(gl_FragCoord.xy), mx = ivec2(pc.b.xy) - 1;\n"
+               "  float d = 0.0;\n"
+               "  for (int y = -1; y <= 1; y++)\n"
+               "    for (int x = -1; x <= 1; x++) {\n"
+               "      ivec2 p = clamp(ip + ivec2(x, y), ivec2(0), mx);\n"
+               "      vec3 e = abs(texelFetch(f, p, 0).rgb - texelFetch(h, p, 0).rgb);\n"
+               "      d = max(d, max(e.r, max(e.g, e.b)));\n"
+               "    }\n"
+               "  o = vec4(d > pc.a.x ? texelFetch(f, ip, 0).rgb : texelFetch(g, ip, 0).rgb, 1.0);\n"
+               "}\n";
+    }
     if (!strcmp(name, "clear.vert")) {
         *stage = STAGE_VERTEX;
         return "#version 450\n"

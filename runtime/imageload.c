@@ -38,3 +38,27 @@ bool rt_save_png(const char *path, const unsigned char *rgba, int w, int h) {
     free(px);
     return ok;
 }
+
+typedef struct { unsigned char *p; size_t n, cap; bool failed; } PngBuf;
+static void png_put(void *ctx, void *data, int size) {
+    PngBuf *b = ctx;
+    if (b->failed || size <= 0) return;
+    if (b->n + (size_t)size > b->cap) {
+        size_t cap = (b->cap ? b->cap * 2 : 1 << 20) + (size_t)size;
+        unsigned char *p = realloc(b->p, cap);
+        if (!p) { b->failed = true; return; }
+        b->p = p, b->cap = cap;
+    }
+    memcpy(b->p + b->n, data, (size_t)size);
+    b->n += (size_t)size;
+}
+
+unsigned char *rt_png_encode(const unsigned char *rgba, int w, int h, size_t *len) {
+    PngBuf b = {0};
+    if (w <= 0 || h <= 0 || !stbi_write_png_to_func(png_put, &b, w, h, 4, rgba, w * 4) || b.failed) {
+        free(b.p);
+        return NULL;
+    }
+    *len = b.n;
+    return b.p;
+}

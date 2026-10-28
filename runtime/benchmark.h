@@ -19,6 +19,10 @@ const char *benchmark_save_dir(void);  // runtime/services/fs.c: the copy of the
 // NULL), and each frame's GPU time once known
 void benchmark_frame(uint64_t frame, uint64_t dt_ns, uint64_t render_ns, uint64_t guest_ns, const char *hitch);
 void benchmark_gpu(uint64_t frame, uint64_t ns);
+// vulkan/device.c: each present (any thread; generated: the first of frame generation's pair, the generated frame or
+// the game's shown early on a cut), and the frame generator's GPU time for each generated frame (MihawkGen)
+void benchmark_present(bool generated);
+void benchmark_fg_gpu(uint64_t ns);
 
 #ifdef __cplusplus
 }

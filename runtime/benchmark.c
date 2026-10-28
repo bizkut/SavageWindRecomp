@@ -5,7 +5,9 @@
 //   camera turning: 5 s still, 20 s right, 3 s up, 3 s down, 20 s left, 9 s still. Link stays where the warp puts
 //   him (runtime/services/test_warp.c "plateau"), so nothing the player has done changes the route.
 // What is measured is each presented frame of those 60 s (runtime/frametime.c): its length, the render thread's and
-// the guest threads' CPU time, its GPU time, and the cause of each hitch.
+// the guest threads' CPU time, its GPU time, and the cause of each hitch; and each present to the display
+// (vulkan/device.c: the game's frames and, with frame generation, the generated ones): the presented frame rate and
+// the intervals between presents (when they were handed to the display), and the frame generator's GPU time.
 #include "benchmark.h"
 
 #include <dirent.h>
@@ -228,6 +230,32 @@ void benchmark_gpu(uint64_t frame, uint64_t ns) {
     g_gpu[g_ngpu++] = (float)(ns / 1e6);
 }
 
+// ---- presents: their times (the present thread writes, finish reads up to the count it publishes) and frame
+// generation's GPU time (the render thread)
+enum { MAX_PRESENTS = 2 * MAX_FRAMES };
+static uint64_t g_present_t[MAX_PRESENTS];
+static int g_npresents, g_npresents_gen;  // (g_npresents: release / acquire)
+static float g_fg_gpu[MAX_FRAMES];
+static int g_nfg;
+
+static bool measuring(void) {
+    return __atomic_load_n(&g_on, __ATOMIC_RELAXED) == 1 && __atomic_load_n(&g_state, __ATOMIC_RELAXED) == B_ROUTE;
+}
+
+void benchmark_present(bool generated) {
+    if (!measuring()) return;
+    int n = __atomic_load_n(&g_npresents, __ATOMIC_RELAXED);
+    if (n == MAX_PRESENTS) return;
+    g_present_t[n] = plat_now_ns();
+    g_npresents_gen += generated;
+    __atomic_store_n(&g_npresents, n + 1, __ATOMIC_RELEASE);
+}
+
+void benchmark_fg_gpu(uint64_t ns) {
+    if (!measuring() || g_nfg == MAX_FRAMES) return;
+    g_fg_gpu[g_nfg++] = (float)(ns / 1e6);
+}
+
 static int cmp_float(const void *a, const void *b) {
     float x = *(const float *)a, y = *(const float *)b;
     return x < y ? -1 : x > y;
@@ -254,7 +282,7 @@ static void finish(const char *failure) {
     time_t now = time(NULL);
     char when[32];
     strftime(when, sizeof when, "%Y-%m-%d %H:%M:%S", localtime(&now));
-    double mean = 0, p95 = 0;
+    double mean = 0, p95 = 0, presented_fps = 0, fg_ms = 0;
     if (failure) {
         at += (size_t)snprintf(text + at, sizeof text - at, "Savage Wind benchmark, %s: not run: %s\n", when, failure);
         LOG("[bench] not run: %s\n", failure);
@@ -272,6 +300,38 @@ static void finish(const char *failure) {
                                "\ncpu ms per frame: render thread mean %.2f p95 %.2f max %.1f; guest threads (summed) mean %.2f "
                                "p95 %.2f max %.1f\ngpu ms per frame (%d frames): mean %.2f p95 %.2f max %.1f\n",
                                r.mean, r.p95, r.max, g.mean, g.p95, g.max, g_ngpu, u.mean, u.p95, u.max);
+        // the presents: their rate, the intervals between them (when each was handed to the display; at 119.88 Hz one
+        // refresh is 8.34 ms) and frame generation's GPU time per generated frame
+        int np = __atomic_load_n(&g_npresents, __ATOMIC_ACQUIRE), niv = np > 1 ? np - 1 : 0;
+        double span = niv ? (double)(g_present_t[np - 1] - g_present_t[0]) / 1e9 : 0, dt_sum = 0;
+        for (int i = 0; i < g_n; i++) dt_sum += g_dt[i];
+        presented_fps = span > 0 ? niv / span : 0;
+        double game_fps = dt_sum > 0 ? g_n / (dt_sum / 1e3) : 0;
+        static float iv[MAX_PRESENTS];
+        static const double edge[5] = {6.5, 10.0, 15.0, 18.4, 25.0};
+        int bins[6] = {0};
+        for (int i = 0; i < niv; i++) {
+            iv[i] = (float)((g_present_t[i + 1] - g_present_t[i]) / 1e6);
+            int k = 0;
+            while (k < 5 && iv[i] >= edge[k]) k++;
+            bins[k]++;
+        }
+        Dist pi = dist(iv, niv), fd = dist(g_fg_gpu, g_nfg);
+        double pct = niv ? 100.0 / niv : 0;
+        fg_ms = fd.mean;
+        at += (size_t)snprintf(text + at, sizeof text - at,
+                               "presents %d: %.1f presented fps (%d in frame generation's slot); game frames %.1f fps\n"
+                               "present intervals ms: mean %.2f p50 %.2f p95 %.2f p99 %.2f max %.1f; under 6.5 %.1f%%, "
+                               "6.5-10 %.1f%%, 10-15 %.1f%%, 15-18.4 %.1f%%, 18.4-25 %.1f%%, over 25 %.1f%%\n",
+                               np, presented_fps, g_npresents_gen, game_fps, pi.mean, pi.p50, pi.p95, pi.p99, pi.max,
+                               bins[0] * pct, bins[1] * pct, bins[2] * pct, bins[3] * pct, bins[4] * pct, bins[5] * pct);
+        if (g_nfg)
+            at += (size_t)snprintf(text + at, sizeof text - at,
+                                   "frame generation gpu ms per generated frame (%d frames): mean %.3f p50 %.3f p95 %.3f max %.3f\n",
+                                   g_nfg, fd.mean, fd.p50, fd.p95, fd.max);
+        else
+            at += (size_t)snprintf(text + at, sizeof text - at, "frame generation: %s\n",
+                                   g_npresents_gen ? "on, its GPU time not measured" : "off");
         // the run before this one, from its last.txt
         size_t n = 0;
         char *prev = read_file("benchmark/last.txt", &n);
@@ -288,8 +348,9 @@ static void finish(const char *failure) {
         free(prev);
         at += (size_t)snprintf(text + at, sizeof text - at,
                                "result mean_ms=%.3f p95_ms=%.3f p99_ms=%.3f on_time=%.1f hitches=%d render_ms=%.2f guest_ms=%.2f "
-                               "gpu_ms=%.2f frames=%d\n", f.mean, f.p95, f.p99, g_n ? 100.0 * g_on_time / g_n : 0.0, g_hitches,
-                               r.mean, g.mean, u.mean, g_n);
+                               "gpu_ms=%.2f frames=%d presented_fps=%.1f game_fps=%.1f present_iv_p95_ms=%.2f fg_gpu_ms=%.3f\n",
+                               f.mean, f.p95, f.p99, g_n ? 100.0 * g_on_time / g_n : 0.0, g_hitches, r.mean, g.mean, u.mean,
+                               g_n, presented_fps, game_fps, pi.p95, fd.mean);
         write_file("benchmark/last.txt", text, at < sizeof text ? at : sizeof text - 1);
         for (char *p = text, *e; *p; p = e + 1) {  // (the summary in the log too, one line each)
             e = strchr(p, '\n');
@@ -298,8 +359,8 @@ static void finish(const char *failure) {
         }
     }
     char hist[256];
-    snprintf(hist, sizeof hist, "%s %s mean_ms=%.3f p95_ms=%.3f frames=%d\n", when, failure ? "failed" : "done", mean, p95,
-             failure ? 0 : g_n);
+    snprintf(hist, sizeof hist, "%s %s mean_ms=%.3f p95_ms=%.3f frames=%d presented_fps=%.1f fg_gpu_ms=%.3f\n", when,
+             failure ? "failed" : "done", mean, p95, failure ? 0 : g_n, presented_fps, fg_ms);
     append_line("benchmark/history.txt", hist);
     LOG("[bench] summary in benchmark/last.txt (and benchmark/history.txt): the game closes\n");
     fflush(stderr);

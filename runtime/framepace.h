@@ -8,6 +8,9 @@
 int framepace_target(void);
 // The time between presents for it, nanoseconds (no limit: 1/300 s).
 uint64_t framepace_period_ns(void);
+// MihawkGen's presents (vulkan/device.c present_wait_turn): the game frame's period while it paces them (each game
+// frame presented twice, half a period apart: 8.34 ms at 59.94 fps), 0 otherwise.
+uint64_t framepace_fg_period_ns(void);
 // false: the game paces itself and keeps its own clock (SAVAGEWIND_FRAMEPACE=0)
 bool framepace_on(void);
 // An event is running: a cutscene, a talk, an item fanfare (the game's event manager has an active event)

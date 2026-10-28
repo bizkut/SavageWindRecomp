@@ -17,6 +17,9 @@ WinSize winsize_default(bool fullscreen);  // (the setting unset)
 WinSize winsize_desktop(void);
 // The window's display's refresh rate, Hz (0: not known yet). Any thread.
 float winsize_refresh_rate(void);
+// The display runs at 119.88 Hz or more: the PS5's frame generation (MihawkGen, two presents per 59.94 fps game frame)
+// is offered and runs only then (docs/PS5-PORT-PLAN.md D4: off on a 60 Hz display)
+static inline bool winsize_fg_refresh_ok(void) { return winsize_refresh_rate() >= 119.0f; }
 // "1920 x 1080  (16:9)"; the desktop's size with `native` (the word, translated; NULL: none) too:
 // "1920 x 1080  (16:9, native)"
 void winsize_name(WinSize s, const char *native, char *buf, int n);

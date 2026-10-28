@@ -67,8 +67,6 @@ static struct {
     unsigned toggle;
 } g;
 
-FgVk g_fg_vk;
-
 #define TRY(x) do { FfxErrorCode e_ = (x); if (e_ != FFX_OK) { LOG("[fg] %s failed: %#x\n", #x, (unsigned)e_); return false; } } while (0)
 
 // The backend calls a few extension functions unchecked: the debug labels (VK_EXT_debug_utils, an instance
@@ -112,7 +110,7 @@ static bool make_backend(FfxInterface *i, void **scratch, size_t contexts) {
     return true;
 }
 
-extern "C" void fg_destroy(void) {
+static void fg_destroy(void) {
     if (!g.live) return;
     for (int i = 0; i < R_COUNT; i++) g.shared.fpDestroyResource(&g.shared, g.res[i], g.shared_id);
     ffxFrameInterpolationContextDestroy(&g.fi);
@@ -174,7 +172,7 @@ static FfxResource image(const FgImage *im, const wchar_t *name, bool write) {
 
 static FfxResource shared(int i) { return g.shared.fpGetResource(&g.shared, g.res[i]); }
 
-extern "C" bool fg_dispatch(VkCommandBuffer cb, const FgConfig *c, const FgFrame *f) {
+static bool fg_dispatch(VkCommandBuffer cb, const FgConfig *c, const FgFrame *f) {
     if (g.live && memcmp(&g.cfg, c, sizeof *c)) {
         g_fg_vk.wait_idle();
         fg_destroy();
@@ -246,3 +244,7 @@ extern "C" bool fg_dispatch(VkCommandBuffer cb, const FgConfig *c, const FgFrame
     TRY(ffxFrameInterpolationDispatch(&g.fi, &dd));
     return true;
 }
+
+// The desktop build's frame generation (framegen.h; the PS5's is mihawk.cpp)
+extern "C" const FgBackend g_fg_backend = {FG_BACKEND_FSR3_FI, "AMD FSR 3 frame interpolation", fg_dispatch, nullptr, nullptr,
+                                           nullptr};

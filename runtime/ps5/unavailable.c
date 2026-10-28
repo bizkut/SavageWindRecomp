@@ -1,11 +1,9 @@
-// Boundaries for subsystems not linked into the PS5 title yet: the overlay menu, frame generation (M7) and
-// the desktop's performance overlay. Each answers as the desktop runtime does with no such device or feature.
+// Boundaries for subsystems not linked into the PS5 title yet: the overlay menu and the desktop's performance
+// overlay. Each answers as the desktop runtime does with no such device or feature.
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "../rt.h"
-#include "../nvn/vulkan/framegen.h"
 #include "../perfmon.h"
 #include "../ui/menu.h"
-#include <stdatomic.h>
 #include <stdint.h>
 
 const char *rt_version(void) { return "0.3.1-alpha.3"; }
@@ -27,16 +25,6 @@ void menu_render(void *cmd, uint32_t target_w, uint32_t target_h) { (void)cmd; (
 void menu_test_open(void) {}
 // Window size's list: the PS5 Video page has no Window size row (runtime/ps5/video_page.cpp)
 void menu_size_list_open(void) { LOG("[options] no window size list on the PS5\n"); }
-
-// ---- frame generation (M7: PS5_MihawkGen behind exec.c's vk_fg_generate; framegen.cpp is AMD FSR 3 on desktop)
-FgVk g_fg_vk;
-bool fg_dispatch(VkCommandBuffer cb, const FgConfig *c, const FgFrame *f) {
-    (void)cb; (void)c; (void)f;
-    static atomic_flag said = ATOMIC_FLAG_INIT;
-    if (!atomic_flag_test_and_set(&said)) LOG("[fg] frame generation is not in the PS5 build before M7\n");
-    return false;
-}
-void fg_destroy(void) {}
 
 // ---- the performance overlay's numbers (runtime/perfmon.c; shown by the overlay menu)
 void perfmon_frame(void) {}

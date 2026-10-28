@@ -2,9 +2,11 @@
 // page"). Resolution: Auto / 1080p / 4K replaces the desktop's window rows; 1080p and 4K are offered only where the
 // display reports them (runtime/ps5/window.c winsize_list). A choice applies at the next start: the display plane's
 // surface is made once (window.c reads the setting then). Frame rate: 30 / 60 / Off, the desktop's frame_rate setting.
-// The upscaler and its mode stay; VSync (FIFO is fixed, D4), HDR (not planned yet), the performance overlay and frame
-// generation (M7) are left out. Choices persist in savagewind.ini through the storage broker (settings_save). Also the
-// Quit question's texts: both its answers close the title.
+// Frame generation: On / Off (M7: PS5_MihawkGen, runtime/nvn/vulkan/mihawk.cpp; the desktop's frame_generation
+// setting), offered only while the display runs at 119.88 Hz: each game frame is then presented twice, so the TV shows
+// twice the frame-rate limit (60 -> 120). The upscaler and its mode stay; VSync (FIFO is fixed, D4), HDR (not planned
+// yet) and the performance overlay are left out. Choices persist in savagewind.ini through the storage broker
+// (settings_save). Also the Quit question's texts: both its answers close the title.
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <stdio.h>
 
@@ -74,6 +76,14 @@ void video_page(std::vector<Item> &v) {
     };
     v.push_back(res);
     v.push_back(video_frame_rate(k_fps, (int)(sizeof k_fps / sizeof k_fps[0])));
+    if (winsize_fg_refresh_ok())  // (the display's mode is chosen once, at start-up)
+        v.push_back(toggle(P_VIDEO, "Frame generation", "Twice the frames on screen. Adds a little delay.",
+                           [](const Item &) { return (int)g_settings.frame_gen; },
+                           [](const Item &, int x) {
+                               g_settings.frame_gen = x;
+                               fprintf(stderr, "[options] Video > Frame generation: %s\n", x ? "On" : "Off");
+                           },
+                           0));
     v.push_back(video_wide_view());
     v.push_back(video_field_of_view());
     v.push_back(video_upscaler(k_ups_value, (int)(sizeof k_ups_value / sizeof k_ups_value[0])));

@@ -444,6 +444,29 @@ confirmed on the TV, FG off in menus; A/B vs FG off for latency and artifacts (c
 The Video page's **Frame generation: On / Off** row drives MihawkGen instead of desktop FSR 3, offered only when the
 display runs at 119.88 Hz; with it on, the TV shows twice the frame-rate limit (60 → 120). Persisted like the rest.
 
+**First-launch defaults (decided 2026-10-28).** Applied only for keys absent from `savagewind.ini`, then written to
+it, so an explicit choice in the Video page always wins, also across updates:
+- Resolution: Auto (the display's largest mode).
+- Frame rate: 60 real frames (no 120 real-frame choice; 120 comes from frame generation).
+- Frame generation: On when the display runs at 119.88 Hz (any resolution), off at 60 Hz. This default turns on only
+  once M7's done-when passes; until then it stays Off.
+- Upscaler, by output resolution and measured with the benchmark with FG on: at 1080p, native 1080p without FSR;
+  at 4K, FSR 1 from the highest internal resolution whose GPU time (game + MihawkGen) keeps the frame target. Start
+  candidates: 1440p (Quality), then 1080p (Performance), which M6 measured at 7.7 ms GPU without FG.
+
+Status 2026-10-28 (host-built, eboot `46779550…`, not yet run on the console): the backend choice is the build's
+(`runtime/nvn/vulkan/framegen.h` `g_fg_backend`: desktop links `framegen.cpp`, FSR 3; the PS5 links `mihawk.cpp`,
+MihawkGen, so no GPL code reaches the desktop build). MihawkGen is pinned in `ps5/deps.lock` (`c57232a9…`, weights
+`network.fgw` by SHA-256), exported with `git archive` into `.deps/ps5/mihawkgen` and compiled into the title; the
+title folder ships `network.fgw` and MihawkGen's licence and notices. With the row on, at 119.88 Hz and in play,
+`device.c` draws each game frame into a 4K final image of its own (two, alternating), records the neural method at
+t = 0.5 between the last two (3 slots = frames in flight, all barriers its own), blits the generated frame into a
+window image presented first and the game's frame half a frame later (8.34 ms while the game keeps its pace). The
+frame-rate limit counts the game's frames (`framepace.c`: 60 gives 120 presents; capped at half the refresh rate,
+without VSync's VRR margin); camera cuts and the first frame after FG was off show the game's frame twice. The
+generator's GPU time (its passes' timestamps, `fg_context_set_profile`) is in the 2 s `[fg]` line; the benchmark
+summary adds presented fps, the present-interval distribution and FG GPU ms. Host check: `make test-framepace-fg`.
+
 ### After M7 (optional) — HDR10 output
 Requested 2026-10-28. Desktop has HDR10 presentation on `test` and lists colour grading/HDR as roadmap. On PS5 the
 only evidence is that the pinned RADV build carries Forever patch 0001 (HDR10/immediate); no HDR swapchain has run on

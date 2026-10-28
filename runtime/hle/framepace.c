@@ -148,15 +148,32 @@ static double on_refresh(double fps) {
     return n >= 1 && fabs(hz / n - fps) < fps * 0.01 ? hz / n : fps;
 }
 
-// With frame generation (Video > Frame generation, vulkan/framegen.cpp) a frame is made between each two the game
-// draws: the frame rate counts the presented frames, so the game draws at half of it (60 with 120 chosen).
-volatile int g_fg_active;  // (vulkan/device.c: the last frame was generated)
+// With frame generation (Video > Frame generation, vulkan/framegen.h) a frame is made between each two the game draws,
+// presented first, and the game's half a frame later (vulkan/device.c present_wait_turn). What the frame-rate limit
+// counts is the backend's:
+//   - desktop's FSR 3: the presented frames, so the game draws at half of it (60 with 120 chosen);
+//   - the PS5's MihawkGen: the game's frames, each presented twice (docs/PS5-PORT-PLAN.md M7: 60 gives 120 presents,
+//     one every ~8.3 ms at 119.88 Hz under VRR). The game's rate stays where it was with frame generation off (the
+//     menus' frames, not generated, keep the same pace), at most half the refresh rate: the presents then come at the
+//     refresh rate, where FIFO shows each for one refresh. The VSync cap below (VRR's margin under the refresh) is not
+//     applied: it would hold the game at 57.9 fps and the presents at 115.9 Hz.
+volatile int g_fg_active;       // (vulkan/device.c: the last game frame was presented after a generated one)
+volatile int g_fg_counts_game;  // (vulkan/device.c: the backend's limit counts the game's frames: MihawkGen)
 
 uint64_t framepace_period_ns(void) {
     int target = framepace_target();
     double fps = target > 0 ? target : FPS_CEILING, cap = vsync_cap();
+    if (g_fg_active && g_fg_counts_game) {
+        double hz = winsize_refresh_rate();
+        if (hz >= 30 && fps > hz / 2) fps = hz / 2;
+        return (uint64_t)(1e9 / on_refresh(fps) + 0.5);
+    }
     if (cap > 0 && fps > cap) fps = cap;
     return (uint64_t)((g_fg_active ? 2e9 : 1e9) / on_refresh(fps) + 0.5);
+}
+
+uint64_t framepace_fg_period_ns(void) {
+    return g_fg_active && g_fg_counts_game && framepace_on() ? framepace_period_ns() : 0;
 }
 
 // The frame loop's vsync wait: the present keeps the pace instead (1: skipped; 0: the game's own wait).

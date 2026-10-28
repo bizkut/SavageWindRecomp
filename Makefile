@@ -91,7 +91,8 @@ SHADERC  ?= $(if $(DEPS),-lshaderc_shared,$(or $(shell pkg-config --libs shaderc
 # -rdynamic: crash backtraces name host functions (runtime/platform/linux.c)
 LDFLAGS  := -fuse-ld=lld -rdynamic $(if $(DEPS),-L$(DEPS)/lib) -lSDL3 -lavformat -lavcodec -lavutil -lswscale \
             -lvulkan $(SHADERC) -lz -lpthread -ldl -lm
-BACKEND_SRC := $(wildcard runtime/nvn/vulkan/*.c) $(wildcard runtime/nvn/vulkan/*.cpp)
+# (vulkan/mihawk.cpp: the PS5 build's frame generation, GPL PS5_MihawkGen; never in the desktop build, plan D10)
+BACKEND_SRC := $(filter-out runtime/nvn/vulkan/mihawk.cpp,$(wildcard runtime/nvn/vulkan/*.c) $(wildcard runtime/nvn/vulkan/*.cpp))
 BACKEND_OBJ := $(patsubst runtime/%.cpp,$(B)/rt/%.o,$(patsubst runtime/%.c,$(B)/rt/%.o,$(BACKEND_SRC)))
 IMGUI_OBJ += $(B)/imgui/imgui_impl_vulkan.o
 UIFLAGS  := -x c++  # the .mm UI sources are plain C++ apart from __APPLE__ blocks
@@ -108,7 +109,7 @@ GENFLAGS += -D_FILE_OFFSET_BITS=64 $(GENARCH)
 LDFLAGS  := -fuse-ld=lld -Wl,--stack,16777216 $(if $(DEPS),-L$(DEPS)/lib) -lSDL3 -lavformat -lavcodec -lavutil -lswscale \
             -lvulkan-1 -lwinmm -lole32 -lshell32 -lcomdlg32 -luuid -lshaderc_shared -lpdh -l:libz.a \
             $(if $(RELEASE),-Wl$(comma)--subsystem$(comma)windows)  # release: no console window (log -> savagewind.log)
-BACKEND_SRC := $(wildcard runtime/nvn/vulkan/*.c) $(wildcard runtime/nvn/vulkan/*.cpp)
+BACKEND_SRC := $(filter-out runtime/nvn/vulkan/mihawk.cpp,$(wildcard runtime/nvn/vulkan/*.c) $(wildcard runtime/nvn/vulkan/*.cpp))
 BACKEND_OBJ := $(patsubst runtime/%.cpp,$(B)/rt/%.o,$(patsubst runtime/%.c,$(B)/rt/%.o,$(BACKEND_SRC)))
 BACKEND_OBJ += $(B)/rt/platform/windows_rc.o  # the .exe's icon (Explorer, taskbar)
 WINDRES  ?= windres
@@ -439,3 +440,13 @@ test-ps5-audio: $(B)/test_ps5_audio
 	$(B)/test_ps5_audio
 
 .PHONY: test-ps5-audio
+
+# runtime/hle/framepace.c on the host: the game frame's period with frame generation (FSR 3 and the PS5's MihawkGen)
+$(B)/test_framepace_fg: tools/test_framepace_fg.c runtime/hle/framepace.c runtime/framepace.h runtime/window_size.h
+	@mkdir -p $(B)
+	$(CC) -O1 -Iruntime -o $@ tools/test_framepace_fg.c -lm
+
+test-framepace-fg: $(B)/test_framepace_fg
+	$(B)/test_framepace_fg
+
+.PHONY: test-framepace-fg

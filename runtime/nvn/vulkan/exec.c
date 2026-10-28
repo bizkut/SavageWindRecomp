@@ -332,7 +332,9 @@ void vk_submit_extra(VkSemaphore wait, VkSemaphore signal, VkCommandBuffer extra
     {
         PROF_T0();
         dl_note("submit %llu", (unsigned long long)submit_seq + 1);
+        vk_queue_lock();  // (the present thread may present on this queue: device.c)
         VkResult sr = vkQueueSubmit2(g_vk.queue, 1, &si, VK_NULL_HANDLE);
+        vk_queue_unlock();
         if (sr == VK_ERROR_DEVICE_LOST) vk_devlost_dump();
         VK_CHECK(sr);
         PROF_ADD(prof_submit);
@@ -6020,9 +6022,12 @@ static void scene_post(Prog *pr, CmdRec *r) {
 }
 
 // ================================================================== frame generation (Video > Frame generation)
-// AMD FSR 3 frame interpolation (framegen.cpp) makes a frame between each two the game draws, from the two frames'
-// final images, the newer one's 3D scene depth, its HUD-less image and motion vectors made here from the camera
-// (BOTW has none). device.c presents it, then the game's frame half a frame later. See docs/SAVAGE-WIND.md.
+// The build's backend (framegen.h g_fg_backend) makes a frame between each two the game draws; device.c presents it,
+// then the game's frame half a frame later. Desktop: AMD FSR 3 frame interpolation (framegen.cpp), from the two
+// frames' final images, the newer one's 3D scene depth, its HUD-less image and motion vectors made here from the
+// camera (BOTW has none); see docs/SAVAGE-WIND.md. The PS5: PS5_MihawkGen (mihawk.cpp), from the HUD-less images of
+// the two frames at the window's size, the newest frame's HUD drawn over its result (device.c); of what is gathered
+// here it takes the HUD-less image and the camera, to see a cut (vk_fg_mihawk_inputs).
 //   - The camera: the world's draws into the 3D scene's depth read a context constant buffer (c3) that holds, as
 //     floats, the view (0-11, 3x4 rows), view-projection (12-27), projection (28-43, OpenGL style), the camera's own
 //     matrix (44-55: right, up, back, position in its columns) and near / far (56, 57). The world camera's is the
@@ -6038,6 +6043,7 @@ static void scene_post(Prog *pr, CmdRec *r) {
 static void save_view_png(TexBackend *b, VkImageView src, const char *path);
 volatile int g_fg_want;  // device.c: frame generation is wanted for the frame being drawn
 void vk_fg_wait_idle(void);  // (device.c)
+FgVk g_fg_vk;
 
 enum { FG_CAMERA_FLOATS = 58 };
 static struct {
@@ -6305,7 +6311,7 @@ TexBackend *vk_fg_generate(NvnTexture *t, TexBackend *b) {
             if (g_gpuprof_frame) gp_mark(cb, "frame generation: FSR 3 optical flow + interpolation");
             static int test = -1;  // (measuring) SAVAGEWIND_FG_TEST=2: no interpolation (the HUD-less copy shown instead)
             if (test < 0) test = getenv("SAVAGEWIND_FG_TEST") ? atoi(getenv("SAVAGEWIND_FG_TEST")) : 0;
-            ok = test == 2 ? true : fg_dispatch(cb, &cfg, &f);
+            ok = test == 2 ? true : g_fg_backend.dispatch(cb, &cfg, &f);
             if (test == 2) o = hl;
             vk_full_barrier(cb);
             if (g_gpuprof_frame) gp_mark(cb, "frame generation: done");
@@ -6326,6 +6332,72 @@ TexBackend *vk_fg_generate(NvnTexture *t, TexBackend *b) {
     fg.hudless_ok = fg.copy_pending = false;
     fg.out_rt = fg.scene = NULL;
     return out;
+}
+
+// MihawkGen (device.c, at the game's present, outside any rendering): this frame's HUD-less image when it was taken
+// (the composite's target right after the scene composite, before the HUD's first draw, converted as the game
+// converts it: fg_copy_hudless) and has the presented image b's size; NULL otherwise. *cut: this frame starts a new
+// shot against the last one (the camera jumped over 10 m or turned over ~35 degrees, FSR 3's reset rule above), from
+// the world camera the most draws used; no camera this frame (no 3D scene) is not a cut, and the next camera starts
+// over. Clears the frame's captures (fg_draw gathers them while frame generation is wanted). The image is reused by
+// the next frame's capture: device.c draws it into an image of its own before that.
+TexBackend *vk_fg_mihawk_inputs(TexBackend *b, bool *cut) {
+    if (!g_fg_vk.dev) g_fg_vk = (FgVk){g_vk.phys, g_vk.dev, vk_fg_wait_idle};
+    TexBackend *ob = fg.out_rt ? vk_tex(fg.out_rt, true) : NULL;
+    bool same = ob && ob->width == b->width && ob->height == b->height && fg.present_format == unorm_of(b->format);
+    fg.present_format = unorm_of(b->format);
+    if (fg.copy_pending) fg_copy_hudless();  // (nothing drawn after the composite)
+    TexBackend *hl = fg.hudless_ok && same ? fg_image(0, b->width, b->height, srgb_of(unorm_of(b->format)),
+                                                       VK_IMAGE_USAGE_TRANSFER_DST_BIT) : NULL;
+    int best = -1;
+    for (int i = 0; i < fg.ncand; i++)
+        if (best < 0 || fg.cand[i].draws > fg.cand[best].draws) best = i;
+    *cut = false;
+    if (best >= 0) {
+        const float *m = fg.cand[best].m;
+        float pos[3] = {m[47], m[51], m[55]}, fwd[3] = {-m[46], -m[50], -m[54]}, dp = 0, dot = 0;
+        for (int k = 0; k < 3; k++) dp += (pos[k] - fg.prev_pos[k]) * (pos[k] - fg.prev_pos[k]), dot += fwd[k] * fg.prev_fwd[k];
+        *cut = fg.have_prev && (dp > 100 || dot < 0.82f);
+        memcpy(fg.prev_pos, pos, sizeof pos), memcpy(fg.prev_fwd, fwd, sizeof fwd);
+    }
+    fg.have_prev = best >= 0;
+    fg.ncand = 0;
+    fg.hudless_ok = fg.copy_pending = false;
+    fg.out_rt = fg.scene = NULL;
+    return hl;
+}
+
+// MihawkGen's presented generated frame (fg_hud.frag): the newest game frame's HUD over the frame generated from the
+// HUD-less images. Where the final image and its HUD-less version differ (by over 3/255 anywhere in a pixel's 3 x 3
+// neighbourhood: the HUD, blended over the world, with the upscaler's spread around its edges), the final image;
+// elsewhere the generated one. The pipeline is made before the window image's rendering begins (vk_fg_hud_prepare);
+// vk_fg_hud_draw draws inside it. Its three views are in SHADER_READ_ONLY_OPTIMAL.
+void vk_fg_hud_prepare(VkFormat fmt) { post_pipeline("fg_hud.frag", fmt); }
+
+void vk_fg_hud_draw(VkCommandBuffer cb, VkFormat fmt, VkImageView gen, VkImageView final, VkImageView hudless, uint32_t w,
+                    uint32_t h) {
+    VkPipeline pipe = post_pipeline("fg_hud.frag", fmt);
+    VkDescriptorSet ds = vk_alloc_set(post_set_layout);
+    VkImageView v[3] = {gen, final, hudless};
+    VkDescriptorImageInfo ii[3];
+    VkWriteDescriptorSet wr[3];
+    for (int i = 0; i < 3; i++) {
+        ii[i] = (VkDescriptorImageInfo){vk_default_sampler(false), v[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+        wr[i] = (VkWriteDescriptorSet){.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = ds, .dstBinding = (uint32_t)i,
+                                       .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                                       .pImageInfo = &ii[i]};
+    }
+    vkUpdateDescriptorSets(g_vk.dev, 3, wr, 0, NULL);
+    vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe);
+    vk_dyn_forget();
+    vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, post_layout, 0, 1, &ds, 0, NULL);
+    VkViewport vp = {0, 0, (float)w, (float)h, 0, 1};
+    VkRect2D sc = {{0, 0}, {w, h}};
+    vkCmdSetViewport(cb, 0, 1, &vp);
+    vkCmdSetScissor(cb, 0, 1, &sc);
+    float pc[8] = {3.0f / 255.0f, 0, 0, 0, (float)w, (float)h, 0, 0};
+    vkCmdPushConstants(cb, post_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof pc, pc);
+    vkCmdDraw(cb, 3, 1, 0, 0);
 }
 
 // Inside the window image's rendering (device.c vk_frame_begin): the game image into (vx, vy, vw, vh).

@@ -73,6 +73,10 @@ void vk_full_barrier(VkCommandBuffer cb);
 void vk_end_pass(void);
 void vk_submit_extra(VkSemaphore wait, VkSemaphore signal, VkCommandBuffer extra);  // submit + one more cb (present)
 void vk_present_idle(void);  // device.c: the presentation thread has no present queued or in progress
+// device.c: g_vk.queue's external synchronisation while the present thread presents on it too (a device with one
+// queue, frame generation's presents); the wait is measured (the "[fgpipe]" line)
+void vk_queue_lock(void);
+void vk_queue_unlock(void);
 void vk_dyn_forget(void);    // exec.c: graphics pipeline / dynamic state of the main command buffer changed elsewhere
 
 // Transient GPU-visible memory that lives until the submission it was allocated for completes.
