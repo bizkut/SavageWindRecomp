@@ -35,6 +35,9 @@ bool benchmark_fg_capture(int *count, int *every);
 void benchmark_render_cpu(uint64_t present_ns, uint64_t fg_ns, bool fg);
 // The route's part now: -1 not measuring, 1 the camera turning (route seconds 5-51), 0 still (vulkan/rprof.c)
 int benchmark_segment(void);
+// Elapsed measured-route seconds, or -1 outside the route.
+double benchmark_route_seconds(void);
+int benchmark_route_frame(void);  // measured real frames so far, or -1 outside the route
 // lines of its own the summary gets (vulkan/rprof.c: the render-thread profile), written into out when it is made
 void benchmark_extra(void (*lines)(char *out, size_t n));
 

@@ -97,7 +97,10 @@ static void bc4_encode(const uint8_t *img, uint32_t wb, uint32_t hb, uint8_t *li
 }
 
 // ---- the cell canvas: coverage 0..1, cell pixels, y down
-typedef struct { float a[CELL * CELL]; } Canvas;
+#define MAX_GLYPH_SCALE 4
+typedef struct { float a[CELL * MAX_GLYPH_SCALE * CELL * MAX_GLYPH_SCALE]; } Canvas;
+static int canvas_scale = 1;
+#define CANVAS_SIZE (CELL * canvas_scale)
 typedef struct { float cx, cy, s, w; } Box;  // the original glyph's centre, height and width
 
 typedef enum { SH_CIRCLE, SH_BOX, SH_SEG, SH_TRI } ShapeType;
@@ -136,14 +139,18 @@ static float sd(const Shape *s, float x, float y) {
     return s->ring > 0 ? fabsf(d) - s->ring : d;
 }
 
-static float cover(float d) { return clampf(0.5f - d, 0, 1); }
+static float cover(float d) { return clampf(0.5f - d * canvas_scale, 0, 1); }
 static void fill(Canvas *c, Shape s) {
-    for (int y = 0; y < CELL; y++)
-        for (int x = 0; x < CELL; x++) c->a[y * CELL + x] = maxf(c->a[y * CELL + x], cover(sd(&s, x + 0.5f, y + 0.5f)));
+    int n = CANVAS_SIZE;
+    for (int y = 0; y < n; y++)
+        for (int x = 0; x < n; x++)
+            c->a[y * n + x] = maxf(c->a[y * n + x], cover(sd(&s, (x + 0.5f) / canvas_scale, (y + 0.5f) / canvas_scale)));
 }
 static void cut(Canvas *c, Shape s) {
-    for (int y = 0; y < CELL; y++)
-        for (int x = 0; x < CELL; x++) c->a[y * CELL + x] *= 1 - cover(sd(&s, x + 0.5f, y + 0.5f));
+    int n = CANVAS_SIZE;
+    for (int y = 0; y < n; y++)
+        for (int x = 0; x < n; x++)
+            c->a[y * n + x] *= 1 - cover(sd(&s, (x + 0.5f) / canvas_scale, (y + 0.5f) / canvas_scale));
 }
 static Shape circle(float x, float y, float r) { return (Shape){SH_CIRCLE, {x, y}, r, 0}; }
 static Shape box(float x, float y, float hw, float hh, float r) { return (Shape){SH_BOX, {x, y, hw, hh}, r, 0}; }
@@ -181,6 +188,7 @@ static bool font_ready(void) {
 
 // The text's capitals cap_h tall (less if it is wider than max_w), centred on (cx, cy): coverage into t
 static void text(Canvas *t, const char *s, float cx, float cy, float cap_h, float max_w) {
+    cx *= canvas_scale; cy *= canvas_scale; cap_h *= canvas_scale; max_w *= canvas_scale;
     memset(t, 0, sizeof *t);
     if (!font_ready() || !*s) return;
     int cap_y0, cap_y1, x0, x1;  // the height of "H" gives the scale for capitals
@@ -207,8 +215,8 @@ static void text(Canvas *t, const char *s, float cx, float cy, float cap_h, floa
             for (int y = 0; y < bh; y++)
                 for (int x = 0; x < bw; x++) {
                     int X = ox + x, Y = oy + y;
-                    if (X >= 0 && X < CELL && Y >= 0 && Y < CELL)
-                        t->a[Y * CELL + X] = maxf(t->a[Y * CELL + X], bm[y * bw + x] / 255.0f);
+                    if (X >= 0 && X < CANVAS_SIZE && Y >= 0 && Y < CANVAS_SIZE)
+                        t->a[Y * CANVAS_SIZE + X] = maxf(t->a[Y * CANVAS_SIZE + X], bm[y * bw + x] / 255.0f);
                 }
         }
         stbtt_GetCodepointHMetrics(&g_font, cp, &adv, &lsb);
@@ -263,8 +271,7 @@ uint8_t *glyphs_text_line(const char *s, float cap_h, float max_w, int *w, int *
     *h = H;
     return out;
 }
-static void ink(Canvas *c, const Canvas *t) { for (int i = 0; i < CELL * CELL; i++) c->a[i] = maxf(c->a[i], t->a[i]); }
-static void erase(Canvas *c, const Canvas *t) { for (int i = 0; i < CELL * CELL; i++) c->a[i] *= 1 - t->a[i]; }
+static void erase(Canvas *c, const Canvas *t) { for (int i = 0; i < CANVAS_SIZE * CANVAS_SIZE; i++) c->a[i] *= 1 - t->a[i]; }
 
 // ---- icons
 enum { DIR_U = 1, DIR_D = 2, DIR_L = 4, DIR_R = 8 };
@@ -331,10 +338,11 @@ static void dpad(Canvas *c, Box b, int mask) {
         cut(c, circle(x, y, w * 0.55f));
         return;
     }
-    for (int py = 0; py < CELL; py++)  // the cross's outline (both bars as one shape)
-        for (int px = 0; px < CELL; px++) {
-            float d = fabsf(minf(sd(&h, px + 0.5f, py + 0.5f), sd(&v, px + 0.5f, py + 0.5f))) - t;
-            c->a[py * CELL + px] = maxf(c->a[py * CELL + px], cover(d));
+    for (int py = 0; py < CANVAS_SIZE; py++)
+        for (int px = 0; px < CANVAS_SIZE; px++) {
+            float X = (px + 0.5f) / canvas_scale, Y = (py + 0.5f) / canvas_scale;
+            float d = fabsf(minf(sd(&h, X, Y), sd(&v, X, Y))) - t;
+            c->a[py * CANVAS_SIZE + px] = maxf(c->a[py * CANVAS_SIZE + px], cover(d));
         }
     if (mask & DIR_U) fill(c, box(x, y - L / 2 - w / 2, w, L / 2 - w / 2 + r, r));
     if (mask & DIR_D) fill(c, box(x, y + L / 2 + w / 2, w, L / 2 - w / 2 + r, r));
@@ -349,6 +357,18 @@ static Shape arrow(float x, float y, float k, int dir) {  // a triangle pointing
     case DIR_L: return tri(x - k, y, x + k * 0.7f, y - k, x + k * 0.7f, y + k);
     default: return tri(x + k, y, x - k * 0.7f, y - k, x - k * 0.7f, y + k);
     }
+}
+
+// Analog stick with directional indicators. Nintendo mode retains the game's own art.
+static void stick(Canvas *c, Box b, int dirs, bool right) {
+    float s = minf(b.s, b.w), x = b.cx, y = b.cy, r = s * 0.27f;
+    fill(c, circle(x, y, r));
+    cut_text(c, right ? "R" : "L", x, y, s * 0.28f, s * 0.36f);
+    float k = s * 0.085f, gap = s * 0.39f;
+    if (dirs & DIR_U) fill(c, arrow(x, y - gap, k, DIR_U));
+    if (dirs & DIR_D) fill(c, arrow(x, y + gap, k, DIR_D));
+    if (dirs & DIR_L) fill(c, arrow(x - gap, y, k, DIR_L));
+    if (dirs & DIR_R) fill(c, arrow(x + gap, y, k, DIR_R));
 }
 
 // A keycap with its label (or arrows: dirs) cut out; wide labels get a wider key
@@ -381,14 +401,14 @@ static void mouse(Canvas *c, Box b, int button, int dirs) {
     fill(c, ring(body, t));
     fill(c, seg(x - hw, split, x + hw, split, t * 0.8f));
     fill(c, seg(x, y - hh, x, split, t * 0.8f));
-    for (int py = 0; py < CELL; py++)
-        for (int px = 0; px < CELL; px++) {
-            float X = px + 0.5f, Y = py + 0.5f, d = sd(&body, X, Y);
+    for (int py = 0; py < CANVAS_SIZE; py++)
+        for (int px = 0; px < CANVAS_SIZE; px++) {
+            float X = (px + 0.5f) / canvas_scale, Y = (py + 0.5f) / canvas_scale, d = sd(&body, X, Y);
             if (button == 1) d = maxf(d, maxf(X - x, Y - split));
             else if (button == 3) d = maxf(d, maxf(x - X, Y - split));
             else if (button == 4 || button == 5) d = maxf(d, maxf(X - (x - hw * 0.3f), fabsf(Y - (y + hh * (button == 4 ? 0.2f : 0.55f))) - hh * 0.14f));
             else continue;
-            c->a[py * CELL + px] = maxf(c->a[py * CELL + px], cover(d));
+            c->a[py * CANVAS_SIZE + px] = maxf(c->a[py * CANVAS_SIZE + px], cover(d));
         }
     if (button == 2) fill(c, seg(x, y - hh * 0.62f, x, y - hh * 0.32f, hw * 0.32f));
     float k = b.s * 0.09f, g = b.s * 0.08f;
@@ -613,7 +633,7 @@ static bool draw_glyph(Canvas *c, Box b, int code, int kind, int *copy) {
         }
         }
     }
-    // Xbox / PlayStation: buttons through the bindings; the sticks keep the game's (L / R)
+    // Xbox / PlayStation: buttons through the bindings, sticks drawn at the target resolution.
     switch (m.kind) {
     case G_BUTTON: pad_button(c, b, g_bind_pad[m.arg], ps); return true;
     case G_DPAD:
@@ -623,6 +643,7 @@ static bool draw_glyph(Canvas *c, Box b, int code, int kind, int *copy) {
         }
         dpad(c, b, m.arg);
         return true;
+    case G_LSTICK: case G_RSTICK: stick(c, b, m.arg, m.kind == G_RSTICK); return true;
     default: return false;
     }
 }
@@ -635,7 +656,7 @@ static void cell_origin(const SheetFont *f, uint32_t i, int *x0, int *y0) {
 static int sheet_y(const SheetFont *f, int y0, int y) { return (int)f->sheet_h - 1 - (y0 + y); }  // (stored bottom-up)
 
 bool glyphs_apply(uint64_t addr, uint64_t pool_lo, uint64_t pool_hi, uint32_t format, uint32_t w, uint32_t h,
-                  uint8_t *lin, uint32_t wb, uint32_t hb) {
+                  uint8_t *lin, uint32_t wb, uint32_t hb, int scale, uint8_t **high) {
     const SheetFont *f = &k_sheet;
     if (format != FMT_BC4 || w != f->sheet_w || h != f->sheet_h || w != wb * 4 || h != hb * 4) return false;
     if (addr < pool_lo || addr + SHEET_BYTES > pool_hi) return false;
@@ -647,9 +668,15 @@ bool glyphs_apply(uint64_t addr, uint64_t pool_lo, uint64_t pool_hi, uint32_t fo
         return false;
     }
     int kind = resolve_kind();
-    uint8_t *orig = malloc((uint64_t)w * h), *img = malloc((uint64_t)w * h);
+    if (scale != 2 && scale != 4) scale = 1;
+    uint8_t *orig = malloc((uint64_t)w * h), *img = malloc((uint64_t)w * h * scale * scale);
+    if (!img && scale > 1) { scale = 1; img = malloc((uint64_t)w * h); }
+    if (!orig || !img) { free(orig); free(img); return false; }
     bc4_decode(lin, wb, hb, orig);
-    memcpy(img, orig, (uint64_t)w * h);
+    uint32_t ow = w * scale, oh = h * scale;
+    for (uint32_t y = 0; y < oh; y++)
+        for (uint32_t x = 0; x < ow; x++) img[(uint64_t)y * ow + x] = orig[(uint64_t)(y / scale) * w + x / scale];
+    canvas_scale = scale;
     int changed = 0;
     for (int code = 0xE040; code < 0xE0A0; code++) {
         uint32_t gi = index_of(code);
@@ -676,22 +703,26 @@ bool glyphs_apply(uint64_t addr, uint64_t pool_lo, uint64_t pool_hi, uint32_t fo
         if (copy && index_of(copy) != 0xffff) {  // the game's glyph from another cell
             int sx0, sy0;
             cell_origin(f, index_of(copy), &sx0, &sy0);
-            for (int y = 0; y < CELL; y++)
-                memcpy(img + (uint64_t)sheet_y(f, y0, y) * w + x0, orig + (uint64_t)sheet_y(f, sy0, y) * w + sx0, CELL);
+            for (int y = 0; y < CELL * scale; y++)
+                for (int x = 0; x < CELL * scale; x++)
+                    img[(uint64_t)(oh - 1 - (y0 * scale + y)) * ow + x0 * scale + x] =
+                        orig[(uint64_t)sheet_y(f, sy0, y / scale) * w + sx0 + x / scale];
             changed++;
         } else if (drawn) {
-            for (int y = 0; y < CELL; y++)
-                for (int x = 0; x < CELL; x++)
-                    img[(uint64_t)sheet_y(f, y0, y) * w + x0 + x] = (uint8_t)lroundf(cv.a[y * CELL + x] * 255);
+            for (int y = 0; y < CELL * scale; y++)
+                for (int x = 0; x < CELL * scale; x++)
+                    img[(uint64_t)(oh - 1 - (y0 * scale + y)) * ow + x0 * scale + x] =
+                        (uint8_t)lroundf(cv.a[y * CANVAS_SIZE + x] * 255);
             changed++;
         }
     }
-    if (changed) bc4_encode(img, wb, hb, lin);
+    canvas_scale = 1;
+    if (scale == 1 && changed) bc4_encode(img, wb, hb, lin);
     static int nlog;
     if (nlog++ < 16)
         LOG("[glyphs] button glyph sheet %llx: %s icons, %d glyphs redrawn\n", (unsigned long long)addr,
             k_kind_names[kind], changed);
-    if (getenv("SAVAGEWIND_GLYPH_DUMP")) {
+    if (scale == 1 && getenv("SAVAGEWIND_GLYPH_DUMP")) {
         static int n;
         char path[128];
         snprintf(path, sizeof path, "build/glyph_sheet_%d.pgm", ++n);
@@ -706,7 +737,7 @@ bool glyphs_apply(uint64_t addr, uint64_t pool_lo, uint64_t pool_hi, uint32_t fo
         }
     }
     free(orig);
-    free(img);
+    if (scale > 1) *high = img; else free(img);
     return true;
 }
 
@@ -728,7 +759,7 @@ static const LayoutIcon k_layout_icons[] = {
     {64, 64, 0xc171fee97aa2e0b1ull, 0xE049},  // ButtonIconL46NN_00: the d-pad (the shortcuts at the top left)
 };
 
-bool glyphs_apply_layout(uint32_t format, uint32_t w, uint32_t h, uint8_t *lin, uint32_t row) {
+bool glyphs_apply_layout(uint32_t format, uint32_t w, uint32_t h, uint8_t *lin, uint32_t row, int scale, uint8_t **high) {
     if (format != FMT_R8 || w > 2 * CELL || h > 2 * CELL || row < w) return false;
     const LayoutIcon *li = NULL;
     for (size_t i = 0; i < sizeof k_layout_icons / sizeof *k_layout_icons && !li; i++)
@@ -741,6 +772,13 @@ bool glyphs_apply_layout(uint32_t format, uint32_t w, uint32_t h, uint8_t *lin, 
             break;
         }
     if (!li) return false;
+    if (scale != 2 && scale != 4) scale = 1;
+    uint8_t *out = scale > 1 ? malloc((uint64_t)w * h * scale * scale) : lin;
+    if (!out) scale = 1, out = lin;
+    if (scale > 1)
+        for (uint32_t y = 0; y < h * scale; y++)
+            for (uint32_t x = 0; x < w * scale; x++)
+                out[(uint64_t)y * w * scale + x] = lin[(uint64_t)(y / scale) * row + x / scale];
     // the icon's box (its lit pixels), in a cell canvas with the texture centred in it (scaled down to fit)
     float k = w > CELL || h > CELL ? (float)CELL / (float)(w > h ? w : h) : 1;
     float ox = (CELL - w * k) / 2, oy = (CELL - h * k) / 2;
@@ -753,22 +791,27 @@ bool glyphs_apply_layout(uint32_t format, uint32_t w, uint32_t h, uint8_t *lin, 
                 if (y < by0) by0 = y;
                 if (y > by1) by1 = y;
             }
-    if (bx1 < 0) return true;
+    if (bx1 < 0) { if (scale > 1) *high = out; return true; }
     Box b = {ox + (bx0 + bx1 + 1) * k / 2, oy + (by0 + by1 + 1) * k / 2, (by1 - by0 + 1) * k, (bx1 - bx0 + 1) * k};
     static Canvas cv;
     memset(&cv, 0, sizeof cv);
+    canvas_scale = scale;
     int kind = resolve_kind(), copy = 0;
     bool drawn = draw_glyph(&cv, b, li->code, kind, &copy);  // (Nintendo: the game's own, even with other bindings)
     if (drawn)
-        for (int y = 0; y < (int)h; y++)
-            for (int x = 0; x < (int)w; x++) {  // (bilinear from the canvas)
-                float fx = clampf(ox + (x + 0.5f) * k - 0.5f, 0, CELL - 1), fy = clampf(oy + (y + 0.5f) * k - 0.5f, 0, CELL - 1);
-                int x0 = (int)fx, y0 = (int)fy, x1 = x0 + 1 < CELL ? x0 + 1 : x0, y1 = y0 + 1 < CELL ? y0 + 1 : y0;
+        for (int y = 0; y < (int)h * scale; y++)
+            for (int x = 0; x < (int)w * scale; x++) {
+                int n = CANVAS_SIZE;
+                float fx = clampf(ox * scale + (x + 0.5f) * k - 0.5f, 0, n - 1);
+                float fy = clampf(oy * scale + (y + 0.5f) * k - 0.5f, 0, n - 1);
+                int x0 = (int)fx, y0 = (int)fy, x1 = x0 + 1 < n ? x0 + 1 : x0, y1 = y0 + 1 < n ? y0 + 1 : y0;
                 float tx = fx - x0, ty = fy - y0;
-                float a = (cv.a[y0 * CELL + x0] * (1 - tx) + cv.a[y0 * CELL + x1] * tx) * (1 - ty) +
-                          (cv.a[y1 * CELL + x0] * (1 - tx) + cv.a[y1 * CELL + x1] * tx) * ty;
-                lin[(uint64_t)y * row + x] = (uint8_t)lroundf(a * 255);
+                float a = (cv.a[y0 * n + x0] * (1 - tx) + cv.a[y0 * n + x1] * tx) * (1 - ty) +
+                          (cv.a[y1 * n + x0] * (1 - tx) + cv.a[y1 * n + x1] * tx) * ty;
+                out[(uint64_t)y * (scale > 1 ? w * scale : row) + x] = (uint8_t)lroundf(a * 255);
             }
+    canvas_scale = 1;
+    if (scale > 1) *high = out;
     static int nlog;
     if (nlog++ < 16) LOG("[glyphs] layout icon %04X (%ux%u): %s icons%s\n", li->code, w, h, k_kind_names[kind], drawn ? "" : ", kept");
     return true;

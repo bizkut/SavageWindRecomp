@@ -3779,7 +3779,7 @@ static void texture_info(int stage, ShaderInfo *si, int i, VkDescriptorImageInfo
     uint32_t tic = h & 0xFFFFF, tsc = (uint32_t)(h >> 20) & 0xFFF;
     // (vk_sampler's Video > Anisotropic filtering: not for textures with one mip level - the render targets BOTW reads
     // back - nor in blended draws - particles, effects, decals - whose quads' square edges it brought out)
-    bool all = aniso_all(), aniso_ok = all || !(st.color_state[0] & 1), material = false;
+    bool all = aniso_all(), aniso_ok = all || !(st.color_state[0] & 1), material = false, glyph = false;
     sc[0] = sc[1] = 1;
     wh[0] = wh[1] = 0;
     if (h && st.tpool && tic < (uint32_t)st.tpool->count) {
@@ -3807,6 +3807,7 @@ static void texture_info(int stage, ShaderInfo *si, int i, VkDescriptorImageInfo
             }
             renderer_texture_scale(et, &sc[0], &sc[1]);
             material = et->backend && !((TexBackend *)et->backend)->gpu_owned;
+            glyph = et->backend && ((TexBackend *)et->backend)->glyph_scale > 1;
             if (et == scene_up.t && stage == 1) {  // (with the texture's own swizzle: BOTW draws its weapon wheel's
                 // blurred capture of the scene, whose alpha is 0, with alpha forced to 1)
                 view = vk_image_view(scene_up.img, VK_IMAGE_VIEW_TYPE_2D, scene_up.img->format, 0, 1, 0, 1,
@@ -3832,8 +3833,14 @@ static void texture_info(int stage, ShaderInfo *si, int i, VkDescriptorImageInfo
         }
     }
     float bias = material && stage == 1 && pass_mvec >= 0 && rt_jitter_on() ? scene_mip_bias : 0;
-    if (h && st.spool && tsc < (uint32_t)st.spool->count)
-        smp = vk_sampler(&((NvnSamplerDesc *)st.spool->entries)[tsc], aniso_ok, bias);
+    if (h && st.spool && tsc < (uint32_t)st.spool->count) {
+        NvnSamplerDesc *desc = &((NvnSamplerDesc *)st.spool->entries)[tsc];
+        if (glyph) {
+            NvnSamplerDesc linear = *desc;
+            linear.mag_filter = 1; linear.min_filter = 1; linear.lod_min = linear.lod_max = 0;
+            smp = vk_sampler(&linear, false, 0);
+        } else smp = vk_sampler(desc, aniso_ok, bias);
+    }
     if (!view) view = vk_dummy_view(st_->type), layout = VK_IMAGE_LAYOUT_GENERAL;
     if (!smp) smp = vk_default_sampler(true);
     *out = (VkDescriptorImageInfo){smp, view, layout};
@@ -6578,7 +6585,9 @@ static void fg_draw(Prog *pr, CmdRec *r) {
             if (i < 4) fg.cand[i].draws++;
         }
     }
-    NvnTexture *t = scene_composite(pr, r);
+    // Use the same scene selected for post-processing (including FSR 3), then
+    // capture its composite target after the game's draw, before the HUD.
+    NvnTexture *t = scene_up.t ? scene_up.t : scene_composite(pr, r);
     if (t) {
         fg.out_rt = st.rt.color[0];
         fg.scene = t;
@@ -7058,6 +7067,8 @@ static void fg_out_window(VkCommandBuffer cb, TexBackend *b, float vx, float vy,
 // Video > Anti-aliasing TAA, mvec_taa's output for the scene t in *taa_t / *taa (scene_post goes on from it).
 static TexBackend *mvec_vectors_img;
 static uint64_t mvec_filled = ~0ull;
+static const char *mvec_fill_reason = "no matching scene composite";
+static uint64_t mvec_reason_frame = ~0ull;
 static TexBackend *mvec_taa(VkCommandBuffer cb, TexBackend *b, uint64_t frame);
 static TexBackend *taa_img;  // (this frame's TAA output, of the scene taa_tex)
 static NvnTexture *taa_tex;
@@ -7078,8 +7089,13 @@ static bool mvec_scene_view(Prog *pr, CmdRec *r, NvnTexture **taa_t, TexBackend 
         float m[16];
         TexBackend *db = mvec_depth ? vk_tex(mvec_depth, false) : NULL;
         float jit[2];
-        if (mvec_filled != frame && db && db->image && db->width == mvec_target_img->width &&
-            db->height == mvec_target_img->height && mvec_reprojection(m, jit)) {
+        if (mvec_filled != frame) {
+            mvec_reason_frame = frame;
+            mvec_fill_reason = !db || !db->image ? "missing depth image"
+                : db->width != mvec_target_img->width || db->height != mvec_target_img->height ? "depth/target size mismatch"
+                : !mvec_reprojection(m, jit) ? "camera reprojection unavailable" : NULL;
+        }
+        if (mvec_filled != frame && !mvec_fill_reason) {
             mvec_filled = frame;
             vk_end_pass();
             VkCommandBuffer cb = vk_cmd();
@@ -7248,11 +7264,15 @@ static TexBackend *fsr3_scene(VkCommandBuffer cb, TexBackend *b, uint32_t ow, ui
     uint64_t frame = renderer_present_count();
     TexBackend *v = mvec_vectors_img, *db = mvec_depth ? vk_tex(mvec_depth, false) : NULL;
     float jit[2], nr, fr, fov;
-    const char *why = mvec_filled != frame ? "no vectors this frame" : !v || v->width != b->width || v->height != b->height ? "vectors' size"
+    const char *why = mvec_filled != frame ? (!mvec_target_img ? "no motion target"
+                        : mvec_reason_frame == frame && mvec_fill_reason ? mvec_fill_reason : "no matching vector composite")
+                    : !v || v->width != b->width || v->height != b->height ? "vectors' size"
                     : !db || !db->image || db->width != b->width || db->height != b->height ? "depth's size"
                     : ow < b->width || oh < b->height ? "output smaller" : !mvec_camera_now(jit, &nr, &fr, &fov) ? "no camera" : NULL;
     static const char *lwhy;
-    if (why != lwhy && why) LOG("[fsr3] skipped: %s (scene %ux%u, vectors %ux%u, depth %ux%u)\n", why, b->width, b->height,
+    if (why != lwhy && why) LOG("[fsr3] frame %llu skipped: %s (scene %ux%u, target %ux%u, vectors %ux%u, depth %ux%u)\n",
+                                (unsigned long long)frame, why, b->width, b->height,
+                                mvec_target_img ? mvec_target_img->width : 0, mvec_target_img ? mvec_target_img->height : 0,
                                 v ? v->width : 0, v ? v->height : 0, db ? db->width : 0, db ? db->height : 0);
     lwhy = why;
     if (why) return NULL;
@@ -7286,9 +7306,10 @@ static TexBackend *fsr3_scene(VkCommandBuffer cb, TexBackend *b, uint32_t ow, ui
     };
     last_ns = ns;
     rec_drain();  // FidelityFX records directly into this command buffer.
-    if (!fsr3_dispatch(&d)) return NULL;
+    bool dispatched = fsr3_dispatch(&d);
+    vk_dyn_forget();  // FSR can bind pipelines and sets even when dispatch fails.
+    if (!dispatched) return NULL;
     last = frame;
-    vk_dyn_forget();  // (FSR's own pipelines and sets were bound)
     vk_full_barrier(cb);
     rt_jitter_set_phases((uint32_t)fsr3_jitter_phases(w, ow));
     return out;

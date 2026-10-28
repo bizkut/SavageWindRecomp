@@ -488,6 +488,14 @@ timestamps, `fg_context_set_profile`) is in the 2 s `[fg]` line, each wait and t
 unmeasured fast motion with generated/real captures follow it, with the present's and frame generation's render-thread
 CPU; `internal = 1080p` / `1440p` in benchmark.txt picks a run's internal resolution (named in the summary);
 `fg-capture.txt` captures pairs in play. Host check: `make test-framepace-fg`.
+For a native-pixel crop of the real output, write `x y width height [route_seconds]` (output pixels, top-left origin)
+to `/data/savagewind/shot.txt`; the request is saved as `screenshots/shot-<time>.png`, and re-arms on each start. The rectangle must
+fit the output. The optional route time (0–60, exclusive) arms one capture at that measured benchmark time; omit it for
+the next frame. The log includes elapsed route time and measured-frame count. Captures use the SDR intermediate before
+HDR encoding and wait for GPU readback.
+Identified button sheets and HUD icon masks use 2× R8 replacements at 1440p output and 4× at 4K, with the same
+normalized cell layout; allocation failure or multi-level textures retain the original-size upload path. The game's
+unchanged bitmap letters and icons that are not redrawn remain limited by their original artwork.
 
 ### After M7 (optional) — HDR10 output
 Requested 2026-10-28. Desktop has HDR10 presentation on `test` and lists colour grading/HDR as roadmap. On PS5 the
@@ -530,6 +538,9 @@ The GPU-timestamp controller uses the configured scene size, 900p, and 720p with
 two-second recovery hysteresis. Benchmark diagnostics accept `gpu_load = N` in `benchmark.txt` for the first
 20 seconds of the measured route and report the internal-size distribution. This implementation is not yet
 qualified on the console; the visual, timing, and hitch criteria above still apply.
+When DRS is enabled at startup, shader precompilation uses a separate completion marker and includes DRS variants
+of observed shader keys and their pipeline libraries. Enabling DRS during play does not rerun that precompilation;
+restart with DRS enabled to run it. Pipeline-state and hitch coverage still require a console measurement.
 
 ### After M7 — Render-thread CPU (queued 2026-10-28)
 The render thread (NVN → Vulkan translation) is the frame-time limit: 10.4–10.7 ms per frame without FG and

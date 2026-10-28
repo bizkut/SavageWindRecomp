@@ -395,6 +395,16 @@ int benchmark_segment(void) {
     double t = (plat_now_ns() - __atomic_load_n(&g_state_t, __ATOMIC_RELAXED)) / 1e9;
     return t >= 5 && t < 51;  // (benchmark_input: right 5-25 s, up / down 25-31, left 31-51)
 }
+double benchmark_route_seconds(void) {
+    if (__atomic_load_n(&g_on, __ATOMIC_RELAXED) != 1 ||
+        __atomic_load_n(&g_state, __ATOMIC_RELAXED) != B_ROUTE) return -1;
+    uint64_t start = __atomic_load_n(&g_state_t, __ATOMIC_RELAXED), now = plat_now_ns();
+    return now >= start ? (now - start) / 1e9 : -1;
+}
+int benchmark_route_frame(void) {
+    return __atomic_load_n(&g_state, __ATOMIC_RELAXED) == B_ROUTE ? __atomic_load_n(&g_n, __ATOMIC_RELAXED) : -1;
+}
+
 
 static void (*g_extra)(char *out, size_t n);
 void benchmark_extra(void (*lines)(char *out, size_t n)) { g_extra = lines; }

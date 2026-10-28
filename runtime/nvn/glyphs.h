@@ -3,15 +3,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-// The texture at addr (format: NVN format, w x h texels) is a button glyph sheet: lin holds its texels as uploaded
-// (linear rows of 4x4 BC4 blocks, wb x hb); they are replaced by the glyphs for the current device. Returns true when
-// the texture is such a sheet (whether or not it changed it).
+// The identified guest sheet is decoded from linear BC4 blocks. scale 2 or 4 returns a malloc'd R8 sheet in *high;
+// scale 1 modifies lin in place. The caller frees *high. Unchanged cells retain the game's original texels.
 bool glyphs_apply(uint64_t addr, uint64_t pool_lo, uint64_t pool_hi, uint32_t format, uint32_t w, uint32_t h,
-                  uint8_t *lin, uint32_t wb, uint32_t hb);
+                  uint8_t *lin, uint32_t wb, uint32_t hb, int scale, uint8_t **high);
 
-// The same for the HUD's button textures (R8 masks, w x h texels, rows `row` bytes apart in lin): true when the texture
-// is one of them.
-bool glyphs_apply_layout(uint32_t format, uint32_t w, uint32_t h, uint8_t *lin, uint32_t row);
+// The same for the HUD's R8 textures; high-resolution output is tightly packed.
+bool glyphs_apply_layout(uint32_t format, uint32_t w, uint32_t h, uint8_t *lin, uint32_t row, int scale, uint8_t **high);
 
 // Changes whenever the icons to draw change (device, bindings, setting): sheets uploaded under another one go up again.
 uint32_t glyphs_generation(void);

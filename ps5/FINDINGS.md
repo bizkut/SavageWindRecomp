@@ -985,3 +985,40 @@ running; the klog was captured directly).
 (return 0 both times). `sceVideoOutGetCurrentOutputMode_` fails there (0x80290018) and is not used; the SDK's device
 capability query has no documented ABI and is not called. First-launch default: 2 → `hdr = on`, 1 → off, failure or
 other values → off. Confirmed: with no `hdr` key the game logged "HDR at start: yes" and wrote `hdr = on`.
+
+## 2026-10-28 — Package read cost and SHA-NI (host investigation)
+
+On the Xeon Silver 4116 host, 512 random merged-package reads per size averaged 0.138 ms (4 KiB), 0.222 ms
+(16 KiB), 0.580 ms (64 KiB), 3.585 ms (512 KiB), and 7.070 ms (1 MiB). Isolated nstool AES-CTR cost
+1.579 ms/MiB and SHA-256 in 16 KiB blocks cost 5.202 ms/MiB. IVFC verifies its hash layers at open and verifies
+whole data blocks for each read, including partial ends; the host results identify hashing as the dominant
+large-read CPU cost, not proof of the exact console breakdown. Host `perf` was unavailable (paranoid=4).
+
+IVFC verification now uses an x86 SHA-NI implementation when CPU features and a one-time software comparison
+pass; otherwise it retains nstool's software verifier. On this host SHA-NI is unavailable: the fallback matched
+41,062/41,062 manifest files with four readers. Under QEMU x86-64 `-cpu max`, accelerated digests matched the
+software implementation for empty, short, padding-boundary and 4/16 KiB inputs, and the startup self-test
+also compared a 1 MiB input. These are host/emulated results; title startup selection, sample hashes, and
+benchmark hitch counts require console evidence. DRS first-start precompilation now tracks a separate completion
+marker and includes DRS variants of observed shader keys; no claim that all pipeline-state hitches are removed.
+
+## 2026-10-28 — FSR 3.1 runs on PS5 (.41, ps5/evidence/m8/ab-fsr3fix2-*.klog)
+
+Eboot `ed5b9c9e…`. The context failure was FidelityFX's debug-label wide-string conversion throwing (`range_error`
+from `wstring_convert`; the earlier `0x8000000A` = `FFX_ERROR_INVALID_ARGUMENT` came from the same path); fixed, with
+FFX exceptions now logged at our boundary. Earlier "FSR 3.1" benchmark rows were not FSR 3.1 (context never created).
+
+| FG on | internal | on time | render ms | GPU ms | game / presented fps |
+|---|---|---|---|---|---|
+| FSR 1 Performance (ref.) | 1920×1080 | 99.8 % | 8.8 | 10.1 | 59.6 / 119.2 |
+| **FSR 3.1 Performance** | 1920×1080 | 97.5 % | 11.5 | 12.35 | 59.5 / 118.9 |
+| **FSR 3.1 Quality** | 2560×1440 | 95.4 % | 11.7 | 14.41 | 59.5 / 119.0 |
+
+FSR 3.1 dispatches every frame (2,100+ per run). It costs ~2.3 ms GPU and ~2.7 ms render-thread CPU over FSR 1 at the
+same internal size (the motion-vector and TAA inputs). Image quality comparison still to do.
+
+## 2026-10-28 — Button icons at native 4K (.41, ps5/evidence/m8/shots/)
+
+A native 3840×2160 crop of the prompt bar (new `shot.txt` tool) shows the L-stick icon ~70 px tall with 2–3 px soft
+edges: the 50×50 glyph-sheet cells magnified with linear filtering. The HUD is drawn at output resolution, so the
+upscaler is not involved. A 4× glyph sheet and procedural PlayStation stick icons are being built.

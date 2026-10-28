@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <mbedtls/sha256.h>
 #if defined(__x86_64__) && (defined(__clang__) || defined(__GNUC__))
 #include <cpuid.h>
@@ -21,6 +22,8 @@ static const uint32_t K[64] = {
   0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
 };
 static uint32_t rotr(uint32_t x, unsigned n) { return (x >> n) | (x << (32-n)); }
+// SHA instructions have legacy SSE encoding. Keep this loop entirely SSE to avoid AVX/SSE transition
+// penalties between the compiler's vector operations and each SHA instruction.
 __attribute__((target("sha,ssse3,sse4.1")))
 static void compress(uint32_t state[8], const unsigned char *data, size_t blocks) {
     __m128i a = _mm_loadu_si128((const __m128i *)state);
@@ -79,8 +82,39 @@ static void sha_init(void) {
             goto done;
         }
     }
-    free(input);
+#ifdef __PROSPERO__
+    // Compare the same independent 16 KiB hashes used by IVFC. A correct SHA-NI path may still be
+    // slower on this title environment; choose the faster implementation before any gameplay reads.
+    uint64_t ns[2] = {0, 0};
+    unsigned char digest[32], check = 0;
+    int clock_ok = 1;
+    for (int round = 0; round < 8; round++) {
+        for (int order = 0; order < 2; order++) {
+            int fast = (round + order) & 1;
+            struct timespec begin, end;
+            if (clock_gettime(CLOCK_MONOTONIC, &begin)) { clock_ok = 0; break; }
+            for (size_t off = 0; off < 1048576; off += 16384) {
+                if (fast) sha256_fast(digest, input + off, 16384);
+                else mbedtls_sha256_ret(input + off, 16384, digest, 0);
+                check ^= digest[round];
+            }
+            if (clock_gettime(CLOCK_MONOTONIC, &end)) { clock_ok = 0; break; }
+            int64_t elapsed = ((int64_t)end.tv_sec - begin.tv_sec) * 1000000000ll + end.tv_nsec - begin.tv_nsec;
+            if (elapsed <= 0) { clock_ok = 0; break; }
+            ns[fast] += (uint64_t)elapsed;
+        }
+        if (!clock_ok) break;
+    }
+    if (clock_ok) {
+        fprintf(stderr, "savagewind-import: sha256: 16KiB blocks software=%.1f MiB/s sha_ni=%.1f MiB/s check=%u\n",
+                8e9 / ns[0], 8e9 / ns[1], (unsigned)check);
+        if (ns[1] < ns[0]) sha_available = 1;
+        else reason = "sha_ni slower in startup benchmark";
+    } else reason = "startup benchmark clock failed";
+#else
     sha_available = 1;
+#endif
+    free(input);
 done:
 #ifdef __PROSPERO__
     if (sha_available) fprintf(stderr, "savagewind-import: sha256: sha_ni selected\n");

@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <exception>
 #ifdef _WIN32
 #include <malloc.h>
 #endif
@@ -111,8 +112,8 @@ static bool make_context(const Fsr3Dispatch *d) {
     if (e == FFX_OK) {
         e = iface.fpCreateBackendContext(&iface, FFX_EFFECT_SHAREDRESOURCES, nullptr, &shared_ctx);
         shared_created = e == FFX_OK;
+        if (!shared_created) LOG("[fsr3] shared fpCreateBackendContext failed: 0x%08x\n", (unsigned)e);
     } else LOG("[fsr3] ffxFsr3UpscalerGetSharedResourceDescriptions failed: 0x%08x\n", (unsigned)e);
-    if (!shared_created && e != FFX_OK) LOG("[fsr3] shared backend context creation failed: 0x%08x\n", (unsigned)e);
     const FfxCreateResourceDescription *rd[3] = {&sd.dilatedDepth, &sd.dilatedMotionVectors, &sd.reconstructedPrevNearestDepth};
     while (made < 3 && e == FFX_OK) {
         e = iface.fpCreateResource(&iface, rd[made], shared_ctx, &shared[made]);
@@ -147,11 +148,14 @@ static FfxResource resource(const Fsr3Image *m, bool uav, const wchar_t *name) {
 extern "C" bool fsr3_dispatch(const Fsr3Dispatch *d) {
     static bool failed;
     if (failed) return false;
+    const char *stage = "context creation";
+    try {
     if ((!have_ctx || d->color.width != ctx_rw || d->color.height != ctx_rh || d->output.width != ctx_ow ||
          d->output.height != ctx_oh) && !make_context(d)) {
         failed = true;  // (no FSR 3 this run: the scene goes on with the game's own composite)
         return false;
     }
+    stage = "resource setup";
     FfxFsr3UpscalerDispatchDescription dd = {};
     dd.commandList = ffxGetCommandListVK(d->cb);
     dd.color = resource(&d->color, false, L"FSR3_Color");
@@ -178,6 +182,7 @@ extern "C" bool fsr3_dispatch(const Fsr3Dispatch *d) {
     static int view = -1;  // SAVAGEWIND_FSR3_VIEW=1: FSR's own debug view of its inputs and state in the output
     if (view < 0) view = getenv("SAVAGEWIND_FSR3_VIEW") != NULL;
     if (view) dd.flags |= FFX_FSR3UPSCALER_DISPATCH_DRAW_DEBUG_VIEW;
+    stage = "ffxFsr3UpscalerContextDispatch";
     FfxErrorCode e = ffxFsr3UpscalerContextDispatch(&ctx, &dd);
     if (e != FFX_OK) {
         static int logged;
@@ -189,6 +194,13 @@ extern "C" bool fsr3_dispatch(const Fsr3Dispatch *d) {
     if (dispatches == 1 || dispatches % 300 == 0)
         LOG("[fsr3] dispatches %llu\n", (unsigned long long)dispatches);
     return true;
+    } catch (const std::exception &ex) {
+        LOG("[fsr3] %s threw: %s; disabling FSR 3\n", stage, ex.what());
+    } catch (...) {
+        LOG("[fsr3] %s threw an unknown exception; disabling FSR 3\n", stage);
+    }
+    failed = true;
+    return false;
 }
 
 extern "C" int fsr3_jitter_phases(uint32_t render_w, uint32_t output_w) {

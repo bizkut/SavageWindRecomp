@@ -1597,9 +1597,13 @@ static void save_window_image(VkCommandBuffer cb, VkSpan *out) {
     image_barrier(cb, g_vk.sc_images[cur_frame.image], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 }
 
-// ---- frame generation's evidence (fg_capture_poll below): a window image, halved (2 x 2 box, 1920 x 1080 from 4K),
-// as PNG in the data root (the PS5: through the storage broker), encoded and written on a thread of its own
+// ---- frame evidence: PNG in the data root (the PS5: through the storage broker), encoded and written on a thread.
+// FG pairs are halved; shot.txt crops retain every output pixel.
 static char frame_capture[160];  // the next vk_frame_end's window image goes there (data-root path), then cleared
+static int capture_x, capture_y, capture_w, capture_h;
+static long shot_seen_mtime = -1, shot_seen_size = -1;
+static int shot_x, shot_y, shot_w, shot_h, shot_armed;
+static double shot_at;
 typedef struct { char path[160]; uint8_t *rgba; int w, h; } CaptureJob;
 
 static void *capture_thread(void *arg) {
@@ -1628,18 +1632,25 @@ static void *capture_thread(void *arg) {
 
 static void capture_write(const char *path, const uint8_t *px, uint32_t w, uint32_t h, bool bgr) {
     CaptureJob *j = calloc(1, sizeof *j);
-    int ow = (int)(w / 2), oh = (int)(h / 2);
+    bool crop = capture_w > 0 && capture_h > 0;
+    int ow = crop ? capture_w : (int)(w / 2), oh = crop ? capture_h : (int)(h / 2);
     if (!j || !(j->rgba = malloc((size_t)ow * (size_t)oh * 4))) { free(j); return; }
     snprintf(j->path, sizeof j->path, "%s", path);
     j->w = ow, j->h = oh;
     int r = bgr ? 2 : 0, b = bgr ? 0 : 2;
     for (int y = 0; y < oh; y++)
         for (int x = 0; x < ow; x++) {
-            const uint8_t *s = px + ((size_t)(2 * y) * w + 2 * (size_t)x) * 4, *t = s + (size_t)w * 4;
+            const uint8_t *s = px + ((size_t)(crop ? capture_y + y : 2 * y) * w +
+                                      (size_t)(crop ? capture_x + x : 2 * x)) * 4;
             uint8_t *d = j->rgba + ((size_t)y * (size_t)ow + (size_t)x) * 4;
-            d[0] = (uint8_t)((s[r] + s[r + 4] + t[r] + t[r + 4] + 2) / 4);
-            d[1] = (uint8_t)((s[1] + s[5] + t[1] + t[5] + 2) / 4);
-            d[2] = (uint8_t)((s[b] + s[b + 4] + t[b] + t[b + 4] + 2) / 4);
+            if (crop) {
+                d[0] = s[r]; d[1] = s[1]; d[2] = s[b];
+            } else {
+                const uint8_t *t = s + (size_t)w * 4;
+                d[0] = (uint8_t)((s[r] + s[r + 4] + t[r] + t[r + 4] + 2) / 4);
+                d[1] = (uint8_t)((s[1] + s[5] + t[1] + t[5] + 2) / 4);
+                d[2] = (uint8_t)((s[b] + s[b + 4] + t[b] + t[b + 4] + 2) / 4);
+            }
             d[3] = 255;
         }
     pthread_t th;
@@ -1678,6 +1689,7 @@ void vk_frame_end(const char *shot_path) {
         uint8_t *px = shot.ptr;
         bool bgr = g_vk.sc_format == VK_FORMAT_B8G8R8A8_UNORM || g_vk.sc_format == VK_FORMAT_B8G8R8A8_SRGB;
         if (capture) capture_write(frame_capture, px, w, h, bgr);
+        capture_w = capture_h = 0;
         frame_capture[0] = 0;
         if (!shot_path) return;
         for (uint64_t i = 0; bgr && i < (uint64_t)w * h; i++) { uint8_t t = px[i * 4]; px[i * 4] = px[i * 4 + 2]; px[i * 4 + 2] = t; }
@@ -2035,6 +2047,33 @@ static void present_locked(NvnTexture *t) {
                 if (*wnext == ',') wnext++;
             }
         }
+        // shot.txt: x y width height [measured-route seconds]. The optional time arms the crop at startup.
+        // State is reset on in-place reboot as well as a fresh process start.
+        if (!(total_frames % 60)) {
+            struct stat st;
+            if (rt_data_stat("shot.txt", &st) != 0) {
+                shot_seen_mtime = shot_seen_size = -1;
+                shot_armed = 0;
+            } else if ((long)st.st_mtime != shot_seen_mtime || (long)st.st_size != shot_seen_size) {
+                shot_seen_mtime = (long)st.st_mtime; shot_seen_size = (long)st.st_size;
+                FILE *f = rt_data_fopen("shot.txt", "r");
+                shot_at = -1;
+                int n = f ? fscanf(f, "%d %d %d %d %lf", &shot_x, &shot_y, &shot_w, &shot_h, &shot_at) : 0;
+                if (f) fclose(f);
+                shot_armed = n >= 4 && shot_x >= 0 && shot_y >= 0 && shot_w > 0 && shot_h > 0 &&
+                             (uint64_t)shot_x + shot_w <= g_vk.sc_extent.width && (uint64_t)shot_y + shot_h <= g_vk.sc_extent.height &&
+                             (n == 4 || (shot_at >= 0 && shot_at < 60));
+                if (!shot_armed) LOG("[shot] invalid crop in shot.txt\n");
+            }
+        }
+        double route = shot_armed && shot_at >= 0 ? benchmark_route_seconds() : -1;
+        if (shot_armed && (shot_at < 0 || (route >= 0 && route >= shot_at))) {
+            capture_x = shot_x; capture_y = shot_y; capture_w = shot_w; capture_h = shot_h;
+            snprintf(frame_capture, sizeof frame_capture, "screenshots/shot-%ld.png", (long)time(NULL));
+            LOG("[shot] crop %d %d %d %d at route %.3f frame %d\n",
+                shot_x, shot_y, shot_w, shot_h, route, benchmark_route_frame());
+            shot_armed = 0;
+        }
         const char *path = shot ? "build/window.png" : wpath[0] ? wpath : fg_real_shot[0] ? fg_real_shot : NULL;
         vk_frame_end(path);
         frame_capture[0] = 0;
@@ -2317,6 +2356,8 @@ void backend_init(void) {
 
 // ---- in-place reboot (runtime/main.c teardown; main thread, guest threads stopped)
 void backend_reset(void) {
+    shot_seen_mtime = shot_seen_size = -1;
+    shot_armed = 0;
     if (!g_vk.dev) return;
     vk_present_idle();
     rec_drain();

@@ -841,6 +841,33 @@ static void upload_scaled(VkCommandBuffer cb, TexBackend *b, VkSpan s, VkBufferI
     rec_CmdBlitImage(cb, img, VK_IMAGE_LAYOUT_GENERAL, b->image, VK_IMAGE_LAYOUT_GENERAL, 1, &bl, lin ? VK_FILTER_LINEAR : VK_FILTER_NEAREST);
     vk_defer_image(img, mem);
 }
+// Replace only identified, single-level sampled glyph images. Keep the guest image alive until allocation succeeds.
+static bool glyph_image(NvnTexture *t, TexBackend *b, uint32_t scale) {
+    if (b->glyph_scale == scale) return true;
+    if (scale <= 1) {
+        if (b->glyph_scale) { destroy_image(b); b->glyph_scale = 0; create_image(t, b); }
+        return true;
+    }
+    if (t->target != 1 || t->levels > 1 || t->samples > 1 ||
+        t->width * scale > g_vk.props.limits.maxImageDimension2D ||
+        t->height * scale > g_vk.props.limits.maxImageDimension2D) return false;
+    VkImageCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, .imageType = VK_IMAGE_TYPE_2D,
+                            .format = VK_FORMAT_R8_UNORM, .extent = {t->width * scale, t->height * scale, 1},
+                            .mipLevels = 1, .arrayLayers = 1, .samples = VK_SAMPLE_COUNT_1_BIT,
+                            .tiling = VK_IMAGE_TILING_OPTIMAL,
+                            .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT};
+    VmaAllocationCreateInfo ai = {.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE};
+    VkImage image;
+    VmaAllocation mem;
+    if (vmaCreateImage(g_vk.vma, &ci, &ai, &image, &mem, NULL) != VK_SUCCESS) return false;
+    destroy_image(b);
+    b->image = image; b->mem = mem; b->format = ci.format; b->usage = ci.usage;
+    b->width = ci.extent.width; b->height = ci.extent.height; b->levels = 1;
+    b->glyph_scale = scale;
+    vk_image_init_layout(vk_upload_cmd(), image, VK_IMAGE_ASPECT_COLOR_BIT);
+    return true;
+}
+
 
 // Guest memory -> image for the levels in level_mask (bit per level), every layer or slice.
 static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask);
@@ -855,7 +882,7 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
     const FormatInfo *fi = t->layout.fmt;
     VkFmt mf = fmt_of(t->format);
     if (!t->addr || t->target == 10 || !fi || !fi->bpb || !storage_readable(t, storage_size(t))) return;
-    if (b->format != mf.vf && !b->astc_bw) return;  // unsupported format: nothing sensible to copy
+    if (b->format != mf.vf && !b->astc_bw && !b->glyph_scale) return;  // unsupported format
     VkCommandBuffer cb = vk_upload_cmd();
     uint32_t layers = t->layout.layers ? t->layout.layers : 1;
     if (layers > b->layers && b->depth == 1) layers = b->layers;
@@ -893,13 +920,39 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
             } else {
                 tegra_deswizzle(src, lin, l.wb, l.hb, l.d, fi->bpb, l.block_height_log2, l.block_depth_log2);
             }
-            if (lv == 0 && layer == 0 && t->format == 0x49 && t->pool &&  // (the game's button glyphs: device icons)
-                glyphs_apply(t->addr, t->pool->storage, t->pool->storage + t->pool->size, t->format, t->width,
-                             t->height, lin, l.wb, l.hb))
+            uint8_t *high = NULL;
+            int gs = g_vk.sc_extent.height >= 2000 ? 4 : g_vk.sc_extent.height >= 1400 ? 2 : 1;
+            if (t->target != 1 || t->levels > 1 || t->samples > 1) gs = 1;
+            bool sheet = lv == 0 && layer == 0 && t->format == 0x49 && t->pool;
+            bool layout = lv == 0 && layer == 0 && t->format == 0x01 && !linear;
+            bool glyph = sheet ? glyphs_apply(t->addr, t->pool->storage, t->pool->storage + t->pool->size,
+                                               t->format, t->width, t->height, lin, l.wb, l.hb, gs, &high)
+                               : layout && glyphs_apply_layout(t->format, l.w, l.h, lin, row, gs, &high);
+            if (glyph) {
+                if (high && !glyph_image(t, b, gs)) {
+                    free(high); high = NULL;
+                    glyph_image(t, b, 1);
+                    if (sheet) glyphs_apply(t->addr, t->pool->storage, t->pool->storage + t->pool->size,
+                                            t->format, t->width, t->height, lin, l.wb, l.hb, 1, &high);
+                    else glyphs_apply_layout(t->format, l.w, l.h, lin, row, 1, &high);
+                } else if (!high) glyph_image(t, b, 1);
                 b->glyph_gen = glyphs_generation();
-            if (lv == 0 && layer == 0 && t->format == 0x01 && !linear &&  // (the HUD's button textures, likewise)
-                glyphs_apply_layout(t->format, l.w, l.h, lin, row))
-                b->glyph_gen = glyphs_generation();
+                b->glyph_output_scale = gs;
+                if (high && b->glyph_scale == gs)
+                    LOG("[glyphs] high-resolution R8 image %ux%u (%dx)\n", b->width, b->height, gs);
+                if (high) {
+                    VkSpan hs = vk_transient_copy(high, (uint64_t)l.w * l.h * gs * gs, 16);
+                    free(high);
+                    VkBufferImageCopy rg = {.bufferOffset = hs.off, .bufferRowLength = l.w * gs,
+                        .imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
+                        .imageExtent = {l.w * gs, l.h * gs, 1}};
+                    rec_CmdCopyBufferToImage(cb, hs.buf, b->image, VK_IMAGE_LAYOUT_GENERAL, 1, &rg);
+                    continue;
+                }
+            } else if (b->glyph_scale) {
+                glyph_image(t, b, 1);
+                b->glyph_gen = 0;
+            }
             if (t->target == 2 && lv == 0 && getenv("SAVAGEWIND_DUMP_TEX3D")) {  // (debugging) 3D texels as uploaded
                 char path[128];
                 snprintf(path, sizeof path, "build/tex3d_%llu_%ux%ux%u_f%x.raw", (unsigned long long)t->debug_id, l.w, l.h, l.d,
@@ -1046,7 +1099,10 @@ TexBackend *vk_tex(NvnTexture *t, bool for_render) {
     if (!for_render && !b->gpu_owned && vk_trace_tex(t))  // (CPU-owned: guest memory is uploaded when it changed)
         vk_trace_event(t, 1, NULL, 0, "use: CPU-owned, uploaded %d dynamic %d", b->uploaded, b->dynamic);
     if (b->pending_rgba) upload_pending(b);
-    if (b->glyph_gen && b->glyph_gen != glyphs_generation()) upload_levels(t, b, 1);  // (button icons: other device)
+    int glyph_scale = g_vk.sc_extent.height >= 2000 ? 4 : g_vk.sc_extent.height >= 1400 ? 2 : 1;
+    if (t->target != 1 || t->levels > 1 || t->samples > 1) glyph_scale = 1;
+    if (b->glyph_gen && (b->glyph_gen != glyphs_generation() || b->glyph_output_scale != glyph_scale))
+        upload_levels(t, b, 1);
     // Levels nvnTextureWriteTexels filled go up now, also into an image the GPU draws into: BOTW writes level 0 of its
     // 32x32x32 noise that way and then renders the smaller levels from it (the noise stayed black: GPU-owned images
     // never read guest memory again).
