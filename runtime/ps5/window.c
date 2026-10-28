@@ -59,6 +59,9 @@ SDL_Window *SDL_CreateWindow(const char *title, int w, int h, SDL_WindowFlags fl
         ps5_logf("[ps5] Video > VSync set to On (FIFO) for VideoOut, was %d\n", g_settings.vsync);
     g_settings.vsync = VSYNC_ON;
     ps5_logf("[ps5] window: VideoOut display plane, its size from the display mode (asked %dx%d), no SDL video\n", w, h);
+    ps5_logf("[ps5] Video page (savagewind.ini): frame rate %d (0: off), upscaler %d, upscaler mode %d, anti-aliasing "
+             "%d, field of view %d%%\n", g_settings.fps_limit, g_settings.upscaler, g_settings.upscale_quality,
+             g_settings.antialias, g_settings.fov);
     return &g_window;
 }
 
@@ -268,10 +271,9 @@ bool SDL_PushEvent(SDL_Event *event) {
     return room;
 }
 bool SDL_PollEvent(SDL_Event *event) {
-    if (atomic_exchange(&g_quit, false)) {
-        memset(event, 0, sizeof *event);
-        event->type = SDL_EVENT_QUIT;
-        return true;
+    if (atomic_exchange(&g_quit, false)) {  // (the window loop would exit(); a title closes through the system instead)
+        ps5_logf("[ps5] quit requested: the title closes\n");
+        ps5_exit_title();
     }
     ps5_input_poll();
     pthread_mutex_lock(&g_events_lock);

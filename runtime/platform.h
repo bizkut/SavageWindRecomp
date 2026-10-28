@@ -19,6 +19,8 @@ extern "C" {
 #ifdef __PROSPERO__
 // Direct klog output, independent of the asynchronous stderr pipe.
 void ps5_logf(const char *format, ...);
+// Close the title (runtime/platform/main_ps5.c: sceSystemServiceLoadExec("exit")); stderr is flushed first
+__attribute__((noreturn)) void ps5_exit_title(void);
 #endif
 
 // ---- guest address space

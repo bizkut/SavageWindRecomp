@@ -481,3 +481,12 @@ the user over Chiaki-ng Remote Play with a keyboard mapped as the gamepad. Gyro/
 eboot `138c0748…`) are wired, but this setup only delivers Chiaki-ng's idle motion (constant 0 1 0 G, 5–6 samples/s)
 and no rumble target. **Deferred by the user:** physical-DualSense checks (gyro aim, flat-table axes, rumble,
 power-off/PS-button reconnect).
+
+## 2026-10-28 — M4 step 3: Savage Wind's Options pages on PS5 (.41, ps5/evidence/m4/run3)
+
+Eboot `5bfb3044…` with the button-prompt font in the title folder. Start-up reads the Video page from
+`savagewind.ini` (frame rate 60, upscaler off), resolution Auto → mode 0 3840×2160 at 119.88 Hz with VRR, and the
+game runs ~60 fps (frame 1082 at 59.9 fps) with no fault. Pages, the Resolution/Frame rate rows and the Confirm-button
+option (default Circle = Switch layout) are not yet checked by hand. Step 4 (USB keyboard/mouse polling) is not
+started. Host: desktop `runtime-objs` builds; `test-vibration` and `test-ps5-input` pass; `test-bind-capture` cannot
+link here (no libSDL3 on this PC, same before this change).

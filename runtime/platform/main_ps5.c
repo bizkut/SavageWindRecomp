@@ -20,9 +20,19 @@ static void exit_title(void) {
     sceSystemServiceLoadExec("exit", NULL);
     for (;;) sleep(1);
 }
-// No in-place reboot (runtime/main.c: back to the start screen, or the game again): the title has no start screen,
-// and nothing on the PS5 asks for one. SAVAGEWIND_REBOOT_AT is a desktop test (a title has no environment).
+void ps5_exit_title(void) {
+    exit_title();
+    for (;;) sleep(1);
+}
+// No in-place reboot (runtime/main.c: back to the start screen, or the game again): the title has no start screen.
+// A request (the Options pages: Quit > Start screen, Language > Restart now; settings already saved) closes the title,
+// to be started again from the home screen. SAVAGEWIND_REBOOT_AT is a desktop test (a title has no environment).
 int rt_reboot_requested(void) { return 0; }
+void rt_request_reboot(int kind) {
+    fprintf(stderr, "[ps5] %s requested: no in-place restart on the PS5, the title closes (start it again)\n",
+            kind == 2 ? "the start screen" : "a restart");
+    exit_title();
+}
 void reboot_test_frame(uint64_t frame) { (void)frame; }
 
 static void module_init(Cpu *c, Module *m) {
@@ -36,6 +46,8 @@ static void init_sdk(Cpu *c) { module_init(c, loader_module("sdk")); }
 static void init_main(Cpu *c) {
     for (int i = g_nmodules - 1; i >= 0; i--)
         if (strcmp(g_modules[i].name, "sdk")) module_init(c, &g_modules[i]);
+    extern void rt_title_menu_prepare(void);  // runtime/ui/game_options.mm: tables the constructors filled
+    rt_title_menu_prepare();
 }
 static void fini_main(Cpu *c) {
     for (int i = 0; i < g_nmodules; i++) {

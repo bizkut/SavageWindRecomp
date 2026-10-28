@@ -408,3 +408,14 @@ test-vibration: $(B)/test_vibration
 	$(B)/test_vibration
 
 .PHONY: test-vibration
+
+# runtime/ps5/input.c on the host, against the PS5 SDL shim's headers and scripted scePad / sceKeyboard / sceMouse
+$(B)/test_ps5_input: tools/test_ps5_input.c runtime/ps5/input.c runtime/ps5/scancodes.inc runtime/ps5/sdl_shim.h \
+                     runtime/hle/bindings.c runtime/input_bind.h
+	@mkdir -p $(B)
+	$(CC) -O1 -Iruntime -Iruntime/ps5/include -o $@ tools/test_ps5_input.c -lm
+
+test-ps5-input: $(B)/test_ps5_input
+	$(B)/test_ps5_input
+
+.PHONY: test-ps5-input

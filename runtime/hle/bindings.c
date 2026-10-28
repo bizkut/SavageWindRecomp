@@ -119,6 +119,21 @@ bool bind_is_default_slot(int dev, int slot) {
     return dev == BIND_DEV_PAD ? g_bind_pad[slot] == k_def_pad[slot] : g_bind_key[slot] == k_def_key[slot];
 }
 
+// The confirm button (Controls page): the controller's east face button is Switch A (Circle on a PlayStation pad: the
+// Switch layout, the default) or its south one (Cross). A and B swap, and X and Y with them, so the layout stays the
+// same shape; the bindings carry it (savagewind.ini bind_pad_* lines, the button prompts: runtime/nvn/glyphs.c).
+bool bind_confirm_south(void) { return g_bind_pad[BIND_A] == SDL_GAMEPAD_BUTTON_SOUTH; }
+void bind_set_confirm_south(bool south) {
+    if (bind_confirm_south() == south) return;
+    int16_t t = g_bind_pad[BIND_A];
+    g_bind_pad[BIND_A] = g_bind_pad[BIND_B], g_bind_pad[BIND_B] = t;
+    t = g_bind_pad[BIND_X];
+    g_bind_pad[BIND_X] = g_bind_pad[BIND_Y], g_bind_pad[BIND_Y] = t;
+    LOG("[input] confirm button: %s (controller A %s, B %s, X %s, Y %s)\n", south ? "south" : "east (Switch layout)",
+        k_pad_ini[g_bind_pad[BIND_A]], k_pad_ini[g_bind_pad[BIND_B]], k_pad_ini[g_bind_pad[BIND_X]],
+        k_pad_ini[g_bind_pad[BIND_Y]]);
+}
+
 
 // ------------------------------------------------------------------ capture
 static _Atomic int cap_dev = -1, cap_slot = -1;

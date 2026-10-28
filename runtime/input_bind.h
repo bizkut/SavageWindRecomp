@@ -47,6 +47,10 @@ int bind_label_family(void);                   // the connected controller's fam
 void bind_reset(int dev);
 bool bind_is_default(int dev);
 bool bind_is_default_slot(int dev, int slot);
+// The confirm button: the controller's south face button is Switch A (else, by default, its east one). Setting it swaps
+// the A / B and X / Y bindings.
+bool bind_confirm_south(void);
+void bind_set_confirm_south(bool south);
 
 // "Click a binding, then press": begun from the UI; the next press (any thread's SDL event) is taken. Escape cancels,
 // as does BIND_CAPTURE_MS without a press. On a conflict the two inputs swap.

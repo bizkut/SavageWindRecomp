@@ -251,6 +251,19 @@ void build_items(void) {
                        [](const Item &, int x) { return tr(k_icons[x]); },
                        [](const Item &) { return g_settings.button_icons; },
                        [](const Item &, int x) { g_settings.button_icons = x; }, ICONS_AUTO));
+    // The confirm button (runtime/hle/bindings.c): the Switch layout (A on the east face button: Circle, Xbox B) or the
+    // south one (Cross, Xbox A). A and B swap, X and Y with them; the Controller page and the prompts follow.
+    v.push_back(choice(P_CONTROLS, "Confirm button", "Which button confirms (A). The other goes back; X and Y swap too.",
+                       [](const Item &) { return 2; },
+                       [](const Item &, int x) {
+                           static std::string s;
+                           int fam = bind_label_family();
+                           s = tr(bind_pad_label(x ? SDL_GAMEPAD_BUTTON_SOUTH : SDL_GAMEPAD_BUTTON_EAST, fam));
+                           if (!x) s += std::string(" ") + tr("(Switch layout)");
+                           return s.c_str();
+                       },
+                       [](const Item &) { return (int)bind_confirm_south(); },
+                       [](const Item &, int x) { bind_set_confirm_south(x != 0); }, 0));
 
     // Keyboard and controller: one button per Switch input, showing what drives it; A waits for the new one
     auto bind = [&](int page, int action, int slot) {
@@ -474,7 +487,9 @@ extern "C" int rt_opt_store(uint64_t row) {
     size_t idx = (size_t)(it - g_items.data());
     bool past_end = false;
     if (it->kind == KIND_TOGGLE) {
-        it->set(*it, rd32(row + 0x54) & 0xff ? 1 : 0);
+        int x = rd32(row + 0x54) & 0xff ? 1 : 0;
+        it->set(*it, x);
+        fprintf(stderr, "[options] %s = %d at %.3f s\n", it->title, x, SDL_GetTicksNS() / 1e9);
     } else if (it->kind == KIND_CHOICE) {
         int g = (int)rd32(row + 0x58), gn = game_count(*it);
         g = g < 0 ? 0 : g >= gn ? gn - 1 : g;
@@ -484,8 +499,8 @@ extern "C" int rt_opt_store(uint64_t row) {
         bool off = it->value_off && it->value_off(*it, x);  // (shown, not stored)
         if (idx < g_shown.size()) g_shown[idx] = off ? x : -1;
         if (!off) it->set(*it, x);
-        if (getenv("SAVAGEWIND_LOG_OPTIONS"))  // (tests: when each value is stored)
-            fprintf(stderr, "[options] %s = %d at %.3f s\n", it->title, x, SDL_GetTicksNS() / 1e9);
+        fprintf(stderr, "[options] %s = %d (%s)%s at %.3f s\n", it->title, x, it->label(*it, x),
+                off ? ", can't be picked yet: not stored" : "", SDL_GetTicksNS() / 1e9);
     }
     if (it->kind != KIND_BUTTON) settings_save();
     if (it->page == P_VIDEO) mark_all_rows(rd64(row));  // (the sizes offered follow Fullscreen, texts the upscaler)

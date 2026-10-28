@@ -15,6 +15,9 @@ std::string tr_upper(const char *s);
 // that changes with it: a UI context whose fonts were made for another number makes them again (ui_fonts_*).
 const char *ui_lang(void);
 int ui_lang_generation(void);
+// Each translated text of the menu language (the font fallback's glyph ranges)
+void ui_lang_texts(void (*fn)(const char *text, void *ctx), void *ctx);
 // After each font a UI context adds (AddFontFromFileTTF at `size`): merges a system font with the glyphs the menu
 // language's texts use that Latin-1 fonts lack (Cyrillic, kana and kanji, hangul, hanzi). Returns false if none needed.
+// (runtime/ui/i18n_fonts.mm: the ImGui half, left out where no ImGui menu is linked)
 bool ui_merge_fallback_font(ImFontAtlas *atlas, float size, const ImFontConfig *base);
