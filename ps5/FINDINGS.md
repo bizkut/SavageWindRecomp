@@ -524,3 +524,10 @@ Eboot `e2b5c156…`: AudioOut port open at 48 kHz stereo S16 (256-frame outputs)
 stereo) plays through it. Over 90 s, every 10 s window: ~1875 periods, **0 underruns, 0 errors, 0 dropped frames**,
 queue peak 2512 frames. No `[movie]` line in this run: with nobody at the controller the game stayed at the title
 screen, so the intro movie path is not yet exercised. Listening check and the 10-minute run pending (user away).
+
+## 2026-10-28 — Mouse-wheel zoom for scope and map (.41, ps5/evidence/m4/wheel-run1)
+
+Shared input: the wheel pulses d-pad Up/Down (scope, AppCamera id 4) or right stick up/down (map, AppMap id 0x2a)
+only while that screen's open-state byte (new optional site `screen_state`, 0xfe on 1.9.0) is 2; otherwise dropped.
+Toggle `mouse_wheel_zoom`, default on. Eboot `87c68e8a…` runs ~60 fps with audio, no fault. Scope/map zoom on hardware
+needs a USB mouse (deferred with the USB checks). 1.8.2 site unresolved (no 1.8.2 main here).

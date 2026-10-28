@@ -190,6 +190,8 @@ T("How fast the mouse turns the camera.", "Wie schnell die Maus die Kamera dreht
 T("Mouse vertical sensitivity", "Vertikale Mausempfindlichkeit")
 T("Up and down, as a percentage of the mouse sensitivity.", "Hoch und runter, in Prozent der Mausempfindlichkeit.")
 T("Invert mouse Y", "Maus-Y-Achse umkehren")
+T("Mouse wheel zooms (scope, map)", "Mausrad zoomt (Fernrohr, Karte)")
+T("Each notch zooms the scope or the map in or out. Elsewhere the wheel does nothing.", "Jede Raste zoomt das Fernrohr oder die Karte heran oder weg. Sonst tut das Rad nichts.")
 T("Motion sensitivity", "Bewegungsempfindlichkeit")
 T("How far turning the controller turns the aim.", "Wie stark eine Drehung des Controllers das Zielen bewegt.")
 T("Invert motion", "Bewegung umkehren")

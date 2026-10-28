@@ -21,9 +21,15 @@
     X(main_data)               /* main's .data (then .bss, up to main_end) */                                           \
     X(main_end)
 
+// Sites a game version may lack (tools/game_sites.py OPTIONAL_GROUPS): 0 when the game code has no address for one,
+// and what reads it does nothing then
+#define GAME_SITES_OPTIONAL(X)                                                                                         \
+    X(screen_state) /* field: a UI screen's open state byte (0 closed, 1 opening, 2 open, 3 closing; 1.9.0 +0xfe) */
+
 typedef struct {
 #define GAME_SITE_FIELD(n) uint64_t n;
     GAME_SITES(GAME_SITE_FIELD)
+    GAME_SITES_OPTIONAL(GAME_SITE_FIELD)
 #undef GAME_SITE_FIELD
 } GameSites;
 

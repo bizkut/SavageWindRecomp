@@ -95,6 +95,10 @@ SITES = [
          'f9400268 aa1303e0', 0),
     Site('dialog_answer', 'ref', '90000008/9f00001f 528001a9 aa0003f3 b9000109/ffc003ff 94000000/fc000000 aa0003e1 '
          'aa1303e0 94000000/fc000000', 3),
+    # the UI screens' open state (runtime/hle/wheel_zoom.c): a screen's isOpen (1.9.0 FUN_7100f6e08c) reads its state
+    # byte (0 closed, 1 opening, 2 open, 3 closing) and the open request just below it; then isOpening's first load
+    Site('screen_state', 'imm', '39400008/ffc003ff 7100091f 39c00008/ffc003ff 7a400908 1a9fb7e0 d65f03c0 '
+         '39400008/ffc003ff 7100051f', 0),
     # the title screen menu
     Site('title_update', 'code', 'a9bb7bfd a90167fc 910003fd a9025ff8 a90357f6 a9044ff4 d107c3ff 5286c208/fffff2ff', 0),
     Site('title_button', 'code', 'd10183ff a9037bfd f90023f5 a9054ff4 9100c3fd b9404434 aa0003f3 94000000/fc000000', 0),
@@ -173,11 +177,13 @@ SITES = [
 # KNOWN table, the whole group is left out (with its patches) instead of refusing the version. The mouse camera's
 # sites go together: the stick input without the linear vertical part would square the mouse's (unclamped) motion.
 # Without them the mouse turns the camera through the right stick, as before (runtime/hle/input.c); without the
-# second group it turns it without the game's camera inversion options.
+# second group it turns it without the game's camera inversion options. Without screen_state (1.8.2 has no address
+# for it in KNOWN: its pattern finds it there or not) the mouse wheel zooms nothing (runtime/game_sites.h).
 OPTIONAL_GROUPS = [
     ('yaz0_stream', 'yaz0_stream_ret'),
     ('cam_stick', 'cam_pitch_chase', 'cam_pitch_surf', 'cam_pitch_wakeboard', 'cam_pitch_aim', 'cam_pitch_item'),
     ('cam_reverse_x', 'cam_reverse_y'),
+    ('screen_state',),
 ]
 OPTIONAL = {n for g in OPTIONAL_GROUPS for n in g}
 
@@ -283,6 +289,7 @@ KNOWN = {
         'controller_step': 0x7001dad0e0,
         'player_info': 0x7001e13ed0,
         'world_mgr': 0x7001e57580,
+        'screen_state': 0xfe,
         'cam_stick': 0x7000d57fe0,
         'cam_pitch_chase': 0x7000bf5334,
         'cam_pitch_surf': 0x7000c1a52c,

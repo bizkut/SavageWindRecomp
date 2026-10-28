@@ -31,7 +31,9 @@ static const char *const k_names[] = {"off", "scope", "map"};
 
 static _Atomic int published = WZ_NONE;  // the context at the last controller read: the main thread's gate
 static _Atomic int pending;              // notches waiting: > 0 in, < 0 out
+static _Atomic unsigned changes;         // context changes so far (what waited, parts of a notch too, is dropped)
 static float part;                       // main thread: the part of a notch a fine wheel or touchpad gave so far
+static unsigned part_changes;            // ... since this many changes
 
 static uint64_t screen(uint64_t mgr, uint32_t id) {  // (ScreenMgr: +0x28 count, +0x30 screens by id)
     uint64_t arr = *(uint64_t *)(uintptr_t)(mgr + 0x30);
@@ -51,10 +53,9 @@ int wheel_zoom_context(uint64_t screen_mgr, uint64_t state_field) {
 }
 
 void wheel_zoom_wheel(float y) {
-    if (atomic_load(&published) == WZ_NONE) {
-        part = 0;
-        return;
-    }
+    unsigned c = atomic_load(&changes);
+    if (c != part_changes) part = 0, part_changes = c;
+    if (atomic_load(&published) == WZ_NONE) return;  // (nothing zooms: the wheel does nothing)
     part += y;
     int n = (int)part;  // (toward 0: a part left over waits for the rest of its notch)
     if (!n) return;
@@ -78,6 +79,7 @@ WheelZoomPulse wheel_zoom_read(int ctx, uint64_t frame) {
     if (ctx != g.ctx) {  // opened, closed or another screen: what waited was for the one before
         LOG("[input] wheel zoom: %s\n", k_names[ctx]);
         g.ctx = ctx, g.phase = 0;
+        atomic_fetch_add(&changes, 1);
         atomic_store(&pending, 0);
     }
     if (ctx == WZ_NONE) return out;

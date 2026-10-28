@@ -120,6 +120,8 @@ T("How fast the mouse turns the camera.", "เมาส์หมุนกล้�
 T("Mouse vertical sensitivity", "ความไวเมาส์แนวตั้ง")
 T("Up and down, as a percentage of the mouse sensitivity.", "ขึ้นและลง เป็นเปอร์เซ็นต์ของความไวเมาส์")
 T("Invert mouse Y", "กลับแกน Y ของเมาส์")
+T("Mouse wheel zooms (scope, map)", "ล้อเมาส์ซูม (กล้องส่องทางไกล, แผนที่)")
+T("Each notch zooms the scope or the map in or out. Elsewhere the wheel does nothing.", "หมุนล้อหนึ่งจังหวะเพื่อซูมกล้องส่องทางไกลหรือแผนที่เข้าหรือออก ในที่อื่นล้อไม่มีผล")
 T("Only the mouse. The camera Y-axis option inverts both.", "เฉพาะเมาส์ ตัวเลือกแกน Y ของกล้องจะกลับทั้งสองอย่าง")
 T("Motion sensitivity", "ความไวการเคลื่อนไหว")
 T("How far turning the controller turns the aim.", "การหมุนคอนโทรลเลอร์หมุนการเล็งไปไกลแค่ไหน")

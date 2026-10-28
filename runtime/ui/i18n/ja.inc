@@ -190,6 +190,8 @@ T("How fast the mouse turns the camera.", "マウスでカメラを回す速さ�
 T("Mouse vertical sensitivity", "マウスの縦感度")
 T("Up and down, as a percentage of the mouse sensitivity.", "上下の動きです。マウス感度に対する割合で指定します。")
 T("Invert mouse Y", "マウスのY軸を反転")
+T("Mouse wheel zooms (scope, map)", "マウスホイールでズーム（望遠鏡、マップ）")
+T("Each notch zooms the scope or the map in or out. Elsewhere the wheel does nothing.", "ホイールを1段回すごとに望遠鏡やマップをズームイン／アウトします。それ以外ではホイールは何もしません。")
 T("Motion sensitivity", "モーション感度")
 T("How far turning the controller turns the aim.", "コントローラーを回したときに狙いが動く量です。")
 T("Invert motion", "モーションを反転")

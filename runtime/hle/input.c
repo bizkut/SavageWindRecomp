@@ -3,7 +3,8 @@
 // Both go through the player's bindings (runtime/hle/bindings.c has the defaults: keyboard and mouse laid out for
 // BOTW, controller by position, Switch A = east). Keyboard bindings can name mouse buttons; the mouse's motion turns
 // the camera (the right stick) while the cursor is held in the window, or tilts the controller while the tilt key is
-// held (motion controls: runtime/hle/motion.c, which also takes the controller's gyroscope and accelerometer).
+// held (motion controls: runtime/hle/motion.c, which also takes the controller's gyroscope and accelerometer). The
+// mouse wheel zooms the scope and the map (runtime/hle/wheel_zoom.c), beside the bindings.
 #include <SDL3/SDL.h>
 #include <ctype.h>
 #include <math.h>
@@ -11,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../game_sites.h"
 #include "../hle.h"
 #include "../nvn/nvn.h"
 #include "../nvn/renderer.h"
@@ -19,6 +21,7 @@
 #include "../motion.h"
 #include "../npad.h"
 #include "../vibration.h"
+#include "../wheel_zoom.h"
 
 enum {
     BTN_A = 0, BTN_B, BTN_X, BTN_Y, BTN_LSTICK, BTN_RSTICK, BTN_L, BTN_R, BTN_ZL, BTN_ZR, BTN_PLUS, BTN_MINUS,
@@ -391,6 +394,9 @@ void input_handle_event(const SDL_Event *e) {
             recompute_keyboard();
         }
         break;
+    case SDL_EVENT_MOUSE_WHEEL:  // (only while the scope or the map is open: wheel_zoom_wheel drops it otherwise)
+        if (g_settings.wheel_zoom && win_focused && !menu_cursor_free()) wheel_zoom_wheel(e->wheel.y);
+        break;
     case SDL_EVENT_WINDOW_FOCUS_LOST: case SDL_EVENT_WINDOW_FOCUS_GAINED:
         win_focused = e->type == SDL_EVENT_WINDOW_FOCUS_GAINED;
         break;
@@ -689,6 +695,13 @@ void input_npad_read(NpadInput *in, uint64_t id_addr) {
         int dy = (int)((d >> BTN_UP) & 1) - (int)((d >> BTN_DOWN) & 1);
         int32_t m = dx && dy ? 23170 : 32767;  // diagonals: same speed (32767 / sqrt 2)
         if (dx || dy) lx = dx * m, ly = dy * m;
+    }
+    {   // the mouse wheel's zoom pulse: Switch buttons beside the player's, or the right stick in place of it
+        extern uint64_t renderer_present_count(void);
+        int zoom = menu || !g_settings.wheel_zoom ? WZ_NONE : wheel_zoom_context(g_site.screen_mgr, g_site.screen_state);
+        WheelZoomPulse z = wheel_zoom_read(zoom, renderer_present_count());
+        b |= z.buttons;
+        if (z.stick) rx = z.rx, ry = z.ry;
     }
     in->buttons = b;
     in->lx = lx, in->ly = ly, in->rx = rx, in->ry = ry;

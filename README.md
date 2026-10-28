@@ -189,10 +189,12 @@ Steam Deck) also aims and tilts by motion. Keyboard and mouse defaults:
 | Rune (L) | Q | Throw (R) | R |
 | Look (right stick press) | Middle click | D-pad | Arrow keys |
 | Inventory (Plus) | Tab | Map (Minus) | M |
-| Tilt the controller (hold, motion puzzles) | T + mouse | | |
+| Tilt the controller (hold, motion puzzles) | T + mouse | Zoom the scope or the map | Mouse wheel |
 
 Every key and mouse button can be remapped in the game's Options (the Keyboard pages), next to the mouse sensitivity
-(horizontal and vertical) and Y inversion, motion sensitivity and inversion and the tilt key (Controls). The game's
+(horizontal and vertical) and Y inversion, motion sensitivity and inversion and the tilt key (Controls). The mouse
+wheel zooms only while the scope or the map is open, one zoom step per notch, and does nothing anywhere else; it isn't
+a binding, so every key and button keeps its own (Controls > Mouse wheel zooms turns it off). The game's
 button prompts show the keys you bound, or your controller's own buttons (Controls > Button icons: Automatic follows
 the device you use). The mouse turns the camera directly, as in a PC game: 0.022° per count at 100% sensitivity (as
 Quake and Source count it), on both axes (the vertical one scaled by Controls > Mouse vertical sensitivity), with no

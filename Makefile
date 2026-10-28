@@ -420,6 +420,16 @@ test-ps5-input: $(B)/test_ps5_input
 
 .PHONY: test-ps5-input
 
+# runtime/hle/wheel_zoom.c on the host: the scope / map gating against a made-up ScreenMgr, and the wheel's pulses
+$(B)/test_wheel_zoom: tools/test_wheel_zoom.c runtime/hle/wheel_zoom.c runtime/wheel_zoom.h runtime/input_bind.h
+	@mkdir -p $(B)
+	$(CC) -O1 -Iruntime -o $@ tools/test_wheel_zoom.c -lpthread
+
+test-wheel-zoom: $(B)/test_wheel_zoom
+	$(B)/test_wheel_zoom
+
+.PHONY: test-wheel-zoom
+
 # runtime/ps5/audio.c on the host, against the PS5 SDL shim's headers and a scripted SceAudioOut
 $(B)/test_ps5_audio: tools/test_ps5_audio.c runtime/ps5/audio.c runtime/ps5/sdl_shim.h
 	@mkdir -p $(B)

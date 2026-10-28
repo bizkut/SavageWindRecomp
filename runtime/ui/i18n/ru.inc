@@ -190,6 +190,8 @@ T("How fast the mouse turns the camera.", "Как быстро мышь пово
 T("Mouse vertical sensitivity", "Вертикальная чувствительность мыши")
 T("Up and down, as a percentage of the mouse sensitivity.", "Вверх и вниз, в процентах от чувствительности мыши.")
 T("Invert mouse Y", "Инверсия оси Y мыши")
+T("Mouse wheel zooms (scope, map)", "Колесо мыши — зум (бинокль, карта)")
+T("Each notch zooms the scope or the map in or out. Elsewhere the wheel does nothing.", "Каждый щелчок колеса приближает или отдаляет бинокль или карту. В остальное время колесо ничего не делает.")
 T("Motion sensitivity", "Чувствительность движения")
 T("How far turning the controller turns the aim.", "Насколько поворот контроллера двигает прицел.")
 T("Invert motion", "Инверсия движения")

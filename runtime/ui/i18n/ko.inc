@@ -190,6 +190,8 @@ T("How fast the mouse turns the camera.", "마우스로 카메라를 돌리는 �
 T("Mouse vertical sensitivity", "마우스 세로 감도")
 T("Up and down, as a percentage of the mouse sensitivity.", "위아래 움직임으로, 마우스 감도에 대한 비율입니다.")
 T("Invert mouse Y", "마우스 Y축 반전")
+T("Mouse wheel zooms (scope, map)", "마우스 휠로 확대/축소 (망원경, 지도)")
+T("Each notch zooms the scope or the map in or out. Elsewhere the wheel does nothing.", "휠을 한 칸 돌릴 때마다 망원경이나 지도를 확대 또는 축소합니다. 그 밖에는 휠이 아무것도 하지 않습니다.")
 T("Motion sensitivity", "모션 감도")
 T("How far turning the controller turns the aim.", "컨트롤러를 돌렸을 때 조준이 움직이는 정도입니다.")
 T("Invert motion", "모션 반전")

@@ -357,6 +357,30 @@ Pendiente:
      Los sitios son opcionales (`OPTIONAL_GROUPS` en `tools/game_sites.py`): si en una versión un patrón no encuentra
      su sitio, el grupo entero queda fuera y el ratón vuelve a mover el stick (sin el segundo grupo, solo pierde las
      opciones de inversión del juego). `SAVAGEWIND_MOUSE_NATIVE=0` también vuelve al stick.
+   - Rueda del ratón: zoom del catalejo y del mapa (2026-10-28, `runtime/hle/wheel_zoom.c`, llamado desde
+     `runtime/hle/input.c`; el escritorio y la PS5 comparten el código). Cada muesca es un pulso de la entrada del
+     Switch que hace zoom en la pantalla abierta, al lado de los bindings (no ocupa ni cambia ninguno), y fuera de
+     esas pantallas la rueda no hace nada. Lo que hace zoom, leído en el código de la 1.9.0 (pantallas por el nombre
+     de su layout, tabla del ScreenMgr en 0x7101d4e3e8: id 1 `Title_00`, 0x34 `OptionWindow_00`, 0x39
+     `SystemWindow_00`, como ya usaba el runtime):
+     - Catalejo y cámara de la tableta: pantalla 4, `AppCamera_00`. Su update (`FUN_7100de8ebc`) acerca o aleja
+       mientras se mantiene Arriba o Abajo de la cruceta (bits 16 / 17 sostenidos de su mando: Up / Down de sead,
+       que el mando Npad, 0x71010fe678, saca solo de Arriba / Abajo de nn::hid), cada vez más rápido (0,01 por frame
+       hasta 0,06 en un recorrido de 0 a 1), y guarda el zoom en un float de GameData. Pulso: Arriba (acercar) o
+       Abajo (alejar) 4 frames; las muescas seguidas lo mantienen.
+     - Mapa: pantalla 0x2a, `AppMap_00`. Su entrada (`FUN_7100dfa50c`) sube un nivel de zoom con el disparo de
+       `RightStickUp` y baja con `RightStickDown` (bits 24 / 25, que sead deriva de la inclinación del stick derecho;
+       `mc_mapZoom_in` / `_out`), nada mientras sigue inclinado. Pulso: stick derecho a fondo 2 frames y centrado 2.
+     - Abierta = su byte de estado (sitio `screen_state`, 1.9.0 +0xfe; lo lee el `isOpen` del juego,
+       `FUN_7100f6e08c`) vale 2: después de la animación de apertura y antes de la de cierre (0 cerrada, 1
+       abriéndose, 3 cerrándose). Que la pantalla exista no basta: la petición de abrir pantallas (`FUN_7100e6a590`)
+       mira si el mapa existente está cerrado. El bit 6 de +0x2aa tampoco: el ScreenMgr lo pone en todas a la vez.
+     - El reloj de los pulsos son los frames presentados (el juego lee sus mandos una vez por frame). Como mucho 8
+       muescas esperan; al abrirse, cerrarse o cambiar de pantalla se tira lo que esperaba. Ajuste
+       `mouse_wheel_zoom` (Opciones > Controles, y el menú superpuesto; activado por defecto). El klog dice
+       `[input] wheel zoom: scope|map|off` al cambiar y `... in|out (d-pad up|...)` por pulso. Pruebas en el host:
+       `make test-wheel-zoom`. La 1.8.2 no tiene `screen_state` en `KNOWN`: su patrón lo encuentra al generar o el
+       grupo queda fuera y la rueda no hace nada (sin comprobar: no hay un `main` 1.8.2 en esta máquina).
    - Controles de movimiento (2026-10-22, `runtime/hle/motion.c`): BOTW importa cuatro funciones del sensor de seis
      ejes de nn::hid: `GetSixAxisSensorHandles` y `StartSixAxisSensor` (cuando cambia el estilo del mando,
      `FUN_7100d9e24c`), `GetSixAxisSensorStates` (cada frame, las 16 muestras más nuevas de cada handle) y
@@ -1333,6 +1357,9 @@ que depende de la versión son las direcciones del `main` que tocan los parches 
   - Campos de objetos del juego que la 1.9.0 movió (2, tipo `imm`: el inmediato de la instrucción): el número de
     filas de la pantalla Opciones (+8: las filas; 1.8.2 +0x3698, 1.9.0 +0x36b0) y el botón activo del menú del
     título (1.8.2 +0x363c, 1.9.0 +0x3654).
+  - Opcionales para el runtime (`GAME_SITES_OPTIONAL` en `runtime/game_sites.h`, `OPTIONAL_GROUPS`): el byte de
+    estado de una pantalla de UI (`screen_state`, tipo `imm`, 1.9.0 +0xfe: la rueda del ratón). Una versión sin él
+    carga igual, con 0 en `g_site`, y lo que lo lee no hace nada.
 - Cada patrón son unas 8 palabras de instrucciones dentro de una misma función, con los campos que se mueven
   enmascarados: offsets de `b` / `bl` / `b.cond` / `cbz` / `tbz`, la página de un `adrp` y los 12 bits bajos que le
   suma un `add` / `ldr` / `str`. El sitio es esa instrucción (`code`), la función a la que salta (`call`), la
@@ -1346,11 +1373,12 @@ que depende de la versión son las direcciones del `main` que tocan los parches 
   un aviso. Una versión sin tabla necesita que todos los patrones encuentren un solo lugar.
 - `gen.py layout` resuelve los sitios y los escribe en `layout.c` (`game_version`, `game_sites[]`);
   `gen.py main` los resuelve de nuevo para los parches (`patches.table()`). El runtime los toma al cargar la
-  biblioteca (`gamelib_load` llena `g_site`; falta uno: no carga). Los 38 se resuelven en ~4 s.
+  biblioteca (`gamelib_load` llena `g_site`; falta uno que no es opcional: no carga). Los 38 se resuelven en ~4 s.
 - Lo que los sitios no cubren, a revisar a mano en cada versión: offsets de estructuras (campos de `ksys::VFR`,
   la fila de Opciones y su entrada de 0x30 bytes, ScreenMgr +0x28 / +0x30, el evento activo en +0x1d2b8,
   PlayerInfo +0x88 / +0xa4, TimeMgr +0xb8, la respuesta del diálogo), ids de pantallas (0x34 Opciones, 0x39
-  diálogo, 1 título), botones del título (0x69..0x6f, 0x6c amiibo), la vtable del diálogo (+0x4e0) y el número de
+  diálogo, 1 título, 4 `AppCamera_00` y 0x2a `AppMap_00` para la rueda), botones del título (0x69..0x6f, 0x6c amiibo),
+  la vtable del diálogo (+0x4e0) y el número de
   opciones del juego (14). Cada parche además comprueba la palabra de instrucción que espera y para la generación
   si no la ve. El modo FP (`FPCR.FZ` en `MXCSR`, `runtime/simd.h`) no tiene direcciones.
 
