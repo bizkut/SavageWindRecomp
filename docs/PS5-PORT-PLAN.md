@@ -506,6 +506,15 @@ lowering the resolution would only blur the picture. Step down after a few frame
 after a longer stretch well under it (hysteresis, so the size doesn't oscillate). MihawkGen runs at the game image's
 size (M7), so it must accept the current used part of a max-size image too.
 
+### After M7 — Render-thread CPU (queued 2026-10-28)
+The render thread (NVN → Vulkan translation) is the frame-time limit: 10.4–10.7 ms per frame without FG and
+13.6 ms with FG in the benchmark, against a GPU at 7.7 ms. In order, each measured with two benchmark runs before
+and after (agreeing within 2 %): (1) profile its time by command kind with the existing counters; (2) upstream
+PR #189 (driver calls on a recorder thread); (3) PRs #128 and #155 (descriptor sets kept across submissions,
+narrower barriers); (4) the generated game code at `-O2` instead of `-O1` (`ps5/tools/build-gamecode.sh`). A change
+stays only if the benchmark shows it helps on the PS5. **Done when:** render-thread CPU p95 is under 12 ms with FG on
+and the "command translation" hitches are gone from the benchmark.
+
 ### M8 — Temporal upgrades (after PR #194/#195)
 Reuse PR #194's motion vectors, jitter, depth copy and reactive mask and PR #195's FSR 3.1 path; do not re-derive
 motion vectors. Open item: take them by upstream merge (preferred) or rebase/cherry-pick the pinned heads, resolving
