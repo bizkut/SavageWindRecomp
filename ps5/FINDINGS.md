@@ -446,3 +446,30 @@ With guest stacks moved out of RADV's 32-bit BO window (run 2: `vkCreateDescript
 `frame 227 58.6 fps max 75ms` (236 draws/2 s, 0 waits). After ~4 s the game's own sead assertion fires
 (`[lm] … seadRawPrintNin.cpp PrintStringImpl … SDK has been aborted or failed assertion with no message`) →
 `svcBreak(reason=0)` at guest 0x700267974c. Not yet seen on the TV by a person; title screen unconfirmed.
+
+## 2026-10-28 — M3 run 3's abort: the SDK's controller applet path on an empty hid shared memory (host analysis)
+
+The game's own backtrace in run3.klog, symbolized against the 1.9.0 SDK module (base 0x7002504000):
+`nn::diag::detail::AbortImpl` ← `nn::hid::GetNpadJoyHoldType()` (0x7002a1a770) ← `nn::hid::ShowControllerSupport`
+(0x7002a43410) ← game code ← `nnMain`. `GetNpadJoyHoldType` reads `NpadSharedMemoryAccessor::GetNpadCondition()`
+from the hid shared memory and returns 0x58cca (module 202 hid, description 710) when its "initialized" byte is 0. No
+input service fills that memory: desktop never reads it, because `hle/input.c` answers the Npad calls itself
+(`GetNpadStyleSet`: player 1 FullKey; `GetNpadStates`: connected). The PS5 link left `input.c` out with its device
+code, so the recompiled SDK reported no controller and the game opened the controller applet. The guest-facing part
+is now `runtime/hle/npad.c` (with the vibration handles), and `hle/motion.c` no longer touches SDL (the SDL sensor
+calls moved to `input.c`); both are linked into the title. Before M4 player 1 reads nothing pressed and the six-axis
+sensor lies flat and still, as on desktop with no device in hand. Host check: `ps5/probe/test_npad_hle.c`.
+
+Fatal reports now explain an SDK abort: svcBreak with a 4-byte argument logs the aborted result
+(`[kernel] svcBreak: the SDK aborted on result …`), and every fatal report prints the guest call chain from its frame
+records (`guest backtrace (frame pointers)`: `f_<entry>+offset` and the module's exported name when the function is
+that symbol) and the last 16 IPC requests of any thread (`thread`, service, command, result).
+
+## 2026-10-28 — M3 run 4: 100 s of rendering with no fault (.41, ps5/evidence/m3/run4)
+
+Run 3's abort: with no controller, the game called `nn::hid::ShowControllerSupport`, then `GetNpadJoyHoldType` read
+zeroed HID shared memory and aborted on result 0x58cca. Desktop's Npad HLE is now shared (`hle/npad.c`, SDL-free
+`hle/motion.c`); before M4, player 1 is connected with nothing pressed. Run 4 (eboot `d395fc11…`) ran the full 100 s
+window: mostly **59.9 fps, max 17 ms** per 2 s window. The hitches line up with first-time shader compiles (898 over
+the run; 335 in the 7.7 s stall at frame 2720, plus 33 MB of uploads). That is the cold-cache case D6/M6 precompile
+targets. Not yet confirmed on the TV by a person.

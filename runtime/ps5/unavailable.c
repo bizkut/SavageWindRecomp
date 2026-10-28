@@ -6,13 +6,16 @@
 #include "../nvn/glyphs.h"
 #include "../nvn/vulkan/framegen.h"
 #include "../perfmon.h"
+#include "../npad.h"
 #include "../ui/menu.h"
 #include <stdatomic.h>
 #include <string.h>
 
 const char *rt_version(void) { return "0.3.1-alpha.3"; }
 
-// ---- input (M4: runtime/ps5/input.c into runtime/hle/input.c's state)
+// ---- input (M4: runtime/ps5/input.c into runtime/hle/input.c's state). The game's controller boundary
+// (runtime/hle/npad.c) and motion (runtime/hle/motion.c) are linked: player 1's controller is connected, as on desktop
+// with no device in hand, and here reads nothing pressed and lies flat and still.
 // A settings file can contain unrelated/unknown keys. Binding settings are
 // rejected rather than silently pretending that PS5 input has been installed.
 bool bind_settings_load(const char *key, const char *value) {
@@ -27,6 +30,7 @@ bool input_user_blocked(const SDL_Event *e) { (void)e; return false; }
 void input_mouse_update(void *window) { (void)window; }
 void input_frame(uint64_t frame) { (void)frame; }
 void input_cam_frame(float ratio) { (void)ratio; }
+void input_npad_read(NpadInput *in, uint64_t id_addr) { (void)id_addr; memset(in, 0, sizeof *in); }
 // The desktop's debugging keys (F8, F9, F12: runtime/hle/input.c), never pressed without a keyboard
 volatile int g_debug_frame_request, g_record_frames, g_skip_fs_off;
 // The mouse camera hooks (tools/patches.py; runtime/hle/input.c) with no mouse: the game's stick camera

@@ -1,19 +1,19 @@
 // Motion controls (runtime/hle/motion.c): the game's six-axis sensor (gyroscope + accelerometer) from the controller's
-// own sensors through SDL3, or from the mouse while the tilt key (bindings: BIND_TILT) is held.
+// own sensors, or from the mouse while the tilt key (bindings: BIND_TILT) is held.
 #pragma once
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct SDL_Gamepad SDL_Gamepad;
-typedef union SDL_Event SDL_Event;
-
-// Main thread (runtime/hle/input.c)
-void motion_pad_opened(SDL_Gamepad *pad);  // turns its gyroscope and accelerometer on, when it has them
+// Main thread (runtime/hle/input.c). Sensor readings are in SDL's controller axes: X right, Y up out of its face, Z
+// toward the player.
+void motion_pad_opened(bool sensors);  // a controller opened; sensors: its gyroscope and accelerometer report
 void motion_pad_closed(void);
-void motion_sensor_event(const SDL_Event *e);  // SDL_EVENT_GAMEPAD_SENSOR_UPDATE
+void motion_accel(const float d[3]);                  // m/s^2, the push against gravity
+void motion_gyro(const float d[3], uint64_t ts_ns);   // radians per second; the reading's sensor time
 void motion_tilt_held(bool held);              // the tilt key, pressed or let go
 void motion_mouse(float dx, float dy);         // mouse motion while the tilt key is held (pixels)
 

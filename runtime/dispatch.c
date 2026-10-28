@@ -221,6 +221,53 @@ static const char *host_sym(uint64_t pc, uint64_t *offset) {
     return s ? s : rt_host_fn_name(pc, offset);
 }
 
+// The recompiled guest function containing a guest address (its entry; 0: none)
+static uint64_t guest_fn_start(uint64_t addr) {
+    for (int t = 0; t < ntables; t++) {
+        FnTable *ft = &tables[t];
+        if (addr < ft->lo || addr > ft->hi + 0x100000) continue;
+        uint64_t lo = 0, hi = ft->count;  // first entry above addr
+        while (lo < hi) {
+            uint64_t mid = (lo + hi) / 2;
+            if (ft->addrs[mid] <= addr) lo = mid + 1;
+            else hi = mid;
+        }
+        if (lo) return ft->addrs[lo - 1];
+    }
+    return 0;
+}
+
+// One guest code address of a fatal report: its function as f_<entry>, and the module's exported name when the
+// function is that symbol (the nearest export before an unnamed function would name the wrong one). at: the address
+// that executes (a return address minus 4, so a call that never returns still names its caller).
+static void log_guest_frame(const char *what, uint64_t addr, uint64_t at) {
+    uint64_t fn = guest_fn_start(at), soff = 0;
+    const char *s = loader_symbol_at(at, &soff);
+    bool named = s && (fn ? at - soff == fn : true);
+    if (fn) LOG("  %-4s %llx  f_%llx+%llx  %s\n", what, addr, fn, addr - fn, named ? s : "");
+    else LOG("  %-4s %llx  %s+%llx\n", what, addr, named ? s : "?", named ? addr - (at - soff) : 0ull);
+}
+
+// The guest's call chain from its frame records (x29 -> {caller's x29, return address}): the recompiled code keeps
+// them on the guest stack, so this is the chain the game's own diag backtrace walks. lr first (a leaf function, such as
+// an SVC wrapper, keeps its return address only there); each record must lie in guest memory above the previous one
+// (the first above sp), within 1 MiB of it. (c->pc is not shown: recompiled code sets it only for indirect calls.)
+static void log_guest_backtrace(const Cpu *c) {
+    LOG("guest backtrace (frame pointers):\n");
+    if (c->x[30]) log_guest_frame("lr", c->x[30], c->x[30] - 4);
+    uint64_t fp = c->x[29], prev = c->sp;
+    for (int n = 0; n < 32; n++) {
+        if ((fp & 7) || fp < prev || fp - prev >= 0x100000 || fp < GUEST_LO || fp + 16 > GUEST_HI) break;
+        uint64_t next = ((const uint64_t *)(uintptr_t)fp)[0], ret = ((const uint64_t *)(uintptr_t)fp)[1];
+        if (!ret) break;
+        char what[8];
+        snprintf(what, sizeof what, "#%d", n);
+        log_guest_frame(what, ret, ret - 4);
+        prev = fp + 16;
+        fp = next;
+    }
+}
+
 void rt_fatal_trace(void) {
     LOG("host backtrace (guest functions are f_<addr>):\n");
     plat_print_backtrace();
@@ -231,7 +278,9 @@ void rt_fatal_trace(void) {
         for (int i = 0; i < 31; i += 4)
             LOG("  x%-2d %016llx  x%-2d %016llx  x%-2d %016llx  x%-2d %016llx\n", i, c->x[i], i + 1,
                 c->x[i + 1], i + 2, c->x[i + 2], i + 3, c->x[i + 3]);
+        log_guest_backtrace(c);
     }
+    ipc_log_recent();
     plat_fatal_notice();
     // our crash handler also catches SIGABRT: without this abort() re-entered it forever (a 5 GB log)
     signal(SIGABRT, SIG_DFL);

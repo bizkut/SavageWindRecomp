@@ -7,7 +7,7 @@
 // "no data". The camera's motion aiming (FUN_7100c28eac) uses the newest sample's angular velocity and direction, and
 // the direction against the previous frame's; the tilt puzzles follow the direction against gravity.
 //
-// Where the motion comes from: the controller's gyroscope and accelerometer (SDL3 sensor events: DualShock 4,
+// Where the motion comes from: the controller's gyroscope and accelerometer (on desktop SDL3 sensor events: DualShock 4,
 // DualSense, Switch Pro, Joy-Con, Steam Deck...), fused into an orientation on the main thread (the gyroscope turns it,
 // gravity slowly corrects its tilt); or, while the tilt key is held, the mouse tilts a still controller (it levels
 // again once the key is let go); or a scripted run. With none of them the controller lies flat and still.
@@ -25,7 +25,6 @@
 // radians per second.
 //
 // SAVAGEWIND_MOTION_LOG=1 logs the orientation the game gets about once a second.
-#include <SDL3/SDL.h>
 #include <math.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -37,6 +36,7 @@
 #include "../settings.h"
 
 #define PI 3.14159265358979323846
+#define STANDARD_GRAVITY 9.80665f  // m/s^2 per G (SDL_STANDARD_GRAVITY)
 #define SAMPLE_NS 5000000ull  // the Switch's sensor rate, 200 Hz
 #define NSAMPLES 16           // states kept per handle (BOTW reads 16)
 #define KP 0.6                // gravity's pull on the tilt, per radian of error per second
@@ -131,24 +131,15 @@ static struct {
 
 bool motion_has_sensors(void) { return g.sensors; }
 
-void motion_pad_opened(SDL_Gamepad *pad) {
-    bool gyro = SDL_GamepadHasSensor(pad, SDL_SENSOR_GYRO), accel = SDL_GamepadHasSensor(pad, SDL_SENSOR_ACCEL);
-    bool on = gyro && accel && SDL_SetGamepadSensorEnabled(pad, SDL_SENSOR_GYRO, true) &&
-              SDL_SetGamepadSensorEnabled(pad, SDL_SENSOR_ACCEL, true);
+void motion_pad_opened(bool sensors) {
     pthread_mutex_lock(&g_lock);
-    g.sensors = on, g.started = false, g.gyro_ts = 0;
+    g.sensors = sensors, g.started = false, g.gyro_ts = 0;
     memset(g.bias, 0, sizeof g.bias);
     memset(g.mean, 0, sizeof g.mean);
     memset(g.var, 0, sizeof g.var);
     g.acc_mean = 1, g.acc_var = 0;
     memset(g.lin, 0, sizeof g.lin);
     pthread_mutex_unlock(&g_lock);
-    if (on)
-        LOG("[motion] %s: gyroscope and accelerometer on (%.0f / %.0f Hz)\n", SDL_GetGamepadName(pad),
-            SDL_GetGamepadSensorDataRate(pad, SDL_SENSOR_GYRO), SDL_GetGamepadSensorDataRate(pad, SDL_SENSOR_ACCEL));
-    else
-        LOG("[motion] %s has no motion sensors%s: the tilt key and the mouse tilt it\n", SDL_GetGamepadName(pad),
-            gyro || accel ? " SDL can use" : "");
 }
 
 void motion_pad_closed(void) {
@@ -204,16 +195,11 @@ static void fuse_gyro(const double raw[3], double dt) {
     g.q = qnorm(qmul(g.q, (Quat){cos(h), w[0] * s, w[1] * s, w[2] * s}));
 }
 
-void motion_sensor_event(const SDL_Event *e) {
-    const float *d = e->gsensor.data;
+void motion_accel(const float d[3]) {
     pthread_mutex_lock(&g_lock);
-    if (!g.sensors) {
-        pthread_mutex_unlock(&g_lock);
-        return;
-    }
-    if (e->gsensor.sensor == SDL_SENSOR_ACCEL) {
-        g.acc[0] = -d[0] / SDL_STANDARD_GRAVITY, g.acc[1] = d[2] / SDL_STANDARD_GRAVITY;
-        g.acc[2] = -d[1] / SDL_STANDARD_GRAVITY;
+    if (g.sensors) {
+        g.acc[0] = -d[0] / STANDARD_GRAVITY, g.acc[1] = d[2] / STANDARD_GRAVITY;
+        g.acc[2] = -d[1] / STANDARD_GRAVITY;
         double an = sqrt(g.acc[0] * g.acc[0] + g.acc[1] * g.acc[1] + g.acc[2] * g.acc[2]);
         if (!g.started && an > 0.5) {  // (first reading: tilt from gravity, facing ahead)
             double s = -g.acc[1] / an;
@@ -223,9 +209,14 @@ void motion_sensor_event(const SDL_Event *e) {
         Mat m;
         quat_mat(g.q, m);
         g.lin[0] = g.acc[0] + m[2][0], g.lin[1] = g.acc[1] + m[2][1], g.lin[2] = g.acc[2] + m[2][2];
-    } else if (e->gsensor.sensor == SDL_SENSOR_GYRO && g.started) {
+    }
+    pthread_mutex_unlock(&g_lock);
+}
+
+void motion_gyro(const float d[3], uint64_t ts) {
+    pthread_mutex_lock(&g_lock);
+    if (g.sensors && g.started) {
         double raw[3] = {d[0], -d[2], d[1]};
-        uint64_t ts = e->gsensor.sensor_timestamp ? e->gsensor.sensor_timestamp : e->gsensor.timestamp;
         double dt = g.gyro_ts && ts > g.gyro_ts ? (double)(ts - g.gyro_ts) / 1e9 : 0;
         g.gyro_ts = ts;
         if (dt > 0 && dt < 0.1) fuse_gyro(raw, dt);

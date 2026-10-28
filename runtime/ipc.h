@@ -74,6 +74,7 @@ Service *service_new(const char *name, ServiceHandler h, void *state);
 Service *service_lookup(const char *name);  // from the registry (services/*.c)
 void ipc_return_object(IpcResp *resp, Service *s);
 void ipc_log_in_flight(void);  // (crash reports) the service and command whose handler this thread is running
+void ipc_log_recent(void);     // (fatal reports) the last requests of every thread: service, command, result
 
 typedef struct { const char *name; ServiceHandler handler; } ServiceDef;
 #ifdef __APPLE__

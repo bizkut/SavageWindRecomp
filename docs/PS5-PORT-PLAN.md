@@ -364,9 +364,12 @@ The M3 link adds the desktop Vulkan backend unchanged in behaviour (`runtime/nvn
 (D4 mode choice; VSync pinned to On/FIFO) and the PS5 half of `window_size.h`. A title has no Vulkan loader, so
 `ps5/tools/gen-vk-globals.py` generates a trampoline per command of the RADV header, resolved through
 `vk_icdGetInstanceProcAddr`. RADV's zlib (linked whole) serves the runtime too. RADV's PS5 winsys already calls
-`sceAgcSuspendPoint` after each submission. Still at a boundary (`runtime/ps5/unavailable.c`, each answering as the
-desktop does with no such device or feature): input and bindings, button-glyph replacement, the overlay menu and
-Savage Wind's Options pages (all M4), movies (M5), frame generation (M7), the performance overlay.
+`sceAgcSuspendPoint` after each submission. The game's controller boundary is linked as on desktop: `hle/npad.c`
+(player 1 a connected FullKey controller; the SDK's own Npad calls read hid shared memory that no input service fills,
+and run 3 aborted in its controller applet path) and `hle/motion.c` (six-axis states; with no sensors the controller
+lies flat and still). Still at a boundary (`runtime/ps5/unavailable.c`, each answering as the desktop does with no
+such device or feature): the input devices (player 1 reads nothing pressed) and bindings, button-glyph replacement,
+the overlay menu and Savage Wind's Options pages (all M4), movies (M5), frame generation (M7), the performance overlay.
 
 ### M4 — Input
 D8 complete. **Done when:** a scripted klog of each device: DualSense buttons/sticks/triggers/gyro aim/rumble; USB

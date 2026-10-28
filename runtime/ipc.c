@@ -1,4 +1,5 @@
 // IPC message parsing/serialization and session management.
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -21,6 +22,27 @@ static __thread const char *ipc_in_flight_svc;
 static __thread uint32_t ipc_in_flight_cmd;
 void ipc_log_in_flight(void) {
     if (ipc_in_flight_svc) LOG("in IPC handler: %s cmd %u\n", ipc_in_flight_svc, ipc_in_flight_cmd);
+}
+
+// The last requests any thread made (service, command, result), printed only by a fatal report: what the game asked
+// just before it gave up. Written by every thread without a lock (a slot reused while it is read shows mixed fields).
+#define IPC_RECENT 16
+static struct { uint64_t tid; uint32_t cmd, result; char svc[32]; } ipc_recent[IPC_RECENT];
+static atomic_uint ipc_recent_next;
+static void ipc_note(const Cpu *c, const char *svc, uint32_t cmd, uint32_t result) {
+    unsigned i = atomic_fetch_add_explicit(&ipc_recent_next, 1, memory_order_relaxed) % IPC_RECENT;
+    ipc_recent[i].tid = c->thread ? ((const KThread *)c->thread)->id : 0;
+    ipc_recent[i].cmd = cmd, ipc_recent[i].result = result;
+    strncpy(ipc_recent[i].svc, svc, sizeof ipc_recent[i].svc - 1);
+}
+void ipc_log_recent(void) {
+    unsigned n = atomic_load(&ipc_recent_next), k = n < IPC_RECENT ? n : IPC_RECENT;
+    LOG("last %u IPC requests, oldest first:\n", k);
+    for (unsigned j = n - k; j != n; j++) {
+        unsigned i = j % IPC_RECENT;
+        LOG("  thread %llu: %s cmd %u -> %#x\n", (unsigned long long)ipc_recent[i].tid, ipc_recent[i].svc,
+            ipc_recent[i].cmd, ipc_recent[i].result);
+    }
 }
 
 static void stub_handler(Service *s, IpcReq *req, IpcResp *resp) {
@@ -173,6 +195,7 @@ int ipc_handle_request(Cpu *c, uint32_t handle) {
         req.data = (const uint8_t *)raw;
         req.data_size = raw_words * 4;
         sess->svc->handler(sess->svc, &req, &resp);
+        ipc_note(c, sess->svc->name, req.cmd, resp.result);
         return tipc_write_response(msg, req.type, &resp);
     }
     uint8_t *payload = (uint8_t *)aligned;
@@ -212,6 +235,7 @@ int ipc_handle_request(Cpu *c, uint32_t handle) {
         ipc_in_flight_svc = target->name, ipc_in_flight_cmd = req.cmd;
         target->handler(target, &req, &resp);
         ipc_in_flight_svc = NULL;
+        ipc_note(c, target->name, req.cmd, resp.result);
     } else if (req.type == 5 || req.type == 7) {  // control
         req.cmd = *(uint32_t *)(payload + 8);
         LOG("[ipc] control %u on %s (handle %x)\n", req.cmd, sess->svc->name, handle);

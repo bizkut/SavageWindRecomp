@@ -1,4 +1,4 @@
-// Controller input: SDL keyboard/gamepad -> nn::hid Npad state.
+// Controller input: SDL keyboard/gamepad -> player 1's controller for the game's nn::hid Npad calls (runtime/hle/npad.c).
 //
 // Both go through the player's bindings (runtime/hle/bindings.c has the defaults: keyboard and mouse laid out for
 // BOTW, controller by position, Switch A = east). Keyboard bindings can name mouse buttons; the mouse's motion turns
@@ -17,6 +17,7 @@
 #include "../settings.h"
 #include "../input_bind.h"
 #include "../motion.h"
+#include "../npad.h"
 #include "../vibration.h"
 
 enum {
@@ -31,7 +32,6 @@ static _Atomic int32_t key_lx, key_ly, key_rx, key_ry, pad_lx, pad_ly, pad_rx, p
 static uint8_t keys_down[SDL_SCANCODE_COUNT];
 static uint8_t mouse_down[8];  // SDL_BUTTON_LEFT .. X2 (keyboard bindings BIND_MOUSE + button)
 static SDL_Gamepad *pad;
-static _Atomic int64_t sampling;
 
 // Host keys / buttons held by a test script (SAVAGEWIND_HOST_INPUT, input_frame): they go through the bindings
 static uint8_t test_keys[SDL_SCANCODE_COUNT];
@@ -336,6 +336,20 @@ int input_pad_family(void) {
     return env >= 0 ? env : pad_family;
 }
 
+// The opened controller's gyroscope and accelerometer on (runtime/hle/motion.c), when it has them
+static void pad_sensors_on(void) {
+    bool gyro = SDL_GamepadHasSensor(pad, SDL_SENSOR_GYRO), accel = SDL_GamepadHasSensor(pad, SDL_SENSOR_ACCEL);
+    bool on = gyro && accel && SDL_SetGamepadSensorEnabled(pad, SDL_SENSOR_GYRO, true) &&
+              SDL_SetGamepadSensorEnabled(pad, SDL_SENSOR_ACCEL, true);
+    motion_pad_opened(on);
+    if (on)
+        LOG("[motion] %s: gyroscope and accelerometer on (%.0f / %.0f Hz)\n", SDL_GetGamepadName(pad),
+            SDL_GetGamepadSensorDataRate(pad, SDL_SENSOR_GYRO), SDL_GetGamepadSensorDataRate(pad, SDL_SENSOR_ACCEL));
+    else
+        LOG("[motion] %s has no motion sensors%s: the tilt key and the mouse tilt it\n", SDL_GetGamepadName(pad),
+            gyro || accel ? " SDL can use" : "");
+}
+
 void input_handle_event(const SDL_Event *e) {
     static bool scanned;  // pads present at startup: their ADDED event may have gone to the start screen's loop
     if (!scanned) {
@@ -343,7 +357,7 @@ void input_handle_event(const SDL_Event *e) {
         int n = 0;
         SDL_JoystickID *ids = SDL_GetGamepads(&n);
         if (n > 0 && !pad) { pad = SDL_OpenGamepad(ids[0]); LOG("[input] gamepad: %s\n", SDL_GetGamepadName(pad)); note_family(); }
-        if (pad) motion_pad_opened(pad);
+        if (pad) pad_sensors_on();
         SDL_free(ids);
     }
     switch (e->type) {
@@ -385,7 +399,7 @@ void input_handle_event(const SDL_Event *e) {
             pad = SDL_OpenGamepad(e->gdevice.which);
             LOG("[input] gamepad: %s\n", SDL_GetGamepadName(pad));
             note_family();
-            if (pad) motion_pad_opened(pad);
+            if (pad) pad_sensors_on();
         }
         break;
     case SDL_EVENT_GAMEPAD_REMOVED:
@@ -399,7 +413,11 @@ void input_handle_event(const SDL_Event *e) {
         recompute_pad();
         break;
     case SDL_EVENT_GAMEPAD_SENSOR_UPDATE:
-        if (pad && !host_test && SDL_GetGamepadID(pad) == e->gsensor.which) motion_sensor_event(e);
+        if (pad && !host_test && SDL_GetGamepadID(pad) == e->gsensor.which) {
+            if (e->gsensor.sensor == SDL_SENSOR_ACCEL) motion_accel(e->gsensor.data);
+            else if (e->gsensor.sensor == SDL_SENSOR_GYRO)
+                motion_gyro(e->gsensor.data, e->gsensor.sensor_timestamp ? e->gsensor.sensor_timestamp : e->gsensor.timestamp);
+        }
         break;
     case SDL_EVENT_GAMEPAD_AXIS_MOTION: case SDL_EVENT_GAMEPAD_BUTTON_DOWN: case SDL_EVENT_GAMEPAD_BUTTON_UP:
         if (pad && !host_test && (e->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN ||
@@ -640,24 +658,16 @@ uint64_t input_buttons_now(void) { return (menu_input_captured() ? 0 : key_butto
 
 static int32_t clamp_axis(int32_t v) { return v > 32767 ? 32767 : v < -32767 ? -32767 : v; }
 
-// NpadFullKeyState / NpadHandheldState / NpadJoy*State share this layout (0x28 bytes):
-// {int64 sampling, u64 buttons, AnalogStick L {x,y}, AnalogStick R {x,y}, u32 attributes}
-static void fill_state(Cpu *c) {
-    uint8_t *s = (uint8_t *)(uintptr_t)c->x[0];
-    uint32_t id = *(uint32_t *)(uintptr_t)c->x[1];
-    memset(s, 0, 0x28);
-    *(int64_t *)s = ++sampling;
-    static int nlog;
-    if (nlog < 6 && (sampling % 600) == 1) { nlog++; LOG("[input] GetNpadState id %#x lr %llx\n", id, c->x[30]); }
-    if (id != 0) return;  // docked: only player 1 (FullKey); Handheld stays disconnected
+// Player 1's controller for runtime/hle/npad.c: keyboard, gamepad and test script through the bindings
+void input_npad_read(NpadInput *in, uint64_t id_addr) {
     extern uint64_t g_watch_lo, g_watch_hi;
-    if (id == 0 && !g_pad_obj) g_pad_obj = c->x[1] - 8;
-    if (id == 0 && !g_watch_lo && getenv("SAVAGEWIND_WATCH_PAD")) {
+    if (!g_pad_obj) g_pad_obj = id_addr - 8;
+    if (!g_watch_lo && getenv("SAVAGEWIND_WATCH_PAD")) {
         unsigned lo = 0x98 + 0x10, hi = 0x98 + 0x48;  // offsets from the controller manager
         sscanf(getenv("SAVAGEWIND_WATCH_PAD"), "%x,%x", &lo, &hi);
-        g_watch_lo = c->x[1] - 8 - 0x98 + lo;
-        g_watch_hi = c->x[1] - 8 - 0x98 + hi;
-        LOG("[input] watching controller object %llx\n", c->x[1] - 8);
+        g_watch_lo = id_addr - 8 - 0x98 + lo;
+        g_watch_hi = id_addr - 8 - 0x98 + hi;
+        LOG("[input] watching controller object %llx\n", id_addr - 8);
     }
     bool menu = menu_input_captured();  // the overlay menu / name entry has the controls (typing there isn't for the game)
     uint64_t b = menu ? script_buttons : key_buttons | pad_buttons | script_buttons;
@@ -680,95 +690,6 @@ static void fill_state(Cpu *c) {
         int32_t m = dx && dy ? 23170 : 32767;  // diagonals: same speed (32767 / sqrt 2)
         if (dx || dy) lx = dx * m, ly = dy * m;
     }
-    // stick directions also appear as buttons (bits 16-23)
-    if (lx < -16000) b |= 1ull << 16;
-    if (ly > 16000) b |= 1ull << 17;
-    if (lx > 16000) b |= 1ull << 18;
-    if (ly < -16000) b |= 1ull << 19;
-    if (rx < -16000) b |= 1ull << 20;
-    if (ry > 16000) b |= 1ull << 21;
-    if (rx > 16000) b |= 1ull << 22;
-    if (ry < -16000) b |= 1ull << 23;
-    *(uint64_t *)(s + 8) = b;
-    static uint64_t last_b;
-    if (b != last_b && getenv("SAVAGEWIND_INPUT")) LOG("[input] id %#x buttons %#llx (sampling %lld, lr %llx)\n", id, (unsigned long long)b, (long long)sampling, c->x[30]);
-    last_b = b;
-    *(int32_t *)(s + 16) = lx;
-    *(int32_t *)(s + 20) = ly;
-    *(int32_t *)(s + 24) = rx;
-    *(int32_t *)(s + 28) = ry;
-    *(uint32_t *)(s + 32) = 1;  // IsConnected
-}
-
-HLE_FUNC("_ZN2nn3hid12GetNpadStateEPNS0_16NpadFullKeyStateERKj", hid_state_fullkey) { fill_state(c); }
-HLE_FUNC("_ZN2nn3hid12GetNpadStateEPNS0_16NpadJoyDualStateERKj", hid_state_dual) { fill_state(c); }
-HLE_FUNC("_ZN2nn3hid12GetNpadStateEPNS0_16NpadJoyLeftStateERKj", hid_state_left) { fill_state(c); }
-HLE_FUNC("_ZN2nn3hid12GetNpadStateEPNS0_17NpadHandheldStateERKj", hid_state_handheld) { fill_state(c); }
-HLE_FUNC("_ZN2nn3hid12GetNpadStateEPNS0_17NpadJoyRightStateERKj", hid_state_right) { fill_state(c); }
-
-// int GetNpadStates(State *out, int count, const NpadIdType &id): the newest `count` samples, newest first (BOTW
-// 1.8.2 reads its controllers only this way). Every sample is the current state, with sampling numbers counting
-// back from the newest.
-static void fill_states(Cpu *c) {
-    uint8_t *out = (uint8_t *)(uintptr_t)c->x[0];
-    int count = (int)c->x[1];
-    uint64_t id_ptr = c->x[2];
-    if (!out || count <= 0) { c->x[0] = 0; return; }
-    uint64_t saved = c->x[1];
-    c->x[1] = id_ptr;  // (fill_state's arguments: state, &id)
-    fill_state(c);
-    c->x[1] = saved;
-    int64_t newest = *(int64_t *)out;
-    for (int i = 1; i < count; i++) {
-        memcpy(out + 0x28 * i, out, 0x28);
-        *(int64_t *)(out + 0x28 * i) = newest - i;
-    }
-    c->x[0] = (uint64_t)count;
-}
-HLE_FUNC("_ZN2nn3hid13GetNpadStatesEPNS0_16NpadFullKeyStateEiRKj", hid_states_fullkey) { fill_states(c); }
-HLE_FUNC("_ZN2nn3hid13GetNpadStatesEPNS0_16NpadJoyDualStateEiRKj", hid_states_dual) { fill_states(c); }
-HLE_FUNC("_ZN2nn3hid13GetNpadStatesEPNS0_16NpadJoyLeftStateEiRKj", hid_states_left) { fill_states(c); }
-HLE_FUNC("_ZN2nn3hid13GetNpadStatesEPNS0_17NpadHandheldStateEiRKj", hid_states_handheld) { fill_states(c); }
-HLE_FUNC("_ZN2nn3hid13GetNpadStatesEPNS0_17NpadJoyRightStateEiRKj", hid_states_right) { fill_states(c); }
-
-// FullKey for player 1 only (we report docked mode, where Handheld is unavailable)
-HLE_FUNC("_ZN2nn3hid15GetNpadStyleSetERKj", hid_style_set) {
-    uint32_t id = *(uint32_t *)(uintptr_t)c->x[0];
-    static int nlog;
-    if (nlog++ < 4) LOG("[input] GetNpadStyleSet id %#x\n", id);
-    c->x[0] = id == 0 ? 1 : 0;  // docked: no handheld controller
-}
-
-// BindNpadStyleSetUpdateEvent(id, SystemEventType*, clear mode): signaled once so the game sees a
-// controller connected.
-#include "../kernel.h"
-HLE_FUNC("_ZN2nn3hid27BindNpadStyleSetUpdateEventERKjPNS_2os15SystemEventTypeENS3_14EventClearModeE", hid_bind_style_event) {
-    uint32_t w, r;
-    KEvent *ev = kernel_create_event_pair(&w, &r);
-    klock();
-    kernel_signal(ev);
-    pthread_mutex_unlock(&g_klock);
-    uint64_t clear_mode = c->x[2];
-    c->x[0] = c->x[1];
-    c->x[1] = r;
-    c->x[2] = 0;
-    c->x[3] = clear_mode;
-    guest_call(c, guest_sym("_ZN2nn2os33AttachReadableHandleToSystemEventEPNS0_15SystemEventTypeEjbNS0_14EventClearModeE"));
-    LOG("[input] style set update event bound\n");
-}
-
-// The SDK's vibration node graph stays recompiled; its mixed output reaches services/hid_set.c.
-HLE_FUNC("_ZN2nn3hid25InitializeVibrationDeviceERKNS0_21VibrationDeviceHandleE", hid_init_vibration) { (void)c; }
-HLE_FUNC("_ZN2nn3hid25GetVibrationDeviceHandlesEPNS0_21VibrationDeviceHandleEiRKjNS_4util10BitFlagSetILi32ENS0_12NpadStyleTagEEE", hid_vibration_handles) {
-    uint32_t *out = (uint32_t *)(uintptr_t)c->x[0];
-    int n = (int)c->x[1] < 2 ? (int)c->x[1] : 2;
-    uint32_t id = *(uint32_t *)(uintptr_t)c->x[2];
-    for (int i = 0; i < n; i++) out[i] = 3u | (id & 0xFF) << 8 | (uint32_t)i << 16;  // style, player, device, padding
-    c->x[0] = (uint64_t)n;
-}
-HLE_FUNC("_ZN2nn3hid22GetVibrationDeviceInfoEPNS0_19VibrationDeviceInfoERKNS0_21VibrationDeviceHandleE", hid_vibration_info) {
-    uint32_t *info = (uint32_t *)(uintptr_t)c->x[0];
-    uint32_t h = *(uint32_t *)(uintptr_t)c->x[1];
-    info[0] = 1;        // VibrationDeviceType_LinearResonantActuator
-    info[1] = 1 + ((h >> 16) & 1);  // position: left = 1, right = 2
+    in->buttons = b;
+    in->lx = lx, in->ly = ly, in->rx = rx, in->ry = ry;
 }
