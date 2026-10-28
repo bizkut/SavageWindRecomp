@@ -21,6 +21,8 @@
 
 #include "../hle.h"
 
+#include "../benchmark.h"
+
 typedef struct { const char *name; float x, y, z; const char *map_type, *map_name; } WarpPlace;
 // Positions are the game's own start positions near each place (Map/MainField/Static.smubin and
 // Map/MainFieldDungeon/Static.smubin in Bootup.pack: StartPos entries).
@@ -75,13 +77,15 @@ static void set_str(uint8_t *d, uint64_t size, const char *name, const char *s) 
     set_entries(d, size, name, v, 16, false);
 }
 
+// (the built-in benchmark, runtime/benchmark.c, starts at the Great Plateau)
 bool test_warp_active(void) {
     return getenv("SAVAGEWIND_TEST_WARP") || getenv("SAVAGEWIND_TEST_TIME") || getenv("SAVAGEWIND_TEST_WEATHER") ||
-           getenv("SAVAGEWIND_TEST_FLAGS");
+           getenv("SAVAGEWIND_TEST_FLAGS") || benchmark_on();
 }
 
 void test_warp_patch(uint8_t *d, uint64_t size) {
     const char *w = getenv("SAVAGEWIND_TEST_WARP");
+    if (!w && benchmark_on()) w = "plateau";
     if (w && *w) {
         WarpPlace p = {0};
         bool found = false;

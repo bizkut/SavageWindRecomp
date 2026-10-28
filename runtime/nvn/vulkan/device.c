@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "../../frametime.h"
 #include "../../framepace.h"
 #include "../../imageload.h"
 #include "../../paths.h"
@@ -17,6 +18,7 @@
 #include "../../ui/menu.h"
 #include "../../window_size.h"
 #include "vk.h"
+#include "../glyphs.h"
 #include "../output_scale.h"
 #include "../renderer.h"
 #ifdef __PROSPERO__
@@ -436,6 +438,7 @@ static void create_device(void) {
     b->sampleRateShading = h->sampleRateShading;
     b->fragmentStoresAndAtomics = h->fragmentStoresAndAtomics;
     b->vertexPipelineStoresAndAtomics = h->vertexPipelineStoresAndAtomics;
+    b->shaderStorageImageWriteWithoutFormat = h->shaderStorageImageWriteWithoutFormat;  // (compute SUST: maxwell/shader.h)
     b->robustBufferAccess = h->robustBufferAccess;  // guest shaders index cbufs freely: keep OOB reads harmless
     b->shaderClipDistance = h->shaderClipDistance;
     if (!h->shaderInt64) LOG("[vk] warning: no shaderInt64 (64-bit address math in shaders)\n");
@@ -1369,7 +1372,7 @@ static void hdr_write(VkCommandBuffer cb, uint32_t i) {
     image_barrier(cb, hdr_sc_images[i], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 }
 
-uint64_t g_present_split[6];  // (VK_PROF) acquire, end pass, draw + menu, submit, present, slot wait
+// (the present's own time and its acquire: runtime/frametime.h FT_PRESENT_NS, FT_ACQUIRE_NS)
 typedef struct { uint32_t image; VkSemaphore acquired; bool ok; } Frame;
 static Frame cur_frame;
 
@@ -1381,9 +1384,7 @@ bool vk_frame_begin(const float clear[4]) {
     SDL_GetWindowSizeInPixels(window, &w, &h);
     // minimised (Windows keeps the window's size then, but its surface is 0 x 0: every acquire was out of date)
     if (!w || !h || (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)) return false;
-    uint64_t tp = SDL_GetTicksNS();
     present_wait_room();
-    g_present_split[4] += SDL_GetTicksNS() - tp;
     float white;  // (Windows HDR turned on or off, the window moved to another display, Video > HDR changed)
     bool hdr = hdr_wanted(&white);
     if (g_hdr) g_hdr_white = white;
@@ -1396,12 +1397,10 @@ bool vk_frame_begin(const float clear[4]) {
     if (trace) LOG("[vk] frame begin %dx%d (swapchain %ux%u)\n", w, h, g_vk.sc_extent.width, g_vk.sc_extent.height);
     slot = (slot + 1) % FRAMES;
     if (!acquire_sem[slot]) acquire_sem[slot] = binary_semaphore();
-    uint64_t tw = SDL_GetTicksNS();
     vk_wait_seq(slot_seq[slot]);
-    g_present_split[5] += SDL_GetTicksNS() - tw;
     uint64_t ta = SDL_GetTicksNS();
     VkResult r = acquire_image(acquire_sem[slot], &cur_frame.image);
-    g_present_split[0] += SDL_GetTicksNS() - ta;
+    ft_add(FT_ACQUIRE_NS, SDL_GetTicksNS() - ta);
     if (r == VK_ERROR_OUT_OF_DATE_KHR) {
         recreate_swapchain();
         r = acquire_image(acquire_sem[slot], &cur_frame.image);
@@ -1478,13 +1477,9 @@ void vk_frame_end(const char *shot_path) {
     uint32_t img = cur_frame.image;
     if (!done_sem[img]) done_sem[img] = binary_semaphore();
     uint64_t seq = vk_pending_seq();
-    uint64_t ts = SDL_GetTicksNS();
     vk_submit_extra(cur_frame.acquired, done_sem[img], VK_NULL_HANDLE);
-    g_present_split[3] += SDL_GetTicksNS() - ts;
-    ts = SDL_GetTicksNS();
     if (!present_image(img, done_sem[img], frame_kind, seq)) recreate_swapchain();
     frame_kind = PRES_PLAIN;
-    g_present_split[4] += SDL_GetTicksNS() - ts;
     cur_frame.ok = false;
     if (shot_path) {
         vk_wait_seq(seq);
@@ -1529,16 +1524,84 @@ void backend_represent(void) {
 
 // ---- pipeline pre-warm (exec.c): the first frame that looks like gameplay waits until the pipelines of the list are
 // built. When that takes more than a moment, the window shows a bar of how far it is meanwhile (black, the bar a
-// third of the width near the bottom; clears only, nothing to compile).
+// third of the width near the bottom; clears only, nothing to compile). The PS5 title's first-start shader
+// precompilation (runtime/platform/main_ps5.c) shows the same bar with lines of text around it (lines: heading,
+// percentage, step, note; NULL: the bar alone): set in Fira Sans (runtime/nvn/glyphs.c), sized by the window's
+// height, centred, and copied into the window image as grey levels over the black (no pipeline to compile either).
 bool vk_pso_wait_needed(void);
 bool vk_pso_wait(int ms, float *done);
 
-static void present_progress(float done) {
+// A grey level (0..1) as one texel of the window image's format; false: a format the text isn't drawn in
+static bool grey_texel(VkFormat f, float v, uint32_t *out) {
+    switch (f) {
+    case VK_FORMAT_B8G8R8A8_UNORM: case VK_FORMAT_B8G8R8A8_SRGB: case VK_FORMAT_R8G8B8A8_UNORM:
+    case VK_FORMAT_R8G8B8A8_SRGB: case VK_FORMAT_A8B8G8R8_UNORM_PACK32: case VK_FORMAT_A8B8G8R8_SRGB_PACK32: {
+        uint32_t b = (uint32_t)lroundf(v * 255);
+        *out = b | b << 8 | b << 16 | 0xffu << 24;
+        return true;
+    }
+    case VK_FORMAT_A2B10G10R10_UNORM_PACK32: case VK_FORMAT_A2R10G10B10_UNORM_PACK32: {
+        uint32_t t = (uint32_t)lroundf(v * 1023);
+        *out = t | t << 10 | t << 20 | 3u << 30;
+        return true;
+    }
+    default: return false;
+    }
+}
+
+// The progress screen's lines: capital height and centre (fractions of the window's height), grey level
+static const struct { float cap, y, level; } k_lines[4] = {{0.040f, 0.30f, 0.95f}, {0.062f, 0.42f, 1.0f},
+                                                          {0.024f, 0.62f, 0.80f}, {0.020f, 0.86f, 0.62f}};
+static struct { char s[160]; int cap; VkFormat format; uint32_t *px; int w, h; } g_line[4];  // (set again when they change)
+
+static void progress_text(VkCommandBuffer cb, const char *const *lines, int32_t W, int32_t H) {
+    VkBufferImageCopy rg[4];
+    VkBuffer buf[4];
+    int n = 0;
+    for (int i = 0; i < 4; i++) {
+        const char *s = lines[i] ? lines[i] : "";
+        int cap = (int)lroundf(k_lines[i].cap * (float)H);
+        if (strcmp(g_line[i].s, s) || g_line[i].cap != cap || g_line[i].format != g_vk.sc_format) {
+            free(g_line[i].px);
+            g_line[i].px = NULL;
+            snprintf(g_line[i].s, sizeof g_line[i].s, "%s", s);
+            g_line[i].cap = cap;
+            g_line[i].format = g_vk.sc_format;
+            int w = 0, h = 0;
+            uint32_t lut[256];
+            bool ok = true;
+            for (int k = 0; k < 256 && ok; k++) ok = grey_texel(g_vk.sc_format, k_lines[i].level * (float)k / 255.0f, &lut[k]);
+            uint8_t *cov = ok && *s ? glyphs_text_line(s, (float)cap, (float)W * 0.9f, &w, &h) : NULL;
+            if (cov && (g_line[i].px = malloc((size_t)w * (size_t)h * 4))) {
+                for (size_t k = 0; k < (size_t)w * (size_t)h; k++) g_line[i].px[k] = lut[cov[k]];
+                g_line[i].w = w;
+                g_line[i].h = h;
+            }
+            free(cov);
+        }
+        if (!g_line[i].px) continue;
+        int32_t x = (W - g_line[i].w) / 2, y = (int32_t)lroundf(k_lines[i].y * (float)H) - g_line[i].h / 2;
+        if (x < 0 || y < 0 || x + g_line[i].w > W || y + g_line[i].h > H) continue;
+        VkSpan sp = vk_transient_copy(g_line[i].px, (uint64_t)g_line[i].w * (uint64_t)g_line[i].h * 4, 4);
+        buf[n] = sp.buf;
+        rg[n++] = (VkBufferImageCopy){.bufferOffset = sp.off, .imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
+                                      .imageOffset = {x, y, 0}, .imageExtent = {(uint32_t)g_line[i].w, (uint32_t)g_line[i].h, 1}};
+    }
+    if (!n) return;
+    VkImage img = g_vk.sc_images[cur_frame.image];
+    vk_frame_suspend();
+    image_barrier(cb, img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    for (int i = 0; i < n; i++) vkCmdCopyBufferToImage(cb, buf[i], img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &rg[i]);
+    image_barrier(cb, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    vk_frame_resume();
+}
+
+void vk_present_progress(float done, const char *const *lines) {
     static const float black[4] = {0, 0, 0, 1};
     if (!vk_frame_begin(black)) return;
     VkCommandBuffer cb = vk_cmd();
     int32_t w = (int32_t)g_vk.sc_extent.width, h = (int32_t)g_vk.sc_extent.height;
-    int32_t bw = w / 3, bh = h / 90 > 4 ? h / 90 : 4, x = (w - bw) / 2, y = h - h / 8;
+    int32_t bw = w / 3, bh = h / 90 > 4 ? h / 90 : 4, x = (w - bw) / 2, y = lines ? h * 52 / 100 - bh / 2 : h - h / 8;
     int32_t fill = (int32_t)(done * (float)bw);
     struct { VkRect2D r; float c; } parts[3] = {{{{x - 2, y - 2}, {(uint32_t)bw + 4, (uint32_t)bh + 4}}, 0.4f},
                                                 {{{x, y}, {(uint32_t)bw, (uint32_t)bh}}, 0.06f},
@@ -1550,6 +1613,7 @@ static void present_progress(float done) {
         VkClearRect cr = {parts[i].r, 0, 1};
         vkCmdClearAttachments(cb, 1, &a, 1, &cr);
     }
+    if (lines) progress_text(cb, lines, w, h);
     static int shot;  // (SAVAGEWIND_PSO_SLOW_MS, exec.c: the first bar frame past a quarter)
     bool save = !shot && done > 0.25f && getenv("SAVAGEWIND_PSO_SLOW_MS");
     if (save) { shot = 1; mkdir("build", 0755); }
@@ -1562,7 +1626,7 @@ static uint64_t pso_wait(void) {  // ns waited
     float done = 0;
     int bars = 0;
     while (!vk_pso_wait(100, &done))
-        if (SDL_GetTicksNS() - t0 > 300000000ull) { present_progress(done); bars++; }
+        if (SDL_GetTicksNS() - t0 > 300000000ull) { vk_present_progress(done, NULL); bars++; }
     uint64_t dt = SDL_GetTicksNS() - t0;
     LOG("[pso] frame %llu waited %.0f ms for the pipeline pre-warm (%d frames with the bar)\n", (unsigned long long)total_frames + 1,
         dt / 1e6, bars);
@@ -1602,7 +1666,6 @@ static void present_locked(NvnTexture *t) {
     b->presented = true;
     uint64_t t0 = SDL_GetTicksNS();
     vk_end_pass();
-    g_present_split[1] += SDL_GetTicksNS() - t0;
     t0 += pso_wait();  // (not the acquire's time)
     // Frame generation: the frame between the last one and this (exec.c vk_fg_generate), presented first
     TexBackend *gen = vk_fg_generate(t, b);
@@ -1641,7 +1704,6 @@ static void present_locked(NvnTexture *t) {
         VkCommandBuffer cb = vk_cmd();
         float pv[8] = {renderer_origin_lower_left() ? 1.0f : 0.0f, 0, 0, 0, crop[0], crop[1], crop[2], crop[3]};
         memcpy(g_shot_crop, crop, sizeof crop);
-        uint64_t td = SDL_GetTicksNS();
         if (gen) {  // the generated frame, as the game's are (crop, anti-aliasing, menu), then this one half a frame later
             vk_present_draw(cb, gen, (float)vx, (float)vy, (float)vw, (float)vh, pv);
             menu_render((void *)cb, g_vk.sc_extent.width, g_vk.sc_extent.height);
@@ -1680,7 +1742,6 @@ static void present_locked(NvnTexture *t) {
         if (menu_at < 0) menu_at = getenv("SAVAGEWIND_MENU_AT") ? atol(getenv("SAVAGEWIND_MENU_AT")) : 0;
         if (menu_at && (long)total_frames + 1 == menu_at) { extern void menu_test_open(void); menu_test_open(); }
         menu_render((void *)cb, g_vk.sc_extent.width, g_vk.sc_extent.height);
-        g_present_split[2] += SDL_GetTicksNS() - td;
         static long win_shot = -1;
         if (win_shot < 0) win_shot = getenv("SAVAGEWIND_WINDOW_SHOT") ? atol(getenv("SAVAGEWIND_WINDOW_SHOT")) : 0;
         bool shot = win_shot && (long)total_frames + 1 == win_shot;
@@ -1706,9 +1767,9 @@ static void present_locked(NvnTexture *t) {
         renderer_submit();
     }
 presented:
+    ft_add(FT_PRESENT_NS, SDL_GetTicksNS() - t0);
     g_fg_want = fg_wanted();  // (for the next frame's draws)
-    extern void vk_prof_frame(uint64_t frame, uint64_t present_ns);
-    vk_prof_frame(total_frames, SDL_GetTicksNS() - t0);
+    ft_frame();
     extern void vk_list_stats_frame(void);
     vk_list_stats_frame();
     {   // SAVAGEWIND_FRAME_LOG=1: "[ft] <ms> <frame> <target fps>" at every present (frame time statistics)
@@ -1851,9 +1912,12 @@ presented:
     if (prev_present > 0 && now - prev_present > max_gap) max_gap = now - prev_present;
     prev_present = now;
     if (now - last_fps_time >= fps_iv) {
-        if (last_fps_time > 0)
-            LOG("[vk] t=%.1f frame %llu %.1f fps max %.0fms (%s)\n", now, (unsigned long long)total_frames,
-                frames / (now - last_fps_time), max_gap * 1000.0, renderer_stats());
+        if (last_fps_time > 0) {
+            char ft[1024];
+            ft_window(ft, sizeof ft);
+            LOG("[vk] t=%.1f frame %llu %.1f fps max %.0fms (%s) | %s\n", now, (unsigned long long)total_frames,
+                frames / (now - last_fps_time), max_gap * 1000.0, renderer_stats(), ft);
+        }
         if (gen_frames && last_fps_time > 0)
             LOG("[fg] %.1f generated frames/s: %.1f presented\n", gen_frames / (now - last_fps_time),
                 (frames + gen_frames) / (now - last_fps_time));

@@ -3,8 +3,13 @@
 #include "../gamelib.h"
 #include "../hle.h"
 #include "../kernel.h"
+#include "../nvn/precompile.h"
 #include "../paths.h"
+#include "../settings.h"
+#include <ps5platform/heap.h>
 #include <ps5platform/klog.h>
+#include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,6 +66,104 @@ static void fini_main(Cpu *c) {
     }
 }
 
+// ---- first start: every shader of the game precompiled (docs/PS5-PORT-PLAN.md D6, runtime/nvn/precompile.h), before
+// the game runs, while the screen shows what it is doing (a heading, the percentage of the whole, the step in plain
+// words with a bar, and that it happens once) and the klog the step, how far it is and the time so far. Runs again
+// when the translator or the driver changed (cache/precompiled.txt); off with precompile_shaders = 0.
+// (on a thread of its own with an 8 MiB stack: opening the packages needs more than the main thread's 2 MiB,
+// runtime/platform/exefs_ps5.c)
+static ShaderPrecompile g_pc;
+static void *precompile_main(void *arg) {
+    (void)arg;
+    RomfsImage *img = fs_game_romfs();  // (kept open: the game reads it next)
+    if (img) shader_precompile_run(&g_pc, img, "exefs/main");
+    else {
+        snprintf(g_pc.why, sizeof g_pc.why, "the game's RomFS can't be read");
+        atomic_store(&g_pc.state, SP_FAILED);
+    }
+    return NULL;
+}
+
+static void thousands(char *out, size_t n, int v) {  // 13997 -> "13,997"
+    if (v >= 1000) snprintf(out, n, "%d,%03d", v / 1000, v % 1000);
+    else snprintf(out, n, "%d", v);
+}
+
+static void first_start_precompile(void) {
+    int shaders = 0, status = shader_precompile_status(&shaders, NULL, 0);
+    if (status == 1 || !g_settings.precompile_shaders) {
+        LOG("[precompile] %s\n", status == 1 ? "done for this translator and driver: skipped" : "off (precompile_shaders = 0)");
+        return;
+    }
+    LOG("[precompile] %s: every shader of the game is translated and compiled now, with its pipeline libraries\n",
+        status ? "the translator or the driver changed" : "first start");
+    uint64_t t0 = plat_now_ns();
+    extern void vk_present_progress(float done, const char *const *lines);
+    extern void gpu_lock(void), gpu_unlock(void);
+    pthread_t t;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setstacksize(&attr, 8u << 20);
+    int rc = pthread_create(&t, &attr, precompile_main, NULL);
+    pthread_attr_destroy(&attr);
+    if (rc) { LOG("[precompile] no thread (%d): skipped\n", rc); return; }
+    static const char *const steps[] = {"opening the game's packages", "reading the shader archives", "translating and compiling shaders",
+                                        "building pipeline libraries", "done", "failed", "stopped"};
+    uint64_t next_log = t0, last_window = t0;
+    int last_state = -1;
+    extern uint64_t radv_ps5_allocated_bytes;  // (RADV's PS5 winsys: its buffers' direct memory)
+    extern void rt_heap_timing(uint64_t *calls, uint64_t *ns, unsigned *own_arenas);  // (runtime/ps5/heap_arenas.c)
+    for (int st; (st = atomic_load(&g_pc.state)) < SP_DONE;) {
+        float f = shader_precompile_progress(&g_pc);
+        char pct[16], step[160], a[16], b[16];
+        snprintf(pct, sizeof pct, "%d %%", (int)(f * 100));  // (99 at most until it is done)
+        thousands(a, sizeof a, atomic_load(&g_pc.done));
+        thousands(b, sizeof b, atomic_load(&g_pc.total));
+        if (st == SP_READING) snprintf(step, sizeof step, "Step 1 of 3: reading the game's shaders");
+        else if (st == SP_COMPILING) snprintf(step, sizeof step, "Step 2 of 3: translating shaders, %s of %s", a, b);
+        else if (st == SP_PIPELINES) snprintf(step, sizeof step, "Step 3 of 3: compiling them for the GPU, %s of %s", a, b);
+        else snprintf(step, sizeof step, "Opening the game's files");
+        const char *lines[4] = {"Compiling shaders", pct, step,
+                                "This happens only on the first start and after an update."};
+        gpu_lock();
+        vk_present_progress(f, lines);
+        gpu_unlock();
+        uint64_t now = plat_now_ns();
+        bool tick = now >= next_log;
+        if (tick || st != last_state) {
+            LOG("[precompile] %.0f s: %s, %d of %d (%.0f%% of the whole)\n", (now - t0) / 1e9, steps[st],
+                atomic_load(&g_pc.done), atomic_load(&g_pc.total), shader_precompile_progress(&g_pc) * 100);
+            next_log = now + 5000000000ull;
+            last_state = st;
+        }
+        if (tick) {  // (and where the workers' time went meanwhile, the heap's share sampled: runtime/ps5/heap_arenas.c)
+            struct ps5_heap_stats heap;
+            ps5_heap_stats(&heap);
+            static uint64_t last_calls, last_ns;
+            uint64_t calls, ns;
+            unsigned own;
+            rt_heap_timing(&calls, &ns, &own);
+            char extra[300];
+            snprintf(extra, sizeof extra, "; heap %.1fM calls taking ~%.1f s, %u threads on arenas of their own; title heap "
+                     "%.0f MB in %u segments, %llu libc fallbacks; RADV buffers %.0f MB", (calls - last_calls) / 1e6,
+                     (ns - last_ns) / 1e9, own, heap.mapped_bytes / 1048576.0, heap.segments, heap.libc_fallbacks,
+                     __atomic_load_n(&radv_ps5_allocated_bytes, __ATOMIC_RELAXED) / 1048576.0);
+            last_calls = calls, last_ns = ns;
+            shader_precompile_log_window(&g_pc, (now - last_window) / 1e9, extra);
+            last_window = now;
+        }
+        usleep(100000);
+    }
+    pthread_join(t, NULL);
+    struct ps5_heap_stats heap;
+    ps5_heap_stats(&heap);
+    int st = atomic_load(&g_pc.state);
+    LOG("[precompile] %s in %.1f s: %d shaders, %d translations (%d made, %d were cached, %d failed), %d pipeline "
+        "libraries and compute pipelines%s%s; title heap %.0f MB now, %.0f MB at most\n", steps[st], (plat_now_ns() - t0) / 1e9,
+        g_pc.shaders, g_pc.keys, g_pc.made, g_pc.cached, g_pc.failed, g_pc.pipelines, st == SP_FAILED ? ": " : "",
+        st == SP_FAILED ? g_pc.why : "", heap.mapped_bytes / 1048576.0, heap.peak_bytes / 1048576.0);
+}
+
 int main(void) {
     sceKernelDebugOutText(0, "savagewind: PPSA90212 M3 1.9.0 startup\n");
     if (ps5_klog_capture_stderr("savagewind: ") != 0) {
@@ -71,6 +174,12 @@ int main(void) {
         fprintf(stderr, "cannot reserve guest address space\n");
         exit_title();
     }
+    // RADV's own shader cache is off (by default a database in /app0/radv-shader-cache, radv_ps5_platform.c): the
+    // title keeps the driver's compiled shaders itself (cache/vk_pipelines.bin, vk_precompiled.bin, through the
+    // broker), and the database wrote every new shader again with direct title writes (two flushed writes each,
+    // under locks the lookups of all compiling threads share). On the host the precompilation's libraries took 10%
+    // longer with it, on a fast disk (65.3 against 59.1 s; 7 threads, RADV's null NAVI21 device, Mesa 25.2).
+    setenv("MESA_SHADER_CACHE_DISABLE", "true", 1);
     plat_init();
     rt_paths_init();
     char why[512] = "";
@@ -108,9 +217,12 @@ int main(void) {
     uint64_t game = hle_register("<rtld_init_main>", init_main);
     uint64_t fini = has_fini ? hle_register("<rtld_fini_main>", fini_main) : 0;
     KThread *thread = kernel_create_main_thread(start, stack_size, prio);
+    extern void ui_window_init(void);  // runtime/nvn/vulkan/device.c: the display plane and device
+    ui_window_init();
+    first_start_precompile();
     fprintf(stderr, "[ps5] entering linked game code at %llx\n", (unsigned long long)start);
     kernel_run_main(thread, thread->handle, 0, sdk, game, fini);
-    extern int ui_run(void);  // runtime/nvn/vulkan/device.c: the display plane and device, then the window loop
+    extern int ui_run(void);  // (its window loop; the window is up)
     ui_run();
     exit_title();
 }

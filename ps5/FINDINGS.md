@@ -609,7 +609,8 @@ Host harness: the real `shader_precompile_run` over `build/romfs-reference` on R
   the title now turns it off (`MESA_SHADER_CACHE_DISABLE`), since it keeps the driver's binaries itself. The
   remaining console-only cause is not identified yet: a new 5 s klog line splits the workers' time (work wall vs
   its thread CPU, reads, budget waits; process CPU; title heap segments and libc fallbacks; RADV buffers).
-- **The 24 failed translations** are the translator's, identical on desktop (the host build fails the same 24):
+- **The 24 failed translations** (state at this entry; since fixed by the translator work, 13,997/13,997 on the host,
+  console to confirm) were the translator's, identical on desktop (the host build failed the same 24):
   20 compute shaders of `agl_technique_pfx.sharcb` (16 × unknown instruction `eb1804a000470000` at 0x18, 2 ×
   `eb28048600f70600` at 0x450, 1 × `eb28048600f70400` at 0x3f0, 1 × `eb18048000470300` at 0x10) and 4 fragment shaders
   of `agl_common.sharcb` (`tlds info 6`); now logged once, grouped, after the step.
@@ -635,3 +636,27 @@ ruled out**: every worker's mask is 0x1fff and the per-item `sceKernelGetCurrent
 0–12. Wall-clock scaling is 28/s with 1 worker vs 61/s with 16 (**2.1x**; 6.6x on the host), so the workers contend
 on a shared lock. After start-up the AOC lookup re-opens the packages once per DLC index ("Add-on content not
 found" six or more times), and three ~28 ms render-thread hitches remain in the first 6 s.
+
+Changes after run 3 (host-built, not yet run on the console):
+- **Heap arenas per thread** (`runtime/ps5/heap_arenas.c`, linked with `--wrap=ps5_heap_*`): the SDK's title heap is 8
+  dlmalloc mspaces, each behind a lock, handed out round robin, so 16 workers share them two by two. The precompile
+  workers now each get an mspace of their own from the same range (`plat_thread_heap_own`; a pool of 32, returned
+  when the thread ends). The SDK's dlmalloc keeps FOOTERS, so a free or realloc from any thread goes to the owning
+  arena. The 5 s line adds the heap's call count and time (sampled one call in 64 by the time stamp counter, since
+  the build's emulated TLS allocates on first use and can't be used inside malloc) and the number of threads on
+  arenas of their own. The scaling check now compares 1 worker, 8 and all workers on arenas of their own, and all
+  workers on the shared arenas, in one run.
+- **AOC:** `savagewind_package_addons` (ps5/importer) reads which add-on indexes the packages hold once per process,
+  and `fs_aoc_present`/`load_image` answer from that mask instead of opening the packages for every index.
+- **The three ~28 ms hitches at frames 124/244/364** were the first three 2 s windows' `[vk] command counts` dump
+  (still ~1 KB in one klog write). The PS5 no longer dumps it.
+
+## 2026-10-28 — First-start precompile, run 4: 120 s, 0 failed (.41, ps5/evidence/m6/precompile-first4*.klog)
+
+Eboot `08f0e14f…` (translator fix + per-worker heap arenas + cached add-on lookup). **done in 119.8 s** (run 1: 880.5
+s): reading 25.0 s, translation 77.6 s, pipeline libraries 37.9 s; **13,997/13,997 translated, 0 failed** (was 24).
+The scaling check confirms the heap lock as the contention: 1 worker 27/s; 16 workers sharing the SDK's 8 arenas 52/s
+(1.9x); 8 workers with own arenas 201/s (7.4x); 16 with own arenas 279/s (10.3x). Add-on lookup is now one 0.10 s scan
+(no repeated package opens), and no hitch occurs in the first windows (59.9 fps, max 18 ms). The user saw the
+"Compiling shaders" screen finish. Title heap peaks at 1,728 MB (freeing it after precompile is still open). The
+game's own threads still use the shared arenas.

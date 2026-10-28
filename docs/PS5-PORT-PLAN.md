@@ -327,7 +327,9 @@ and replayable. No claim without an artifact.
 Status 2026-10-27 (`ps5/FINDINGS.md`, console runs 3–11): **S1 go** — `mmap` refuses the window (flexible budget),
 `sceKernelReserveVirtualRange` + fixed direct-memory commits work at the exact addresses, 16 KiB pages. **S2 go** —
 256 MiB stacks as reserved addresses with fault-time 1 MiB direct-memory commits, 48 threads. **S3 go** — static link.
-**S6 measured** on the console; desktop comparison with generated code pending. **S4, S5 not started.**
+**S6 measured** on the console (micro-loops); with the game on the title screen the render thread takes 1.1 ms and
+the GPU 1.8 ms of a 16.68 ms frame (M6 measure1); the guest threads' share and in-game numbers await the M6
+benchmark. Desktop comparison with generated code pending. **S4, S5 not started.**
 Exit: written go/no-go per spike in `ps5/FINDINGS.md`.
 
 ### M1 — Title shell
@@ -424,6 +426,16 @@ repo. A fixed camera route through the Great Plateau that runs without player in
 and hitch causes, and writes a summary through the broker, so console runs need no player. Shared code, so desktop
 gains it too. **Done when:** two consecutive runs on .41 of the same route agree within 2 % on mean and 95th-percentile
 frame time.
+
+Status 2026-10-28 (host-built, eboot `4b70bf98…`, not yet run on the console): `runtime/benchmark.c` runs when
+`benchmark.txt` is in the data root: it copies `save/` to `benchmark/save/` (the game continues that copy), warps Link
+outside the Shrine of Resurrection (`test_warp.c` "plateau"), presses A on the title screen until Continue loads,
+lets the world settle 20 s, then measures 60 s of camera turning (5 s still, 20 s right, 3 s up, 3 s down, 20 s left,
+9 s still) and closes the game. Summary: `benchmark/last.txt` (mean/p50/p95/p99 frame time, on-time share, hitches by
+cause, render/guest CPU and GPU per frame, and the difference from the previous run's mean and p95 with "agree
+within 2 %" or not); one line per run in `benchmark/history.txt`. Measurement: `runtime/frametime.c` (`[vk]`,
+`[hitch]` and `[perf]` lines, FINDINGS 2026-10-28 "M6 measure1"). The PS5 title precompiles every shader before the
+game runs at its first start and after a translator/driver change (D6; `precompile_shaders = 0` turns it off).
 
 ### M7 — MihawkGen 2× and VRR at 120
 D7 backend; frame pacing in `runtime/hle/framepace.c` for real + generated presents under VRR.

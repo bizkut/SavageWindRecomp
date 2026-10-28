@@ -15,3 +15,7 @@ bool glyphs_apply_layout(uint32_t format, uint32_t w, uint32_t h, uint8_t *lin, 
 
 // Changes whenever the icons to draw change (device, bindings, setting): sheets uploaded under another one go up again.
 uint32_t glyphs_generation(void);
+
+// A line of text in Fira Sans SemiBold (the labels' font), its capitals cap_h pixels tall (smaller when it would be
+// wider than max_w): coverage 0..255, *w x *h bytes in rows, malloc'd (free it). NULL when the font is missing.
+uint8_t *glyphs_text_line(const char *s, float cap_h, float max_w, int *w, int *h);

@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <zlib.h>
 
+#include "../benchmark.h"
 #include "../game_sites.h"
 #include "../hle.h"
 #include "../ipc.h"
@@ -829,7 +830,9 @@ static void storage(Service *s, IpcReq *req, IpcResp *resp) {
         if (!b) { resp->result = MAKE_RESULT(2, 6001); break; }
         if (size > b->size) size = b->size;
         kernel_watch_write("romfs read", b->addr, size);
+        uint64_t t0 = plat_now_ns();
         ssize_t n = romfs_read(m, (uint8_t *)(uintptr_t)b->addr, size, off);
+        kernel_romfs_read_done(plat_now_ns() - t0, size);
         if (n < 0) LOG("[fs] storage read failed at %llx: %s\n", off, strerror(errno));
         if (m != &images[0]) break;
         {
@@ -853,14 +856,15 @@ static void storage(Service *s, IpcReq *req, IpcResp *resp) {
 
 #ifdef ROMFS_PACKAGE
 // M2 must initialize the data root before the filesystem service is opened.
-static RomfsImage *open_package_image(unsigned index, char *why, size_t why_size) {
-    char dir[1100], keys[1200];
+// The packages in <data root>/import (malloc'd paths), and the keys' path; false: the folder can't be read (why)
+static bool list_packages(char keys[1200], char ***out, size_t *out_count, char *why, size_t why_size) {
+    char dir[1100];
     snprintf(dir, sizeof dir, "%s/import", rt_data_root());
-    snprintf(keys, sizeof keys, "%s/prod.keys", dir);
+    snprintf(keys, 1200, "%s/prod.keys", dir);
     DIR *d = opendir(dir);
     if (!d) {
         snprintf(why, why_size, "cannot open package directory");
-        return NULL;
+        return false;
     }
     char **paths = NULL;
     size_t count = 0;
@@ -879,22 +883,53 @@ static RomfsImage *open_package_image(unsigned index, char *why, size_t why_size
         snprintf(paths[count++], len, "%s/%s", dir, entry->d_name);
     }
     closedir(d);
-    RomfsImage *image = NULL;
     if (failed) snprintf(why, why_size, "out of memory listing packages");
-    else image = romfs_image_open_package(keys, (const char *const *)paths, count, index, why, why_size);
+    *out = paths;
+    *out_count = count;
+    return !failed;
+}
+
+static void free_packages(char **paths, size_t count) {
     for (size_t i = 0; i < count; ++i) free(paths[i]);
     free(paths);
+}
+
+static RomfsImage *open_package_image(unsigned index, char *why, size_t why_size) {
+    char keys[1200], **paths = NULL;
+    size_t count = 0;
+    RomfsImage *image = NULL;
+    if (list_packages(keys, &paths, &count, why, why_size))
+        image = romfs_image_open_package(keys, (const char *const *)paths, count, index, why, why_size);
+    free_packages(paths, count);
     return image;
+}
+
+// The add-on content indexes the packages hold (bit i-1: index i), looked up once per process: the game probes every
+// index at boot, and opening the packages for each took seconds (ps5/evidence/m6/precompile-first3.klog)
+int savagewind_package_addons(const char *keys_path, const char *const *paths, size_t count);
+static int package_addons(void) {
+    static int mask = -2;
+    if (mask != -2) return mask;
+    char keys[1200], why[256] = "", **paths = NULL;
+    size_t count = 0;
+    uint64_t t0 = plat_now_ns();
+    mask = list_packages(keys, &paths, &count, why, sizeof why) ? savagewind_package_addons(keys, (const char *const *)paths, count) : -1;
+    free_packages(paths, count);
+    LOG("[fs] add-on content in the packages: %s%#x (looked up in %.2f s)\n", mask < 0 ? "can't be read, " : "",
+        mask < 0 ? 0 : (unsigned)mask, (plat_now_ns() - t0) / 1e9);
+    return mask;
 }
 #endif
 
-// Opens image k from the folder dir (indexed and patched the first time); NULL when it can't be read.
-static Service *open_image(int k, const char *dir, const char *name) {
+// Image k from the folder dir, opened, indexed and patched the first time; false when it can't be read.
+static bool load_image(int k, const char *dir, const char *name) {
     RomImage *m = &images[k];
     if (!m->img) {
         char why[256] = "";
         uint64_t t0 = plat_now_ns();
 #ifdef ROMFS_PACKAGE
+        int addons = k ? package_addons() : -1;  // (an add-on the packages don't hold: not opened again and again)
+        if (k && addons >= 0 && !(k <= 8 && ((addons >> (k - 1)) & 1))) return false;
         m->img = open_package_image((unsigned)k, why, sizeof why);
 #else
         m->img = romfs_image_open(dir, why, sizeof why);
@@ -905,7 +940,7 @@ static Service *open_image(int k, const char *dir, const char *name) {
 #else
             LOG("[fs] cannot read %s: %s\n", dir, why);
 #endif
-            return NULL;
+            return false;
         }
         LOG("[fs] romfs image %s: %llu MB, opened in %.2f s\n", name, (unsigned long long)(romfs_image_size(m->img) >> 20),
             (plat_now_ns() - t0) / 1e9);
@@ -914,6 +949,16 @@ static Service *open_image(int k, const char *dir, const char *name) {
         rom_index();
         R = &images[0];
     }
+    return true;
+}
+
+// The game's RomFS image as the game reads it (shader precompilation at the PS5 title's first start, before the game
+// runs); NULL when it can't be read (logged).
+RomfsImage *fs_game_romfs(void) { return load_image(0, g_romfs_dir, "IStorage(romfs)") ? images[0].img : NULL; }
+
+static Service *open_image(int k, const char *dir, const char *name) {
+    if (!load_image(k, dir, name)) return NULL;
+    RomImage *m = &images[k];
     Storage *st = calloc(1, sizeof *st);
     st->img = m;
     st->size = romfs_image_size(m->img);
@@ -947,7 +992,9 @@ bool fs_aoc_present(int index) {
 #ifdef ROMFS_PACKAGE
     if (index < 1 || index > AOC_MAX) return false;
     if (images[index].img) return true;
-    char why[256] = "";
+    int mask = package_addons();
+    if (mask >= 0) return index <= 8 && ((mask >> (index - 1)) & 1);
+    char why[256] = "";  // (the scan failed: this index's own look)
     RomfsImage *image = open_package_image((unsigned)index, why, sizeof why);
     if (!image) return false;
     romfs_image_close(image);
@@ -1248,6 +1295,7 @@ static void filesystem(Service *s, IpcReq *req, IpcResp *resp) {
 static Service *open_host_fs(const char *sub) {
     HostFs *fs = calloc(1, sizeof *fs);
     if (getenv("SAVAGEWIND_SAVE_DIR")) g_save_dir = getenv("SAVAGEWIND_SAVE_DIR");  // test runs use a scratch copy
+    if (benchmark_save_dir()) g_save_dir = benchmark_save_dir();                   // (so does the benchmark)
     snprintf(fs->root, sizeof fs->root, "%s/%s", g_save_dir, sub);
 #ifdef __PROSPERO__
     int r = rt_storage_mkdirs(fs->root);

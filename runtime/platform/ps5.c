@@ -188,6 +188,11 @@ void plat_sleep_until_ns(uint64_t t) {
     while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts, NULL) == EINTR) {}
 }
 void plat_thread_realtime(uint64_t period_ns) { (void)period_ns; }
+uint64_t plat_thread_cpu_ns(void) {
+    struct timespec ts;
+    if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts)) return 0;
+    return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+}
 void plat_init(void) {}
 bool plat_exe_path(char *buf, size_t size) { (void)buf; (void)size; return false; }
 void plat_exec(char *const argv[]) { (void)argv; fprintf(stderr, "PS5: exec is unavailable\n"); }

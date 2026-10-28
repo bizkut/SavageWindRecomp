@@ -5,6 +5,8 @@
 //     see tools/test_translate.sh); the MSL text and all ShaderInfo fields must be identical.
 //  2. GLSL must compile: the same program with key.glsl = 1 is compiled in-process with shaderc (Vulkan 1.3) and
 //     the SPIR-V validated with SPIRV-Tools.
+//  3. Directed checks first: cbuf_reach (reach_tests) and the surface / multisampled-fetch encodings of the game's
+//     shaders (surface_tests), translated, compiled and validated, and their rejected neighbours.
 //
 // Programs are synthesized from the opcode patterns translate.c recognizes (every OPM(value, mask) and the
 // half-precision `(op & mask) == value` tests, read from the source file): the unmasked bits are random, with
@@ -105,6 +107,18 @@ static uint64_t gen_insn(uint32_t pc, uint32_t total) {
         is(w, 0xdf48000000000000ull, 0xfff8000000000000ull) || is(w, 0xdeb8000000000000ull, 0xfff8000000000000ull))
         w = setf(w, 36, 13, rnd(100) < 90 ? rnd(4) : rnd(8192));
     if (is(w, 0xdf48000000000000ull, 0xfff8000000000000ull) && rnd(100) < 90) w = setf(w, 22, 6, 1);  // TXQ dimension
+    // surfaces (SULD.D, SUST.P, SUATOM): mostly valid dimensions, the .IGN clamp, few image handles (shared slots),
+    // SUST's whole RGBA mask, SUATOM's 32-bit sizes and operations
+    bool suld = is(w, 0xeb18000000000000ull, 0xfff8000000000000ull), sust = is(w, 0xeb28000000000000ull, 0xfff8000000000000ull),
+         suatom = is(w, 0xea00000000000000ull, 0xffc0000000000000ull);
+    if ((suld || sust || suatom) && rnd(100) < 90) {
+        static const uint32_t dims[] = {0, 2, 3, 4, 5};
+        w = setf(w, 33, 3, dims[rnd(5)]);
+        w = setf(w, 49, 2, 0);
+        w = setf(w, 36, 13, 0x48 + rnd(4));
+        if (sust) w = setf(w, 20, 4, 0xF);
+        if (suatom) { static const uint32_t ops[] = {0, 1, 2, 5, 6, 7, 8}; w = setf(w, 51, 3, rnd(2)); w = setf(w, 29, 4, ops[rnd(7)]); }
+    }
     // attribute addresses (LD / ST a[], IPA)
     uint32_t aa = attr_addrs[rnd(sizeof attr_addrs / sizeof attr_addrs[0])] + (rnd(100) < 30 ? 4 * rnd(4) : 0);
     if (is(w, 0xefd8000000000000ull, 0xfff8000000000000ull) || is(w, 0xeff0000000000000ull, 0xfff8000000000000ull)) {
@@ -245,6 +259,116 @@ static bool reach_tests(void) {
     return ok;
 }
 
+#ifdef WITH_GLSL
+static shaderc_compiler_t g_comp;
+static shaderc_compile_options_t g_opt;
+static spv_context g_spv;
+#endif
+
+// NULL when the GLSL compiles (shaderc, Vulkan 1.3) and validates (SPIRV-Tools), or without WITH_GLSL; else why not
+static const char *glsl_check(const char *src, int stage) {
+#ifdef WITH_GLSL
+    static char err[512];
+    shaderc_shader_kind kind = stage == STAGE_VERTEX ? shaderc_vertex_shader : stage == STAGE_FRAGMENT ? shaderc_fragment_shader
+                                                                                                        : shaderc_compute_shader;
+    shaderc_compilation_result_t res = shaderc_compile_into_spv(g_comp, src, strlen(src), kind, "case", "main", g_opt);
+    const char *why = NULL;
+    if (shaderc_result_get_compilation_status(res) != shaderc_compilation_status_success) {
+        snprintf(err, sizeof err, "compile: %s", shaderc_result_get_error_message(res));
+        why = err;
+    } else {
+        spv_diagnostic diag = NULL;
+        spv_const_binary_t bin = {(const uint32_t *)shaderc_result_get_bytes(res), shaderc_result_get_length(res) / 4};
+        spv_validator_options vo = spvValidatorOptionsCreate();
+        if (spvValidateWithOptions(g_spv, vo, &bin, &diag) != SPV_SUCCESS) {
+            snprintf(err, sizeof err, "validate: %s", diag ? diag->error : "?");
+            why = err;
+        }
+        spvValidatorOptionsDestroy(vo);
+        spvDiagnosticDestroy(diag);
+    }
+    shaderc_result_release(res);
+    return why;
+#else
+    (void)src; (void)stage;
+    return NULL;
+#endif
+}
+
+// Directed checks of the surface instructions (bound SULD.D / SUST.P / SUATOM) and the multisampled texel fetch (TLDS
+// 2D MS), with the encodings of the game's agl_technique_pfx (compute) and agl_common (fragment) shaders: each
+// translates to GLSL that compiles and validates, with the image / texture slot the renderer binds; and the forms the
+// translator leaves out stay rejected.
+typedef struct {
+    const char *name;
+    int stage;
+    uint64_t insn[3];   // 0: NOP
+    const char *error;  // expected translation failure (substring), or NULL
+    int type, fmt;      // slot 0: TEXTYPE_*, IMGFMT_* (-1: a texture, not an image)
+    uint32_t off;       // its handle offset
+    bool written;
+} SurfaceCase;
+
+static bool surface_case(const SurfaceCase *k) {
+    static uint8_t prog[0x80 + 8 * 8 + 64];
+    memset(prog, 0, sizeof prog);
+    size_t hdr = k->stage == STAGE_COMPUTE ? 0 : 0x80;
+    if (k->stage == STAGE_FRAGMENT) { uint32_t omap = 0xF; memcpy(prog + 0x30 + 0x48, &omap, 4); }
+    uint64_t *code = (uint64_t *)(prog + hdr);
+    code[0] = code[4] = 0x001f8000fc0007e0ull;  // scheduling words
+    for (int i = 0; i < 3; i++) code[1 + i] = k->insn[i] ? k->insn[i] : 0x50b0000000070f00ull;  // (NOP)
+    code[5] = 0xe30000000007000full;  // EXIT
+    code[6] = code[7] = 0xe2400fffff87000full;  // BRA self
+    ShaderKey key;
+    memset(&key, 0, sizeof key);
+    key.glsl = 1;
+    ShaderInfo *si = maxwell_translate(prog, sizeof prog, k->stage, &key);
+    const char *why = NULL;
+    char buf[640];
+    if (k->error) {
+        if (si->msl || !strstr(si->error, k->error)) { snprintf(buf, sizeof buf, "want failure \"%s\", got %s", k->error, si->msl ? "a translation" : si->error); why = buf; }
+    } else if (!si->msl) {
+        snprintf(buf, sizeof buf, "translation failed: %s", si->error);
+        why = buf;
+    } else {
+        const ShaderTexture *t = &si->tex[0];
+        bool image = k->fmt >= 0;
+        if (si->ntex != 1 || t->is_image != image || t->type != k->type || t->handle_offset != k->off ||
+            (image && (t->image_format != k->fmt || t->image_written != k->written || (k->fmt == IMGFMT_TYPED && !si->uses_rscale)))) {
+            snprintf(buf, sizeof buf, "slot: ntex %d image %d type %d fmt %d offset %#x written %d", si->ntex, t->is_image, t->type,
+                     t->image_format, t->handle_offset, t->image_written);
+            why = buf;
+        } else {
+            why = glsl_check(si->msl, k->stage);
+        }
+    }
+    if (why) printf("surface %s: FAILED (%s)\n", k->name, why);
+    maxwell_free(si);
+    return !why;
+}
+
+static bool surface_tests(void) {
+    const uint64_t inc = (0xea0804a000d70404ull & ~(0xFull << 29)) | 3ull << 29;           // SUATOM .INC
+    const uint64_t buf1d = (0xeb1804a000470000ull & ~(7ull << 33)) | 1ull << 33;           // SULD .1D_BUFFER
+    const SurfaceCase cases[] = {
+        {"suld.d.32 1d (eb18048000470300)", STAGE_COMPUTE, {mov(3, 255), 0xeb18048000470300ull}, NULL, TEXTYPE_1D, IMGFMT_R32UI, 0x120, false},
+        {"suld.d.32 1d (eb1804a000470000)", STAGE_COMPUTE, {0xeb1804a000470000ull}, NULL, TEXTYPE_1D, IMGFMT_R32UI, 0x128, false},
+        {"suld.d.32 2d (eb1804c600470004)", STAGE_COMPUTE, {0xeb1804c600470004ull}, NULL, TEXTYPE_2D, IMGFMT_R32UI, 0x130, false},
+        {"sust.p rgba 2d (eb28048600f70600)", STAGE_COMPUTE, {0xeb28048600f70600ull}, NULL, TEXTYPE_2D, IMGFMT_TYPED, 0x120, true},
+        {"sust.p rgba 2d (eb28048600f70400)", STAGE_COMPUTE, {0xeb28048600f70400ull}, NULL, TEXTYPE_2D, IMGFMT_TYPED, 0x120, true},
+        {"suatom.add.s32 1d (ea0804a000d70404)", STAGE_COMPUTE, {0xea0804a000d70404ull}, NULL, TEXTYPE_1D, IMGFMT_R32I, 0x128, true},
+        {"tlds 2d ms after txq (dac2008020970600)", STAGE_FRAGMENT, {0xdf48008180470204ull, 0xdac2008020970600ull}, NULL, TEXTYPE_2D_MS, -1, 0x20, false},
+        {"sust.p rg mask rejected", STAGE_COMPUTE, {0xeb28048600370600ull}, "sust component mask", 0, 0, 0, false},
+        {"suld in a fragment shader rejected", STAGE_FRAGMENT, {0xeb1804a000470000ull}, "outside a vulkan compute shader", 0, 0, 0, false},
+        {"suatom.inc rejected", STAGE_COMPUTE, {inc}, "suatom op 3", 0, 0, 0, false},
+        {"suld 1d buffer rejected", STAGE_COMPUTE, {buf1d}, "suld dimension 1", 0, 0, 0, false},
+    };
+    int n = (int)(sizeof cases / sizeof cases[0]), ok = 0;
+    for (int i = 0; i < n; i++) ok += surface_case(&cases[i]);
+    printf("surfaces: %d of %d checks passed%s\n", ok, n, ok == n ? "" : " - FAILED");
+    return ok == n;
+}
+
 int main(int argc, char **argv) {
     if (argc < 4) { fprintf(stderr, "usage: %s <translate.c> <count> <seed> [msl|glsl|both] [dump_dir]\n", argv[0]); return 2; }
     load_patterns(argv[1]);
@@ -267,10 +391,14 @@ int main(int argc, char **argv) {
     shaderc_compile_options_set_target_env(opt, shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
     shaderc_compile_options_set_source_language(opt, shaderc_source_language_glsl);
     spv_context spv = spvContextCreate(SPV_ENV_VULKAN_1_3);
+    g_comp = comp;
+    g_opt = opt;
+    g_spv = spv;
 #else
     if (do_glsl) { fprintf(stderr, "built without WITH_GLSL: msl mode only\n"); do_glsl = false; }
 #endif
     bool reach_ok = reach_tests();
+    reach_ok &= surface_tests();
     static uint8_t prog[0x80 + 64 * 32 + 128];
     long msl_ok = 0, msl_fail = 0, msl_diff = 0, gl_ok = 0, gl_tfail = 0, gl_tfail_only = 0, gl_cfail = 0, gl_vfail = 0;
     long by_stage[3] = {0};

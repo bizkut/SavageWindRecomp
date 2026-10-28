@@ -174,7 +174,12 @@ static void core_acquire(KThread *t) {
     t->core_ticket = k->next_ticket++;
     if (k->nwaiting < 64) k->waiting[k->nwaiting++] = t;
     core_best_update(k);
-    while ((k->owner || !core_next(k, t)) && !g_rt_unwind) pthread_cond_wait(&k->cv, &k->m);
+    if ((k->owner || !core_next(k, t)) && !g_rt_unwind) {
+        uint64_t t0 = plat_now_ns();
+        KT_CPU(t);
+        while ((k->owner || !core_next(k, t)) && !g_rt_unwind) pthread_cond_wait(&k->cv, &k->m);
+        KT_ADD(t, core_ns, plat_now_ns() - t0);
+    }
     for (int i = 0; i < k->nwaiting; i++)
         if (k->waiting[i] == t) { k->waiting[i] = k->waiting[--k->nwaiting]; break; }
     core_best_update(k);
@@ -208,8 +213,11 @@ void kernel_thread_off_cores(void) {
 void kernel_sleep_until_ns(uint64_t t) {
     KThread *me = t_cur;
     core_release(me);
+    uint64_t t0 = plat_now_ns();
+    if (me) KT_CPU(me);
     for (uint64_t now; !g_rt_unwind && (now = plat_now_ns()) < t;)
         plat_sleep_until_ns(t - now < 50000000 ? t : now + 50000000);
+    if (me) KT_ADD(me, sleep_ns, plat_now_ns() - t0);
     core_acquire(me);
 }
 
@@ -218,11 +226,27 @@ void kernel_sleep_until_ns(uint64_t t) {
 // it is host code on the submitting thread, ~10 ms a frame in the open world plus shader compiles: holding the core,
 // it kept the game's other threads of that core waiting. It reads guest memory the GPU would read anyway.
 static __thread int host_work_depth;
+static __thread uint64_t host_work_t0;
 void kernel_host_work_begin(void) {
-    if (host_work_depth++ == 0) core_release(t_cur);
+    if (host_work_depth++ == 0) {
+        core_release(t_cur);
+        host_work_t0 = plat_now_ns();
+        if (t_cur) KT_CPU(t_cur);
+    }
 }
 void kernel_host_work_end(void) {
-    if (--host_work_depth == 0) core_acquire(t_cur);
+    if (--host_work_depth == 0) {
+        if (t_cur) KT_ADD(t_cur, host_ns, plat_now_ns() - host_work_t0);
+        core_acquire(t_cur);
+    }
+}
+
+void kernel_romfs_read_done(uint64_t ns, uint64_t bytes) {
+    KThread *t = t_cur;
+    if (!t) return;
+    KT_ADD(t, romfs_ns, ns);
+    KT_ADD(t, romfs_bytes, bytes);
+    KT_ADD(t, romfs_reads, 1);
 }
 
 // At a syscall: give the core to a better thread waiting for it, if there is one.
@@ -275,12 +299,15 @@ static bool kwait(int64_t timeout_ns, const struct timespec *ts) {
     bool held = t && t->core_held >= 0;
     if (held) core_release(t);  // (lock order: g_klock, then a core's m; core_acquire never runs under g_klock)
     bool r;
+    uint64_t t0 = t ? plat_now_ns() : 0;
+    if (t) KT_CPU(t);
     if (timeout_ns < 0) {
         pthread_cond_wait(cv, &g_klock);
         r = true;
     } else {
         r = pthread_cond_timedwait(cv, &g_klock, ts) == 0;
     }
+    if (t) KT_ADD(t, wait_ns, plat_now_ns() - t0);
     if (held) {
         pthread_mutex_unlock(&g_klock);
         core_acquire(t);
@@ -376,6 +403,21 @@ int kernel_running_threads(pthread_t *host, uint32_t *handle, uint64_t *entry, i
     for (KThread *t = g_threads; t && n < max; t = t->anext)
         if (t->started && !t->finished) host[n] = t->host, handle[n] = t->handle, entry[n] = t->entry, n++;
     for (int i = 0; i < g_nhost_threads && n < max; i++) host[n] = g_host_threads[i], handle[n] = 0xf000 + i, entry[n] = 0, n++;
+    pthread_mutex_unlock(&g_klock);
+    return n;
+}
+
+int kernel_thread_times(KThreadTimes *out, int max) {
+    int n = 0;
+    klock();
+    for (KThread *t = g_threads; t && n < max; t = t->anext) {
+        if (!t->started || t->finished) continue;
+        KThreadTimes *o = &out[n++];
+        o->handle = t->handle, o->prio = t->prio, o->core = t->core, o->entry = t->entry;
+        const uint64_t *src = (const uint64_t *)&t->times;
+        uint64_t *dst = (uint64_t *)&o->times;
+        for (size_t i = 0; i < sizeof t->times / sizeof(uint64_t); i++) dst[i] = __atomic_load_n(&src[i], __ATOMIC_RELAXED);
+    }
     pthread_mutex_unlock(&g_klock);
     return n;
 }
@@ -913,11 +955,14 @@ static void svc_impl(Cpu *c, uint32_t imm, uint64_t pc) {
         int64_t ns = (int64_t)x[0];
         if (ns <= 0) { core_yield(t_cur); break; }
         core_release(t_cur);
-        for (uint64_t end = plat_now_ns() + (uint64_t)ns, now; !g_rt_unwind && (now = plat_now_ns()) < end;) {
+        uint64_t t0 = plat_now_ns();
+        KT_CPU(t_cur);
+        for (uint64_t end = t0 + (uint64_t)ns, now; !g_rt_unwind && (now = plat_now_ns()) < end;) {
             uint64_t d = end - now < 50000000 ? end - now : 50000000;
             struct timespec ts = {(time_t)(d / 1000000000), (long)(d % 1000000000)};
             nanosleep(&ts, NULL);
         }
+        KT_ADD(t_cur, sleep_ns, plat_now_ns() - t0);
         core_acquire(t_cur);
         break;
     }

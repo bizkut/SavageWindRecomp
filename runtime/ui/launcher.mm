@@ -48,6 +48,7 @@ extern "C" {
 #include "gamelib.h"
 #include "game_versions.h"
 #include "romfs_build.h"
+#include "romfs_image.h"
 #include "settings.h"
 #include "input_bind.h"
 #ifndef __APPLE__
@@ -421,7 +422,9 @@ static void run_precompile(void) {
     atomic_store(&g_pc.cancel, false);
     g_precompiling = true;
     set_job("Precompiling shaders...");
-    bool ok = shader_precompile_run(&g_pc, (g_root + "/romfs").c_str());
+    RomfsImage *img = romfs_image_open((g_root + "/romfs").c_str(), g_pc.why, sizeof g_pc.why);
+    bool ok = img && shader_precompile_run(&g_pc, img, (g_root + "/exefs/main").c_str());
+    romfs_image_close(img);
     g_precompiling = false;
     if (ok) set_job("Shaders precompiled.");
     else if (atomic_load(&g_pc.state) == SP_CANCELLED) set_job("Shader precompilation stopped.");

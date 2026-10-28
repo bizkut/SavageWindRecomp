@@ -458,8 +458,7 @@ Pendiente:
        1645-1900, ~4.700 draws, intervalo fijo): 15,0 → 11,4 ms por frame (3,2 → 2,4 µs por draw); frames de más de
        40 ms en todo el paseo: 79 y 49 → 9 y 8 (dos corridas de cada uno; los que quedan son capturas, compilaciones
        al cargar el mundo y picos del juego). `SAVAGEWIND_VK_PROF=2` deja solo los tiempos por lista (los de cada draw
-       cuestan ~0,3 µs por draw); la línea `[hitch]` termina con `exec waits` (esperas a la GPU dentro de la
-       traducción).
+       cuestan ~0,3 µs por draw).
      - Render targets que el mismo draw muestrea y escribe (~240 draws por frame en el mundo: el terreno, fs
        `50fc37edcd79cf02`, hace un OR de bits en el canal G del target 0 del G-buffer leyendo su propio píxel; también
        `60f90627d72c7d08` y `fd051fb152ee8e40`, sin barreras del juego entre ellos): antes se copiaba el target de
@@ -593,8 +592,10 @@ Pendiente:
        solo con traducciones y SPIR-V precompilados, eran 12,7 s de compilaciones y 51 frames de más de 40 ms. Lo que
        queda: los enlaces y el precalentamiento al cargar el mundo (~500 en los primeros 2 s) y algún enlace suelto
        de 30-70 ms.
-     Medición: `SAVAGEWIND_VK_PROF=1 SAVAGEWIND_HITCH_MS=1` registra cada frame con su desglose (traducción, esperas a
-     la GPU, compilaciones, presentación, pausa del ritmo); `SAVAGEWIND_MAX_INTERVAL=2` impide que el juego pase a 20
+     Medición: las líneas `[hitch]` (`runtime/frametime.c`, siempre: cada frame de más de 1,5 períodos del límite, 25 ms
+     como mínimo; `SAVAGEWIND_HITCH_MS=<ms>` fija otro umbral) dan su causa y su desglose (CPU del hilo de render y de los
+     hilos del juego, compilaciones, pipelines, texturas, esperas a la GPU, lecturas del paquete, esperas entre hilos), y
+     la línea `[vk]` de cada 2 s la CPU y la GPU por frame; `SAVAGEWIND_MAX_INTERVAL=2` impide que el juego pase a 20
      FPS, así su paso por frame es fijo y un recorrido con guion sigue siempre el mismo camino (comparaciones A/B);
      `SAVAGEWIND_LOG_FRAMETIME=<ms>` da el tiempo de frame que mide el propio juego; `SAVAGEWIND_LOG_HOLD=1` dice qué
      shader dejó el resto de la lista en una pieza. Paseo con guion (Continue, ~90 s caminando, frames 520-3200,

@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "../framepace.h"
+#include "../frametime.h"
 #include "../game_sites.h"
 #include "../kernel.h"
 #include "../perfmon.h"
@@ -1192,7 +1193,7 @@ NVN(nvnQueueAcquireTexture) {
 // framepace.c) after the last one, and tells framepace.c when it went out (the game's clock follows it).
 // SAVAGEWIND_FRAMEPACE=0 (the game's own pacing): interval x 1/60 s after the last one, and never sooner than
 // SAVAGEWIND_FPS_CAP allows (default 60; 0 = no cap).
-uint64_t g_pace_sleep_ns;  // (VK_PROF hitch lines) time present_pace slept
+// (the time it sleeps is the presenting thread's sleep_ns: runtime/kernel.c kernel_sleep_until_ns)
 static void present_pace(int interval) {
     static int cap = -1;
     static uint64_t last;
@@ -1206,9 +1207,7 @@ static void present_pace(int interval) {
     }
     uint64_t target = last + period, now = plat_now_ns();
     if (last && now < target) kernel_sleep_until_ns(target);
-    uint64_t t1 = plat_now_ns();
-    g_pace_sleep_ns += t1 - now;
-    now = t1;
+    now = plat_now_ns();
     last = last && now < target + period ? target : now;  // (steady cadence; after a long frame, start again)
     framepace_presented(last, last == target);
 }
@@ -1222,6 +1221,7 @@ NVN(nvnQueuePresentTexture) {
     present_pace(w->interval);
     if (frame_split()) g_fs_pace = plat_now_ns();
     perfmon_frame();
+    ft_present_thread();
     TL("present (backend)");
     if (async_exec()) {
         if (i >= 0 && i < w->num) queue_put(QOP_PRESENT, 0, HOST(NvnTexture, w->textures[i]));

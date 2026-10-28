@@ -70,6 +70,14 @@ void plat_thread_realtime(uint64_t period_ns) {
     setpriority(PRIO_PROCESS, (id_t)gettid(), -10);  // (per thread on Linux; fails quietly without CAP_SYS_NICE)
 }
 
+void plat_thread_heap_own(void) {}  // (glibc gives threads arenas of their own)
+
+uint64_t plat_thread_cpu_ns(void) {
+    struct timespec ts;
+    if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts)) return 0;
+    return (uint64_t)ts.tv_sec * 1000000000u + (uint64_t)ts.tv_nsec;
+}
+
 // ---- process
 // Started from a desktop (the AppImage) there is no terminal: stdout / stderr go to savagewind.log in the data folder
 // (runtime/paths.h; rt_paths_init runs later, so the same rule is applied here). Processes started by this one (the

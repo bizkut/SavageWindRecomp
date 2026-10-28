@@ -88,6 +88,8 @@ typedef struct {
     Str *flow_before;
     uint8_t *flow_dead;
     struct InsnWrites *writes;  // by instruction index: what its emitted code assigns (cbuf_reach)
+    uint64_t tex_lod_query;     // (GLSL) texture slots an LOD query (TMML) reads: not multisampled ones
+    uint64_t tex_levels_query;  // (GLSL) texture slots TXQ reads the level count of: tlevels<slot>()
 } Ctx;
 
 static uint64_t bits(uint64_t w, int lo, int n) { return (w >> lo) & ((n == 64) ? ~0ull : ((1ull << n) - 1)); }
@@ -525,6 +527,7 @@ static int tex_slot(Ctx *c, uint32_t index, int type, bool shadow, bool array) {
     if (index >= 8192) return 0;
     if (c->tex_slot[index]) {
         int s = c->tex_slot[index] - 1;
+        if (c->info->tex[s].is_image) { fail(c, "image %u used as a texture", index); return s; }
         if (type >= 0 && c->tex_weak[s]) {
             ShaderTexture *t = &c->info->tex[s];
             t->type = (uint8_t)type;
@@ -740,6 +743,10 @@ static bool glsl_texs(Ctx *c, uint64_t w, bool fetch, int *slot_out, char *call,
             sprintf(call, "texelFetch(t%d, ivec2(%s), 0)", slot, RSC2(c, slot, "uint2(int2(%s, %s) + int2(int(%s << 28) >> 28, int(%s << 24) >> 28))", A, A1, Bv, Bv)); break;
         case 5: slot = tex_slot(c, index, TEXTYPE_2D, false, false);
             sprintf(call, "texelFetch(t%d, ivec2(%s), int(%s))", slot, RSC2(c, slot, "uint2(%s, %s)", A, A1), Bv); break;
+        // 2D multisampled, level 0: x Ra, y Ra + 1, the sample Rb (Ryujinx TldsTarget.Texture2DLodZeroMultisample).
+        // Multisampled images are never scaled (textures.c tex_scale_group): no rsc.
+        case 6: slot = tex_slot(c, index, TEXTYPE_2D_MS, false, false);
+            sprintf(call, "texelFetch(t%d, ivec2(int(%s), int(%s)), int(%s))", slot, A, A1, Bv); break;
         case 7: slot = tex_slot(c, index, TEXTYPE_3D, false, false);
             sprintf(call, "texelFetch(t%d, ivec3(%s, %s, %s), 0)", slot, A, A1, Bv); break;
         case 8: slot = tex_slot(c, index, TEXTYPE_2D_ARRAY, false, true);
@@ -841,7 +848,7 @@ static bool writes_gpr(uint64_t w) {
         {0x5b60, 0xfff0}, {0x4b60, 0xfff0}, {0x3660, 0xfef0},  // ISETP
         {0x5d20, 0xfff8}, {0x5090, 0xfff8}, {0x50a0, 0xfff8},  // HSETP2, PSETP, CSETP
         {0x38f0, 0xfef8}, {0x5cf0, 0xfff8}, {0x4cf0, 0xfff8},  // R2P
-        {0xeff0, 0xfff8}, {0xeed8, 0xfff8}, {0xef50, 0xfff8}, {0xef58, 0xfff8},  // ST attribute, STG, STL, STS
+        {0xeff0, 0xfff8}, {0xeed8, 0xfff8}, {0xef50, 0xfff8}, {0xef58, 0xfff8}, {0xeb28, 0xfff8},  // ST a[], STG STL STS SUST
         {0xe300, 0xfff0}, {0xe330, 0xfff0}, {0xe240, 0xfff0}, {0xe250, 0xfff0},  // EXIT, KIL, BRA, BRX
         {0xe290, 0xfff0}, {0xe2a0, 0xfff0}, {0xe2b0, 0xfff0}, {0xe340, 0xfff0}, {0xe350, 0xfff0},  // SSY PBK PCNT BRK CONT
         {0xf0f8, 0xfff8}, {0xf0f0, 0xfff8}, {0x50b0, 0xfff8}, {0xef98, 0xfff8}, {0xf0a8, 0xfff8},  // SYNC DEPBAR NOP MEMBAR BAR
@@ -1023,8 +1030,12 @@ static void emit_tmml(Ctx *c, uint64_t w, uint32_t pc, bool bindless) {
                               reg(c, a == RZ ? RZ : a + 1, rr[1]));
     else snprintf(P, sizeof P, "vec3(as_type<float>(%s), as_type<float>(%s), as_type<float>(%s))", reg(c, a, rr[0]),
                   reg(c, a == RZ ? RZ : a + 1, rr[1]), reg(c, a == RZ ? RZ : a + 2, rr[2]));
-    if (c->stage == STAGE_FRAGMENT) sp(&c->body, "    { vec2 lq = textureQueryLod(t%d, %s);\n", slot, P);
-    else sp(&c->body, "    { vec2 lq = vec2(0.0f);\n");
+    if (c->stage == STAGE_FRAGMENT) {
+        c->tex_lod_query |= 1ull << slot;  // (none on a multisampled texture: glsl_finish)
+        sp(&c->body, "    { vec2 lq = textureQueryLod(t%d, %s);\n", slot, P);
+    } else {
+        sp(&c->body, "    { vec2 lq = vec2(0.0f);\n");
+    }
     sp(&c->body, "      uvec4 q = uvec4(uint(int(lq.y * 256.0f)), uint(int(lq.x * 256.0f)), 0u, 0u);\n");
     int k = 0;
     for (int i = 0; i < 4; i++)
@@ -1109,6 +1120,141 @@ static void emit_tex(Ctx *c, uint64_t w, uint32_t pc, bool bindless) {
     else
         sprintf(call, "t%d.sample(s%d, %s(%s)%s%s%s%s)", slot, slot, vec, coords, array ? ", " : "", layer, lod, off);
     write_tex_result(c, slot, call, mask, d, RZ, false, false);
+}
+
+// ------------------------------------------------------------------ surfaces (bound SULD.D / SUST.P / SUATOM)
+// Field layout as Ryujinx's InstDecoders reads it (InstSuldD, InstSust, InstSuatom) and Mesa's GM107 encoders write it
+// (nouveau codegen nv50_ir_emit_gm107.cpp emitSUTarget / emitSUHandle / emitSULDx / emitSUSTx / emitSUREDx, NAK
+// sm50.rs OpSuLd / OpSuSt / OpSuAtom): the handle is texture-cbuf word TidB (bits 36-48), as for textures; the
+// coordinates come from Ra, Ra + 1, ... (registers past RZ read 0), then the array layer; dimension bits 33-35 (1D,
+// 1D buffer, 1D array, 2D, 2D array, 3D); clamp bits 49-50 (0: .IGN, out-of-range accesses dropped). Vulkan GLSL
+// compute shaders only: the renderer binds storage images to dispatches (exec.c).
+static int su_type(int dim) {
+    switch (dim) {
+    case 0: return TEXTYPE_1D;
+    case 2: return TEXTYPE_1D_ARRAY;
+    case 3: return TEXTYPE_2D;
+    case 4: return TEXTYPE_2D_ARRAY;
+    case 5: return TEXTYPE_3D;
+    default: return -1;  // 1: 1D buffer (a storage texel buffer, which nothing binds); 6, 7: invalid
+    }
+}
+
+static bool su_check(Ctx *c, uint64_t w, const char *what, int type) {
+    if (c->stage != STAGE_COMPUTE || !c->glsl) { fail(c, "%s outside a vulkan compute shader", what); return false; }
+    if (type < 0) { fail(c, "%s dimension %d", what, (int)bits(w, 33, 3)); return false; }
+    if (bits(w, 49, 2)) { fail(c, "%s clamp %d", what, (int)bits(w, 49, 2)); return false; }
+    return true;
+}
+
+// The slot of image handle `index` (a texture slot number: binding 32 + slot), declared with format fmt (IMGFMT_*)
+static int img_slot(Ctx *c, uint32_t index, int type, int fmt, bool store) {
+    if (c->tex_slot[index]) {
+        int s = c->tex_slot[index] - 1;
+        ShaderTexture *t = &c->info->tex[s];
+        if (!t->is_image) fail(c, "texture %u used as an image", index);
+        else if (t->type != type || t->image_format != fmt) fail(c, "image %u used as two types", index);
+        else t->image_written |= store;
+        return s;
+    }
+    int s = c->info->ntex++;
+    if (s >= 31) { fail(c, "too many textures"); return 0; }
+    c->tex_slot[index] = s + 1;
+    ShaderTexture *t = &c->info->tex[s];
+    t->handle_offset = index * 4;
+    t->type = (uint8_t)type;
+    t->is_array = type == TEXTYPE_1D_ARRAY || type == TEXTYPE_2D_ARRAY;
+    t->is_image = true;
+    t->image_format = (uint8_t)fmt;
+    t->image_written = store;
+    return s;
+}
+
+// Opens a block with the access's coordinates `sc` (int / ivec2 / ivec3; a byte address x shifted right by `shift`)
+// and `inb`: whether they fall inside image variable `var`.
+static void su_coords(Ctx *c, int a, int type, const char *var, int shift) {
+    int n = type == TEXTYPE_1D ? 1 : type == TEXTYPE_3D || type == TEXTYPE_2D_ARRAY ? 3 : 2;
+    char co[3][40];
+    for (int i = 0; i < n; i++) {
+        char rb[16];
+        const char *r = reg(c, a == RZ || a + i >= RZ ? RZ : a + i, rb);
+        if (i == 0 && shift) snprintf(co[i], sizeof co[i], "(int(%s) >> %d)", r, shift);
+        else snprintf(co[i], sizeof co[i], "int(%s)", r);
+    }
+    if (n == 1) sp(&c->body, "    { int sc = %s; bool inb = uint(sc) < uint(imageSize(%s));\n", co[0], var);
+    else if (n == 2) sp(&c->body, "    { ivec2 sc = ivec2(%s, %s); bool inb = all(lessThan(uvec2(sc), uvec2(imageSize(%s))));\n",
+                        co[0], co[1], var);
+    else sp(&c->body, "    { ivec3 sc = ivec3(%s, %s, %s); bool inb = all(lessThan(uvec3(sc), uvec3(imageSize(%s))));\n", co[0],
+            co[1], co[2], var);
+}
+
+// SULD.D: raw load of 1, 2 or 4 words (or a zero / sign-extended byte or short) into Rd, Rd + 1, ... through a view
+// in the matching integer format. The predicate field at bits 30-32 is not written (Ryujinx and Mesa leave it).
+static void emit_suld(Ctx *c, uint64_t w) {
+    int d = (int)bits(w, 0, 8), a = (int)bits(w, 8, 8), size = (int)bits(w, 20, 3);
+    int type = su_type((int)bits(w, 33, 3));
+    if (!su_check(c, w, "suld", type)) return;
+    if (size == 7) { fail(c, "suld size %d", size); return; }  // .UB128
+    if (d == RZ) return;
+    static const uint8_t fmt[7] = {IMGFMT_R8UI, IMGFMT_R8UI, IMGFMT_R16UI, IMGFMT_R16UI, IMGFMT_R32UI, IMGFMT_RG32UI, IMGFMT_RGBA32UI};
+    static const int log2b[7] = {0, 0, 1, 1, 2, 3, 4};
+    static const char *const narrow[4] = {"v.x", "uint(sx8(v.x))", "v.x", "uint(sx16(v.x))"};
+    int slot = img_slot(c, (uint32_t)bits(w, 36, 13), type, fmt[size], false);
+    if (c->fail) return;
+    char var[16];
+    snprintf(var, sizeof var, "t%d", slot);
+    su_coords(c, a, type, var, bits(w, 23, 1) ? log2b[size] : 0);  // .BA: x in bytes
+    sp(&c->body, "      uvec4 v = inb ? imageLoad(t%d, sc) : uvec4(0u);\n", slot);
+    int n = size < 5 ? 1 : size == 5 ? 2 : 4;
+    for (int k = 0; k < n && d + k < RZ; k++) {
+        c->reg_used[d + k] = 1;
+        if (size < 4) sp(&c->body, "      r%d = %s;\n", d + k, narrow[size]);
+        else sp(&c->body, "      r%d = v[%d];\n", d + k, k);
+    }
+    sp(&c->body, "    }\n");
+}
+
+// SUST.P: formatted store of Rd .. Rd + 3 (the whole RGBA mask only) in the image's own format. The bound view's
+// numeric type is known when it is bound: rscale[1 + slot].z picks the variable (shader.h).
+static void emit_sust(Ctx *c, uint64_t w) {
+    int d = (int)bits(w, 0, 8), a = (int)bits(w, 8, 8), mask = (int)bits(w, 20, 4);
+    int type = su_type((int)bits(w, 33, 3));
+    if (!su_check(c, w, "sust", type)) return;
+    if (mask != 0xF) { fail(c, "sust component mask %#x", mask); return; }
+    int slot = img_slot(c, (uint32_t)bits(w, 36, 13), type, IMGFMT_TYPED, true);
+    if (c->fail) return;
+    c->uses_rscale = true;
+    char var[16], rd[4][16];
+    snprintf(var, sizeof var, "t%df", slot);
+    su_coords(c, a, type, var, 0);
+    const char *D[4];
+    for (int k = 0; k < 4; k++) D[k] = reg(c, d == RZ || d + k >= RZ ? RZ : d + k, rd[k]);
+    sp(&c->body, "      if (inb) { uvec4 v = uvec4(%s, %s, %s, %s); float k = rscale[%d].z;\n", D[0], D[1], D[2], D[3], slot + 1);
+    sp(&c->body, "        if (k == 1.0f) imageStore(t%du, sc, v); else if (k == 2.0f) imageStore(t%di, sc, ivec4(v));"
+                 " else imageStore(t%df, sc, uintBitsToFloat(v)); }\n    }\n", slot, slot, slot);
+}
+
+// SUATOM: 32-bit integer atomic (size .U32 / .S32 at bits 51-53, operation bits 29-32) with Rb on an R32_UINT /
+// R32_SINT view; the old value to Rd. .INC / .DEC (wrapping at Rb) have no image atomic.
+static void emit_suatom(Ctx *c, uint64_t w) {
+    int d = (int)bits(w, 0, 8), a = (int)bits(w, 8, 8), b = (int)bits(w, 20, 8);
+    int size = (int)bits(w, 51, 3), op = (int)bits(w, 29, 4);
+    int type = su_type((int)bits(w, 33, 3));
+    static const char *const fn[9] = {"imageAtomicAdd", "imageAtomicMin", "imageAtomicMax", NULL, NULL,
+                                      "imageAtomicAnd", "imageAtomicOr", "imageAtomicXor", "imageAtomicExchange"};
+    if (!su_check(c, w, "suatom", type)) return;
+    if (size > 1) { fail(c, "suatom size %d", size); return; }
+    if (op > 8 || !fn[op]) { fail(c, "suatom op %d", op); return; }
+    int slot = img_slot(c, (uint32_t)bits(w, 36, 13), type, size ? IMGFMT_R32I : IMGFMT_R32UI, true);
+    if (c->fail) return;
+    char var[16], rb[16];
+    snprintf(var, sizeof var, "t%d", slot);
+    su_coords(c, a, type, var, bits(w, 28, 1) ? 2 : 0);  // .BA: x in bytes
+    const char *B = reg(c, b, rb);
+    if (size) sp(&c->body, "      uint v = 0u; if (inb) v = uint(%s(t%d, sc, int(%s)));\n", fn[op], slot, B);
+    else sp(&c->body, "      uint v = 0u; if (inb) v = %s(t%d, sc, %s);\n", fn[op], slot, B);
+    if (d != RZ) { c->reg_used[d] = 1; sp(&c->body, "      r%d = v;\n", d); }
+    sp(&c->body, "    }\n");
 }
 
 // ------------------------------------------------------------------ instruction translation
@@ -1240,10 +1386,11 @@ static void emit_insn(Ctx *c, uint64_t w, uint32_t pc) {
         int qt = (int)bits(w, 22, 6);
         uint32_t mask = (uint32_t)bits(w, 31, 4);
         int slot = tex_slot(c, index, -1, false, false);  // the type comes from a sample, if any
-        if (qt == 1 && c->glsl) {  // tsize<slot>() is emitted with the slot's final type
+        if (qt == 1 && c->glsl) {  // tsize<slot>() / tlevels<slot>() are emitted with the slot's final type
             c->uses_rscale = true;
+            c->tex_levels_query |= 1ull << slot;
             sp(&c->body, "    { uint lv = %s; uvec4 q = uvec4(uint(floor(float(tsize%d(int(lv)).x) / rscale[%d].x + 0.5f)), "
-               "uint(floor(float(tsize%d(int(lv)).y) / rscale[%d].y + 0.5f)), 1u, uint(textureQueryLevels(t%d)));\n",
+               "uint(floor(float(tsize%d(int(lv)).y) / rscale[%d].y + 0.5f)), 1u, uint(tlevels%d()));\n",
                R(a), slot, slot + 1, slot, slot + 1, slot);
             int n = 0;
             for (int i = 0; i < 4; i++)
@@ -1932,6 +2079,12 @@ static void emit_insn(Ctx *c, uint64_t w, uint32_t pc) {
         if (!c->glsl) sp(&c->body, "    threadgroup_barrier(mem_flags::mem_threadgroup);\n");
         else if (c->stage == STAGE_COMPUTE) sp(&c->body, "    barrier();\n");
         else sp(&c->body, "    /* bar */\n");  // GLSL barrier() is compute / tessellation only
+    } else if (OPM(0xeb18000000000000ull, 0xfff8000000000000ull)) {  // SULD.D (bound handle)
+        emit_suld(c, w);
+    } else if (OPM(0xeb28000000000000ull, 0xfff8000000000000ull)) {  // SUST.P (bound handle)
+        emit_sust(c, w);
+    } else if (OPM(0xea00000000000000ull, 0xffc0000000000000ull)) {  // SUATOM (bound handle, not .CAS)
+        emit_suatom(c, w);
     } else {
         fail(c, "unknown instruction %016llx at %#x", (unsigned long long)w, pc);
     }
@@ -2140,8 +2293,24 @@ static const char *glsl_sampler_type(const ShaderTexture *t) {
         {"sampler1D", "sampler1DShadow"}, {"sampler2D", "sampler2DShadow"}, {"sampler3D", "sampler3D"},
         {"samplerCube", "samplerCubeShadow"}, {"sampler2DArray", "sampler2DArrayShadow"},
         {"samplerCubeArray", "samplerCubeArrayShadow"}, {"sampler1DArray", "sampler1DArrayShadow"}};
+    if (t->type == TEXTYPE_2D_MS) return "sampler2DMS";
     int ty = t->type <= TEXTYPE_1D_ARRAY ? t->type : TEXTYPE_2D;
     return names[ty][t->shadow ? 1 : 0];
+}
+
+// A storage image slot (tex[i].is_image): the variables the GLSL contract in shader.h names
+static void glsl_image_decl(Str *s, int set, int i, const ShaderTexture *t) {
+    const char *dim = t->type == TEXTYPE_1D ? "1D" : t->type == TEXTYPE_1D_ARRAY ? "1DArray" : t->type == TEXTYPE_2D_ARRAY ? "2DArray"
+                    : t->type == TEXTYPE_3D ? "3D" : "2D";
+    if (t->image_format == IMGFMT_TYPED) {
+        static const char *const kinds[3][2] = {{"", "f"}, {"u", "u"}, {"i", "i"}};
+        for (int k = 0; k < 3; k++)
+            sp(s, "layout(set = %d, binding = %d) writeonly uniform %simage%s t%d%s;\n", set, 32 + i, kinds[k][0], dim, i, kinds[k][1]);
+        return;
+    }
+    static const char *const fmt[] = {"", "r8ui", "r16ui", "r32ui", "rg32ui", "rgba32ui", "r32i"};
+    sp(s, "layout(set = %d, binding = %d, %s) uniform %simage%s t%d;\n", set, 32 + i, fmt[t->image_format],
+       t->image_format == IMGFMT_R32I ? "i" : "u", dim, i);
 }
 
 // Declarations + entry point around the (rewritten) body; mirrors the MSL assembly in maxwell_translate.
@@ -2153,8 +2322,10 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
     glsl_rewrite(c, &body, c->body.buf ? c->body.buf : "");
     if (info->uses_gmem && (info->cbuf_mask & (1u << GMEM_BUFFER_INDEX))) fail(c, "cbuf %d clashes with gmem", GMEM_BUFFER_INDEX);
     if (info->cbuf_mask >> 18) fail(c, "cbuf index out of range");
-    for (int i = 0; i < info->ntex; i++)
+    for (int i = 0; i < info->ntex; i++) {
         if (info->tex[i].shadow && info->tex[i].type == TEXTYPE_3D) fail(c, "3d shadow texture");
+        if (info->tex[i].type == TEXTYPE_2D_MS && ((c->tex_lod_query >> i) & 1)) fail(c, "lod query on a multisampled texture");
+    }
     if (c->fail) { free(body.buf); free(c->body.buf); free(c); return info; }
     int set = stage == STAGE_FRAGMENT ? 1 : 0;
     Str s = {0};  // (the prelude goes in front at the end: glsl_with_prelude)
@@ -2181,6 +2352,7 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
     }
     for (int i = 0; i < info->ntex; i++) {
         ShaderTexture *t = &info->tex[i];
+        if (t->is_image) { glsl_image_decl(&s, set, i, t); continue; }
         sp(&s, "layout(set = %d, binding = %d) uniform %s t%d;\n", set, 32 + i, glsl_sampler_type(t), i);
         // size of level l as (width, height, depth or layers)
         switch (t->type) {
@@ -2188,8 +2360,11 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
         case TEXTYPE_1D_ARRAY: sp(&s, "ivec3 tsize%d(int l) { ivec2 s = textureSize(t%d, l); return ivec3(s.x, 1, s.y); }\n", i, i); break;
         case TEXTYPE_3D: case TEXTYPE_2D_ARRAY: case TEXTYPE_CUBE_ARRAY:
             sp(&s, "ivec3 tsize%d(int l) { return textureSize(t%d, l); }\n", i, i); break;
+        case TEXTYPE_2D_MS: sp(&s, "ivec3 tsize%d(int l) { return ivec3(textureSize(t%d), 1); }\n", i, i); break;  // (one level)
         default: sp(&s, "ivec3 tsize%d(int l) { return ivec3(textureSize(t%d, l), 1); }\n", i, i);
         }
+        if (((c->tex_levels_query >> i) & 1) && t->type == TEXTYPE_2D_MS) sp(&s, "int tlevels%d() { return 1; }\n", i);
+        else if ((c->tex_levels_query >> i) & 1) sp(&s, "int tlevels%d() { return textureQueryLevels(t%d); }\n", i, i);
     }
     if (stage == STAGE_VERTEX) {
         for (int i = 0; i < 32; i++) {

@@ -45,11 +45,12 @@ typedef struct {
 // what names a shader binary in the shader key log (vulkan/shaders.c) and here. bin_size (may be NULL): that size.
 uint64_t shader_code_hash(const uint8_t *code, size_t max_size, int stage, uint32_t *bin_size);
 
-// Reads every shader archive of the RomFS folder romfs (extracted/romfs) into set, and the executable's shader files
-// (exefs/main next to it, when there). progress (may be NULL): part done, 0..1.
-// false: the image could not be read (why).
-bool shader_archive_scan(const char *romfs, SaSet *set, void (*progress)(float done, void *user), void *user,
-                         char *why, size_t why_size);
+// Reads every shader archive of the game's RomFS image (runtime/romfs_image.h: the extracted folder or the packages)
+// into set, and the executable's shader files (exefs_main: its path for loader_read_file, when there). progress (may
+// be NULL): part done, 0..1. false: the image's tables could not be read (why).
+typedef struct RomfsImage RomfsImage;
+bool shader_archive_scan(RomfsImage *img, const char *exefs_main, SaSet *set, void (*progress)(float done, void *user),
+                         void *user, char *why, size_t why_size);
 int shader_archive_find(const SaSet *set, uint64_t hash);  // index in set->shaders, -1: not there
 void shader_archive_free(SaSet *set);
 

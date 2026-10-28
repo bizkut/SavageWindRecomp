@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 
 #include "../../paths.h"
+#include "cache_pack.h"
 #include "shaders.h"
 #ifdef __PROSPERO__
 #include "../../storage_ps5.h"
@@ -33,7 +34,7 @@ static shaderc_shader_kind kind_of(int stage) {
 // GLSL compile (the driver's pipeline cache only covers the step after this one). <id>: this file's (vk_cache_dir_id):
 // another build's folder is removed (vk_cache_cleanup). A file: "SPZ1", the SPIR-V's word count, the SPIR-V
 // deflated (zlib; a third to a quarter of the size: the precompiled shaders of the whole game take ~0.4 GB instead
-// of 1.4).
+// of 1.4). The precompilation's are entries of the folder's pack instead (cache_pack.c), the same bytes.
 static uint64_t src_hash(const char *src, int stage) {
     uint64_t h = 0xcbf29ce484222325ull ^ (uint64_t)stage;
     for (const char *p = vk_spirv_id(); *p; p++) { h ^= (uint8_t)*p; h *= 0x100000001B3ull; }
@@ -48,18 +49,23 @@ static void spirv_path(char *path, size_t n, uint64_t h) {
 }
 
 static uint32_t *cache_load(uint64_t h, size_t *nwords) {
-    char path[512];
-    spirv_path(path, sizeof path, h);
-    FILE *f = rt_data_fopen(path, "rb");
-    if (!f) return NULL;
-    fseek(f, 0, SEEK_END);
-    long n = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    uint8_t *z = n > 8 && n < (64l << 20) ? malloc((size_t)n) : NULL;
-    if (z && fread(z, 1, (size_t)n, f) != (size_t)n) { free(z); z = NULL; }
-    fclose(f);
+    uint8_t *z = NULL;
+    size_t n = 0;
+    if (!cache_pack_read(PACK_SPIRV, h, &z, &n)) {
+        char path[512];
+        spirv_path(path, sizeof path, h);
+        FILE *f = rt_data_fopen(path, "rb");
+        if (!f) return NULL;
+        fseek(f, 0, SEEK_END);
+        long len = ftell(f);
+        fseek(f, 0, SEEK_SET);
+        z = len > 8 && len < (64l << 20) ? malloc((size_t)len) : NULL;
+        if (z && fread(z, 1, (size_t)len, f) != (size_t)len) { free(z); z = NULL; }
+        fclose(f);
+        n = z ? (size_t)len : 0;
+    }
     uint32_t *d = NULL, words = 0;
-    if (z && !memcmp(z, "SPZ1", 4)) {
+    if (z && n > 8 && !memcmp(z, "SPZ1", 4)) {
         memcpy(&words, z + 4, 4);
         uLongf len = (uLongf)words * 4;
         d = words && words < (16u << 20) ? malloc(len) : NULL;
@@ -74,6 +80,17 @@ static uint32_t *cache_load(uint64_t h, size_t *nwords) {
 }
 
 static void cache_store(uint64_t h, const uint32_t *spv, size_t nwords) {
+    uLongf zn = compressBound((uLong)(nwords * 4));
+    uint8_t *z = malloc(8 + zn);
+    if (!z) return;
+    memcpy(z, "SPZ1", 4);
+    uint32_t w = (uint32_t)nwords;
+    memcpy(z + 4, &w, 4);
+    bool ok = compress2(z + 8, &zn, (const Bytef *)spv, (uLong)(nwords * 4), 1) == Z_OK;  // (fast: stores happen at draws too)
+    if (!ok || cache_pack_add(PACK_SPIRV, h, z, 8 + zn)) {
+        free(z);
+        return;
+    }
     static int made;
     char path[512], tmp[540], name[96];
     if (!made) {
@@ -85,19 +102,13 @@ static void cache_store(uint64_t h, const uint32_t *spv, size_t nwords) {
         mkdir(path, 0755);
     }
     spirv_path(path, sizeof path, h);
-    snprintf(tmp, sizeof tmp, "%s.%llx", path, (unsigned long long)(uintptr_t)&made ^ (unsigned long long)(uintptr_t)spv);
-    uLongf zn = compressBound((uLong)(nwords * 4));
-    uint8_t *z = malloc(8 + zn);
-    if (!z) return;
-    memcpy(z, "SPZ1", 4);
-    uint32_t w = (uint32_t)nwords;
-    memcpy(z + 4, &w, 4);
-    bool ok = compress2(z + 8, &zn, (const Bytef *)spv, (uLong)(nwords * 4), 1) == Z_OK;  // (fast: stores happen at draws too)
 #ifdef __PROSPERO__
-    if (ok) rt_storage_replace(path, z, 8 + zn);
+    (void)tmp;
+    rt_storage_replace(path, z, 8 + zn);
     free(z);
 #else
-    FILE *f = ok ? fopen(tmp, "wb") : NULL;
+    snprintf(tmp, sizeof tmp, "%s.%llx", path, (unsigned long long)(uintptr_t)&made ^ (unsigned long long)(uintptr_t)spv);
+    FILE *f = fopen(tmp, "wb");
     ok = f && fwrite(z, 1, 8 + zn, f) == 8 + zn;
     if (f && fclose(f)) ok = false;
     free(z);
@@ -166,10 +177,12 @@ static uint32_t *no_contraction(uint32_t *spv, size_t *nwords) {
 // driver optimises anyway. SAVAGEWIND_VK_OPT=1 turns it back on (experiments).
 // The SPIR-V of src in the disk cache (compiled now if missing): 0 it was there, 1 compiled, -1 failed.
 int vk_spirv_ensure(const char *src, int stage) {
+    uint64_t h = src_hash(src, stage);
     char path[512];
-    spirv_path(path, sizeof path, src_hash(src, stage));
+    spirv_path(path, sizeof path, h);
     struct stat st;
-    if (!getenv("SAVAGEWIND_VK_NO_SPIRV_CACHE") && !rt_data_stat(path, &st) && st.st_size > 20) return 0;
+    if (!getenv("SAVAGEWIND_VK_NO_SPIRV_CACHE") && (cache_pack_has(PACK_SPIRV, h) || (!rt_data_stat(path, &st) && st.st_size > 20)))
+        return 0;
     size_t n = 0;
     uint32_t *spv = vk_glsl_to_spirv(src, stage, "precompile", &n);
     free(spv);

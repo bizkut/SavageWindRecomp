@@ -54,6 +54,12 @@ static inline int plat_guest_thread_create(pthread_t *thread, void *(*entry)(voi
 uint64_t plat_now_ns(void);                // monotonic
 void plat_sleep_until_ns(uint64_t t);      // precise wait for plat_now_ns() >= t
 void plat_thread_realtime(uint64_t period_ns);  // periodic timing thread (vsync): don't coalesce its timers
+// The calling thread's CPU time (user + system), ns; 0 where the OS gives none. Only the thread's own: the PS5's
+// pthread_getcpuclockid hands every thread the same "calling thread" clock (ps5/evidence/m6/measure1.klog).
+uint64_t plat_thread_cpu_ns(void);
+// The calling thread allocates from a heap arena of its own from now on (the PS5 title heap: runtime/ps5/heap_arenas.c,
+// for threads that allocate heavily at the same time); nothing elsewhere (the system allocators have their own).
+void plat_thread_heap_own(void);
 
 // ---- process
 void plat_init(void);                                // first thing in main()

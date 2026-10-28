@@ -41,12 +41,14 @@ export PS5_RADV_ARCHIVE="$radv/libvulkan_radeon.ps5.a"
 export PS5_CFLAGS="-fexceptions -Iruntime -Iruntime/nvn -Iruntime/ps5/include -Ithird_party -I$radv/include \
 -I$shaderc/include -isystem third_party/stb -I$gen/inc -Ithird_party/smaa/Textures -I$zlib -isystem ${ffmpeg[0]}/include \
 -DROMFS_PACKAGE -DTRANSLATOR_ID=\"$translator_id\" -DSPIRV_ID=\"$spirv_id\" -march=x86-64-v3 -Wno-format"
-export PS5_LINK_INPUTS="--gc-sections --wrap=exit --wrap=_exit --wrap=_Exit --wrap=quick_exit --wrap=abort --wrap=sceSystemServiceLoadExec --start-group $game $package/libsavagewind-package.a $ns/libpietendo/bin/linux/libpietendo.a $ns/libtoolchain/bin/linux/libtoolchain.a $ns/libfmt/bin/linux/libfmt.a $ns/liblz4/bin/linux/liblz4.a $ns/libmbedtls/bin/linux/libmbedtls.a $shaderc/lib/libshaderc_combined.a ${ffmpeg[*]:1} --end-group"
+# (--wrap=ps5_heap_*: the SDK's malloc wrappers go through runtime/ps5/heap_arenas.c, arenas of their own per thread)
+export PS5_LINK_INPUTS="--gc-sections --wrap=exit --wrap=_exit --wrap=_Exit --wrap=quick_exit --wrap=abort --wrap=sceSystemServiceLoadExec --wrap=ps5_heap_malloc --wrap=ps5_heap_calloc --wrap=ps5_heap_memalign --wrap=ps5_heap_free --start-group $game $package/libsavagewind-package.a $ns/libpietendo/bin/linux/libpietendo.a $ns/libtoolchain/bin/linux/libtoolchain.a $ns/libfmt/bin/linux/libfmt.a $ns/liblz4/bin/linux/liblz4.a $ns/libmbedtls/bin/linux/libmbedtls.a $shaderc/lib/libshaderc_combined.a ${ffmpeg[*]:1} --end-group"
 app=$(bash ps5/tools/build-title.sh game \
     runtime/platform/main_ps5.c runtime/platform/ps5.c runtime/platform/gamelib_ps5.c \
     runtime/platform/exefs_ps5.c runtime/ps5/sdl_shim.c runtime/ps5/log.c runtime/ps5/unavailable.c runtime/ps5/diagnostics.cpp \
-    runtime/ps5/window.c runtime/ps5/input.c runtime/ps5/audio.c runtime/ps5/libc_aliases.S build/ps5/game-gen/vk_globals.c \
-    runtime/dispatch.c runtime/fnprof.c runtime/ipc.c runtime/kernel.c runtime/loader.c runtime/imageload.c \
+    runtime/ps5/window.c runtime/ps5/input.c runtime/ps5/audio.c runtime/ps5/heap_arenas.c runtime/ps5/libc_aliases.S \
+    build/ps5/game-gen/vk_globals.c \
+    runtime/benchmark.c runtime/dispatch.c runtime/fnprof.c runtime/frametime.c runtime/ipc.c runtime/kernel.c runtime/loader.c runtime/imageload.c \
     runtime/platform/paths_ps5.c runtime/settings.c runtime/language.c runtime/storage_ps5.c \
     runtime/romfs_build.c runtime/romfs_image.c ps5/storagebroker/client.c \
     runtime/hle/heaps.c runtime/hle/setjmp.c runtime/hle/pl.c runtime/hle/yaz0.c runtime/hle/vibration.c runtime/hle/vi.c \
@@ -55,8 +57,8 @@ app=$(bash ps5/tools/build-title.sh game \
     runtime/ui/game_options.mm runtime/ui/i18n.mm runtime/ps5/video_page.cpp runtime/nvn/glyphs.c \
     runtime/nvn/astc.c runtime/nvn/cmdbuf.c runtime/nvn/formats.c runtime/nvn/objects.c runtime/nvn/output_scale.c \
     runtime/nvn/shader_archive.c runtime/nvn/smaa_data.c runtime/nvn/tegra.c runtime/nvn/maxwell/translate.c \
-    runtime/nvn/vulkan/device.c runtime/nvn/vulkan/exec.c runtime/nvn/vulkan/textures.c runtime/nvn/vulkan/shaders.c \
-    runtime/nvn/vulkan/spirv.c runtime/nvn/vulkan/precompile.c runtime/nvn/vulkan/vma.cpp \
+    runtime/nvn/vulkan/cache_pack.c runtime/nvn/vulkan/device.c runtime/nvn/vulkan/exec.c runtime/nvn/vulkan/textures.c \
+    runtime/nvn/vulkan/shaders.c runtime/nvn/vulkan/spirv.c runtime/nvn/vulkan/precompile.c runtime/nvn/vulkan/vma.cpp \
     runtime/services/acc.c runtime/services/am.c runtime/services/audio.c runtime/services/fs.c runtime/services/hid_set.c \
     runtime/services/misc.c runtime/services/time.c runtime/services/test_warp.c | tee /dev/stderr | tail -n 1)
 # The button prompts' label font (runtime/nvn/glyphs.c: rt_resource, /app0), with its licence

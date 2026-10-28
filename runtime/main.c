@@ -201,11 +201,16 @@ static void boot(const char *root) {
 // --scan-shaders: what runtime/nvn/shader_archive.c finds in the game's RomFS image (a check of the enumeration the
 // shader precompilation uses).
 static int scan_shaders(const char *root) {
-    char image[1100], why[256] = "";
+    char image[1100], exefs[1100], why[256] = "";
     snprintf(image, sizeof image, "%s/romfs", root);
+    snprintf(exefs, sizeof exefs, "%s/exefs/main", root);
     SaSet set;
     uint64_t t0 = plat_now_ns();
-    if (!shader_archive_scan(image, &set, NULL, NULL, why, sizeof why)) { fprintf(stderr, "[shaders] %s\n", why); return 1; }
+    RomfsImage *img = romfs_image_open(image, why, sizeof why);
+    if (!img) { fprintf(stderr, "[shaders] cannot read %s: %s\n", image, why); return 1; }
+    bool scanned = shader_archive_scan(img, exefs, &set, NULL, NULL, why, sizeof why);
+    romfs_image_close(img);
+    if (!scanned) { fprintf(stderr, "[shaders] %s: %s\n", image, why); return 1; }
     int n[6] = {0}, prog[3] = {0};
     for (int i = 0; i < set.nshaders; i++) n[set.shaders[i].stage]++;
     for (int i = 0; i < set.nprograms; i++) prog[set.programs[i].cs >= 0 ? 2 : 0]++;
@@ -269,13 +274,17 @@ static void *precompile_progress(void *arg) {
 static int precompile_shaders(const char *root) {
     extern void ui_window_init(void);  // (the Vulkan device, for the pipelines; SAVAGEWIND_HIDDEN keeps the window hidden)
     if (!getenv("SAVAGEWIND_PRECOMPILE_NO_PIPELINES")) ui_window_init();
-    char image[1100];
+    char image[1100], exefs[1100];
     snprintf(image, sizeof image, "%s/romfs", root);
+    snprintf(exefs, sizeof exefs, "%s/exefs/main", root);
     static ShaderPrecompile p;
+    RomfsImage *img = romfs_image_open(image, p.why, sizeof p.why);
+    if (!img) { fprintf(stderr, "[precompile] cannot read %s: %s\n", image, p.why); return 1; }
     pthread_t t;
     pthread_create(&t, NULL, precompile_progress, &p);
-    bool ok = shader_precompile_run(&p, image);
+    bool ok = shader_precompile_run(&p, img, exefs);
     pthread_join(t, NULL);
+    romfs_image_close(img);
     fprintf(stderr, "\n[precompile] %s: %d shaders, %d translations (%d made, %d cached, %d failed) in %.1f s%s%s\n",
             ok ? "done" : "stopped", p.shaders, p.keys, p.made, p.cached, p.failed, p.seconds, ok ? "" : ": ", ok ? "" : p.why);
     return ok ? 0 : 1;

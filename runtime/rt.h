@@ -105,3 +105,6 @@ bool fs_aoc_present(int index);
 // that reads game files the game itself names, where no host file has them (the PS5 reads the user's packages)
 bool fs_romfs_file(const char *path, int *image, uint64_t *off, uint64_t *size);
 ssize_t fs_romfs_pread(int image, void *dst, uint64_t n, uint64_t off);
+// The game's RomFS image, opened as the game's first read opens it (runtime/romfs_image.h); NULL when it can't be read
+typedef struct RomfsImage RomfsImage;
+RomfsImage *fs_game_romfs(void);

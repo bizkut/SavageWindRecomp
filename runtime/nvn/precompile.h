@@ -15,6 +15,8 @@ enum { SP_IDLE, SP_READING, SP_COMPILING, SP_PIPELINES, SP_DONE, SP_FAILED, SP_C
 typedef struct {
     _Atomic int state;        // SP_*
     _Atomic int done, total;  // the current step's progress
+    _Atomic long long work_done, work_total;  // the pipeline libraries' progress by their cost (the bar)
+    int threads;              // worker threads
     _Atomic bool cancel;      // set to stop (the caches keep what is done)
     // the result
     int shaders, keys, made, cached, failed, pipelines;
@@ -22,10 +24,16 @@ typedef struct {
     char why[256];            // SP_FAILED: what went wrong
 } ShaderPrecompile;
 
-// Runs it on the calling thread (with worker threads of its own); romfs: extracted/romfs. Pipelines only
-// when the Vulkan device is up (the start screen's window).
-bool shader_precompile_run(ShaderPrecompile *p, const char *romfs);
+// Runs it on the calling thread (with worker threads of its own) over the game's RomFS image (runtime/romfs_image.h)
+// and its executable (exefs_main, for loader_read_file; may be NULL). Pipelines only when the Vulkan device is up (the
+// start screen's window; the PS5 title's display plane).
+typedef struct RomfsImage RomfsImage;
+bool shader_precompile_run(ShaderPrecompile *p, RomfsImage *img, const char *exefs_main);
 float shader_precompile_progress(const ShaderPrecompile *p);  // 0..1 over the whole run
+// While it runs (another thread, every few seconds): one log line of where the workers' time went since the last call
+// (seconds ago): their work and its thread CPU, reading, waiting for the memory budget, the cores their items
+// finished on; then extra (may be NULL). Once: the workers' affinity masks.
+void shader_precompile_log_window(const ShaderPrecompile *p, double seconds, const char *extra);
 // The last run's record (cache/precompiled.txt): 0 never run, 1 done for these shaders, 2 done for an older
 // translator (run again after an update). shaders, date (may be NULL): how many, when (YYYY-MM-DD).
 int shader_precompile_status(int *shaders, char *date, int n);

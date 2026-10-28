@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "../../frametime.h"
 #include "../../kernel.h"
 #include "../../paths.h"
 #include "shaders.h"
@@ -24,6 +25,7 @@
 #include "../../storage_ps5.h"
 #include <errno.h>
 #endif
+uint64_t renderer_present_count(void);
 
 static uint64_t stat_build_waits;  // draws that waited for their pipeline (draw_must_happen)
 static uint64_t stat_draws, stat_skipped, stat_passes, stat_dispatches, stat_wait_ns, stat_flushes, stat_feedback_copies;
@@ -46,10 +48,10 @@ static uint64_t stat_sets, stat_sets_reused;  // descriptor sets asked for / sha
 // sets = descriptor sets incl. cbuf copies, vtx = index scan + vertex copies, submit = vkQueueSubmit2)
 static int prof = -1;
 static uint64_t prof_exec, prof_draw, prof_sets, prof_vtx, prof_submit, prof_pre, prof_key, prof_dyn, prof_tex, prof_up, prof_gpu;
-static VkQueryPool prof_qp;
-static uint64_t cum_exec, cum_wait, cum_draws, cum_submits;  // (profiling) never reset: hitch log
-static uint64_t cum_xwait;  // (profiling) the part of cum_wait spent inside backend_execute
-static __thread bool in_execute;  // (this thread is in backend_execute)
+// GPU time of every submission (runtime/frametime.c): timestamps at the start of its upload and main command buffers
+// and at its end, three per submission slot
+static VkQueryPool gpu_qp;
+static uint64_t cum_draws;  // never reset (vk_pso_wait_needed)
 static uint32_t prof_end_line[4096];  // passes ended, by the exec.c line that ended them (0: submit / present)
 uint64_t prof_views_created;  // textures.c vk_image_view cache misses
 uint64_t prof_up_ns = ~0ull;  // textures.c upload checks (~0: profiling off)
@@ -109,8 +111,8 @@ void vk_collect_dead(void);
 #define SUBS 32  // (several a frame: long command lists go to the GPU in pieces, see begin_pass)
 typedef struct {
     VkCommandBuffer main, upload;
-    bool main_begun, upload_begun, ts;  // ts: GPU timestamps written (profiling)
-    uint64_t seq;
+    bool main_begun, upload_begun, ts, ts_upload;  // ts / ts_upload: GPU timestamps written (main / upload buffer)
+    uint64_t seq, frame;  // frame: the presented-frame count when it was recorded (its GPU time goes to that frame)
     VkDescriptorPool pools[64];  // (BOTW 1.8.2 records thousands of draws into one submission)
     int npools, cur_pool;
 } Sub;
@@ -154,9 +156,9 @@ void vk_wait_seq(uint64_t seq) {
                               .pValues = &seq};
     uint64_t t0 = SDL_GetTicksNS();
     VkResult r = vkWaitSemaphores(g_vk.dev, &wi, 10ull * 1000000000ull);
-    stat_wait_ns += SDL_GetTicksNS() - t0;
-    cum_wait += SDL_GetTicksNS() - t0;
-    if (in_execute) cum_xwait += SDL_GetTicksNS() - t0;
+    uint64_t waited = SDL_GetTicksNS() - t0;
+    stat_wait_ns += waited;
+    if (!kernel_current_thread()) ft_add(FT_GPU_WAIT_NS, waited);  // (the render thread's; a guest thread's is its own)
     if (r == VK_TIMEOUT) LOG("[vk] GPU did not finish submission %llu within 10 s (device lost?)\n", (unsigned long long)seq);
     else if (r != VK_SUCCESS) {
         extern void vk_devlost_dump(void);
@@ -173,11 +175,15 @@ static Sub *sub(void) {
     Sub *s = &subs[cur_sub];
     if (s->seq != submit_seq + 1) {  // slot reused: its previous submission must be done
         vk_wait_seq(s->seq);
-        if (s->ts) {  // (profiling) GPU time of that submission
-            uint64_t t[2];
-            if (vkGetQueryPoolResults(g_vk.dev, prof_qp, (uint32_t)cur_sub * 2, 2, sizeof t, t, 8, VK_QUERY_RESULT_64_BIT) == VK_SUCCESS && t[1] > t[0])
-                prof_gpu += (uint64_t)((double)(t[1] - t[0]) * g_vk.props.limits.timestampPeriod);
-            s->ts = false;
+        if (s->ts) {  // GPU time of that submission: from its first command buffer's start to its end
+            uint64_t t[3];
+            if (vkGetQueryPoolResults(g_vk.dev, gpu_qp, (uint32_t)cur_sub * 3, 3, sizeof t, t, 8, VK_QUERY_RESULT_64_BIT) == VK_SUCCESS) {
+                uint64_t start = s->ts_upload && t[2] < t[0] ? t[2] : t[0];
+                uint64_t ns = t[1] > start ? (uint64_t)((double)(t[1] - start) * g_vk.props.limits.timestampPeriod) : 0;
+                if (prof) prof_gpu += ns;
+                ft_gpu(s->frame, ns);
+            }
+            s->ts = s->ts_upload = false;
         }
         for (int i = 0; i < s->npools; i++) vkResetDescriptorPool(g_vk.dev, s->pools[i], 0);
         s->cur_pool = 0;
@@ -206,9 +212,10 @@ VkCommandBuffer vk_cmd(void) {
         begin_cb(&s->main, &s->main_begun);
         dyn_epoch++;
         gp_mark(s->main, "(submission start; includes GPU idle before it)");
-        if (prof && prof_qp) {
-            vkCmdResetQueryPool(s->main, prof_qp, (uint32_t)cur_sub * 2, 2);
-            vkCmdWriteTimestamp2(s->main, VK_PIPELINE_STAGE_2_NONE, prof_qp, (uint32_t)cur_sub * 2);
+        s->frame = renderer_present_count();
+        if (gpu_qp) {
+            vkCmdResetQueryPool(s->main, gpu_qp, (uint32_t)cur_sub * 3, 2);
+            vkCmdWriteTimestamp2(s->main, VK_PIPELINE_STAGE_2_NONE, gpu_qp, (uint32_t)cur_sub * 3);
             s->ts = true;
         }
     }
@@ -217,10 +224,16 @@ VkCommandBuffer vk_cmd(void) {
 
 VkCommandBuffer vk_upload_cmd(void) {
     Sub *s = sub();
-    begin_cb(&s->upload, &s->upload_begun);
+    if (!s->upload_begun) {
+        begin_cb(&s->upload, &s->upload_begun);
+        if (gpu_qp) {
+            vkCmdResetQueryPool(s->upload, gpu_qp, (uint32_t)cur_sub * 3 + 2, 1);
+            vkCmdWriteTimestamp2(s->upload, VK_PIPELINE_STAGE_2_NONE, gpu_qp, (uint32_t)cur_sub * 3 + 2);
+            s->ts_upload = true;
+        }
+    }
     return s->upload;
 }
-
 void vk_full_barrier(VkCommandBuffer cb) {
     VkMemoryBarrier2 mb = {.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2, .srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
                            .srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT, .dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
@@ -304,7 +317,7 @@ void vk_submit_extra(VkSemaphore wait, VkSemaphore signal, VkCommandBuffer extra
         cbs[n++] = (VkCommandBufferSubmitInfo){.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO, .commandBuffer = s->upload};
     }
     vk_cmd();  // (an empty main buffer still carries the semaphores)
-    if (s->ts) vkCmdWriteTimestamp2(s->main, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, prof_qp, (uint32_t)cur_sub * 2 + 1);
+    if (s->ts) vkCmdWriteTimestamp2(s->main, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, gpu_qp, (uint32_t)cur_sub * 3 + 1);
     VK_CHECK(vkEndCommandBuffer(s->main));
     cbs[n++] = (VkCommandBufferSubmitInfo){.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO, .commandBuffer = s->main};
     VkSemaphoreSubmitInfo sig[2] = {{.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, .semaphore = g_vk.timeline,
@@ -329,7 +342,6 @@ void vk_submit_extra(VkSemaphore wait, VkSemaphore signal, VkCommandBuffer extra
     pthread_mutex_unlock(&seq_lock);
     cur_sub = (cur_sub + 1) % SUBS;
     stat_flushes++;
-    cum_submits++;
     chunk_draws = 0;
     chunk_hold = false;
     ring_retire();
@@ -435,9 +447,9 @@ VkDescriptorSet vk_alloc_set(VkDescriptorSetLayout layout) {
             VkDescriptorPoolSize sizes[] = {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 32768}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 16384},
                                             {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 32768},
                                             {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 4096}, {VK_DESCRIPTOR_TYPE_SAMPLER, 4096},
-                                            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 32768}};
+                                            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 32768}, {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 4096}};
             VkDescriptorPoolCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, .maxSets = 8192,
-                                             .poolSizeCount = 6, .pPoolSizes = sizes};
+                                             .poolSizeCount = 7, .pPoolSizes = sizes};
             VK_CHECK(vkCreateDescriptorPool(g_vk.dev, &ci, NULL, &s->pools[s->npools++]));
         }
         VkDescriptorSetAllocateInfo ai = {.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -486,6 +498,7 @@ VkSpan vk_transient(uint64_t size, uint64_t align) {
             c->used = off + size;
             c->seq = pending;
             stat_upload_bytes += size;
+            g_ft[FT_UPLOAD_BYTES] += size;
             return (VkSpan){c->buf, off, c->ptr + off};
         }
     }
@@ -498,6 +511,7 @@ VkSpan vk_transient(uint64_t size, uint64_t align) {
     chunks[pick].used = size;
     chunks[pick].seq = pending;
     stat_upload_bytes += size;
+    g_ft[FT_UPLOAD_BYTES] += size;  // (render thread only, as ft_frame: no atomic on this path)
     return (VkSpan){chunks[pick].buf, 0, chunks[pick].ptr};
 }
 
@@ -655,8 +669,16 @@ static void *translator(void *a) {
     return NULL;
 }
 static bool sync_shaders(void);
+// A build run on the calling thread (synchronous shaders): its time is the render thread's (runtime/frametime.c);
+// a translation runs its program's build inside it, counted once.
+static void run_inline(void (*fn)(void *), void *arg) {
+    static __thread int depth;
+    uint64_t t0 = depth++ ? 0 : SDL_GetTicksNS();
+    fn(arg);
+    if (--depth == 0) ft_add(FT_BUILD_INLINE_NS, SDL_GetTicksNS() - t0);
+}
 static void run_translate(void (*fn)(void *), void *arg) {
-    if (sync_shaders()) { fn(arg); return; }
+    if (sync_shaders()) { run_inline(fn, arg); return; }
     static bool started;
     if (!started) { started = true; pthread_t t; pthread_create(&t, NULL, translator, NULL); }
     Job *j = malloc(sizeof *j);
@@ -669,7 +691,7 @@ static void run_translate(void (*fn)(void *), void *arg) {
 }
 
 static void run_job(void (*fn)(void *), void *arg) {
-    if (sync_shaders()) { fn(arg); return; }
+    if (sync_shaders()) { run_inline(fn, arg); return; }
     static bool started;
     if (!started) {
         started = true;
@@ -732,42 +754,22 @@ uint32_t nvn_window_origin(void);
 uint32_t nvn_depth_mode(void);
 bool renderer_origin_lower_left(void) { return nvn_window_origin() == 0; }
 
-// (SAVAGEWIND_VK_PROF) called once per presented frame: frames over 50 ms are logged with where their time went.
-// present_ns: time in backend_present's acquire/blit/present.
-extern uint64_t g_pace_sleep_ns;  // (objects.c present_pace)
-void vk_prof_frame(uint64_t frame, uint64_t present_ns) {
-    if (!prof) return;
-    static uint64_t last_t, l_exec, l_wait, l_xwait, l_draws, l_subs, l_comp, hitch_ns;
-    if (!hitch_ns) hitch_ns = getenv("SAVAGEWIND_HITCH_MS") ? (uint64_t)atoi(getenv("SAVAGEWIND_HITCH_MS")) * 1000000ull : 50000000ull;
-    uint64_t now = SDL_GetTicksNS();
-    uint64_t comp = prof_c_tr + prof_c_prog + prof_c_pipe + prof_c_comp;
-    if (comp < l_comp) l_comp = 0;  // (the fps line took the counters)
-    if (last_t && now - last_t > hitch_ns) {
-        uint64_t dt = now - last_t, ex = cum_exec - l_exec, wt = cum_wait - l_wait;
-        extern uint64_t g_present_split[6];
-        LOG("[hitch] frame %llu: %.0f ms = backend exec %.1f (of which GPU waits %.1f, compiles %.1f) + present %.1f (acquire %.1f "
-            "end %.1f draw %.1f submit %.1f present %.1f slot %.1f) + other %.1f (pace %.1f); %llu draws, %llu submits, compiles %d pending; "
-            "exec waits %.1f\n",
-            (unsigned long long)frame, dt / 1e6, ex / 1e6, wt / 1e6, (comp - l_comp) / 1e6, present_ns / 1e6,
-            g_present_split[0] / 1e6, g_present_split[1] / 1e6, g_present_split[2] / 1e6, g_present_split[3] / 1e6,
-            g_present_split[4] / 1e6, g_present_split[5] / 1e6,
-            ((double)dt - ex - present_ns) / 1e6, g_pace_sleep_ns / 1e6, (unsigned long long)(cum_draws - l_draws),
-            (unsigned long long)(cum_submits - l_subs),
-            atomic_load(&stat_compiles), (cum_xwait - l_xwait) / 1e6);
-    }
-    { extern uint64_t g_present_split[6]; memset(g_present_split, 0, sizeof g_present_split); }
-    g_pace_sleep_ns = 0;
-    l_comp = comp;
-    last_t = now; l_exec = cum_exec; l_wait = cum_wait; l_xwait = cum_xwait; l_draws = cum_draws; l_subs = cum_submits;
-}
-
 const char *renderer_stats(void) {
     static int dumps, always = -1;
     if (always < 0) always = getenv("SAVAGEWIND_LOG_CMD_COUNTS") != NULL;  // (debugging) every interval, not just the first 3
-    if (dumps++ < 3 || always) {
-        LOG("[vk] command counts:");
-        for (int i = 0; i < CMD_COUNT; i++) if (op_counts[i]) LOG(" %d:%llu", i, (unsigned long long)op_counts[i]);
-        LOG("\n");
+#ifdef __PROSPERO__
+    // (none on the PS5: even as one klog write, the ~1 KB line held frames 124/244/364 - the first three 2 s windows,
+    // the three dumps - for 27-30 ms each, ps5/evidence/m6/precompile-first3.klog)
+    if ((void)dumps, always > 0) {
+#else
+    if (dumps++ < 3 || always) {  // (one line, one write: a klog write costs the PS5's render thread ~1.4 ms, and a
+                                  //  write per count held three frames for 44-47 ms, ps5/evidence/m6/measure1.klog)
+#endif
+        char line[1024];
+        size_t n = (size_t)snprintf(line, sizeof line, "[vk] command counts:");
+        for (int i = 0; i < CMD_COUNT && n < sizeof line; i++)
+            if (op_counts[i]) n += (size_t)snprintf(line + n, sizeof line - n, " %d:%llu", i, (unsigned long long)op_counts[i]);
+        LOG("%s\n", line);
     }
     snprintf(stats_text, sizeof stats_text,
              "%llu draws, %llu skipped, %llu passes, %llu dispatches, %llu flushes, wait %.0fms, compile %d (warm %d), fbcopy %llu (+%llu live), upload %.1fMB",
@@ -846,11 +848,12 @@ void vk_exec_init(void) {
     prof = getenv("SAVAGEWIND_VK_PROF") != NULL;
     profd = prof && atoi(getenv("SAVAGEWIND_VK_PROF")) != 2;
     no_dyn_cache = getenv("SAVAGEWIND_VK_NO_DYN_CACHE") != NULL;
-    if (prof) {
-        prof_up_ns = 0;
-        VkQueryPoolCreateInfo qi = {.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO, .queryType = VK_QUERY_TYPE_TIMESTAMP, .queryCount = SUBS * 2};
-        if (vkCreateQueryPool(g_vk.dev, &qi, NULL, &prof_qp) != VK_SUCCESS) prof_qp = VK_NULL_HANDLE;
+    if (prof) prof_up_ns = 0;
+    if (g_vk.props.limits.timestampComputeAndGraphics) {
+        VkQueryPoolCreateInfo qi = {.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO, .queryType = VK_QUERY_TYPE_TIMESTAMP, .queryCount = SUBS * 3};
+        if (vkCreateQueryPool(g_vk.dev, &qi, NULL, &gpu_qp) != VK_SUCCESS) gpu_qp = VK_NULL_HANDLE;
     }
+    if (!gpu_qp) LOG("[vk] no GPU timestamps: the frame times have no GPU time\n");
     st_defaults();
     pso_init();
 }
@@ -1855,6 +1858,7 @@ static void compile_program(void *arg) {
     if (made) {
         atomic_fetch_add(&stat_compiles, 1);
         atomic_fetch_add(&prof_c_prog, SDL_GetTicksNS() - pt0); atomic_fetch_add(&prof_c_nprog, 1);
+        ft_add(FT_SHADER_NS, SDL_GetTicksNS() - pt0); ft_add(FT_SHADERS, 1);
     } else {
         atomic_fetch_add(&stat_warm, 1);
     }
@@ -1941,6 +1945,7 @@ static void translate_program(void *arg) {
                 p->fi ? p->fi->attr_mask : 0, fin, (unsigned long long)p->code[0], (unsigned long long)p->code[1]);
     }
     atomic_fetch_add(&prof_c_tr, SDL_GetTicksNS() - pt0); atomic_fetch_add(&prof_c_ntr, 1);
+    ft_add(FT_SHADER_NS, SDL_GetTicksNS() - pt0); ft_add(FT_SHADERS, 1);
     if (!p->vi->msl) {
         LOG("[shader] VS translate failed: %s (code %llx)\n", p->vi->error, (unsigned long long)p->code[0]);
         dump_failed_shader(p->code[0], p->cmax[0], "vs");
@@ -2679,6 +2684,7 @@ static void build_pipeline(void *arg) {
         if (r == VK_SUCCESS) pso_record(1, vk_translate_id(k->prog->vi), vk_translate_id(k->prog->fi), &k->s, sizeof k->s);
         atomic_fetch_add(&stat_compiles, 1);
         atomic_fetch_add(&prof_c_pipe, SDL_GetTicksNS() - pt0); atomic_fetch_add(&prof_c_npipe, 1);
+        ft_add(FT_PIPELINE_NS, SDL_GetTicksNS() - pt0); ft_add(FT_PIPELINES, 1);
     } else {
         atomic_fetch_add(&stat_warm, 1);
     }
@@ -3753,6 +3759,43 @@ static VkDescriptorSet set_finish(VkDescriptorSetLayout layout, VkWriteDescripto
     return ds;
 }
 
+// A compute program's image slots (maxwell/shader.h: tex[i].is_image, SULD / SUST / SUATOM): storage views of the
+// bound images (CMD_BIND_IMAGES: their handles follow the 32 texture handles, offset 0x120 + 8 * image slot; the
+// handle names a texture pool entry, nvnTexturePoolRegisterImage), resolved before the dispatch's descriptor set.
+// false: one can't be bound as the shader declares it (textures.c vk_storage_view): the dispatch is skipped, as before
+// the translator knew these instructions.
+static VkImageView img_view[64];
+static uint8_t img_kind[64];  // the view's numeric type (rscale[1 + slot].z): 0 float, 1 unsigned, 2 signed integer
+static NvnTexture *img_tex[64];
+static bool image_slots(int stage, ShaderInfo *si) {
+    static const VkFormat raw[] = {VK_FORMAT_UNDEFINED, VK_FORMAT_R8_UINT, VK_FORMAT_R16_UINT, VK_FORMAT_R32_UINT,
+                                   VK_FORMAT_R32G32_UINT, VK_FORMAT_R32G32B32A32_UINT, VK_FORMAT_R32_SINT};  // IMGFMT_*
+    for (int i = 0; i < si->ntex && i < 64; i++) {
+        ShaderTexture *t = &si->tex[i];
+        img_view[i] = VK_NULL_HANDLE;
+        img_tex[i] = NULL;
+        img_kind[i] = 0;
+        if (!t->is_image) continue;
+        int slot = ((int)t->handle_offset - 0x120) / 8;
+        uint64_t h = slot >= 0 && slot < 8 && !(t->handle_offset & 7) ? st.img[stage][slot] : 0;
+        uint32_t tic = h & 0xFFFFF;
+        NvnTexEntry *e = h && st.tpool && tic < (uint32_t)st.tpool->count ? &((NvnTexEntry *)st.tpool->entries)[tic] : NULL;
+        int kind = 0;
+        if (e && e->tex && t->image_format < sizeof raw / sizeof raw[0])
+            img_view[i] = vk_storage_view(e->tex, &e->view, e->has_view, t->type, raw[t->image_format], &kind);
+        if (!img_view[i]) {
+            static int nlog;
+            if (nlog++ < 20)
+                LOG("[compute] image slot %d (handle offset %#x, handle %llx, nvn fmt %#x flags %#x): no storage view, dispatch skipped\n", i,
+                    t->handle_offset, (unsigned long long)h, e && e->tex ? e->tex->format : 0, e && e->tex ? e->tex->flags : 0);
+            return false;
+        }
+        img_kind[i] = (uint8_t)kind;
+        img_tex[i] = e->tex;
+    }
+    return true;
+}
+
 // Writes the descriptor set of one stage. gx..gz: compute group counts (driver constants).
 // pre_ii: texture descriptors already resolved by the caller (draw: fragment textures, needed earlier for the
 // viewport decision), or NULL.
@@ -3799,6 +3842,13 @@ static VkDescriptorSet stage_set(Prog *p, VkDescriptorSetLayout layout, uint32_t
         } else if (b->type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) {
             bi[n] = gmem_info();
             w[n].pBufferInfo = &bi[n];
+        } else if (b->type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE && b->binding >= 32 && b->binding < 32 + 64) {
+            int ti = (int)b->binding - 32;  // (image_slots resolved it)
+            ii[n] = (VkDescriptorImageInfo){VK_NULL_HANDLE, img_view[ti], VK_IMAGE_LAYOUT_GENERAL};
+            rs[1 + ti][2] = img_kind[ti];
+            tex_sc[sg][ti][0] = tex_sc[sg][ti][1] = 1;
+            tex_wh[sg][ti][0] = tex_wh[sg][ti][1] = 0;
+            w[n].pImageInfo = &ii[n];
         } else {
             continue;  // rscale / tint: written below, once the textures (and their scales) are known
         }
@@ -3902,6 +3952,7 @@ static void build_compute(void *arg) {
         if (atomic_load(&c->state) == 2) pso_record(2, vk_translate_id(cp->si), 0, cp->local, sizeof cp->local);
         atomic_fetch_add(&stat_compiles, 1);
         atomic_fetch_add(&prof_c_comp, SDL_GetTicksNS() - pt0);
+        ft_add(FT_PIPELINE_NS, SDL_GetTicksNS() - pt0); ft_add(FT_PIPELINES, 1);
     } else {
         atomic_fetch_add(&stat_warm, 1);
     }
@@ -4385,6 +4436,7 @@ static void dispatch_compute(uint32_t gx, uint32_t gy, uint32_t gz) {
     if (!st.program || !gx || !gy || !gz) return;
     CsProg *cp = compute_program(st.program);
     if (!cp || atomic_load(&cp->p.state) != 1) { stat_skipped++; return; }
+    if (!image_slots(5, cp->si)) { stat_skipped++; return; }
     gw_check((const uint32_t[6]){0, 0, 0, 0, 0, cp->si->cbuf_mask}, false, 0, 0);
     vk_end_pass();
     VkCommandBuffer cb = vk_cmd();
@@ -4405,6 +4457,8 @@ static void dispatch_compute(uint32_t gx, uint32_t gy, uint32_t gz) {
     vkCmdDispatch(cb, gx, gy, gz);
     stat_dispatches++;
     chunk_draws++;
+    for (int i = 0; i < cp->si->ntex && i < 64; i++)  // (stored images: what the GPU wrote, not guest memory, from now on)
+        if (cp->si->tex[i].is_image && cp->si->tex[i].image_written && img_tex[i]) renderer_mark_gpu_owned(img_tex[i]);
     if (cp->si->writes_gmem) {
         if (getenv("SAVAGEWIND_LOG_HOLD")) {
             LOG("[hold] frame %llu draw %llu: cs %llx sbuf:", (unsigned long long)renderer_present_count(),
@@ -4575,6 +4629,7 @@ static void wait_built(_Atomic int *state) {  // (0 building: until built or fai
     uint64_t t0 = SDL_GetTicksNS();
     while (atomic_load(state) == 0 && SDL_GetTicksNS() - t0 < 5000000000ull) SDL_Delay(1);
     stat_build_waits++;
+    ft_add(FT_BUILD_WAIT_NS, SDL_GetTicksNS() - t0);
 }
 
 static void draw_(CmdRec *r, bool indexed) {
@@ -6777,12 +6832,9 @@ void backend_execute(uint64_t handle) {
     gpu_lock();
     if (g_debug_frame && getenv("SAVAGEWIND_LOG_OPS")) LOG("[submit] %llx\n", (unsigned long long)handle);
     PROF_T0();
-    in_execute = true;
     guest_copy_flush();  // (a new list: the game may have written the memory of the last one's copies since)
     exec_list(handle, 0);
-    in_execute = false;
     PROF_ADD(prof_exec);
-    if (prof) cum_exec += SDL_GetTicksNS() - prof_t0_;
     static int sync_submit = -1;
     if (sync_submit < 0) sync_submit = getenv("SAVAGEWIND_SYNC_SUBMIT") ? 1 : 0;
     if (sync_submit) renderer_flush();

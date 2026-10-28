@@ -14,7 +14,14 @@
 //  - rscale table -> binding 18: `uniform RScale { vec4 rscale[65]; };` (std140, the MSL buffer 18 contents).
 //  - per-draw tint -> binding 19: `uniform Tint { vec4 ltint[2]; };` (fragment, when uses_tint).
 //  - texture slot i (ShaderInfo.tex[i]) -> binding 32 + i, a combined image sampler: sampler1D/2D/3D/Cube/
-//    1DArray/2DArray/CubeArray, or its *Shadow variant when tex[i].shadow.
+//    1DArray/2DArray/CubeArray/2DMS, or its *Shadow variant when tex[i].shadow.
+//  - or, when tex[i].is_image (compute only: SULD / SUST / SUATOM), a storage image on binding 32 + i, the handle
+//    at tex[i].handle_offset (the bound image handles follow the 32 texture handles: 0x120 + 8 * image slot).
+//    image_format IMGFMT_TYPED: `writeonly uniform image<dim> t<i>f`, `uimage<dim> t<i>u` and `iimage<dim> t<i>i`
+//    on that one binding: the view in the image's own format, of the type rscale[1 + i].z names (0 float, 1 unsigned,
+//    2 signed integer: only that variable is accessed). Otherwise `layout(r8ui|r16ui|r32ui|rg32ui|rgba32ui|r32i)
+//    uniform uimage<dim>|iimage<dim> t<i>`: a view in that format of an image with texels of its size (raw access).
+//    Accesses outside the image are dropped (loads and atomics return 0), as Maxwell's .IGN clamp.
 //  - vertex inputs `layout(location=i) in vec4|ivec4|uvec4 a<i>;` (key->attr_kind); varyings: location i =
 //    generic attribute i, `vec4 v<i>` (fragment side flat / noperspective as in MSL); `invariant gl_Position`;
 //    gl_PointSize when writes_point_size. Fragment outputs `layout(location=rt) out vec4|ivec4|uvec4 c<rt>;`,
@@ -48,10 +55,15 @@ typedef struct {
     uint32_t shared_size;   // compute: shared memory bytes (from the program's control section)
 } ShaderKey;
 
+// Storage images (ShaderTexture.is_image): the format the shader declares for the view (see the GLSL contract)
+enum { IMGFMT_TYPED, IMGFMT_R8UI, IMGFMT_R16UI, IMGFMT_R32UI, IMGFMT_RG32UI, IMGFMT_RGBA32UI, IMGFMT_R32I };
+
 typedef struct {
     uint32_t handle_offset;  // byte offset of the texture handle in the bound texture cbuf
     uint8_t type;            // TEXTYPE_*
     bool shadow, is_array, is_image, bindless;
+    uint8_t image_format;    // is_image: IMGFMT_*
+    bool image_written;      // is_image: the shader stores to it (SUST, SUATOM)
     uint32_t bindless_cbuf, bindless_offset;
 } ShaderTexture;
 

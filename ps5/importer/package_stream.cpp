@@ -152,6 +152,23 @@ extern "C" void *savagewind_package_open(const char *keys_path, const char *cons
     return nullptr;
 }
 
+// Which add-on content indexes (bit i-1: index i) the packages hold, from one look at them: runtime/services/fs.c asks
+// once per process instead of opening the packages for every index the game probes. -1: they can't be read.
+extern "C" int savagewind_package_addons(const char *keys_path, const char *const *paths, size_t count) {
+    try {
+        std::lock_guard<std::mutex> guard(nstool_process_mutex);
+        PackageCore importer(".");
+        importer.st.session = "package-addons";
+        importer.open_inputs(keys_path, paths, count);
+        int mask = 0;
+        for (size_t i = 0; i < importer.addons.size(); i++)
+            if (importer.addons[i].content.pkg) mask |= 1 << i;
+        return mask;
+    } catch (...) {
+        return -1;
+    }
+}
+
 extern "C" uint64_t savagewind_package_size(void *handle) {
     return handle ? static_cast<PackageStream *>(handle)->size : UINT64_MAX;
 }

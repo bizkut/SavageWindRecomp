@@ -18,6 +18,19 @@ typedef struct KObject {
 
 typedef KObject KEvent;
 
+// Where a guest thread's time went (runtime/frametime.c reads these every frame): only the thread itself writes them
+// (KT_ADD), other threads read them as they are (relaxed loads).
+typedef struct {
+    uint64_t cpu_ns;    // its CPU time (plat_thread_cpu_ns) as of its latest wait: a thread reads only its own
+    uint64_t wait_ns;   // blocked in a kernel wait (WaitSynchronization, mutexes, condition variables, arbiters)
+    uint64_t core_ns;   // waiting for its core (another guest thread of that core ran)
+    uint64_t sleep_ns;  // SleepThread, and host code pacing on this thread (the present's turn)
+    uint64_t host_ns;   // the GPU backend's work and waits on this thread (kernel_host_work_begin..end)
+    uint64_t romfs_ns, romfs_bytes, romfs_reads;  // reading the game's RomFS (the packages) for the game
+} KTimes;
+#define KT_ADD(t, field, v) __atomic_store_n(&(t)->times.field, (t)->times.field + (v), __ATOMIC_RELAXED)
+#define KT_CPU(t) __atomic_store_n(&(t)->times.cpu_ns, plat_thread_cpu_ns(), __ATOMIC_RELAXED)
+
 struct KThread {
     KObject obj;  // signaled when the thread exits
     Cpu cpu;
@@ -42,6 +55,7 @@ struct KThread {
     int core_held;
     uint64_t core_ticket;
     bool off_cores;  // runs beside the cores, never holding one (kernel_thread_off_cores)
+    KTimes times;
 };
 
 typedef struct KSharedMem {
@@ -84,3 +98,7 @@ typedef struct { volatile int v; char pad[60]; } __attribute__((aligned(64))) Co
 extern CoreBestWait g_core_best_wait[4];
 void kernel_preempt(KThread *t);
 uint64_t kernel_heap_size(void);  // bytes from HEAP_BASE set by SetHeapSize
+// The guest threads' KTimes (runtime/frametime.c): up to max, returns how many
+typedef struct { uint32_t handle; int prio, core; uint64_t entry; KTimes times; } KThreadTimes;
+int kernel_thread_times(KThreadTimes *out, int max);
+void kernel_romfs_read_done(uint64_t ns, uint64_t bytes);  // runtime/services/fs.c: a RomFS read for the calling thread

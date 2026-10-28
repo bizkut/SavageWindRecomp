@@ -216,6 +216,53 @@ static void text(Canvas *t, const char *s, float cx, float cy, float cap_h, floa
         if (p[1]) pen += stbtt_GetCodepointKernAdvance(&g_font, cp, (unsigned char)p[1]) * scale;
     }
 }
+
+uint8_t *glyphs_text_line(const char *s, float cap_h, float max_w, int *w, int *h) {
+    if (!font_ready() || !*s) return NULL;
+    int cap_y0, cap_y1, x0, x1, asc, desc, gap;
+    stbtt_GetCodepointBox(&g_font, 'H', &x0, &cap_y0, &x1, &cap_y1);
+    stbtt_GetFontVMetrics(&g_font, &asc, &desc, &gap);
+    float scale = cap_h / (float)(cap_y1 > 0 ? cap_y1 : 700), width = 0;
+    for (const char *p = s; *p; p++) {
+        int adv, lsb;
+        stbtt_GetCodepointHMetrics(&g_font, (unsigned char)*p, &adv, &lsb);
+        width += adv * scale;
+        if (p[1]) width += stbtt_GetCodepointKernAdvance(&g_font, (unsigned char)*p, (unsigned char)p[1]) * scale;
+    }
+    if (width > max_w) scale *= max_w / width, width = max_w;
+    int W = (int)ceilf(width) + 4, H = (int)ceilf((float)(asc - desc) * scale) + 4, base = (int)ceilf((float)asc * scale) + 2;
+    uint8_t *out = calloc((size_t)W * (size_t)H, 1), *bm = NULL;
+    size_t bm_size = 0;
+    float pen = 2;
+    for (const char *p = s; out && *p; p++) {
+        int cp = (unsigned char)*p, bx0, by0, bx1, by1, adv, lsb;
+        float sx = pen - floorf(pen);
+        stbtt_GetCodepointBitmapBoxSubpixel(&g_font, cp, scale, scale, sx, 0, &bx0, &by0, &bx1, &by1);
+        int bw = bx1 - bx0, bh = by1 - by0;
+        if (bw > 0 && bh > 0 && (size_t)bw * (size_t)bh > bm_size) {
+            free(bm);
+            bm_size = (size_t)bw * (size_t)bh;
+            bm = malloc(bm_size);
+            if (!bm) bm_size = 0;
+        }
+        if (bw > 0 && bh > 0 && bm) {
+            stbtt_MakeCodepointBitmapSubpixel(&g_font, bm, bw, bh, bw, scale, scale, sx, 0, cp);
+            int ox = (int)floorf(pen) + bx0, oy = base + by0;  // (glyphs overlap where kerning pulls them together)
+            for (int y = 0; y < bh; y++)
+                for (int x = 0; x < bw; x++) {
+                    int X = ox + x, Y = oy + y;
+                    if (X >= 0 && X < W && Y >= 0 && Y < H && bm[y * bw + x] > out[Y * W + X]) out[Y * W + X] = bm[y * bw + x];
+                }
+        }
+        stbtt_GetCodepointHMetrics(&g_font, cp, &adv, &lsb);
+        pen += adv * scale;
+        if (p[1]) pen += stbtt_GetCodepointKernAdvance(&g_font, cp, (unsigned char)p[1]) * scale;
+    }
+    free(bm);
+    *w = W;
+    *h = H;
+    return out;
+}
 static void ink(Canvas *c, const Canvas *t) { for (int i = 0; i < CELL * CELL; i++) c->a[i] = maxf(c->a[i], t->a[i]); }
 static void erase(Canvas *c, const Canvas *t) { for (int i = 0; i < CELL * CELL; i++) c->a[i] *= 1 - t->a[i]; }
 

@@ -97,6 +97,8 @@ typedef struct TexBackend {
     bool gpu_owned, uploaded, dynamic;
     bool slices_renderable;  // 3D image made 2D-array compatible: its slices are render targets
     bool feedback_ok;        // made with VK_IMAGE_USAGE_ATTACHMENT_FEEDBACK_LOOP_BIT_EXT (sampled while it is rendered to)
+    bool storage;            // made with VK_IMAGE_USAGE_STORAGE_BIT (an NVN image texture: compute SULD / SUST / SUATOM)
+    VkImageUsageFlags usage; // what it was made with
     bool feedback_seen;      // a draw sampled it while writing it: its passes begin with the feedback loop enabled
     bool in_feedback_layout; // in ATTACHMENT_FEEDBACK_LOOP_OPTIMAL now (g_vk.feedback_layout: a pass that loops, exec.c)
     uint64_t data_hash, sample_hash, checked_frame, full_frame;
@@ -139,6 +141,11 @@ VkComponentMapping vk_sample_swizzle(NvnTexture *t, const NvnTextureView *v);  /
 VkImageView vk_image_view(TexBackend *b, VkImageViewType type, VkFormat fmt, uint32_t lv0, uint32_t nlv, uint32_t ly0,
                           uint32_t nly, VkComponentMapping sw, VkImageAspectFlags aspect);
 VkImageView vk_dummy_view(int textype);
+// Storage view of t for a compute shader's image slot (maxwell/shader.h): of the type want_textype, level / layers
+// of its NVN view, in format raw (VK_FORMAT_UNDEFINED: the image's own). NULL when t's image can't be used so (not an
+// NVN image texture, a scaled or fallback-format allocation, raw texels of another size). *kind: the view's numeric
+// type, 0 float, 1 unsigned, 2 signed integer.
+VkImageView vk_storage_view(NvnTexture *t, const NvnTextureView *v, bool has_view, int want_textype, VkFormat raw, int *kind);
 void vk_block_flush(VkCommandBuffer cb, TexBackend *b);  // (outside a pass) b->block's texels into b's blocks
 VkSampler vk_sampler(NvnSamplerDesc *d, bool aniso_ok);  // (aniso_ok: Video > Anisotropic filtering may apply)
 VkSampler vk_default_sampler(bool linear);

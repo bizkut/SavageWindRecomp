@@ -5,6 +5,7 @@
 // the camera (the right stick) while the cursor is held in the window, or tilts the controller while the tilt key is
 // held (motion controls: runtime/hle/motion.c, which also takes the controller's gyroscope and accelerometer). The
 // mouse wheel zooms the scope and the map (runtime/hle/wheel_zoom.c), beside the bindings.
+#include "../benchmark.h"
 #include <SDL3/SDL.h>
 #include <ctype.h>
 #include <math.h>
@@ -295,7 +296,8 @@ bool input_user_blocked(const SDL_Event *e) {
     static int on = -1;
     if (on < 0) {
         const char *v = getenv("SAVAGEWIND_NO_USER_INPUT");
-        on = v ? atoi(v) != 0 : (getenv("SAVAGEWIND_INPUT") || getenv("SAVAGEWIND_HOST_INPUT") || getenv("SAVAGEWIND_BIND_TEST"));
+        on = v ? atoi(v) != 0 : (getenv("SAVAGEWIND_INPUT") || getenv("SAVAGEWIND_HOST_INPUT") || getenv("SAVAGEWIND_BIND_TEST") ||
+                                 benchmark_on());
         if (on) LOG("[input] scripted run: keyboard, mouse and controllers ignored\n");
     }
     if (!on) return false;
@@ -615,6 +617,14 @@ void input_frame(uint64_t frame) {
     extern void watch_arm(void);
     watch_arm();
     host_test_frame(frame);
+    {   // the built-in benchmark's route (runtime/benchmark.c)
+        uint64_t bb;
+        int32_t blx, bly, brx, bry;
+        if (benchmark_input(&bb, &blx, &bly, &brx, &bry)) {
+            script_buttons = bb, script_lx = blx, script_ly = bly, script_rx = brx, script_ry = bry;
+            return;
+        }
+    }
     const char *spec = getenv("SAVAGEWIND_INPUT");
     if (!spec) return;
     static const char *const names[] = {"A", "B", "X", "Y", "LSTICK", "RSTICK", "L", "R", "ZL", "ZR", "PLUS",

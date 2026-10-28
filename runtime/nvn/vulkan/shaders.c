@@ -14,6 +14,7 @@
 
 #include "../../paths.h"
 #include "../shader_archive.h"
+#include "cache_pack.h"
 #include "shaders.h"
 #ifdef __PROSPERO__
 #include "../../storage_ps5.h"
@@ -68,44 +69,62 @@ static uint64_t hash64(uint64_t h, const void *p, size_t n) {
 // covers it) when it is sane and of that stage.
 // A file: the header, the ShaderInfo, the GLSL's deflated size and the GLSL deflated (zlib: a sixth of the size). In
 // cache/xlate/<id>/ (the translator's id, vk_cache_dir_id): another build's folder is removed (vk_cache_cleanup).
+// The precompilation's are entries of the folder's pack instead (cache_pack.c), the same bytes.
 static void xlate_path(char *path, size_t n, uint64_t h) {
     char name[96];
     snprintf(name, sizeof name, "xlate/%s/%016llx.xlz", vk_cache_dir_id(maxwell_translator_id()), (unsigned long long)h);
     vk_cache_path(path, n, name);
 }
 
-static ShaderInfo *xlate_load(uint64_t h, const XlateHeader *want, int stage) {
-    char path[512];
-    xlate_path(path, sizeof path, h);
-    FILE *f = rt_data_fopen(path, "rb");
-    if (!f) return NULL;
+static ShaderInfo *xlate_parse(const uint8_t *d, size_t n, const XlateHeader *want, int stage) {
     XlateHeader hd;
-    ShaderInfo *si = NULL;
-    bool ok = fread(&hd, sizeof hd, 1, f) == 1 && hd.msl_len < (64u << 20);
+    uint32_t zn = 0;
+    size_t at = sizeof hd + sizeof(ShaderInfo) + sizeof zn;
+    if (n < at) return NULL;
+    memcpy(&hd, d, sizeof hd);
+    bool ok = hd.msl_len < (64u << 20);
     if (ok && want)
         ok = !memcmp(&hd, want, offsetof(XlateHeader, msl_len)) && hd.bin_size == want->bin_size &&
              !memcmp(&hd.key, &want->key, sizeof hd.key) && hd.stage == want->stage;
     else if (ok)
         ok = !memcmp(hd.magic, "SWX2", 4) && hd.info_size == sizeof(ShaderInfo) && hd.stage == stage && hd.msl_len;
-    uint32_t zn = 0;
-    if (ok) {
-        si = malloc(sizeof *si);
-        char *msl = malloc(hd.msl_len + 1);
-        uint8_t *z = NULL;
-        bool got = si && msl && fread(si, sizeof *si, 1, f) == 1 && fread(&zn, 4, 1, f) == 1 && zn < (64u << 20) &&
-                   (z = malloc(zn ? zn : 1)) && fread(z, 1, zn, f) == zn && si->stage == hd.stage;
-        uLongf len = hd.msl_len;
-        if (got && uncompress((Bytef *)msl, &len, z, zn) == Z_OK && len == hd.msl_len) {
-            msl[hd.msl_len] = 0;
-            si->msl = msl;
-        } else {
-            free(si);
-            free(msl);
-            si = NULL;
-        }
-        free(z);
+    if (!ok) return NULL;
+    memcpy(&zn, d + at - sizeof zn, sizeof zn);
+    ShaderInfo *si = malloc(sizeof *si);
+    char *msl = malloc(hd.msl_len + 1);
+    uLongf len = hd.msl_len;
+    if (si) memcpy(si, d + sizeof hd, sizeof *si);
+    if (si && msl && zn <= n - at && si->stage == hd.stage && uncompress((Bytef *)msl, &len, d + at, zn) == Z_OK &&
+        len == hd.msl_len) {
+        msl[hd.msl_len] = 0;
+        si->msl = msl;
+        return si;
     }
+    free(si);
+    free(msl);
+    return NULL;
+}
+
+static ShaderInfo *xlate_load(uint64_t h, const XlateHeader *want, int stage) {
+    uint8_t *d = NULL;
+    size_t n = 0;
+    if (cache_pack_read(PACK_XLATE, h, &d, &n)) {
+        ShaderInfo *si = xlate_parse(d, n, want, stage);
+        free(d);
+        if (si) return si;
+    }
+    char path[512];
+    xlate_path(path, sizeof path, h);
+    FILE *f = rt_data_fopen(path, "rb");
+    if (!f) return NULL;
+    fseek(f, 0, SEEK_END);
+    long len = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    d = len > 0 && len < (64l << 20) ? malloc((size_t)len) : NULL;
+    bool got = d && fread(d, 1, (size_t)len, f) == (size_t)len;
     fclose(f);
+    ShaderInfo *si = got ? xlate_parse(d, (size_t)len, want, stage) : NULL;
+    free(d);
     return si;
 }
 
@@ -154,6 +173,24 @@ ShaderInfo *vk_translate_load_id(uint64_t id, int stage) {
 }
 
 static void xlate_store(uint64_t h, const XlateHeader *hd, const ShaderInfo *si) {
+    size_t at = sizeof *hd + sizeof *si + sizeof(uint32_t);
+    uLongf zn = compressBound(hd->msl_len);
+    uint8_t *data = malloc(at + zn);
+    if (!data) return;
+    bool ok = compress2(data + at, &zn, (const Bytef *)si->msl, hd->msl_len, 1) == Z_OK;
+    ShaderInfo copy = *si;
+    copy.msl = NULL;
+    uint32_t zn32 = (uint32_t)zn;
+    memcpy(data, hd, sizeof *hd);
+    memcpy(data + sizeof *hd, &copy, sizeof copy);
+    memcpy(data + at - sizeof zn32, &zn32, sizeof zn32);
+    size_t total = at + zn;
+    if (!ok || cache_pack_add(PACK_XLATE, h, data, total)) {
+        static int logged;
+        if (!ok && !__atomic_exchange_n(&logged, 1, __ATOMIC_RELAXED)) LOG("[shader] translation %016llx: deflating it failed: not stored\n", (unsigned long long)h);
+        free(data);
+        return;
+    }
     static int made;
     char path[512], tmp[540], name[96];
     if (!made) {
@@ -165,37 +202,17 @@ static void xlate_store(uint64_t h, const XlateHeader *hd, const ShaderInfo *si)
         mkdir(path, 0755);
     }
     xlate_path(path, sizeof path, h);
-    snprintf(tmp, sizeof tmp, "%s.%llx", path, (unsigned long long)(uintptr_t)si);
-    uLongf zn = compressBound(hd->msl_len);
-    uint8_t *z = malloc(zn);
-    if (!z) return;
-    bool ok = compress2(z, &zn, (const Bytef *)si->msl, hd->msl_len, 1) == Z_OK;
-    ShaderInfo copy = *si;
-    copy.msl = NULL;
-    uint32_t zn32 = (uint32_t)zn;
 #ifdef __PROSPERO__
-    if (ok) {
-        size_t total = sizeof *hd + sizeof copy + sizeof zn32 + zn;
-        uint8_t *data = malloc(total);
-        if (data) {
-            size_t off = 0;
-            memcpy(data + off, hd, sizeof *hd); off += sizeof *hd;
-            memcpy(data + off, &copy, sizeof copy); off += sizeof copy;
-            memcpy(data + off, &zn32, sizeof zn32); off += sizeof zn32;
-            memcpy(data + off, z, zn);
-            rt_storage_replace(path, data, total);
-            free(data);
-        }
-    }
-    free(z);
+    (void)tmp;
+    rt_storage_replace(path, data, total);
 #else
-    FILE *f = ok ? fopen(tmp, "wb") : NULL;
-    ok = f && fwrite(hd, sizeof *hd, 1, f) == 1 && fwrite(&copy, sizeof copy, 1, f) == 1 && fwrite(&zn32, 4, 1, f) == 1 &&
-         fwrite(z, 1, zn, f) == zn;
+    snprintf(tmp, sizeof tmp, "%s.%llx", path, (unsigned long long)(uintptr_t)si);
+    FILE *f = fopen(tmp, "wb");
+    ok = f && fwrite(data, 1, total, f) == total;
     if (f && fclose(f)) ok = false;
-    free(z);
     if (f && (!ok || rename(tmp, path) != 0)) remove(tmp);  // (another thread may have stored it first)
 #endif
+    free(data);
 }
 
 // A cache folder's name for an id (TRANSLATOR_ID / SPIRV_ID are 16 hex digits; built without the Makefile, a date)
@@ -583,7 +600,8 @@ VkShaderModule vk_compile_glsl(const char *src, int stage, const char *name) {
 }
 
 // ================================================================== reflection
-// Just enough SPIR-V parsing to list the descriptor bindings a module declares (set, binding, type).
+// Just enough SPIR-V parsing to list the descriptor bindings a module declares (set, binding, type). Variables that
+// share a binding (the translator's storage image of each numeric type, maxwell/shader.h) are one binding.
 enum { OP_TYPE_IMAGE = 25, OP_TYPE_SAMPLER = 26, OP_TYPE_SAMPLED_IMAGE = 27, OP_TYPE_ARRAY = 28, OP_TYPE_RUNTIME_ARRAY = 29,
        OP_TYPE_STRUCT = 30, OP_TYPE_POINTER = 32, OP_VARIABLE = 59, OP_DECORATE = 71 };
 enum { DEC_BLOCK = 2, DEC_BUFFER_BLOCK = 3, DEC_BINDING = 33, DEC_SET = 34 };
@@ -593,7 +611,7 @@ int vk_reflect(const uint32_t *spv, size_t n, VkBindingInfo *out, int max) {
     if (n < 5 || spv[0] != 0x07230203) return 0;
     uint32_t bound = spv[3];
     int32_t *binding = malloc(bound * sizeof *binding), *set = malloc(bound * sizeof *set);
-    uint8_t *flags = calloc(bound, 1);    // 1 Block, 2 BufferBlock
+    uint8_t *flags = calloc(bound, 1);    // 1 Block, 2 BufferBlock, 4 storage image (OpTypeImage Sampled = 2)
     uint32_t *op = calloc(bound, sizeof *op), *ref = calloc(bound, sizeof *ref), *sc = calloc(bound, sizeof *sc);
     for (uint32_t i = 0; i < bound; i++) binding[i] = set[i] = -1;
     for (size_t i = 5; i < n;) {
@@ -607,6 +625,7 @@ int vk_reflect(const uint32_t *spv, size_t n, VkBindingInfo *out, int max) {
             else if (w[2] == DEC_BUFFER_BLOCK) flags[w[1]] |= 2;
         } else if ((o == OP_TYPE_IMAGE || o == OP_TYPE_SAMPLER || o == OP_TYPE_SAMPLED_IMAGE || o == OP_TYPE_STRUCT) && wc >= 2 && w[1] < bound) {
             op[w[1]] = o;
+            if (o == OP_TYPE_IMAGE && wc >= 9 && w[7] == 2) flags[w[1]] |= 4;
         } else if ((o == OP_TYPE_ARRAY || o == OP_TYPE_RUNTIME_ARRAY) && wc >= 3 && w[1] < bound) {
             op[w[1]] = o;
             ref[w[1]] = w[2];
@@ -629,12 +648,15 @@ int vk_reflect(const uint32_t *spv, size_t n, VkBindingInfo *out, int max) {
         VkDescriptorType dt;
         if (t >= bound) continue;
         if (op[t] == OP_TYPE_SAMPLED_IMAGE) dt = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        else if (op[t] == OP_TYPE_IMAGE) dt = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        else if (op[t] == OP_TYPE_IMAGE) dt = flags[t] & 4 ? VK_DESCRIPTOR_TYPE_STORAGE_IMAGE : VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
         else if (op[t] == OP_TYPE_SAMPLER) dt = VK_DESCRIPTOR_TYPE_SAMPLER;
         else if (op[t] == OP_TYPE_STRUCT && (sc[id] == SC_STORAGE_BUFFER || (flags[t] & 2))) dt = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         else if (op[t] == OP_TYPE_STRUCT && sc[id] == SC_UNIFORM) dt = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         else continue;
-        out[cnt++] = (VkBindingInfo){(uint32_t)(set[id] < 0 ? 0 : set[id]), (uint32_t)binding[id], dt};
+        VkBindingInfo bi = {(uint32_t)(set[id] < 0 ? 0 : set[id]), (uint32_t)binding[id], dt};
+        bool dup = false;
+        for (int k = 0; k < cnt && !dup; k++) dup = out[k].set == bi.set && out[k].binding == bi.binding;
+        if (!dup) out[cnt++] = bi;
     }
     free(binding); free(set); free(flags); free(op); free(ref); free(sc);
     return cnt;

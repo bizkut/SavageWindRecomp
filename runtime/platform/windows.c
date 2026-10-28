@@ -132,6 +132,15 @@ void plat_thread_realtime(uint64_t period_ns) {
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 }
 
+uint64_t plat_thread_cpu_ns(void) {
+    FILETIME created, exited, kernel, user;
+    if (!GetThreadTimes(GetCurrentThread(), &created, &exited, &kernel, &user)) return 0;
+    uint64_t k = (uint64_t)kernel.dwHighDateTime << 32 | kernel.dwLowDateTime;
+    uint64_t u = (uint64_t)user.dwHighDateTime << 32 | user.dwLowDateTime;
+    return (k + u) * 100;  // (100 ns units, advanced at the scheduler's ticks)
+}
+void plat_thread_heap_own(void) {}  // (the system allocator has its own per-thread caches)
+
 // ---- process
 // Release builds are GUI-subsystem executables (no console window): stdout / stderr go to savagewind.log next to the
 // exe, and a fatal error shows a message box (plat_fatal_notice) instead of vanishing. Processes started by this one

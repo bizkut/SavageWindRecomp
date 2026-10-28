@@ -66,6 +66,18 @@ void plat_thread_realtime(uint64_t period_ns) {
                       THREAD_TIME_CONSTRAINT_POLICY_COUNT);
 }
 
+uint64_t plat_thread_cpu_ns(void) {
+    thread_basic_info_data_t info;
+    mach_msg_type_number_t n = THREAD_BASIC_INFO_COUNT;
+    mach_port_t self = mach_thread_self();
+    kern_return_t r = thread_info(self, THREAD_BASIC_INFO, (thread_info_t)&info, &n);
+    mach_port_deallocate(mach_task_self(), self);
+    if (r != KERN_SUCCESS) return 0;
+    return ((uint64_t)info.user_time.seconds + (uint64_t)info.system_time.seconds) * 1000000000ull +
+           ((uint64_t)info.user_time.microseconds + (uint64_t)info.system_time.microseconds) * 1000ull;
+}
+void plat_thread_heap_own(void) {}  // (the system allocator has its own per-thread zones)
+
 bool plat_exe_path(char *buf, size_t size) {
     uint32_t len = (uint32_t)size;
     return _NSGetExecutablePath(buf, &len) == 0;
