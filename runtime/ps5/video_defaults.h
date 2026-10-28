@@ -35,8 +35,8 @@ static bool video_defaults_apply(Settings *s, unsigned present, int width, int h
     if (!(present & VIDEO_HAS_SHARP_UI)) s->sharp_ui = width >= 3840 && height >= 2160;
     if (!(present & VIDEO_HAS_HD_UI_GENERATE)) s->hd_ui_generate = width >= 3840 && height >= 2160;
     if ((present & VIDEO_HAS_ALL) == VIDEO_HAS_ALL) return false;
-    if (!(present & VIDEO_HAS_UPSCALER))
-        s->upscaler = width >= 3840 && height >= 2160 ? UPSCALE_FSR1 : UPSCALE_OFF;
+    if (!(present & VIDEO_HAS_UPSCALER)) // FSR 3.1 at 4K (user decision 2026-10-29); FSR 1 stays selectable
+        s->upscaler = width >= 3840 && height >= 2160 ? UPSCALE_FSR3 : UPSCALE_OFF;
     if (!(present & VIDEO_HAS_QUALITY))
         s->upscale_quality = s->frame_gen ? UPQ_PERFORMANCE : UPQ_QUALITY;
     return true;
