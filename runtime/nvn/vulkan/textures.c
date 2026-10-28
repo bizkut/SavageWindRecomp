@@ -925,15 +925,27 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
             if (t->target != 1 || t->levels > 1 || t->samples > 1) gs = 1;
             bool sheet = lv == 0 && layer == 0 && t->format == 0x49 && t->pool;
             bool layout = lv == 0 && layer == 0 && t->format == 0x01 && !linear;
-            bool glyph = sheet ? glyphs_apply(t->addr, t->pool->storage, t->pool->storage + t->pool->size,
-                                               t->format, t->width, t->height, lin, l.wb, l.hb, gs, &high)
-                               : layout && glyphs_apply_layout(t->format, l.w, l.h, lin, row, gs, &high);
+            bool font_like = lv == 0 && layer == 0 && !linear && t->pool && l.d == 1 &&
+                             (t->format == 0x49 || t->format == 0x01) && l.w >= 128 && l.h >= 128;
+            uint64_t font_start = font_like && !b->font_logged ? SDL_GetTicksNS() : 0;
+            bool text = font_like &&
+                        glyphs_sharp_text(t->addr, t->pool->storage, t->pool->storage + t->pool->size,
+                                          t->format, l.w, l.h, lin, gs == 4 && g_settings.sharp_text,
+                                          !b->font_logged, &high);
+            if (text && font_start)
+                LOG("[font] %ux%u replacement=%s CPU %.2f ms\n", l.w, l.h,
+                    high ? "4x" : "original", (SDL_GetTicksNS() - font_start) / 1000000.0);
+            if (font_like) b->font_logged = true;
+            bool glyph = text || (sheet ? glyphs_apply(t->addr, t->pool->storage, t->pool->storage + t->pool->size,
+                                                       t->format, t->width, t->height, lin, l.wb, l.hb, gs, &high)
+                                        : layout && glyphs_apply_layout(t->format, l.w, l.h, lin, row, gs, &high));
             if (glyph) {
                 if (high && !glyph_image(t, b, gs)) {
                     free(high); high = NULL;
                     glyph_image(t, b, 1);
-                    if (sheet) glyphs_apply(t->addr, t->pool->storage, t->pool->storage + t->pool->size,
-                                            t->format, t->width, t->height, lin, l.wb, l.hb, 1, &high);
+                    if (text) { /* Leave the original sheet untouched. */ }
+                    else if (sheet) glyphs_apply(t->addr, t->pool->storage, t->pool->storage + t->pool->size,
+                                                  t->format, t->width, t->height, lin, l.wb, l.hb, 1, &high);
                     else glyphs_apply_layout(t->format, l.w, l.h, lin, row, 1, &high);
                 } else if (!high) glyph_image(t, b, 1);
                 b->glyph_gen = glyphs_generation();

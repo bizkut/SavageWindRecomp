@@ -254,6 +254,13 @@ uint64_t framepace_shown_frame(void) { return __atomic_load_n(&shown_frames, __A
 
 void rt_vfr_update(uint64_t vfr) {
     __atomic_fetch_add(&game_frames, 1, __ATOMIC_RELAXED);
+    static int ui_state = -1;
+    int ui = framepace_loading_ui() ? 2 : framepace_title_ui() ? 1 : 0;
+    if (ui != ui_state) {
+        static const char *const names[] = {"play", "title", "loading"};
+        LOG("[ui] screen: %s\n", names[ui]);
+        ui_state = ui;
+    }
     {
         extern uint64_t renderer_present_count(void);
         static uint64_t presented = ~0ull;

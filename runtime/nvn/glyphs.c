@@ -73,6 +73,68 @@ static void bc4_decode(const uint8_t *lin, uint32_t wb, uint32_t hb, uint8_t *im
         }
 }
 
+// Hashes are of the original block-linear sheets in the user's 1.9.0 RomFS, not the font data itself.
+// Caption, Normal and Special cover US, EU and JP archives; NormalS is the R8 alternative.
+static const uint64_t k_text_bc4[] = {
+    0x955a272b6e31a058ull, 0x032f81260c272df1ull, 0x1581f8a965c5ac6aull,
+    0xa5c8ba166a69db69ull, 0xf4268691d6f86d3cull,
+    0xf4cf73b7e3c7f63aull, 0xc5e385045b4e88cdull, 0x776270630c55c990ull, 0x7fb7f0f3fa359b91ull,
+    0x44cd43ff3a9671c0ull, 0xb919eea09d79a8ddull, 0x1adf8082d251a617ull, 0x51652b9a4e827975ull,
+    0x7b75a0d566e1723full, 0x68c1f1e7be2c5e49ull,
+    0x525f4a51ff980019ull, 0xee76abbb7585b65dull, 0xf57d4927546720a6ull,
+    0xe7d9d7ea814c1c0aull, 0x423552082e5f6fc9ull, 0x3e3cf72b55d5df63ull,
+    0x1dec9a2e235b297eull, 0xc4f6a8dd1e01dc8dull, 0x607dfe5114631906ull,
+    0x02578d1f8f54edbdull, 0x53a09d3de8f57618ull, 0xd1be0316d59d6e94ull,
+    0xe62ef0e51b381d96ull, 0xcbf43120004d21c8ull, 0x143450f54b1da39bull,
+};
+static const uint64_t k_text_r8[] = {
+    0x40ad310dc3727b45ull, 0x041b480e2cd187f0ull, 0xc6e1cd6fc0dd71e6ull,
+    0x718ca5df6220952bull, 0x7421fec416deaf36ull,
+};
+
+bool glyphs_sharp_text(uint64_t addr, uint64_t pool_lo, uint64_t pool_hi, uint32_t format,
+                       uint32_t w, uint32_t h, const uint8_t *lin, bool enable, bool log_upload, uint8_t **high) {
+    if ((format != FMT_BC4 && format != FMT_R8) || w < 128 || h < 128) return false;
+    bool candidate = h == 1024 && (w == 512 || w == 1024);
+    if (!candidate && !log_upload) return false;
+    uint64_t bytes = format == FMT_BC4 ? (uint64_t)((w + 3) / 4) * ((h + 3) / 4) * 8 : (uint64_t)w * h;
+    if (addr < pool_lo || addr > pool_hi || bytes > pool_hi - addr) return false;
+    uint64_t hash = fnv1a((const uint8_t *)(uintptr_t)addr, bytes);
+    const uint64_t *hashes = format == FMT_BC4 ? k_text_bc4 : k_text_r8;
+    size_t count = format == FMT_BC4 ? sizeof k_text_bc4 / sizeof *k_text_bc4 : sizeof k_text_r8 / sizeof *k_text_r8;
+    size_t i = 0;
+    if (candidate) for (; i < count && hashes[i] != hash; i++) {}
+    bool hit = candidate && i != count;
+    if (log_upload) LOG("[font] %ux%u format %#x hash %016llx %s\n",
+                        w, h, format, (unsigned long long)hash, hit ? "hit" : "miss");
+    if (!hit) return false;
+    if (!enable) return true;
+    uint8_t *src = malloc((uint64_t)w * h), *dst = malloc((uint64_t)w * h * 16);
+    if (!src || !dst) { free(src); free(dst); return true; }
+    if (format == FMT_BC4) bc4_decode(lin, w / 4, h / 4, src);
+    else memcpy(src, lin, (uint64_t)w * h);
+    // Reconstruct the bilinear coverage field at 4x, then narrow its transition around 50%.
+    // This retains the original outline and has no negative lobes or ringing.
+    uint32_t ow = w * 4;
+    for (uint32_t y = 0; y < h * 4; y++) {
+        int sy = (int)y * 2 - 3, y0 = sy < 0 ? 0 : sy / 8, fy = sy < 0 ? 0 : sy % 8;
+        int y1 = y0 + 1 < (int)h ? y0 + 1 : y0;
+        for (uint32_t x = 0; x < ow; x++) {
+            int sx = (int)x * 2 - 3, x0 = sx < 0 ? 0 : sx / 8, fx = sx < 0 ? 0 : sx % 8;
+            int x1 = x0 + 1 < (int)w ? x0 + 1 : x0;
+            int v = (src[(uint64_t)y0 * w + x0] * (8-fx) * (8-fy) +
+                     src[(uint64_t)y0 * w + x1] * fx * (8-fy) +
+                     src[(uint64_t)y1 * w + x0] * (8-fx) * fy +
+                     src[(uint64_t)y1 * w + x1] * fx * fy + 32) / 64;
+            v = (v - 64) * 2;
+            dst[(uint64_t)y * ow + x] = v < 0 ? 0 : v > 255 ? 255 : v;
+        }
+    }
+    free(src);
+    *high = dst;
+    return true;
+}
+
 static void bc4_encode(const uint8_t *img, uint32_t wb, uint32_t hb, uint8_t *lin) {
     uint32_t w = wb * 4;
     for (uint32_t by = 0; by < hb; by++)
@@ -592,6 +654,7 @@ uint32_t glyphs_generation(void) {
     } else {
         for (int i = 0; i < BIND_PAD_COUNT; i++) h = (h ^ (uint16_t)g_bind_pad[i]) * 16777619u;
     }
+    h = (h ^ (uint32_t)g_settings.sharp_text) * 16777619u;
     return h | 1;
 }
 

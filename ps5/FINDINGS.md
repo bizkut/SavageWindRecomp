@@ -1029,3 +1029,10 @@ Eboot `41055321…`: the button glyph sheet is replaced by a 4× (1024×4096 R8)
 including new PlayStation-style L/R stick icons with direction arrows ("high-resolution R8 image 1024x4096 (4x)").
 Native 4K crops before/after show sharp icon edges; the user confirmed on the TV. The game's own bitmap text
 ("Move", "Camera") is unchanged and still soft.
+
+## 2026-10-28 — Loading reads with SHA-NI, round 2 (.41, ps5/evidence/m8/ab-loads2-*.klog)
+
+Eboot `c83b5983…`: startup measure "16 KiB blocks software 266.4 MiB/s, sha_ni 544.9 MiB/s", SHA-NI selected (round 1
+mixed AVX- and SSE-encoded instructions in the SHA-NI loop and regressed to ~200 package-read hitches). Loading-screen
+package-read hitches **53 / 54** per run (baseline 63–70), in play 1–3; route 99.8–100 % on time. A modest gain:
+SHA is now ~2× faster, so what remains is the reads themselves and decryption on the guest threads.

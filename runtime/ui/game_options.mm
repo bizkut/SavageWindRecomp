@@ -909,6 +909,17 @@ Item video_sharpening() {
                   [](const Item &, int x) { g_settings.sharpening = x; }, 0);
 }
 
+Item video_sharp_text() {
+    return toggle(P_VIDEO, "Sharp game text", "Sharpens identified game font sheets at 4K.",
+                  [](const Item &) { return (int)g_settings.sharp_text; },
+                  [](const Item &, int x) { g_settings.sharp_text = x != 0; },
+#ifdef __PROSPERO__
+                  1);
+#else
+                  0);
+#endif
+}
+
 Item video_async_shaders() {
     return toggle(P_VIDEO, "Asynchronous shaders", "On: no stutter, but some effects appear late.",
                   [](const Item &) { return (int)g_settings.async_shaders; },

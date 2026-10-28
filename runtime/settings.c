@@ -41,6 +41,7 @@ Settings g_settings = {
     .vsync = VSYNC_DEFAULT,
 #ifdef __PROSPERO__
     .hdr = HDR_OFF,
+    .sharp_text = true,
 #endif
     .wide_view = true,
     .fov = 100,
@@ -145,6 +146,7 @@ void settings_load(void) {
             for (int i = 0; i < ICONS_COUNT; i++)
                 if (!strcmp(val, k_icons[i])) g_settings.button_icons = i;
         }
+        else if (!strcmp(key, "sharp_text")) g_settings.sharp_text = atoi(val) != 0;
         else if (!strcmp(key, "async_shaders")) g_settings.async_shaders = atoi(val) != 0;
         else if (!strcmp(key, "precompile_shaders")) g_settings.precompile_shaders = atoi(val) != 0;
         else if (!strcmp(key, "wide_view")) g_settings.wide_view = atoi(val) != 0;
@@ -274,6 +276,7 @@ void settings_save(void) {
     fprintf(f, "motion_invert = %s\n", inv[g_settings.motion_invert & 3]);
     fprintf(f, "button_icons = %s\n", k_icons[g_settings.button_icons >= 0 && g_settings.button_icons < ICONS_COUNT ?
                                                 g_settings.button_icons : ICONS_AUTO]);
+    fprintf(f, "sharp_text = %d\n", g_settings.sharp_text);
     fprintf(f, "async_shaders = %d\n", g_settings.async_shaders);
     fprintf(f, "precompile_shaders = %d\n", g_settings.precompile_shaders);
     static const char *const shadow[SHADOW_COUNT] = {"console", "high", "ultra", "extreme"};

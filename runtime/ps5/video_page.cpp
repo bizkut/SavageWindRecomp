@@ -113,6 +113,7 @@ void video_page(std::vector<Item> &v) {
                        [](const Item &, int x) { g_settings.dynamic_resolution = x != 0; settings_save(); }, 0));
     v.push_back(video_anisotropy());
     v.push_back(video_sharpening());
+    v.push_back(video_sharp_text());
     v.push_back(video_async_shaders());
     v.push_back(video_shadows());
 }

@@ -11,6 +11,10 @@ bool glyphs_apply(uint64_t addr, uint64_t pool_lo, uint64_t pool_hi, uint32_t fo
 // The same for the HUD's R8 textures; high-resolution output is tightly packed.
 bool glyphs_apply_layout(uint32_t format, uint32_t w, uint32_t h, uint8_t *lin, uint32_t row, int scale, uint8_t **high);
 
+// Recognize a text sheet by its original guest bytes; optionally return its 4x R8 replacement.
+bool glyphs_sharp_text(uint64_t addr, uint64_t pool_lo, uint64_t pool_hi, uint32_t format,
+                       uint32_t w, uint32_t h, const uint8_t *lin, bool enable, bool log_upload, uint8_t **high);
+
 // Changes whenever the icons to draw change (device, bindings, setting): sheets uploaded under another one go up again.
 uint32_t glyphs_generation(void);
 

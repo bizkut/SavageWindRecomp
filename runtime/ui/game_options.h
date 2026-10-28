@@ -51,6 +51,7 @@ Item video_upscaler_mode();
 Item video_antialiasing();
 Item video_anisotropy();
 Item video_sharpening();
+Item video_sharp_text();
 Item video_async_shaders();
 Item video_shadows();
 
