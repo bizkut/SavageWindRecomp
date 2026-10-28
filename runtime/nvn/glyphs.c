@@ -24,6 +24,7 @@
 #include <SDL3/SDL.h>
 
 #include "glyphs.h"
+#include "text_sdf.h"
 #include "../framepace.h"
 #include "../input_bind.h"
 #include "../paths.h"
@@ -79,6 +80,7 @@ typedef struct {
     uint64_t hash;
     uint32_t w, h, format;
     uint16_t cell_w, cell_h, cols, rows;
+    uint16_t *ink; // per-cell clipped [left,right) in source pixels
 } TextSheet;
 static TextSheet text_sheets[128];
 static size_t text_sheet_count;
@@ -121,8 +123,31 @@ void glyphs_register_font(const uint8_t *b, uint64_t n) {
         for (j = 0; j < text_sheet_count; j++)
             if (text_sheets[j].hash == hash && text_sheets[j].w == w && text_sheets[j].h == h &&
                 text_sheets[j].format == format) break;
-        if (j == text_sheet_count)
-            text_sheets[text_sheet_count++] = (TextSheet){hash, w, h, format, cw, ch, cols, rows};
+        if (j == text_sheet_count) {
+            size_t cells = (size_t)cols * rows;
+            uint16_t *ink = malloc(cells * sizeof(*ink));
+            if (!ink) continue;
+            for (size_t k = 0; k < cells; k++) ink[k] = (uint16_t)(cw << 8);
+            uint32_t p = font_u32(b + 0x2c);
+            for (unsigned chain = 0; p && chain < 256; chain++) {
+                if (p < 8 || (uint64_t)p + 8 > n) break;
+                const uint8_t *s = b + p - 8;
+                uint32_t size = font_u32(s + 4), first = font_u16(s + 8), last = font_u16(s + 10);
+                if (memcmp(s, "CWDH", 4) || size < 16 || (uint64_t)(p - 8) + size > n ||
+                    last < first || (uint64_t)(last - first + 1) * 3 > size - 16) break;
+                for (uint32_t k = first; k <= last; k++) {
+                    if (k / cells != i) continue;
+                    const uint8_t *m = s + 16 + (k - first) * 3;
+                    int left = (int8_t)m[0]; if (left < 0) left = 0;
+                    int right = left + m[1]; left -= 2; right += 2;
+                    if (left < 0) left = 0; if (right > (int)cw) right = cw;
+                    if (!m[1]) left = right = 0;
+                    ink[k % cells] = (uint16_t)(left | right << 8);
+                }
+                p = font_u32(s + 12);
+            }
+            text_sheets[text_sheet_count++] = (TextSheet){hash, w, h, format, cw, ch, cols, rows, ink};
+        }
     }
     if (text_sheet_count != before)
         LOG("[font] indexed %u new %ux%u sheets (cells %ux%u, grid %ux%u)\n",
@@ -136,6 +161,8 @@ typedef struct {
     uint32_t w, h, format;
     uint16_t cell_w, cell_h, cols, rows;
     int scale, state;  // 1 working, 2 ready, 3 failed
+    bool sharpen;
+    const uint16_t *ink;
     uint8_t *input, *output;
 } TextCache;
 static TextCache text_cache[32];
@@ -183,11 +210,16 @@ static void *text_worker(void *arg) {
             dst[(uint64_t)y * ow + x] = v < 0 ? 0 : v > 255 ? 255 : v;
         }
     }
+    if (!c->sharpen && !text_sdf_sheet(src, dst, w, h, c->cell_w, c->cell_h, c->cols, c->rows, scale, c->ink)) {
+        free(src); free(dst);
+        __atomic_store_n(&c->state, 3, __ATOMIC_RELEASE);
+        return NULL;
+    }
     free(src);
     c->output = dst;
     __atomic_store_n(&c->state, 2, __ATOMIC_RELEASE);
-    LOG("[font] %ux%u hash=%016llx %dx worker %.2f ms finished_frame=%llu\n",
-        w, h, (unsigned long long)c->hash, scale, (SDL_GetTicksNS() - started) / 1000000.0,
+    LOG("[font] %ux%u hash=%016llx %dx method=%s worker %.2f ms finished_frame=%llu\n",
+        w, h, (unsigned long long)c->hash, scale, c->sharpen ? "sharpen" : "sdf", (SDL_GetTicksNS() - started) / 1000000.0,
         (unsigned long long)framepace_game_frame());
     return NULL;
 }
@@ -220,7 +252,7 @@ bool glyphs_sharp_text(uint64_t addr, uint64_t pool_lo, uint64_t pool_hi, uint32
     size_t slot;
     for (slot = 0; slot < sizeof text_cache / sizeof *text_cache; slot++) {
         TextCache *c = &text_cache[slot];
-        if (__atomic_load_n(&c->state, __ATOMIC_ACQUIRE) && c->hash == hash && c->scale == scale && c->format == format && c->w == w && c->h == h) break;
+        if (__atomic_load_n(&c->state, __ATOMIC_ACQUIRE) && c->hash == hash && c->scale == scale && c->format == format && c->w == w && c->h == h && c->sharpen == g_settings.sharp_text_sharpen) break;
     }
     if (slot == sizeof text_cache / sizeof *text_cache) {
         for (slot = 0; slot < sizeof text_cache / sizeof *text_cache && __atomic_load_n(&text_cache[slot].state, __ATOMIC_ACQUIRE); slot++) {}
@@ -230,8 +262,10 @@ bool glyphs_sharp_text(uint64_t addr, uint64_t pool_lo, uint64_t pool_hi, uint32
         if (!c->input) return true;
         memcpy(c->input, lin, bytes);
         c->hash = hash; c->w = w; c->h = h; c->format = format; c->scale = scale;
+        c->sharpen = g_settings.sharp_text_sharpen;
         c->cell_w = text_sheets[i].cell_w; c->cell_h = text_sheets[i].cell_h;
         c->cols = text_sheets[i].cols; c->rows = text_sheets[i].rows;
+        c->ink = text_sheets[i].ink;
         __atomic_store_n(&c->state, 1, __ATOMIC_RELEASE);
         pthread_t thread;
         if (pthread_create(&thread, NULL, text_worker, c)) {

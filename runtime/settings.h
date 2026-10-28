@@ -88,6 +88,7 @@ typedef struct {
     int motion_invert;   // MOTION_INVERT_* bits: turning the controller up / down, left / right goes the other way
     int button_icons;    // ICONS_*: the game's button prompts show this device's buttons (Automatic: the one in use)
     bool sharp_text;     // Vulkan: sharpen identified game font sheets at 4K
+    bool sharp_text_sharpen; // ini sharp_text_method: false = sdf, true = sharpen
     bool sharp_ui;       // Vulkan: enlarge selected layout artwork from the player's archives
     bool sharp_ui_chosen;  // sharp_ui came from the ini (PS5: otherwise the 4K first-launch default decides)
     bool async_shaders;  // draw on while new shaders compile (no stutter; what needs them is skipped meanwhile)

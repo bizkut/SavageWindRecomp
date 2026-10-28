@@ -1062,3 +1062,12 @@ First-launch default (runtime/ps5/video_defaults.h): absent `sharp_ui` → on wh
 On PS5 the layout archive is indexed when the setting is on or not yet chosen (the mode is known only after indexing).
 .41 with no `sharp_ui` in the ini: logo and title art enlarged and live (frames 78–80), indexing 82 ms, ini saved
 `sharp_ui = 1`; benchmark unchanged (99.9 % on time, 59.6 / 119.3 fps). Desktop default stays off.
+
+## 2026-10-28 — Distance-field text (`sharp_text_method = sdf`, opt-in) (.41, ps5/evidence/m8/bar2-*.klog, shots/text-sharpen-vs-sdf.png)
+
+Eboot `ab0f3113…`: per glyph (inside its CWDH ink box), an antialiased EDT at source resolution, the signed distance
+bilinearly upsampled 4× and thresholded with a 1-output-pixel ramp; threshold calibrated per sheet (weight error
+<0.01 %). Native-4K prompt bar vs `sharpen`: smoother curves and cleaner edges ("Move / Controls / Camera"), same
+weight. Costs: worker 2.3–4.5 s per sheet (sharpen 0.16–0.33 s), so the in-play Normal sheets went live at frame 793
+(~13 s; the text stays at the original resolution until then). Host crops show a remaining defect in CJK (Caption 中:
+a blob at the stroke crossing). Default stays `sharpen` until the CJK junction and worker time are fixed.
