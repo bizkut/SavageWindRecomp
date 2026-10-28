@@ -1036,3 +1036,12 @@ Eboot `c83b5983…`: startup measure "16 KiB blocks software 266.4 MiB/s, sha_ni
 mixed AVX- and SSE-encoded instructions in the SHA-NI loop and regressed to ~200 package-read hitches). Loading-screen
 package-read hitches **53 / 54** per run (baseline 63–70), in play 1–3; route 99.8–100 % on time. A modest gain:
 SHA is now ~2× faster, so what remains is the reads themselves and decryption on the guest threads.
+
+## 2026-10-28 — Sharper game text at 4K (.41, ps5/evidence/m8/text3.klog, shots/text-before-after.png)
+
+Eboot `8b50846e…`, `sharp_text` on: the game's font sheets are indexed from the user's own Font archives (BFFNT/TGLP/
+BNTX, 30+ sheets with their glyph-cell grids), and on upload each identified sheet is upscaled 4× per glyph cell on a
+worker thread, then swapped in (title fonts live ~1 frame after the worker finishes; the in-play Normal/Special sheets
+are 2-layer arrays, both layers 4×, live at frame 524 during loading). Render-thread cost per hit 0.4–1.5 ms; workers
+156–328 ms in the background. Native 4K crop of the prompt bar: "Move / Controls / Camera" edges are crisper (the
+method narrows the coverage ramp; not a true vector reconstruction). The title/loading layout art is still original.

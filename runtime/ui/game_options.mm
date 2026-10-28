@@ -910,7 +910,7 @@ Item video_sharpening() {
 }
 
 Item video_sharp_text() {
-    return toggle(P_VIDEO, "Sharp game text", "Sharpens identified game font sheets at 4K.",
+    return toggle(P_VIDEO, "Sharp game text", "Sharpens identified game font sheets at 4K. Restart after turning on.",
                   [](const Item &) { return (int)g_settings.sharp_text; },
                   [](const Item &, int x) { g_settings.sharp_text = x != 0; },
 #ifdef __PROSPERO__

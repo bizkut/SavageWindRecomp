@@ -9,9 +9,11 @@
 #include <string.h>
 
 #include "../../frametime.h"
+#include "../../framepace.h"
 #include "vk.h"
 #include "record.h"
 #include "../../settings.h"
+#include "../../window_size.h"
 #include "../astc.h"
 #include "../glyphs.h"
 #include "../renderer.h"
@@ -841,6 +843,15 @@ static void upload_scaled(VkCommandBuffer cb, TexBackend *b, VkSpan s, VkBufferI
     rec_CmdBlitImage(cb, img, VK_IMAGE_LAYOUT_GENERAL, b->image, VK_IMAGE_LAYOUT_GENERAL, 1, &bl, lin ? VK_FILTER_LINEAR : VK_FILTER_NEAREST);
     vk_defer_image(img, mem);
 }
+static int glyph_output_scale(void) {
+#ifdef __PROSPERO__
+    int h = winsize_effective(true).h;
+#else
+    int h = g_vk.sc_extent.height;
+#endif
+    return h >= 2000 ? 4 : h >= 1400 ? 2 : 1;
+}
+
 // Replace only identified, single-level sampled glyph images. Keep the guest image alive until allocation succeeds.
 static bool glyph_image(NvnTexture *t, TexBackend *b, uint32_t scale) {
     if (b->glyph_scale == scale) return true;
@@ -848,12 +859,12 @@ static bool glyph_image(NvnTexture *t, TexBackend *b, uint32_t scale) {
         if (b->glyph_scale) { destroy_image(b); b->glyph_scale = 0; create_image(t, b); }
         return true;
     }
-    if (t->target != 1 || t->levels > 1 || t->samples > 1 ||
+    if ((t->target != 1 && t->target != 4) || t->levels > 1 || t->samples > 1 ||
         t->width * scale > g_vk.props.limits.maxImageDimension2D ||
         t->height * scale > g_vk.props.limits.maxImageDimension2D) return false;
     VkImageCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, .imageType = VK_IMAGE_TYPE_2D,
                             .format = VK_FORMAT_R8_UNORM, .extent = {t->width * scale, t->height * scale, 1},
-                            .mipLevels = 1, .arrayLayers = 1, .samples = VK_SAMPLE_COUNT_1_BIT,
+                            .mipLevels = 1, .arrayLayers = b->layers, .samples = VK_SAMPLE_COUNT_1_BIT,
                             .tiling = VK_IMAGE_TILING_OPTIMAL,
                             .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT};
     VmaAllocationCreateInfo ai = {.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE};
@@ -888,6 +899,61 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
     if (layers > b->layers && b->depth == 1) layers = b->layers;
     bool linear = nvn_texture_flags_pitch(t->flags);
     uint64_t layer_size = linear ? t->stride * (t->layout.height ? t->layout.height : 1) : tegra_layer_size(&t->layout);
+    // Array fonts switch all layers together; until every worker finishes, retain the original image.
+    if (t->target == 4 && t->pool && !linear && t->levels == 1 && t->samples <= 1 &&
+        (t->format == 0x49 || t->format == 0x01) && layers > 1 && layers <= 32 && (level_mask & 1)) {
+        int scale = glyph_output_scale(), pending = 0;
+        bool all = g_settings.sharp_text && scale > 1;
+        uint8_t *high[32] = {0};
+        LevelLayout l = tegra_level(&t->layout, 0);
+        uint64_t bytes = (uint64_t)l.wb * l.hb * fi->bpb;
+        uint8_t *lin = all ? malloc(bytes) : NULL;
+        if (!lin) all = false;
+        bool ready = all;
+        for (uint32_t layer = 0; all && layer < layers; layer++) {
+            uint64_t addr = t->addr + layer * layer_size + l.offset;
+            tegra_deswizzle((const uint8_t *)(uintptr_t)addr, lin, l.wb, l.hb, 1, fi->bpb,
+                            l.block_height_log2, l.block_depth_log2);
+            int wait = 0;
+            if (!glyphs_sharp_text(addr, t->pool->storage, t->pool->storage + t->pool->size,
+                                   t->format, l.w, l.h, lin, scale, !b->font_logged, &high[layer], &wait)) {
+                all = false;
+                break;
+            }
+            if (wait && !pending) pending = wait;
+            if (!high[layer]) ready = false;
+            if (!b->font_logged)
+                LOG("[font] array %ux%u layer=%u/%u output_height=%d scale=%d target=%u levels=%u samples=%u state=%s\n",
+                    l.w, l.h, layer, layers,
+#ifdef __PROSPERO__
+                    winsize_effective(true).h,
+#else
+                    (int)g_vk.sc_extent.height,
+#endif
+                    scale, t->target, t->levels, t->samples, high[layer] ? "cached" : wait ? "pending" : "original");
+        }
+        free(lin);
+        if (all) {
+            b->font_logged = true;
+            b->font_pending = pending;
+            b->glyph_gen = glyphs_generation();
+            b->glyph_output_scale = scale;
+            if (ready && glyph_image(t, b, scale)) {
+                for (uint32_t layer = 0; layer < layers; layer++) {
+                    VkSpan hs = vk_transient_copy(high[layer], (uint64_t)l.w * l.h * scale * scale, 16);
+                    VkBufferImageCopy rg = {.bufferOffset = hs.off, .bufferRowLength = l.w * scale,
+                        .imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, layer, 1},
+                        .imageExtent = {l.w * scale, l.h * scale, 1}};
+                    rec_CmdCopyBufferToImage(cb, hs.buf, b->image, VK_IMAGE_LAYOUT_GENERAL, 1, &rg);
+                    LOG("[font] array layer=%u addr=%llx live_frame=%llu (%dx)\n", layer,
+                        (unsigned long long)(t->addr + layer * layer_size), (unsigned long long)framepace_game_frame(), scale);
+                }
+                return;
+            }
+        }
+        if (b->glyph_scale) glyph_image(t, b, 1);
+        if (!all) { b->font_pending = 0; b->glyph_gen = 0; }
+    }
     uint32_t levels = t->layout.levels < b->levels ? t->layout.levels : b->levels;
     for (uint32_t layer = 0; layer < layers; layer++) {
         for (uint32_t lv = 0; lv < levels; lv++) {
@@ -921,27 +987,37 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
                 tegra_deswizzle(src, lin, l.wb, l.hb, l.d, fi->bpb, l.block_height_log2, l.block_depth_log2);
             }
             uint8_t *high = NULL;
-            int gs = g_vk.sc_extent.height >= 2000 ? 4 : g_vk.sc_extent.height >= 1400 ? 2 : 1;
+            int gs = glyph_output_scale();
             if (t->target != 1 || t->levels > 1 || t->samples > 1) gs = 1;
             bool sheet = lv == 0 && layer == 0 && t->format == 0x49 && t->pool;
             bool layout = lv == 0 && layer == 0 && t->format == 0x01 && !linear;
-            bool font_like = lv == 0 && layer == 0 && !linear && t->pool && l.d == 1 &&
+            bool font_like = t->target != 4 && lv == 0 && layer == 0 && !linear && t->pool && l.d == 1 &&
                              (t->format == 0x49 || t->format == 0x01) && l.w >= 128 && l.h >= 128;
             uint64_t font_start = font_like && !b->font_logged ? SDL_GetTicksNS() : 0;
+            int pending = 0;
             bool text = font_like &&
                         glyphs_sharp_text(t->addr, t->pool->storage, t->pool->storage + t->pool->size,
-                                          t->format, l.w, l.h, lin, gs == 4 && g_settings.sharp_text,
-                                          !b->font_logged, &high);
+                                          t->format, l.w, l.h, lin, g_settings.sharp_text ? gs : 1,
+                                          !b->font_logged, &high, &pending);
             if (text && font_start)
-                LOG("[font] %ux%u replacement=%s CPU %.2f ms\n", l.w, l.h,
-                    high ? "4x" : "original", (SDL_GetTicksNS() - font_start) / 1000000.0);
+                LOG("[font] %ux%u replacement=%s dispatch %.2f ms output_height=%d scale=%d target=%u levels=%u samples=%u layers=%u\n",
+                    l.w, l.h, high ? "cached" : pending ? "pending" : "original",
+                    (SDL_GetTicksNS() - font_start) / 1000000.0,
+#ifdef __PROSPERO__
+                    winsize_effective(true).h,
+#else
+                    (int)g_vk.sc_extent.height,
+#endif
+                    gs, t->target, t->levels, t->samples, layers);
+            if (t->target != 4) b->font_pending = pending;
             if (font_like) b->font_logged = true;
             bool glyph = text || (sheet ? glyphs_apply(t->addr, t->pool->storage, t->pool->storage + t->pool->size,
                                                        t->format, t->width, t->height, lin, l.wb, l.hb, gs, &high)
                                         : layout && glyphs_apply_layout(t->format, l.w, l.h, lin, row, gs, &high));
             if (glyph) {
                 if (high && !glyph_image(t, b, gs)) {
-                    free(high); high = NULL;
+                    if (!text) free(high);
+                    high = NULL;
                     glyph_image(t, b, 1);
                     if (text) { /* Leave the original sheet untouched. */ }
                     else if (sheet) glyphs_apply(t->addr, t->pool->storage, t->pool->storage + t->pool->size,
@@ -954,11 +1030,13 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
                     LOG("[glyphs] high-resolution R8 image %ux%u (%dx)\n", b->width, b->height, gs);
                 if (high) {
                     VkSpan hs = vk_transient_copy(high, (uint64_t)l.w * l.h * gs * gs, 16);
-                    free(high);
+                    if (!text) free(high);
                     VkBufferImageCopy rg = {.bufferOffset = hs.off, .bufferRowLength = l.w * gs,
                         .imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
                         .imageExtent = {l.w * gs, l.h * gs, 1}};
                     rec_CmdCopyBufferToImage(cb, hs.buf, b->image, VK_IMAGE_LAYOUT_GENERAL, 1, &rg);
+                    if (text) LOG("[font] %ux%u addr=%llx live_frame=%llu (%dx)\n", l.w, l.h,
+                                  (unsigned long long)t->addr, (unsigned long long)framepace_game_frame(), gs);
                     continue;
                 }
             } else if (b->glyph_scale) {
@@ -1111,9 +1189,10 @@ TexBackend *vk_tex(NvnTexture *t, bool for_render) {
     if (!for_render && !b->gpu_owned && vk_trace_tex(t))  // (CPU-owned: guest memory is uploaded when it changed)
         vk_trace_event(t, 1, NULL, 0, "use: CPU-owned, uploaded %d dynamic %d", b->uploaded, b->dynamic);
     if (b->pending_rgba) upload_pending(b);
-    int glyph_scale = g_vk.sc_extent.height >= 2000 ? 4 : g_vk.sc_extent.height >= 1400 ? 2 : 1;
-    if (t->target != 1 || t->levels > 1 || t->samples > 1) glyph_scale = 1;
-    if (b->glyph_gen && (b->glyph_gen != glyphs_generation() || b->glyph_output_scale != glyph_scale))
+    int glyph_scale = glyph_output_scale();
+    if ((t->target != 1 && t->target != 4) || t->levels > 1 || t->samples > 1) glyph_scale = 1;
+    if ((b->glyph_gen && (b->glyph_gen != glyphs_generation() || b->glyph_output_scale != glyph_scale)) ||
+        glyphs_text_ready(b->font_pending))
         upload_levels(t, b, 1);
     // Levels nvnTextureWriteTexels filled go up now, also into an image the GPU draws into: BOTW writes level 0 of its
     // 32x32x32 noise that way and then renders the smaller levels from it (the noise stayed black: GPU-owned images

@@ -121,6 +121,7 @@ typedef struct TexBackend {
     uint8_t glyph_scale;         // high-resolution R8 replacement, 0 for an ordinary image
     uint8_t glyph_output_scale;  // requested scale, including allocation fallback
     bool font_logged;            // first font-like upload logged for this backend
+    int font_pending;             // worker-cache slot awaiting publication, 0 when none
     // textures.c: one image per memory and shape, shared by every texture made there
     uint64_t key_addr;           // 0: not shared
     uint32_t key[7];             // target, format, width, height, depth, levels, samples

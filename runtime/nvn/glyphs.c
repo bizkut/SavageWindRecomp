@@ -16,6 +16,7 @@
 //
 // SAVAGEWIND_GLYPH_DUMP=1 saves each sheet as uploaded, the original beside it (build/glyph_sheet_<n>.pgm, bottom-up).
 #include <math.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,6 +24,7 @@
 #include <SDL3/SDL.h>
 
 #include "glyphs.h"
+#include "../framepace.h"
 #include "../input_bind.h"
 #include "../paths.h"
 #include "../rt.h"
@@ -73,65 +75,176 @@ static void bc4_decode(const uint8_t *lin, uint32_t wb, uint32_t hb, uint8_t *im
         }
 }
 
-// Hashes are of the original block-linear sheets in the user's 1.9.0 RomFS, not the font data itself.
-// Caption, Normal and Special cover US, EU and JP archives; NormalS is the R8 alternative.
-static const uint64_t k_text_bc4[] = {
-    0x955a272b6e31a058ull, 0x032f81260c272df1ull, 0x1581f8a965c5ac6aull,
-    0xa5c8ba166a69db69ull, 0xf4268691d6f86d3cull,
-    0xf4cf73b7e3c7f63aull, 0xc5e385045b4e88cdull, 0x776270630c55c990ull, 0x7fb7f0f3fa359b91ull,
-    0x44cd43ff3a9671c0ull, 0xb919eea09d79a8ddull, 0x1adf8082d251a617ull, 0x51652b9a4e827975ull,
-    0x7b75a0d566e1723full, 0x68c1f1e7be2c5e49ull,
-    0x525f4a51ff980019ull, 0xee76abbb7585b65dull, 0xf57d4927546720a6ull,
-    0xe7d9d7ea814c1c0aull, 0x423552082e5f6fc9ull, 0x3e3cf72b55d5df63ull,
-    0x1dec9a2e235b297eull, 0xc4f6a8dd1e01dc8dull, 0x607dfe5114631906ull,
-    0x02578d1f8f54edbdull, 0x53a09d3de8f57618ull, 0xd1be0316d59d6e94ull,
-    0xe62ef0e51b381d96ull, 0xcbf43120004d21c8ull, 0x143450f54b1da39bull,
-};
-static const uint64_t k_text_r8[] = {
-    0x40ad310dc3727b45ull, 0x041b480e2cd187f0ull, 0xc6e1cd6fc0dd71e6ull,
-    0x718ca5df6220952bull, 0x7421fec416deaf36ull,
-};
+typedef struct {
+    uint64_t hash;
+    uint32_t w, h, format;
+    uint16_t cell_w, cell_h, cols, rows;
+} TextSheet;
+static TextSheet text_sheets[128];
+static size_t text_sheet_count;
 
-bool glyphs_sharp_text(uint64_t addr, uint64_t pool_lo, uint64_t pool_hi, uint32_t format,
-                       uint32_t w, uint32_t h, const uint8_t *lin, bool enable, bool log_upload, uint8_t **high) {
-    if ((format != FMT_BC4 && format != FMT_R8) || w < 128 || h < 128) return false;
-    bool candidate = h == 1024 && (w == 512 || w == 1024);
-    if (!candidate && !log_upload) return false;
-    uint64_t bytes = format == FMT_BC4 ? (uint64_t)((w + 3) / 4) * ((h + 3) / 4) * 8 : (uint64_t)w * h;
-    if (addr < pool_lo || addr > pool_hi || bytes > pool_hi - addr) return false;
-    uint64_t hash = fnv1a((const uint8_t *)(uintptr_t)addr, bytes);
-    const uint64_t *hashes = format == FMT_BC4 ? k_text_bc4 : k_text_r8;
-    size_t count = format == FMT_BC4 ? sizeof k_text_bc4 / sizeof *k_text_bc4 : sizeof k_text_r8 / sizeof *k_text_r8;
-    size_t i = 0;
-    if (candidate) for (; i < count && hashes[i] != hash; i++) {}
-    bool hit = candidate && i != count;
-    if (log_upload) LOG("[font] %ux%u format %#x hash %016llx %s\n",
-                        w, h, format, (unsigned long long)hash, hit ? "hit" : "miss");
-    if (!hit) return false;
-    if (!enable) return true;
-    uint8_t *src = malloc((uint64_t)w * h), *dst = malloc((uint64_t)w * h * 16);
-    if (!src || !dst) { free(src); free(dst); return true; }
-    if (format == FMT_BC4) bc4_decode(lin, w / 4, h / 4, src);
-    else memcpy(src, lin, (uint64_t)w * h);
-    // Reconstruct the bilinear coverage field at 4x, then narrow its transition around 50%.
-    // This retains the original outline and has no negative lobes or ringing.
-    uint32_t ow = w * 4;
-    for (uint32_t y = 0; y < h * 4; y++) {
-        int sy = (int)y * 2 - 3, y0 = sy < 0 ? 0 : sy / 8, fy = sy < 0 ? 0 : sy % 8;
+static uint16_t font_u16(const uint8_t *p) { return (uint16_t)(p[0] | p[1] << 8); }
+static uint32_t font_u32(const uint8_t *p) { return (uint32_t)font_u16(p) | (uint32_t)font_u16(p + 2) << 16; }
+static uint64_t font_u64(const uint8_t *p) { return font_u32(p) | (uint64_t)font_u32(p + 4) << 32; }
+
+void glyphs_register_font(const uint8_t *b, uint64_t n) {
+    if (n < 0x54 || memcmp(b, "FFNT", 4) || b[4] != 0xff || b[5] != 0xfe) return;
+    uint32_t ptr = font_u32(b + 0x28);
+    if (ptr < 8 || (uint64_t)ptr + 24 > n) return;
+    const uint8_t *t = b + ptr - 8;
+    if (memcmp(t, "TGLP", 4)) return;
+    uint32_t cw = t[8], ch = t[9], count = t[10], fmt = font_u16(t + 18);
+    uint32_t cols = font_u16(t + 20), rows = font_u16(t + 22);
+    uint32_t w = font_u16(t + 24), h = font_u16(t + 26), boff = font_u32(t + 28);
+    uint32_t format = fmt == 12 ? FMT_BC4 : fmt == 8 ? FMT_R8 : 0;
+    if (!format || !cw || !ch || !count || !cols || !rows || !w || !h ||
+        (uint64_t)cols * (cw + 1) > w + 1 || (uint64_t)rows * (ch + 1) > h + 1 ||
+        (w & 3) || (h & 3) || boff > n || n - boff < 0x30) return;
+    const uint8_t *bt = b + boff;
+    uint64_t bn = n - boff;
+    if (memcmp(bt, "BNTX", 4) || font_u32(bt + 0x24) != 1) return;
+    uint64_t table = font_u64(bt + 0x28);
+    if (table > bn || bn - table < 8) return;
+    uint64_t brti = font_u64(bt + table);
+    if (brti > bn || bn - brti < 0x78 || memcmp(bt + brti, "BRTI", 4)) return;
+    const uint8_t *r = bt + brti;
+    if (font_u32(r + 0x24) != w || font_u32(r + 0x28) != h || font_u32(r + 0x30) < count) return;
+    uint64_t offsets = font_u64(r + 0x70);
+    if (offsets > bn || bn - offsets < 8) return;
+    uint64_t data = font_u64(bt + offsets);
+    uint64_t bytes = (uint64_t)w * h / (format == FMT_BC4 ? 2 : 1);
+    if (data > bn || bytes * count > bn - data) return;
+    size_t before = text_sheet_count;
+    for (uint32_t i = 0; i < count && text_sheet_count < sizeof text_sheets / sizeof *text_sheets; i++) {
+        uint64_t hash = fnv1a(bt + data + i * bytes, bytes);
+        size_t j;
+        for (j = 0; j < text_sheet_count; j++)
+            if (text_sheets[j].hash == hash && text_sheets[j].w == w && text_sheets[j].h == h &&
+                text_sheets[j].format == format) break;
+        if (j == text_sheet_count)
+            text_sheets[text_sheet_count++] = (TextSheet){hash, w, h, format, cw, ch, cols, rows};
+    }
+    if (text_sheet_count != before)
+        LOG("[font] indexed %u new %ux%u sheets (cells %ux%u, grid %ux%u)\n",
+            (unsigned)(text_sheet_count - before), w, h, cw, ch, cols, rows);
+}
+
+// The render thread owns slot creation; workers publish their immutable results with release/acquire.
+// A bounded session cache avoids both repeated work and invalidating a result while an upload uses it.
+typedef struct {
+    uint64_t hash;
+    uint32_t w, h, format;
+    uint16_t cell_w, cell_h, cols, rows;
+    int scale, state;  // 1 working, 2 ready, 3 failed
+    uint8_t *input, *output;
+} TextCache;
+static TextCache text_cache[32];
+
+static void *text_worker(void *arg) {
+    TextCache *c = arg;
+    uint64_t started = SDL_GetTicksNS();
+    uint32_t w = c->w, h = c->h, scale = c->scale;
+    uint8_t *src = malloc((uint64_t)w * h);
+    uint8_t *dst = malloc((uint64_t)w * h * scale * scale);
+    if (!src || !dst) {
+        free(src); free(dst); free(c->input);
+        __atomic_store_n(&c->state, 3, __ATOMIC_RELEASE);
+        return NULL;
+    }
+    if (c->format == FMT_BC4) bc4_decode(c->input, w / 4, h / 4, src);
+    else memcpy(src, c->input, (uint64_t)w * h);
+    free(c->input);
+    uint32_t ow = w * scale, denom = scale * 2;
+    for (uint32_t y = 0; y < h * scale; y++) {
+        int sy = (int)y * 2 + 1 - (int)scale, y0 = sy < 0 ? 0 : sy / (int)denom, fy = sy < 0 ? 0 : sy % (int)denom;
         int y1 = y0 + 1 < (int)h ? y0 + 1 : y0;
+        uint32_t py = y / scale;
+        uint32_t row = (h - 1 - py) / (c->cell_h + 1);
+        int top = (int)h - 1 - (int)(row * (c->cell_h + 1));
+        int bottom = top - c->cell_h + 1;
         for (uint32_t x = 0; x < ow; x++) {
-            int sx = (int)x * 2 - 3, x0 = sx < 0 ? 0 : sx / 8, fx = sx < 0 ? 0 : sx % 8;
+            int sx = (int)x * 2 + 1 - (int)scale, x0 = sx < 0 ? 0 : sx / (int)denom, fx = sx < 0 ? 0 : sx % (int)denom;
             int x1 = x0 + 1 < (int)w ? x0 + 1 : x0;
-            int v = (src[(uint64_t)y0 * w + x0] * (8-fx) * (8-fy) +
-                     src[(uint64_t)y0 * w + x1] * fx * (8-fy) +
-                     src[(uint64_t)y1 * w + x0] * (8-fx) * fy +
-                     src[(uint64_t)y1 * w + x1] * fx * fy + 32) / 64;
+            uint32_t px = x / scale, col = px / (c->cell_w + 1);
+            int left = col * (c->cell_w + 1), right = left + c->cell_w - 1;
+            if (row >= c->rows || col >= c->cols || py < (uint32_t)bottom || px > (uint32_t)right) {
+                dst[(uint64_t)y * ow + x] = src[(uint64_t)py * w + px];
+                continue;
+            }
+            int ax = x0 < left ? left : x0 > right ? right : x0;
+            int bx = x1 < left ? left : x1 > right ? right : x1;
+            int ay = y0 < bottom ? bottom : y0 > top ? top : y0;
+            int by = y1 < bottom ? bottom : y1 > top ? top : y1;
+            int v = (src[(uint64_t)ay * w + ax] * (denom-fx) * (denom-fy) +
+                     src[(uint64_t)ay * w + bx] * fx * (denom-fy) +
+                     src[(uint64_t)by * w + ax] * (denom-fx) * fy +
+                     src[(uint64_t)by * w + bx] * fx * fy + denom * denom / 2) / (denom * denom);
             v = (v - 64) * 2;
             dst[(uint64_t)y * ow + x] = v < 0 ? 0 : v > 255 ? 255 : v;
         }
     }
     free(src);
-    *high = dst;
+    c->output = dst;
+    __atomic_store_n(&c->state, 2, __ATOMIC_RELEASE);
+    LOG("[font] %ux%u hash=%016llx %dx worker %.2f ms finished_frame=%llu\n",
+        w, h, (unsigned long long)c->hash, scale, (SDL_GetTicksNS() - started) / 1000000.0,
+        (unsigned long long)framepace_game_frame());
+    return NULL;
+}
+
+bool glyphs_text_ready(int pending) {
+    return pending > 0 && pending <= (int)(sizeof text_cache / sizeof *text_cache) &&
+           __atomic_load_n(&text_cache[pending - 1].state, __ATOMIC_ACQUIRE) != 1;
+}
+
+bool glyphs_sharp_text(uint64_t addr, uint64_t pool_lo, uint64_t pool_hi, uint32_t format,
+                       uint32_t w, uint32_t h, const uint8_t *lin, int scale, bool log_upload,
+                       uint8_t **high, int *pending) {
+    if ((format != FMT_BC4 && format != FMT_R8) || w < 128 || h < 128) return false;
+    bool candidate = false;
+    for (size_t j = 0; j < text_sheet_count; j++)
+        if (text_sheets[j].w == w && text_sheets[j].h == h && text_sheets[j].format == format) { candidate = true; break; }
+    if (!candidate && !log_upload) return false;
+    uint64_t bytes = format == FMT_BC4 ? (uint64_t)((w + 3) / 4) * ((h + 3) / 4) * 8 : (uint64_t)w * h;
+    if (addr < pool_lo || addr > pool_hi || bytes > pool_hi - addr) return false;
+    uint64_t hash = fnv1a((const uint8_t *)(uintptr_t)addr, bytes);
+    size_t i = 0;
+    for (; i < text_sheet_count; i++)
+        if (text_sheets[i].hash == hash && text_sheets[i].w == w &&
+            text_sheets[i].h == h && text_sheets[i].format == format) break;
+    bool hit = i != text_sheet_count;
+    if (log_upload) LOG("[font] %ux%u format %#x hash %016llx %s\n",
+                        w, h, format, (unsigned long long)hash, hit ? "hit" : "miss");
+    if (!hit) return false;
+    if (scale != 2 && scale != 4) return true;
+    size_t slot;
+    for (slot = 0; slot < sizeof text_cache / sizeof *text_cache; slot++) {
+        TextCache *c = &text_cache[slot];
+        if (__atomic_load_n(&c->state, __ATOMIC_ACQUIRE) && c->hash == hash && c->scale == scale && c->format == format && c->w == w && c->h == h) break;
+    }
+    if (slot == sizeof text_cache / sizeof *text_cache) {
+        for (slot = 0; slot < sizeof text_cache / sizeof *text_cache && __atomic_load_n(&text_cache[slot].state, __ATOMIC_ACQUIRE); slot++) {}
+        if (slot == sizeof text_cache / sizeof *text_cache) return true;
+        TextCache *c = &text_cache[slot];
+        c->input = malloc(bytes);
+        if (!c->input) return true;
+        memcpy(c->input, lin, bytes);
+        c->hash = hash; c->w = w; c->h = h; c->format = format; c->scale = scale;
+        c->cell_w = text_sheets[i].cell_w; c->cell_h = text_sheets[i].cell_h;
+        c->cols = text_sheets[i].cols; c->rows = text_sheets[i].rows;
+        __atomic_store_n(&c->state, 1, __ATOMIC_RELEASE);
+        pthread_t thread;
+        if (pthread_create(&thread, NULL, text_worker, c)) {
+            free(c->input);
+            __atomic_store_n(&c->state, 3, __ATOMIC_RELEASE);
+            return true;
+        }
+        pthread_detach(thread);
+    }
+    TextCache *c = &text_cache[slot];
+    int state = __atomic_load_n(&c->state, __ATOMIC_ACQUIRE);
+    if (state == 2) *high = c->output;
+    else if (state == 1) *pending = (int)slot + 1;
     return true;
 }
 
