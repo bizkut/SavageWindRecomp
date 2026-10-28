@@ -12,9 +12,12 @@
 // forward (left stick up) while the camera turns right at full speed (1-5 s), then left (5-9 s); with frame
 // generation on, 8 pairs of generated and real frames are captured there, one every 30 game frames from 1.5 s
 // (vulkan/device.c fg_capture_poll: screenshots/fg-<time>-<nn>-gen.png / -real.png). Then the game closes.
+// benchmark.txt may set the run's internal resolution: a line "internal = 1080p" (or 1440p, 2160p ...), applied in
+// memory when the settling starts (internal_apply); the summary gives the internal size either way.
 #include "benchmark.h"
 
 #include <dirent.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,9 +25,12 @@
 #include <time.h>
 
 #include "framepace.h"
+#include "nvn/output_scale.h"
 #include "paths.h"
 #include "platform.h"
 #include "rt.h"
+#include "settings.h"
+#include "window_size.h"
 #ifdef __PROSPERO__
 #include "storage_ps5.h"
 #endif
@@ -33,6 +39,7 @@
 enum { WARMUP_S = 20, ROUTE_S = 60, PAN_S = 10, TITLE_TIMEOUT_S = 240, MAX_FRAMES = 16384 };
 
 static int g_on = -1;
+static int g_internal_h;  // benchmark.txt "internal = <height>p": the 3D scene's height for this run (0: the settings')
 bool benchmark_on(void) {
     if (g_on < 0) {
         struct stat st;
@@ -96,6 +103,46 @@ static char *read_file(const char *path, size_t *n) {
     return d;
 }
 
+// benchmark.txt may hold a line "internal = <height>p" (1080p, 1440p, 2160p ...): the 3D scene's internal height for
+// this run, as Video > Upscaler gives it at the output's size (FSR 1 in the mode whose factor makes that height: at 4K
+// Performance 1080p, Quality 1440p; the upscaler off at the output's own height). Set in memory only (savagewind.ini
+// keeps the player's), when the settling starts. Anything else in the file is ignored.
+static void internal_apply(void) {
+    size_t n = 0;
+    char *t = read_file("benchmark.txt", &n);
+    const char *line = t ? strstr(t, "internal") : NULL;
+    int want = 0;
+    if (line) sscanf(line, "internal = %dp", &want);
+    free(t);
+    if (want <= 0) return;
+    WinSize out = winsize_effective(g_settings.fullscreen);
+    double f = out.h > 0 ? (double)out.h / want : 0;
+    if (f > 0.99 && f < 1.01) {
+        g_settings.upscaler = UPSCALE_OFF;
+    } else {
+        int q = -1;
+        for (int i = 0; i < UPQ_COUNT; i++)
+            if (fabs(upscale_mode_factor(i) - f) < 0.01 * f) q = i;
+        if (q < 0) {
+            LOG("[bench] internal = %dp: no upscaler mode gives that at the %dx%d output; the settings' kept\n", want,
+                out.w, out.h);
+            return;
+        }
+        g_settings.upscaler = UPSCALE_FSR1, g_settings.upscale_quality = q;
+    }
+    g_internal_h = want;
+    LOG("[bench] internal = %dp: upscaler %s for this run\n", want,
+        g_settings.upscaler == UPSCALE_OFF ? "off" : "FSR 1");
+}
+
+// The 3D scene's size now (output_scale.c: the game's 1600x900 scene targets at its scale)
+static void internal_size(int *w, int *h) {
+    WinSize out = winsize_effective(g_settings.fullscreen);
+    OutScale os;
+    output_scale(out.w, out.h, g_settings.wide_view, &os);
+    *w = (int)lround(1600 * os.scene_sx), *h = (int)lround(900 * os.scene_sy);
+}
+
 // ---- the saves: a copy, so that the warp and any autosave never touch the player's
 static int copy_tree(const char *src, const char *dst, int *saves) {
     char host[1024];
@@ -154,6 +201,7 @@ static void finish(const char *failure);
 static void set_state(int s, uint64_t now) {
     g_state = s, g_state_t = now;
     LOG("[bench] %.1f s: %s\n", (now - g_t0) / 1e9, state_names[s]);
+    if (s == B_WARMUP) internal_apply();
 }
 
 bool benchmark_input(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, int32_t *ry) {
@@ -315,10 +363,15 @@ static void finish(const char *failure) {
     } else {
         Dist f = dist(g_dt, g_n), r = dist(g_render, g_n), g = dist(g_guest, g_n), u = dist(g_gpu, g_ngpu);
         mean = f.mean, p95 = f.p95;
+        int iw, ih;
+        internal_size(&iw, &ih);
+        char ifrom[48] = "the settings";
+        if (g_internal_h) snprintf(ifrom, sizeof ifrom, "benchmark.txt: internal = %dp", g_internal_h);
         at += (size_t)snprintf(text + at, sizeof text - at,
-                               "Savage Wind benchmark, %s: Great Plateau camera route, %d s measured after %d s settling\n"
+                               "Savage Wind benchmark, %s: Great Plateau camera route, %d s measured after %d s settling; "
+                               "internal resolution %dx%d (%s)\n"
                                "frames %d: frame ms mean %.3f p50 %.3f p95 %.3f p99 %.3f max %.1f; %.1f%% on time; %d hitches",
-                               when, ROUTE_S, WARMUP_S, g_n, f.mean, f.p50, f.p95, f.p99, f.max,
+                               when, ROUTE_S, WARMUP_S, iw, ih, ifrom, g_n, f.mean, f.p50, f.p95, f.p99, f.max,
                                g_n ? 100.0 * g_on_time / g_n : 0.0, g_hitches);
         for (int i = 0; i < g_ncauses; i++)
             at += (size_t)snprintf(text + at, sizeof text - at, "%s %s %d", i ? "," : ":", g_causes[i].name, g_causes[i].n);
@@ -374,9 +427,10 @@ static void finish(const char *failure) {
         free(prev);
         at += (size_t)snprintf(text + at, sizeof text - at,
                                "result mean_ms=%.3f p95_ms=%.3f p99_ms=%.3f on_time=%.1f hitches=%d render_ms=%.2f guest_ms=%.2f "
-                               "gpu_ms=%.2f frames=%d presented_fps=%.1f game_fps=%.1f present_iv_p95_ms=%.2f fg_gpu_ms=%.3f\n",
+                               "gpu_ms=%.2f frames=%d presented_fps=%.1f game_fps=%.1f present_iv_p95_ms=%.2f fg_gpu_ms=%.3f "
+                               "internal=%dx%d\n",
                                f.mean, f.p95, f.p99, g_n ? 100.0 * g_on_time / g_n : 0.0, g_hitches, r.mean, g.mean, u.mean,
-                               g_n, presented_fps, game_fps, pi.p95, fd.mean);
+                               g_n, presented_fps, game_fps, pi.p95, fd.mean, iw, ih);
         write_file("benchmark/last.txt", text, at < sizeof text ? at : sizeof text - 1);
         for (char *p = text, *e; *p; p = e + 1) {  // (the summary in the log too, one line each)
             e = strchr(p, '\n');

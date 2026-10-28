@@ -152,11 +152,14 @@ static double on_refresh(double fps) {
 // presented first, and the game's half a frame later (vulkan/device.c present_wait_turn). What the frame-rate limit
 // counts is the backend's:
 //   - desktop's FSR 3: the presented frames, so the game draws at half of it (60 with 120 chosen);
-//   - the PS5's MihawkGen: the game's frames, each presented twice (docs/PS5-PORT-PLAN.md M7: 60 gives 120 presents,
-//     one every ~8.3 ms at 119.88 Hz under VRR). The game's rate stays where it was with frame generation off (the
-//     menus' frames, not generated, keep the same pace), at most half the refresh rate: the presents then come at the
-//     refresh rate, where FIFO shows each for one refresh. The VSync cap below (VRR's margin under the refresh) is not
-//     applied: it would hold the game at 57.9 fps and the presents at 115.9 Hz.
+//   - the PS5's MihawkGen: the game's frames, each presented twice (docs/PS5-PORT-PLAN.md M7: 60 gives ~120 presents,
+//     one every ~8.4 ms at 119.88 Hz under VRR), at most 0.5 % under half the refresh rate: 59.64 fps and 119.28
+//     presents a second at 119.88 Hz (59.94 with frame generation off; the menus' frames, not generated, keep that).
+//     Presents at exactly the refresh rate give FIFO no way to drain what
+//     queues up (each late frame leaves one more present waiting, until no window image is free: bench4-fg1.klog, the
+//     render thread waited 5.45 ms a frame to acquire one); a little under it, VRR shows each present as it comes and
+//     the queue empties. The VSync cap below (VRR's margin for frames at the refresh rate, 3.3 % at 120 Hz) is not
+//     applied: it would hold the game at 57.9 fps.
 volatile int g_fg_active;       // (vulkan/device.c: the last game frame was presented after a generated one)
 volatile int g_fg_counts_game;  // (vulkan/device.c: the backend's limit counts the game's frames: MihawkGen)
 
@@ -164,8 +167,8 @@ uint64_t framepace_period_ns(void) {
     int target = framepace_target();
     double fps = target > 0 ? target : FPS_CEILING, cap = vsync_cap();
     if (g_fg_active && g_fg_counts_game) {
-        double hz = winsize_refresh_rate();
-        if (hz >= 30 && fps > hz / 2) fps = hz / 2;
+        double hz = winsize_refresh_rate(), most = hz / 2 * 0.995;
+        if (hz >= 30 && fps > most) return (uint64_t)(1e9 / most + 0.5);  // (not snapped to the refresh: on_refresh)
         return (uint64_t)(1e9 / on_refresh(fps) + 0.5);
     }
     if (cap > 0 && fps > cap) fps = cap;

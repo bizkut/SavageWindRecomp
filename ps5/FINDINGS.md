@@ -786,3 +786,20 @@ Eboot `b3cca2a6…`. MihawkGen now runs at the scene size, 2560×1440: **1.90 ms
 FG on: presented 115.7, game 57.9 fps, 79.1 % on time, GPU 11.6 ms per game frame. The present-queue wait is gone (0),
 but the render thread now waits 5.45 ms per frame to acquire a swapchain image; intervals are 78.8 % in 6.5–10 ms.
 FG off unchanged (98.7 %).
+
+Analysis (host): the presents came at exactly the refresh rate (game 59.94, two presents each, 119.88 Hz FIFO), so
+FIFO could never show them faster than they arrived: every late frame or long present left one more present queued
+at the display, never drained, until no window image was free and the render thread's acquire became the brake
+(vkQueuePresentKHR also blocked up to 6.4 ms). Changes (host-built, not yet run): with MihawkGen the game is held 0.5 %
+under half the refresh rate (59.64 fps, presents 8.38 ms apart, 119.28 Hz: VRR shows each as it comes, and the queue
+drains; `make test-framepace-fg` updated); and the generated frame's window image is acquired without waiting: with
+none free, that game frame is shown without its generated one (counted as "dropped" in the `[fg]` line) instead of
+the render thread waiting.
+
+## 2026-10-28 — M7 benchmark 5: display queue drained (.41, ps5/evidence/m7/bench5-fg1.klog)
+
+Eboot `771afc26…` (game held 0.5 % under half the refresh rate with FG on; a generated frame is dropped instead of
+stalling when no window image is free). The render thread's acquire wait fell from 5.45 to 0.61 ms per frame, with 0
+generated frames dropped. Still: game 57.8 fps, presented 115.5, 79.6 % on time, MihawkGen 1.92 ms. With every
+pipeline wait now near zero, what remains is the render thread's own CPU time with FG on (late frames at p95 19.5 ms),
+the work queued as "Render-thread CPU" after M7.

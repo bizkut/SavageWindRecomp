@@ -1375,13 +1375,15 @@ static void present_wait_room(void) {
     pp_add(PP_ROOM, SDL_GetTicksNS() - t0);
 }
 
-static VkResult acquire_image(VkSemaphore sem, uint32_t *img) {
-    if (!present_threaded()) return vkAcquireNextImageKHR(g_vk.dev, g_vk.swapchain, UINT64_MAX, sem, VK_NULL_HANDLE, img);
+// now_only: no wait for an image (VK_NOT_READY when none is free)
+static VkResult acquire_image(VkSemaphore sem, uint32_t *img, bool now_only) {
+    if (!present_threaded())
+        return vkAcquireNextImageKHR(g_vk.dev, g_vk.swapchain, now_only ? 0 : UINT64_MAX, sem, VK_NULL_HANDLE, img);
     for (;;) {  // (a short timeout at a time: not holding the swapchain while the present thread needs it)
         pthread_mutex_lock(&sc_lock);
-        VkResult r = vkAcquireNextImageKHR(g_vk.dev, g_vk.swapchain, 2000000, sem, VK_NULL_HANDLE, img);
+        VkResult r = vkAcquireNextImageKHR(g_vk.dev, g_vk.swapchain, now_only ? 0 : 2000000, sem, VK_NULL_HANDLE, img);
         pthread_mutex_unlock(&sc_lock);
-        if (r != VK_TIMEOUT && r != VK_NOT_READY) return r;
+        if (now_only || (r != VK_TIMEOUT && r != VK_NOT_READY)) return r;
     }
 }
 
@@ -1481,8 +1483,8 @@ static void frame_render_begin(const float *clear) {
 }
 
 // Acquire the next window image (no rendering begun). Returns false when there is nothing to draw into (minimised
-// window, a failed acquire).
-static bool frame_acquire(void) {
+// window, a failed acquire; now_only: no image free now, *busy set).
+static bool frame_acquire(bool now_only, bool *busy) {
     cur_frame.ok = false;
     int w, h;
     SDL_GetWindowSizeInPixels(window, &w, &h);
@@ -1503,12 +1505,16 @@ static bool frame_acquire(void) {
     if (!acquire_sem[slot]) acquire_sem[slot] = binary_semaphore();
     vk_wait_seq(slot_seq[slot]);
     uint64_t ta = SDL_GetTicksNS();
-    VkResult r = acquire_image(acquire_sem[slot], &cur_frame.image);
+    VkResult r = acquire_image(acquire_sem[slot], &cur_frame.image, now_only);
     ft_add(FT_ACQUIRE_NS, SDL_GetTicksNS() - ta);
     pp_add(PP_ACQUIRE, SDL_GetTicksNS() - ta);
     if (r == VK_ERROR_OUT_OF_DATE_KHR) {
         recreate_swapchain();
-        r = acquire_image(acquire_sem[slot], &cur_frame.image);
+        r = acquire_image(acquire_sem[slot], &cur_frame.image, now_only);
+    }
+    if (now_only && (r == VK_NOT_READY || r == VK_TIMEOUT)) {
+        *busy = true;
+        return false;
     }
     if (r != VK_SUCCESS && r != VK_SUBOPTIMAL_KHR) {
         static unsigned failed;  // (a few, then every 1000th: one a frame filled the log)
@@ -1523,12 +1529,13 @@ static bool frame_acquire(void) {
 
 // Acquire the next window image and begin rendering into it (cleared to `clear`). Returns false when there is
 // nothing to draw into (minimised window).
-bool vk_frame_begin(const float clear[4]) {
-    if (!frame_acquire()) return false;
+static bool frame_begin(const float clear[4], bool now_only, bool *busy) {
+    if (!frame_acquire(now_only, busy)) return false;
     image_barrier(vk_cmd(), g_vk.sc_images[cur_frame.image], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     frame_render_begin(clear);
     return true;
 }
+bool vk_frame_begin(const float clear[4]) { return frame_begin(clear, false, NULL); }
 
 // Passes of their own between vk_frame_begin and vk_frame_end (exec.c post passes): end the window image's
 // rendering, and begin it again keeping what was drawn.
@@ -1783,7 +1790,8 @@ extern volatile int g_fg_want;
 extern volatile int g_fg_active;       // (framepace.c: the game's frame is presented after a generated one)
 TexBackend *vk_fg_generate(NvnTexture *t, TexBackend *b);
 void vk_fg_mihawk_window(char *out, size_t n);
-static uint64_t gen_frames, gen_twice;  // (this window: generated frames presented; game frames presented twice)
+// (this window: generated frames presented; game frames presented twice; generated frames dropped, no window image)
+static uint64_t gen_frames, gen_twice, gen_dropped;
 static char fg_real_shot[256];  // (SAVAGEWIND_FG_SHOT_AT: the game's frame after a generated one saved)
 
 void vk_fg_wait_idle(void) {
@@ -1875,7 +1883,20 @@ static void present_locked(NvnTexture *t) {
     }
     g_fg_active = gen != NULL;
     static const float black[4] = {0, 0, 0, 1};
-    bool have = vk_frame_begin(black);
+    bool have, busy = false;
+    if (gen && g_fg_counts_game) {
+        // MihawkGen: no window image free now (the display still holds them) -> this game frame without its generated
+        // one, rather than the render thread waiting for one (bench4-fg1.klog: 5.45 ms a frame); one present fewer
+        // also lets the display's queue drain
+        have = frame_begin(black, true, &busy);
+        if (busy) {
+            gen = NULL, gen_dropped++;
+            frame_capture[0] = cap_real[0] = 0;
+            have = vk_frame_begin(black);
+        }
+    } else {
+        have = vk_frame_begin(black);
+    }
     uint64_t nd = SDL_GetTicksNS() - t0;
     if (nd > 30000000) {
         static int warned;
@@ -2122,12 +2143,13 @@ presented:
             LOG("[vk] t=%.1f frame %llu %.1f fps max %.0fms (%s) | %s\n", now, (unsigned long long)total_frames,
                 frames / (now - last_fps_time), max_gap * 1000.0, renderer_stats(), ft);
         }
-        if ((gen_frames || gen_twice) && last_fps_time > 0) {
+        if ((gen_frames || gen_twice || gen_dropped) && last_fps_time > 0) {
             // (one klog write each: a render-thread LOG costs ~1.4 ms on the PS5)
             double s = now - last_fps_time;
-            char extra[256] = "";
+            char extra[320] = "";
             if (g_fg_backend.kind == FG_BACKEND_MIHAWK) vk_fg_mihawk_window(extra, sizeof extra);
-            LOG("[fg] %.1f generated frames/s: %.1f presented%s\n", gen_frames / s, (frames + gen_frames + gen_twice) / s, extra);
+            LOG("[fg] %.1f generated frames/s: %.1f presented%s; %llu dropped (no window image free)\n", gen_frames / s,
+                (frames + gen_frames + gen_twice) / s, extra, (unsigned long long)gen_dropped);
             if (g_fg_backend.kind == FG_BACKEND_MIHAWK) {
                 double f = frames ? (double)frames : 1;
                 uint64_t v[PP_COUNT], m[PP_COUNT];
@@ -2145,7 +2167,7 @@ presented:
                     (unsigned long long)atomic_exchange(&pp_depth_max, 0));
             }
         }
-        gen_twice = 0;
+        gen_twice = gen_dropped = 0;
         for (int i = 0; i < PP_COUNT; i++) atomic_store(&pp_sum[i], 0), atomic_store(&pp_max[i], 0);
         max_gap = 0;
         frames = 0;
