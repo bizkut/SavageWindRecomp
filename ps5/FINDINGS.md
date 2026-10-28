@@ -1097,3 +1097,15 @@ The first 4K attempt failed with `PS5FSR4_ERROR_UNSUPPORTED` (−2): the generat
 FSR 1 (both at 4K output). With the game's ~7.7 ms GPU per frame, 4K FSR 4 cannot hold 60 fps, so it is not
 integrated. No cheap 2× lever: RADV's accelerated integer dot product is unavailable on this GPU (gfx1013, and the
 PS5 winsys documents `v_dot4_u32_u8` as incorrect). FSR 4 stays a candidate only for 1080p output (3.8 ms).
+
+## 2026-10-28 — UI HD pack generated on the console (.41, ps5/evidence/hdgen/, ps5/evidence/m8/ab-hdgen-on.klog)
+
+Eboot `0395862a…` (generator version 2), pack folder emptied first: the title read the user's packages, enlarged
+the selected layout textures with the pinned Real-ESRGAN (ncnn on RADV, `realesr-animevideov3`, fixed tile 200),
+encoded BC4/BC5/BC7 with mips and wrote them through the storage broker: **866 textures in 98.3 s** on the PS5 GPU
+(this PC: ~1.5 h on lavapipe). Shader cache was warm, so this run measured generation alone, not its overlap with
+the first-start precompile. Coverage equals the PC pack (866 / 866 hashes, same formats and sizes); a 12-texture
+sample decodes to 51–67 dB PSNR vs the PC files (max pixel difference 37/255), not bit-identical.
+In play: benchmark 99.9 % on time, 59.6 / 119.3 fps; 18 textures replaced (≈1.2 MB GPU). The hearts are matched but
+rejected because the game creates them with the storage flag (`[hd-ui] rejected … storage=1`); that rule stays
+until a revert-on-write path exists.
