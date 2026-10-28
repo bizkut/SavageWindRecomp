@@ -87,6 +87,14 @@ typedef struct {
     float motion_sens;   // motion controls: how far turning the controller turns the aim, 1 = 100%
     int motion_invert;   // MOTION_INVERT_* bits: turning the controller up / down, left / right goes the other way
     int button_icons;    // ICONS_*: the game's button prompts show this device's buttons (Automatic: the one in use)
+// Font reconstruction (runtime/nvn/glyphs.c): per glyph, a distance field (Latin and other thick-stroked glyphs) or
+// coverage sharpening (CJK and thin strokes). PS5: distance field, measured on .41 (ps5/FINDINGS.md, 2026-10-28);
+// elsewhere sharpening until measured there.
+#ifdef __PROSPERO__
+#define SHARP_TEXT_SHARPEN_DEFAULT false
+#else
+#define SHARP_TEXT_SHARPEN_DEFAULT true
+#endif
     bool sharp_text;     // Vulkan: sharpen identified game font sheets at 4K
     bool sharp_text_sharpen; // ini sharp_text_method: false = sdf, true = sharpen
     bool sharp_ui;       // Vulkan: enlarge selected layout artwork from the player's archives

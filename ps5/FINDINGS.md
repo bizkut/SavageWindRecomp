@@ -1071,3 +1071,12 @@ bilinearly upsampled 4× and thresholded with a 1-output-pixel ramp; threshold c
 weight. Costs: worker 2.3–4.5 s per sheet (sharpen 0.16–0.33 s), so the in-play Normal sheets went live at frame 793
 (~13 s; the text stays at the original resolution until then). Host crops show a remaining defect in CJK (Caption 中:
 a blob at the stroke crossing). Default stays `sharpen` until the CJK junction and worker time are fixed.
+
+## 2026-10-28 — Distance-field text, per-glyph, default on PS5 (.41, ps5/evidence/m8/ab-sdf3.klog, ab-sdf-default.klog)
+
+Eboot sdf3 `42de3f24…`: each glyph uses either the calibrated distance field (Latin and thick strokes) or coverage
+sharpening (CJK/fullwidth via CMAP, thin strokes); no mixing inside a glyph. Per-glyph weight error ≤ 1 % on host.
+Console: workers 284–585 ms per sheet (was 2.3–4.5 s), sheets live by frame 533; benchmark 100.0 % on time, 59.6 /
+119.3 fps. Native 4K prompt bar mean edge gradient 82.2 (sharpen 58.5, same route time). CJK glyphs take the sharpen
+path, so their output equals the previous default. Default `sdf` on PS5 (sharpen elsewhere); the ini writes
+`sharp_text_method` only when it differs. Default run with no ini key: all 6 sheets `method=sdf`, 99.9 % on time.

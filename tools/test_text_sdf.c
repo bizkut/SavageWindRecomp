@@ -19,7 +19,8 @@ static void check(int circle) {
         }
         src[y*N+x] = (uint8_t)((hits*255+128)/256); input += src[y*N+x];
     }
-    assert(text_sdf_sheet(src,dst,N,N,N,N,1,1,S,NULL));
+    int sdf_count, sharpen_count;
+    assert(text_sdf_sheet(src,dst,N,N,N,N,1,1,S,NULL,&sdf_count,&sharpen_count));
     for (int i = 0; i < O*O; i++) output += dst[i];
     assert(fabs(output/(S*S)-input) < input*0.02);
     // Horizontal central edge is at x=8 and x=24 (within half a source pixel).
@@ -27,5 +28,9 @@ static void check(int circle) {
     for (int x = 0; x < O; x++) if (dst[(O/2)*O+x] >= 128) { if (first < 0) first=x; last=x; }
     assert(fabs((first+0.5)/S-8) <= 0.5);
     assert(fabs((last+0.5)/S-24) <= 0.5);
+    uint32_t cjk_ink = (N << 8) | 0x10000;
+    memset(dst, 0, sizeof(dst));
+    assert(text_sdf_sheet(src,dst,N,N,N,N,1,1,S,&cjk_ink,&sdf_count,&sharpen_count));
+    assert(sdf_count == 0 && sharpen_count == 1);
 }
 int main(void) { check(0); check(1); puts("text SDF: square and circle passed"); }

@@ -80,7 +80,7 @@ typedef struct {
     uint64_t hash;
     uint32_t w, h, format;
     uint16_t cell_w, cell_h, cols, rows;
-    uint16_t *ink; // per-cell clipped [left,right) in source pixels
+    uint32_t *ink; // per-cell [left,right) and CJK flag, from CWDH/CMAP
 } TextSheet;
 static TextSheet text_sheets[128];
 static size_t text_sheet_count;
@@ -88,6 +88,12 @@ static size_t text_sheet_count;
 static uint16_t font_u16(const uint8_t *p) { return (uint16_t)(p[0] | p[1] << 8); }
 static uint32_t font_u32(const uint8_t *p) { return (uint32_t)font_u16(p) | (uint32_t)font_u16(p + 2) << 16; }
 static uint64_t font_u64(const uint8_t *p) { return font_u32(p) | (uint64_t)font_u32(p + 4) << 32; }
+
+static bool font_cjk(uint32_t c) {
+    return (c >= 0x3000 && c <= 0x30ff) || (c >= 0x3400 && c <= 0x9fff) ||
+           (c >= 0xf900 && c <= 0xfaff) || (c >= 0xff00 && c <= 0xffef) ||
+           (c >= 0x20000 && c <= 0x3134f) || (c >= 0xac00 && c <= 0xd7af);
+}
 
 void glyphs_register_font(const uint8_t *b, uint64_t n) {
     if (n < 0x54 || memcmp(b, "FFNT", 4) || b[4] != 0xff || b[5] != 0xfe) return;
@@ -125,7 +131,7 @@ void glyphs_register_font(const uint8_t *b, uint64_t n) {
                 text_sheets[j].format == format) break;
         if (j == text_sheet_count) {
             size_t cells = (size_t)cols * rows;
-            uint16_t *ink = malloc(cells * sizeof(*ink));
+            uint32_t *ink = malloc(cells * sizeof(*ink));
             if (!ink) continue;
             for (size_t k = 0; k < cells; k++) ink[k] = (uint16_t)(cw << 8);
             uint32_t p = font_u32(b + 0x2c);
@@ -146,6 +152,34 @@ void glyphs_register_font(const uint8_t *b, uint64_t n) {
                 }
                 p = font_u32(s + 12);
             }
+            p = font_u32(b + 0x30);
+            for (unsigned chain = 0; p && chain < 256; chain++) {
+                if (p < 8 || (uint64_t)p + 16 > n) break;
+                const uint8_t *s = b + p - 8;
+                uint32_t size = font_u32(s + 4), first = font_u32(s + 8), last = font_u32(s + 12);
+                uint32_t type = font_u16(s + 16), next = font_u32(s + 20);
+                if (memcmp(s, "CMAP", 4) || size < 26 || (uint64_t)(p - 8) + size > n || last < first || last > 0x10ffff) break;
+                if (type == 0) {
+                    uint32_t base = font_u16(s + 24);
+                    for (uint32_t k = 0; k < cells; k++) {
+                        uint32_t index = i * cells + k;
+                        if (index >= base && index - base <= last - first && font_cjk(first + index - base)) ink[k] |= 0x10000;
+                    }
+                } else if (type == 1 && (uint64_t)(last - first + 1) * 2 <= size - 24) {
+                    for (uint32_t k = 0; k <= last - first; k++) {
+                        uint32_t index = font_u16(s + 24 + 2 * k);
+                        if (font_cjk(first + k) && index / cells == i) ink[index % cells] |= 0x10000;
+                    }
+                } else if (type == 2 && size >= 28) {
+                    uint32_t entries = font_u16(s + 24);
+                    if ((uint64_t)entries * 8 > size - 28) break;
+                    for (uint32_t k = 0; k < entries; k++) {
+                        uint32_t c = font_u32(s + 28 + k * 8), index = font_u16(s + 32 + k * 8);
+                        if (font_cjk(c) && index / cells == i) ink[index % cells] |= 0x10000;
+                    }
+                }
+                p = next;
+            }
             text_sheets[text_sheet_count++] = (TextSheet){hash, w, h, format, cw, ch, cols, rows, ink};
         }
     }
@@ -162,13 +196,14 @@ typedef struct {
     uint16_t cell_w, cell_h, cols, rows;
     int scale, state;  // 1 working, 2 ready, 3 failed
     bool sharpen;
-    const uint16_t *ink;
+    const uint32_t *ink;
     uint8_t *input, *output;
 } TextCache;
 static TextCache text_cache[32];
 
 static void *text_worker(void *arg) {
     TextCache *c = arg;
+    if (!c->sharpen) text_low_priority();
     uint64_t started = SDL_GetTicksNS();
     uint32_t w = c->w, h = c->h, scale = c->scale;
     uint8_t *src = malloc((uint64_t)w * h);
@@ -210,7 +245,8 @@ static void *text_worker(void *arg) {
             dst[(uint64_t)y * ow + x] = v < 0 ? 0 : v > 255 ? 255 : v;
         }
     }
-    if (!c->sharpen && !text_sdf_sheet(src, dst, w, h, c->cell_w, c->cell_h, c->cols, c->rows, scale, c->ink)) {
+    int sdf_count = 0, sharpen_count = 0;
+    if (!c->sharpen && !text_sdf_sheet(src, dst, w, h, c->cell_w, c->cell_h, c->cols, c->rows, scale, c->ink, &sdf_count, &sharpen_count)) {
         free(src); free(dst);
         __atomic_store_n(&c->state, 3, __ATOMIC_RELEASE);
         return NULL;
@@ -218,8 +254,8 @@ static void *text_worker(void *arg) {
     free(src);
     c->output = dst;
     __atomic_store_n(&c->state, 2, __ATOMIC_RELEASE);
-    LOG("[font] %ux%u hash=%016llx %dx method=%s worker %.2f ms finished_frame=%llu\n",
-        w, h, (unsigned long long)c->hash, scale, c->sharpen ? "sharpen" : "sdf", (SDL_GetTicksNS() - started) / 1000000.0,
+    LOG("[font] %ux%u hash=%016llx %dx method=%s sdf_glyphs=%d sharpen_glyphs=%d worker %.2f ms finished_frame=%llu\n",
+        w, h, (unsigned long long)c->hash, scale, c->sharpen ? "sharpen" : "sdf", sdf_count, sharpen_count, (SDL_GetTicksNS() - started) / 1000000.0,
         (unsigned long long)framepace_game_frame());
     return NULL;
 }

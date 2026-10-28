@@ -38,7 +38,7 @@ Settings g_settings = {
     .stick_deadzone = {STICK_DEADZONE_DEFAULT, STICK_DEADZONE_DEFAULT},
     .fps_limit = FPS_DEFAULT,
     .precompile_shaders = true,
-    .sharp_text_sharpen = true, // SDF remains selectable until its thin-stroke quality is established
+    .sharp_text_sharpen = SHARP_TEXT_SHARPEN_DEFAULT,
     .vsync = VSYNC_DEFAULT,
 #ifdef __PROSPERO__
     .hdr = HDR_OFF,
@@ -283,7 +283,8 @@ void settings_save(void) {
     fprintf(f, "button_icons = %s\n", k_icons[g_settings.button_icons >= 0 && g_settings.button_icons < ICONS_COUNT ?
                                                 g_settings.button_icons : ICONS_AUTO]);
     fprintf(f, "sharp_text = %d\n", g_settings.sharp_text);
-    fprintf(f, "sharp_text_method = %s\n", g_settings.sharp_text_sharpen ? "sharpen" : "sdf");
+    if (g_settings.sharp_text_sharpen != SHARP_TEXT_SHARPEN_DEFAULT) // written only when it differs from the platform's
+        fprintf(f, "sharp_text_method = %s\n", g_settings.sharp_text_sharpen ? "sharpen" : "sdf");
     fprintf(f, "sharp_ui = %d\n", g_settings.sharp_ui);
     fprintf(f, "async_shaders = %d\n", g_settings.async_shaders);
     fprintf(f, "precompile_shaders = %d\n", g_settings.precompile_shaders);
