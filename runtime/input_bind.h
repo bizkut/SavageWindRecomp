@@ -31,6 +31,13 @@ enum { BIND_DEV_PAD, BIND_DEV_KEY };
 #define BIND_MOUSE_LAST (BIND_MOUSE + 5)
 // What the player uses (runtime/hle/input.c input_last_device)
 enum { DEVICE_KEYBOARD, DEVICE_PAD };
+// Before any input: a PC starts with keyboard prompts; the PS5, whose player holds a controller, with the controller's
+// (a key, a click or a mouse turn switches to keyboard prompts, a controller button or stick back)
+#ifdef __PROSPERO__
+#define INPUT_START_DEVICE DEVICE_PAD
+#else
+#define INPUT_START_DEVICE DEVICE_KEYBOARD
+#endif
 int input_last_device(void);
 int input_pad_family(void);  // the open controller: 0 Nintendo / other / none, 1 Xbox, 2 PlayStation
 

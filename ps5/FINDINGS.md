@@ -918,3 +918,7 @@ met on the benchmark** (render thread 8.7 ms, GPU 9.9 ms incl. MihawkGen 1.63 ms
 outside the measured route: loading-screen package reads on guest threads (65) and loading waits. "could not lower
 logger priority" is logged once (the logger runs at default priority). Every earlier benchmark's "command translation"
 hitches were largely this logging.
+
+## 2026-10-28 — PS5 starts with controller button prompts (.41, ps5/evidence/m4/prompts-pad-at-start.png)
+
+Before any input the prompts showed keyboard keys (Move WASD, Controls Tab) because the last-used device started as the keyboard. On the PS5 it now starts as the controller (`INPUT_START_DEVICE`; desktop unchanged); a benchmark capture with no input shows controller icons (sticks, Options). Keys, clicks or a mouse turn switch to keyboard icons; a controller button or stick switches back.

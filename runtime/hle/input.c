@@ -42,7 +42,7 @@ static uint8_t test_keys[SDL_SCANCODE_COUNT];
 static _Atomic uint32_t test_pad;
 static _Atomic int32_t test_lx, test_ly;  // (a resting stick's drift: "lstick" in SAVAGEWIND_HOST_INPUT)
 static bool host_test;  // (then a real controller is left out: the player's own pad must not spoil the test)
-static _Atomic int last_device;  // DEVICE_*: what the player used last
+static _Atomic int last_device = INPUT_START_DEVICE;  // DEVICE_*: what the player used last
 static bool tilt_held;  // the tilt key: the mouse tilts the controller instead of turning the camera
 extern bool menu_input_captured(void);  // runtime/ui/menu.mm: overlay menu or name entry up (it has the keys / pad)
 
