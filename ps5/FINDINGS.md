@@ -702,3 +702,26 @@ game 22.6 fps, presented 45.2 fps instead of 120; 0 % on time with 1,326 "render
 intervals mostly 18–25 ms. GPU is not the limit (10.5 ms per game frame + MihawkGen 2.8 ms per generated frame).
 User report (playing): the hearts and health bar leave ghosts, because MihawkGen gets frames with the HUD on; the
 HUD-less variant D7 deferred is now required.
+
+## 2026-10-28 — M7: why FG on ran at 22.6 fps, and the HUD-less fix (eboot `bd57c53b…`, host-built, not yet run)
+
+In bench-fg1.klog the device has **one queue** (`[vk] presents on the calling thread`), so each pair's presents ran
+on the render thread: `present_wait_turn` waited for the GPU to finish the generated frame, then half a frame more
+before the game's frame (27 ms in the present per frame; render thread 15.1 ms CPU). Changes: with one queue,
+MihawkGen's first frame starts the present thread on that queue (`vk_queue_lock` around submits and presents), so the
+render thread no longer waits for the GPU or the spacing; one more swapchain image (5) and six acquire semaphores for
+two presents per game frame; a `[fgpipe]` line per 2 s with each wait (acquire, present-queue room, generator slot,
+queue lock; the present thread's GPU wait, spacing, present call, queue lock; queue depth). The generator now takes the
+HUD-less images of both frames (`exec.c` `vk_fg_mihawk_inputs`, the capture desktop's FSR 3 path uses, drawn to 4K as
+the final image is) and `fg_hud.frag` puts the newest frame's HUD (where final and HUD-less differ, 3 × 3 dilated)
+over the result. `fg-capture.txt` (`<count> [<every>]`) in the data root saves pairs of window images (generated, then
+real; halved PNG) to `screenshots/`.
+
+## 2026-10-28 — M7 benchmark 2: own present thread (.41, ps5/evidence/m7/bench2-fg0/1.klog, captures/)
+
+Eboot `bd57c53b…` (presents on their own thread on the one shared queue, 5 swapchain images). **FG on: presented
+115.8 fps, game 57.9 fps**, 78.8 % on time; GPU 11.43 ms per game frame + MihawkGen 2.78 ms per generated frame.
+Present intervals: 75 % in 6.5–10 ms, 10 % under 6.5, 12 % in 10–15. FG off is unchanged (59.9 fps, 98.8 %, GPU 7.72
+ms). The HUD-less capture is not yet used on the PS5 ("from the final images"). Six generated/real capture pairs
+(1920×1080) were taken on the benchmark route; the hearts look clean in them, but that route's camera turns too slowly
+to show the ghosting the user saw in play.
