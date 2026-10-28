@@ -490,3 +490,10 @@ game runs ~60 fps (frame 1082 at 59.9 fps) with no fault. Pages, the Resolution/
 option (default Circle = Switch layout) are not yet checked by hand. Step 4 (USB keyboard/mouse polling) is not
 started. Host: desktop `runtime-objs` builds; `test-vibration` and `test-ps5-input` pass; `test-bind-capture` cannot
 link here (no libSDL3 on this PC, same before this change).
+
+## 2026-10-28 — M4 step 4: USB keyboard and mouse opened (.41, ps5/evidence/m4/run4)
+
+Eboot `b8ace418…`: keyboard and mouse sysmodules and `sceKeyboardInit`/`sceMouseInit` return 0; USB keyboard indexes
+0–1 and mouse indexes 0–1 open for the signed-in user; the game runs with no fault. Key, click, motion and
+unplug/replug evidence needs a device plugged into the console (not yet done). The PS5 Quit dialog now says it closes
+the game and returns to the PS5 home screen.

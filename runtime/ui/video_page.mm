@@ -100,4 +100,12 @@ void video_page(std::vector<Item> &v) {
     v.push_back(video_shadows());
 }
 
+// Quit: to the desktop (upper), or back to the start screen (lower: runtime/main.c reboots into it)
+const QuitTexts k_quit_texts = {
+    "To the desktop, or back to the Savage Wind start screen.",
+    "Quit to the desktop, or back to the Savage Wind start screen? Unsaved progress is lost.",
+    "Start screen",
+    "Desktop",
+};
+
 }  // namespace opts

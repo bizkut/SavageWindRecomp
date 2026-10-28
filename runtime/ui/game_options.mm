@@ -156,8 +156,7 @@ void build_items(void) {
     v.push_back(button(P_MAIN, "Keyboard (sticks)", "Keys for the sticks and for walking.", "Open", A_PAGE, P_STICKS));
     v.push_back(button(P_MAIN, "Controller", "Which controller button does each button.", "Open", A_PAGE, P_PAD));
     v.push_back(button(P_MAIN, "Language", "Language of the texts and of the voices.", "Open", A_PAGE, P_LANGUAGE));
-    v.push_back(button(P_MAIN, "Quit game", "To the desktop, or back to the Savage Wind start screen.", "Quit",
-                       A_QUIT, 0));
+    v.push_back(button(P_MAIN, "Quit game", k_quit_texts.button_desc, "Quit", A_QUIT, 0));
 
     // Video: the platform's page (runtime/ui/video_page.mm; the PS5's runtime/ps5/video_page.cpp)
     video_page(v);
@@ -731,11 +730,10 @@ extern "C" uint64_t rt_quit_dialog_begin(uint64_t owner) {
 extern "C" void rt_quit_dialog_texts(uint64_t msg, uint64_t left, uint64_t right) {
     if (!g_quit_texts) return;
     g_quit_texts = false;
-    put_text(MSG_QUIT_QUESTION, tr("Quit to the desktop, or back to the Savage Wind start screen? Unsaved progress "
-                                   "is lost."), msg);
+    put_text(MSG_QUIT_QUESTION, tr(k_quit_texts.question), msg);
     // (left: the lower button, 0x5a, the cursor's and B's; right: the upper one, 0x5b)
-    put_text(MSG_QUIT_START, tr("Start screen"), left);
-    put_text(MSG_QUIT_DESKTOP, tr("Desktop"), right);
+    put_text(MSG_QUIT_START, tr(k_quit_texts.lower), left);
+    put_text(MSG_QUIT_DESKTOP, tr(k_quit_texts.upper), right);
 }
 
 extern "C" int rt_quit_dialog_back(void) { return g_quit_dialog != 0; }

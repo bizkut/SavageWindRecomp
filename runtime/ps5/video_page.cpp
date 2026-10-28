@@ -3,7 +3,8 @@
 // display reports them (runtime/ps5/window.c winsize_list). A choice applies at the next start: the display plane's
 // surface is made once (window.c reads the setting then). Frame rate: 30 / 60 / Off, the desktop's frame_rate setting.
 // The upscaler and its mode stay; VSync (FIFO is fixed, D4), HDR (not planned yet), the performance overlay and frame
-// generation (M7) are left out. Choices persist in savagewind.ini through the storage broker (settings_save).
+// generation (M7) are left out. Choices persist in savagewind.ini through the storage broker (settings_save). Also the
+// Quit question's texts: both its answers close the title.
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <stdio.h>
 
@@ -83,5 +84,14 @@ void video_page(std::vector<Item> &v) {
     v.push_back(video_async_shaders());
     v.push_back(video_shadows());
 }
+
+// Quit: no start screen or desktop here; both answers close the title (runtime/platform/main_ps5.c), back to the
+// PS5's home screen, where it starts again
+const QuitTexts k_quit_texts = {
+    "Closes the game, back to the PS5 home screen.",
+    "Close Savage Wind and go back to the PS5 home screen? Unsaved progress is lost.",
+    "Close game",
+    "Home screen",
+};
 
 }  // namespace opts

@@ -1,5 +1,6 @@
-// runtime/ps5/input.c against scripted scePad / sceUserService records, with no console or controller: the SDL
-// gamepad it presents (buttons, axes, events), its lifecycle and the scancode names. make test-ps5-input
+// runtime/ps5/input.c against scripted scePad / sceUserService / sceKeyboard / sceMouse records, with no console or
+// controller: the SDL gamepad it presents (buttons, axes, events), its lifecycle, the keyboards' keys as SDL scancodes,
+// the mice's buttons and summed motion and wheel, and the scancode names. make test-ps5-input
 #include <assert.h>
 #include <stdio.h>
 #include "../runtime/ps5/input.c"
@@ -70,6 +71,44 @@ int32_t scePadRead(int32_t handle, void *records, int32_t capacity) {
     return n;
 }
 
+// Keyboards and mice: index i opens as handle 20 + i (keyboard) / 30 + i (mouse) while hid_ok says so
+static uint16_t sysmodules[4];
+static int nsysmodules, kbd_open_calls[2], kbd_closes, mouse_closes;
+static bool hid_ok[2][2] = {{true, false}, {true, true}};
+static KeyboardRecord kq[2][KEYBOARD_RECORDS];
+static MouseRecord mq[2][MOUSE_RECORDS];
+static int32_t nk[2], nm[2];
+int32_t sceSysmoduleLoadModule(uint16_t id) { assert(nsysmodules < 4); sysmodules[nsysmodules++] = id; return 0; }
+int32_t sceKeyboardInit(void) { return 0; }
+int32_t sceMouseInit(void) { return 0; }
+int32_t sceKeyboardOpen(int32_t user, int32_t type, int32_t index, const void *params) {
+    assert(type == 0 && index >= 0 && index < 2 && params);
+    kbd_open_calls[index]++;
+    return user == initial_user && hid_ok[0][index] ? 20 + index : -2;
+}
+int32_t sceMouseOpen(int32_t user, int32_t type, int32_t index, const void *params) {
+    assert(type == 0 && index >= 0 && index < 2 && params);
+    return user == initial_user && hid_ok[1][index] ? 30 + index : -2;
+}
+int32_t sceKeyboardClose(int32_t handle) { assert(handle == 20 || handle == 21); kbd_closes++; return 0; }
+int32_t sceMouseClose(int32_t handle) { assert(handle == 30 || handle == 31); mouse_closes++; return 0; }
+int32_t sceKeyboardRead(int32_t handle, void *records, int32_t capacity) {
+    int i = handle - 20;
+    assert((i == 0 || i == 1) && capacity == KEYBOARD_RECORDS);
+    memcpy(records, kq[i], sizeof kq[i][0] * (size_t)nk[i]);
+    int32_t n = nk[i];
+    nk[i] = 0;
+    return n;
+}
+int32_t sceMouseRead(int32_t handle, void *records, int32_t capacity) {
+    int i = handle - 30;
+    assert((i == 0 || i == 1) && capacity == MOUSE_RECORDS);
+    memcpy(records, mq[i], sizeof mq[i][0] * (size_t)nm[i]);
+    int32_t n = nm[i];
+    nm[i] = 0;
+    return n;
+}
+
 // ---- helpers
 static PadRecord rec(uint32_t buttons) {
     PadRecord r;
@@ -99,11 +138,53 @@ static const SDL_Event *find(uint32_t type, int which) {
         if (events[i].type == type && which-- == 0) return &events[i];
     return NULL;
 }
+static KeyboardRecord krec(uint32_t modifiers, uint16_t k0, uint16_t k1) {
+    KeyboardRecord r;
+    memset(&r, 0, sizeof r);
+    r.connected = 1;
+    r.length = 1;  // (also when nothing is held)
+    r.modifiers = modifiers;
+    r.keys[0] = k0, r.keys[1] = k1;
+    r.timestamp_us = now_ns / 1000;
+    return r;
+}
+static MouseRecord mrec(uint32_t buttons, int32_t x, int32_t y, int32_t wheel, int32_t tilt) {
+    MouseRecord r;
+    memset(&r, 0, sizeof r);
+    r.connected = 1;
+    r.buttons = buttons;
+    r.x = x, r.y = y, r.wheel = wheel, r.tilt = tilt;
+    r.timestamp_us = now_ns / 1000;
+    return r;
+}
+static void key_records(int index, const KeyboardRecord *r, int n) {
+    memcpy(kq[index], r, sizeof *r * (size_t)n);
+    nk[index] = n;
+}
+static void mouse_records(int index, const MouseRecord *r, int n) {
+    memcpy(mq[index], r, sizeof *r * (size_t)n);
+    nm[index] = n;
+}
+static void poll_hid(void) { poll_with(NULL, 0); }
+// The n-th key event's scancode and direction
+static bool key_is(int i, SDL_Scancode sc, bool down) {
+    return i < nevents && events[i].type == (down ? SDL_EVENT_KEY_DOWN : SDL_EVENT_KEY_UP) &&
+           events[i].key.scancode == sc && events[i].key.down == down;
+}
+static bool button_is(int i, int button, bool down) {
+    return i < nevents && events[i].type == (down ? SDL_EVENT_MOUSE_BUTTON_DOWN : SDL_EVENT_MOUSE_BUTTON_UP) &&
+           events[i].button.button == button && events[i].button.down == down;
+}
 
 int main(void) {
     // Startup: the initial user's pad opens; no controller record yet -> no gamepad
     poll_with(NULL, 0);
     assert(opens == 1 && g_pad.handle == open_result && nevents == 0);
+    // ... and the keyboard and mouse sysmodules load, their libraries start, and indexes 0 and 1 of each open
+    // (keyboard index 1 is refused here: tried again each second)
+    assert(nsysmodules == 2 && sysmodules[0] == SYSMODULE_KEYBOARD && sysmodules[1] == SYSMODULE_MOUSE);
+    assert(g_hid.dev[HID_KEYBOARD][0].handle == 20 && g_hid.dev[HID_KEYBOARD][1].handle < 0 && kbd_open_calls[1] == 1);
+    assert(g_hid.dev[HID_MOUSE][0].handle == 30 && g_hid.dev[HID_MOUSE][1].handle == 31);
     int n = 5;
     SDL_JoystickID *ids = SDL_GetGamepads(&n);
     assert(n == 0);
@@ -283,6 +364,169 @@ int main(void) {
     assert(bind_settings_load("bind_key_a", "Left Shift") && g_bind_key[BIND_A] == SDL_SCANCODE_LSHIFT);
     assert(!strcmp(bind_key_label(g_bind_key[BIND_A]), "Left Shift"));
     bind_reset(BIND_DEV_KEY);
+
+    // ---- USB keyboards and mice. The logout closed the user's (index 0's keyboard, both mice), the login opened
+    // them again; keyboard index 1, refused, is tried again only once a second has passed
+    assert(kbd_closes == 1 && mouse_closes == 2 && nsysmodules == 2);
+    assert(g_hid.dev[HID_KEYBOARD][0].handle == 20 && g_hid.dev[HID_MOUSE][0].handle == 30);
+    poll_hid();
+    int tries = kbd_open_calls[1];
+    poll_hid();
+    assert(kbd_open_calls[1] == tries && g_hid.dev[HID_KEYBOARD][1].handle < 0);
+    hid_ok[0][1] = true;
+    now_ns += 1000000000ull;
+    poll_hid();
+    assert(kbd_open_calls[1] == tries + 1 && g_hid.dev[HID_KEYBOARD][1].handle == 21 && nevents == 0);
+
+    // Each HID usage is SDL's scancode for it, down then up, with SDL's key code (no modifier)
+    static const struct { uint16_t usage; SDL_Scancode sc; SDL_Keycode key; } kmap[] = {
+        {4, SDL_SCANCODE_A, 'a'},           {26, SDL_SCANCODE_W, 'w'},        {40, SDL_SCANCODE_RETURN, '\r'},
+        {41, SDL_SCANCODE_ESCAPE, 0x1b},     {44, SDL_SCANCODE_SPACE, ' '},    {58, SDL_SCANCODE_F1, 0x4000003a},
+        {82, SDL_SCANCODE_UP, 0x40000052},   {88, SDL_SCANCODE_KP_ENTER, 0x40000058},
+    };
+    for (size_t i = 0; i < sizeof kmap / sizeof kmap[0]; i++) {
+        KeyboardRecord k = krec(0, kmap[i].usage, 0);
+        key_records(0, &k, 1);
+        poll_hid();
+        assert(nevents == 1 && key_is(0, kmap[i].sc, true) && events[0].key.which == 1);
+        assert(events[0].key.key == kmap[i].key && events[0].key.mod == SDL_KMOD_NONE && !events[0].key.repeat);
+        k = krec(0, 0, 0);
+        key_records(0, &k, 1);
+        poll_hid();
+        assert(nevents == 1 && key_is(0, kmap[i].sc, false));
+    }
+    // The modifier bits are Left Control..Right GUI: a chord's modifier goes down before its key, up after it, and
+    // the key carries it (Shift + A is 'A')
+    KeyboardRecord k2 = krec(1u << 1, 4, 0);
+    key_records(0, &k2, 1);
+    poll_hid();
+    assert(nevents == 2 && key_is(0, SDL_SCANCODE_LSHIFT, true) && key_is(1, SDL_SCANCODE_A, true));
+    assert(events[1].key.mod == SDL_KMOD_LSHIFT && events[1].key.key == 'A');
+    k2 = krec(0, 0, 0);
+    key_records(0, &k2, 1);
+    poll_hid();
+    assert(nevents == 2 && key_is(0, SDL_SCANCODE_A, false) && key_is(1, SDL_SCANCODE_LSHIFT, false));
+    static const SDL_Scancode mods[8] = {SDL_SCANCODE_LCTRL, SDL_SCANCODE_LSHIFT, SDL_SCANCODE_LALT, SDL_SCANCODE_LGUI,
+                                         SDL_SCANCODE_RCTRL, SDL_SCANCODE_RSHIFT, SDL_SCANCODE_RALT, SDL_SCANCODE_RGUI};
+    for (unsigned b = 0; b < 8; b++) {
+        k2 = krec(1u << b, 0, 0);
+        key_records(0, &k2, 1);
+        poll_hid();
+        assert(nevents == 1 && key_is(0, mods[b], true));
+        k2 = krec(0, 0, 0);
+        key_records(0, &k2, 1);
+        poll_hid();
+        assert(nevents == 1 && key_is(0, mods[b], false));
+    }
+    k2 = krec(0xf0, 0, 0);  // (the right-hand ones together: SDL's modifier state)
+    key_records(0, &k2, 1);
+    poll_hid();
+    assert(nevents == 4 && events[3].key.mod == (SDL_KMOD_RCTRL | SDL_KMOD_RSHIFT | SDL_KMOD_RALT | SDL_KMOD_RGUI));
+    k2 = krec(0, 0, 0);
+    key_records(0, &k2, 1);
+    poll_hid();
+    assert(nevents == 4 && count(SDL_EVENT_KEY_UP) == 4);
+
+    // A batch is every record oldest-first: a tap between two polls is a press and a release; a rollover report
+    // (usage 1) changes nothing; an empty read keeps what is held
+    KeyboardRecord tap[3] = {krec(0, 4, 0), krec(0, 1, 1), krec(0, 4, 22)};
+    key_records(0, tap, 3);
+    poll_hid();
+    assert(nevents == 2 && key_is(0, SDL_SCANCODE_A, true) && key_is(1, SDL_SCANCODE_S, true));
+    poll_hid();
+    assert(nevents == 0 && usage_held(g_hid.keys, SDL_SCANCODE_A) && usage_held(g_hid.keys, SDL_SCANCODE_S));
+    KeyboardRecord up[2] = {krec(0, 0, 0), krec(0, 26, 0)};
+    key_records(0, up, 2);
+    poll_hid();
+    assert(nevents == 3 && key_is(0, SDL_SCANCODE_A, false) && key_is(1, SDL_SCANCODE_S, false) &&
+           key_is(2, SDL_SCANCODE_W, true));
+
+    // Two keyboards: a key is down while either holds it; the second one's events name it (which 2)
+    k2 = krec(0, 26, 0);
+    key_records(1, &k2, 1);
+    poll_hid();
+    assert(nevents == 0 && g_hid.dev[HID_KEYBOARD][1].connected);
+    k2 = krec(0, 0, 0);
+    key_records(0, &k2, 1);
+    poll_hid();
+    assert(nevents == 0);
+    key_records(1, &k2, 1);
+    poll_hid();
+    assert(nevents == 1 && key_is(0, SDL_SCANCODE_W, false) && events[0].key.which == 2);
+
+    // Unplugged: a disconnected record releases what it held; replugged, the same handle reports again; a record
+    // the system intercepts holds nothing
+    k2 = krec(0, 4, 0);
+    key_records(0, &k2, 1);
+    poll_hid();
+    assert(nevents == 1 && key_is(0, SDL_SCANCODE_A, true));
+    k2.connected = 0;
+    key_records(0, &k2, 1);
+    poll_hid();
+    assert(nevents == 1 && key_is(0, SDL_SCANCODE_A, false) && !g_hid.dev[HID_KEYBOARD][0].connected);
+    k2 = krec(0, 4, 0);
+    key_records(0, &k2, 1);
+    poll_hid();
+    assert(nevents == 1 && key_is(0, SDL_SCANCODE_A, true) && g_hid.dev[HID_KEYBOARD][0].connected);
+    k2.intercepted = 1;
+    key_records(0, &k2, 1);
+    poll_hid();
+    assert(nevents == 1 && key_is(0, SDL_SCANCODE_A, false) && g_hid.dev[HID_KEYBOARD][0].connected);
+
+    // Mouse buttons: bits 0..4 are SDL's left, right, middle, X1, X2
+    static const int bmap[5] = {SDL_BUTTON_LEFT, SDL_BUTTON_RIGHT, SDL_BUTTON_MIDDLE, SDL_BUTTON_X1, SDL_BUTTON_X2};
+    for (int b = 0; b < 5; b++) {
+        MouseRecord m = mrec(1u << b, 0, 0, 0, 0);
+        mouse_records(0, &m, 1);
+        poll_hid();
+        assert(nevents == 1 && button_is(0, bmap[b], true));
+        m = mrec(0, 0, 0, 0, 0);
+        mouse_records(0, &m, 1);
+        poll_hid();
+        assert(nevents == 1 && button_is(0, bmap[b], false));
+    }
+    // A click between two polls is a press and a release; an empty read keeps the button held
+    MouseRecord click[3] = {mrec(1, 0, 0, 0, 0), mrec(0, 0, 0, 0, 0), mrec(2, 0, 0, 0, 0)};
+    mouse_records(0, click, 3);
+    poll_hid();
+    assert(nevents == 3 && button_is(0, SDL_BUTTON_LEFT, true) && button_is(1, SDL_BUTTON_LEFT, false) &&
+           button_is(2, SDL_BUTTON_RIGHT, true));
+    poll_hid();
+    assert(nevents == 0 && g_hid.buttons == 1u << SDL_BUTTON_RIGHT);
+
+    // Motion and wheel: every usable record of every mouse in a poll, summed into one motion and one wheel event; an
+    // intercepted or disconnected record adds nothing (and releases its buttons)
+    MouseRecord m0[3] = {mrec(2, 3, -2, 1, 0), mrec(2, 5, 4, 0, -1), mrec(2 | MOUSE_INTERCEPTED, 100, 100, 9, 9)};
+    MouseRecord m1[2] = {mrec(0, -1, 1, 2, 0), mrec(0, 50, 50, 5, 5)};
+    m1[1].connected = 0;
+    mouse_records(0, m0, 3);
+    mouse_records(1, m1, 2);
+    poll_hid();
+    assert(count(SDL_EVENT_MOUSE_MOTION) == 1 && count(SDL_EVENT_MOUSE_WHEEL) == 1 && count(SDL_EVENT_MOUSE_BUTTON_UP) == 1);
+    const SDL_Event *mv = find(SDL_EVENT_MOUSE_MOTION, 0), *wh = find(SDL_EVENT_MOUSE_WHEEL, 0);
+    assert(mv->motion.xrel == 7 && mv->motion.yrel == 3 && wh->wheel.y == 3 && wh->wheel.x == -1);
+    assert(button_is(0, SDL_BUTTON_RIGHT, false) && g_hid.buttons == 0 && nevents == 3);
+    poll_hid();
+    assert(nevents == 0);  // (no records: no motion)
+    // Two mice: a button is down while either holds it
+    MouseRecord l = mrec(1, 0, 0, 0, 0);
+    mouse_records(0, &l, 1);
+    mouse_records(1, &l, 1);
+    poll_hid();
+    assert(nevents == 1 && button_is(0, SDL_BUTTON_LEFT, true));
+    l = mrec(0, 0, 0, 0, 0);
+    mouse_records(0, &l, 1);
+    poll_hid();
+    assert(nevents == 0);
+
+    // The user logs out while a key and a button are held: released, and every keyboard and mouse closed
+    k2 = krec(0, 4, 0);
+    key_records(0, &k2, 1);
+    poll_hid();
+    user_queue[nuser++] = (UserServiceEvent){1, initial_user};
+    poll_hid();
+    assert(count(SDL_EVENT_KEY_UP) == 1 && count(SDL_EVENT_MOUSE_BUTTON_UP) == 1 && g_hid.buttons == 0);
+    assert(kbd_closes == 3 && mouse_closes == 4 && g_hid.dev[HID_KEYBOARD][0].handle < 0);
     printf("test_ps5_input: ok\n");
     return 0;
 }

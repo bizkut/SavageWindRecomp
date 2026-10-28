@@ -1,7 +1,8 @@
 // The PS5's input devices behind the SDL calls runtime/hle/input.c, bindings.c and vibration.c make (D2, D8): the
-// signed-in user's DualSense through scePad. They fill the same host state the desktop's SDL devices fill, so the
-// Switch-controller mapping, rebinding and settings stay the desktop's: the DualSense is an SDL PS5 gamepad, its
-// buttons and axes numbered and scaled as SDL's own DualSense driver reports them.
+// signed-in user's DualSense through scePad, and USB keyboards and mice through sceKeyboard / sceMouse. They fill the
+// same host state the desktop's SDL devices fill, so the Switch-controller mapping, rebinding and settings stay the
+// desktop's: the DualSense is an SDL PS5 gamepad, its buttons and axes numbered and scaled as SDL's own DualSense driver
+// reports them; a keyboard's keys are SDL scancodes (both are USB HID usages); a mouse is SDL's relative mouse.
 //
 // Lifecycle (docs/PS5-PORT-PLAN.md D8, ../ps5-native-gamepad-input-research CONTROLLER-DATA.md): the user service gives
 // the signed-in user, whose standard pad this file opens and alone reads (the window loop's thread, through
@@ -13,9 +14,19 @@
 // record adds it again as a new gamepad, its motion sensors configured afresh. Rumble (vibration.c) is
 // scePadSetVibration. A user logging out closes the pad; a user logging in while none is signed in opens theirs.
 //
-// The klog proves each control: one line per change of the buttons, stick directions or triggers (at most
-// LOG_PER_SECOND a second; the count of the lines left out follows), naming the DualSense controls held and the
-// Switch buttons they drive through the bindings.
+// Keyboards and mice (../ps5-native-gamepad-input-research KEYBOARD-MOUSE.md): their sysmodules are loaded once, then
+// device indexes 0 and 1 of each are opened for the signed-in user (one receiver can put its keyboard on one index and
+// its mouse on the other); an index that does not open is tried again each second. An open handle stays open across
+// unplugging: its records say whether a device is connected, and a replugged one reports on the same handle. Every
+// record is processed oldest-first, so a tap between two polls still goes out as a press and a release: a keyboard's
+// held usages (its modifier bits as Left Control..Right GUI) become key down / up events, a mouse's buttons button
+// events; a poll's motion and wheel, summed over every record of every mouse, go out as one motion and one wheel event.
+// A disconnected or intercepted record holds nothing. A key or button is down while any device holds it.
+//
+// The klog proves each control: one line per change of the buttons, stick directions or triggers, per key or mouse
+// button change (at most LOG_PER_SECOND such lines a second; the count of the lines left out follows), naming the
+// DualSense controls held and the Switch buttons they drive through the bindings; a line per keyboard or mouse
+// connected or disconnected; the mouse's summed motion and wheel once a second while it moves.
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <SDL3/SDL.h>
 #include <stddef.h>
@@ -86,6 +97,49 @@ enum {
 #define PAD_RECORDS 64
 #define USER_SERVICE_NO_EVENT 0x80960007u  // sceUserServiceGetEvent: nothing new
 #define LOG_PER_SECOND 30
+
+// ---- keyboards and mice (declarations and records as ../ps5-native-gamepad-input-research include/ps5_keyboard.hpp
+// and ps5_mouse.hpp have them)
+int32_t sceSysmoduleLoadModule(uint16_t id);
+#define SYSMODULE_KEYBOARD 0x0106
+#define SYSMODULE_MOUSE 0x00a9
+int32_t sceKeyboardInit(void);
+int32_t sceKeyboardOpen(int32_t user_id, int32_t type, int32_t index, const void *params);  // (8 reserved bytes)
+int32_t sceKeyboardClose(int32_t handle);
+int32_t sceKeyboardRead(int32_t handle, void *records, int32_t capacity);  // 1..16 records, oldest first
+int32_t sceMouseInit(void);
+int32_t sceMouseOpen(int32_t user_id, int32_t type, int32_t index, const void *params);  // (8 bytes; 0: one index)
+int32_t sceMouseClose(int32_t handle);
+int32_t sceMouseRead(int32_t handle, void *records, int32_t capacity);  // 1..64 records, oldest first
+
+// sceKeyboardRead's 96-byte record
+typedef struct {
+    uint64_t timestamp_us;
+    uint8_t intercepted, reserved0[7];  // nonzero: the system has the keyboard
+    uint8_t connected, reserved1[3];
+    int32_t length;
+    uint32_t leds;                      // Num, Caps, Scroll Lock
+    uint32_t modifiers;                 // bits 0..7: Left Control, Shift, Alt, GUI, then the right ones
+    uint16_t keys[16];                  // the USB HID usages held (0: none; 1..3: a rollover / error report)
+    uint8_t reserved2[32];
+} KeyboardRecord;
+_Static_assert(sizeof(KeyboardRecord) == 96, "sceKeyboardRead record");
+_Static_assert(offsetof(KeyboardRecord, connected) == 0x10 && offsetof(KeyboardRecord, modifiers) == 0x1c &&
+               offsetof(KeyboardRecord, keys) == 0x20, "keyboard fields");
+// sceMouseRead's 40-byte record
+typedef struct {
+    uint64_t timestamp_us;
+    uint8_t connected, reserved0[3];
+    uint32_t buttons;                   // bits 0..4: primary, secondary, middle, X1, X2; MOUSE_INTERCEPTED
+    int32_t x, y, wheel, tilt;          // relative: right, down, wheel away from the player, wheel tilted right
+    uint8_t reserved1[8];
+} MouseRecord;
+_Static_assert(sizeof(MouseRecord) == 40, "sceMouseRead record");
+_Static_assert(offsetof(MouseRecord, buttons) == 0x0c && offsetof(MouseRecord, tilt) == 0x1c, "mouse fields");
+#define MOUSE_INTERCEPTED 0x80000000u
+#define KEYBOARD_RECORDS 16
+#define MOUSE_RECORDS 64
+#define HID_INDEXES 2  // device indexes per kind (0 and 1 open; higher ones are refused)
 
 // The DualSense buttons SDL's driver reports, in SDL's button numbers (the PS button stays the system's; the L2 / R2
 // bits are left out: SDL reports the triggers as axes, and input.c presses ZL / ZR past half their travel)
@@ -374,9 +428,258 @@ static void pad_read(void) {
     if (newest) pad_publish(newest), g_pad.newest = *newest;
 }
 
+// ---- keyboards and mice
+enum { HID_KEYBOARD, HID_MOUSE, HID_KINDS };
+static const char *const k_hid_name[HID_KINDS] = {"USB keyboard", "USB mouse"};
+typedef struct {
+    int32_t handle;       // -1: not open
+    uint64_t retry_ns;    // when to try opening it again
+    int32_t open_error;   // the failure last logged (each new one is)
+    uint32_t read_errors;
+    bool connected;       // its records say a device is there
+    uint8_t keys[32];     // keyboard: the HID usages it holds (bit per usage)
+    uint32_t buttons;     // mouse: the buttons it holds (bits 0..4)
+} HidDevice;
+static struct {
+    bool lib[HID_KINDS];             // the sysmodule loaded and the library initialized
+    HidDevice dev[HID_KINDS][HID_INDEXES];
+    uint8_t keys[32];                // the usages any keyboard holds (sent as key events)
+    uint32_t buttons;                // the mouse buttons any mouse holds (bit per SDL_BUTTON_*)
+    int64_t moved[4];                // motion x, y, wheel y, x since the last [input] mouse line
+    uint64_t moved_log_ns;
+} g_hid = {.dev = {{{.handle = -1}, {.handle = -1}}, {{.handle = -1}, {.handle = -1}}}};
+
+static bool usage_held(const uint8_t *set, unsigned u) { return set[u >> 3] >> (u & 7) & 1; }
+
+// The usages a record holds: its key array and its modifier bits (as Left Control..Right GUI, 0xe0..0xe7; SDL's
+// scancodes are these usages). Nothing for a disconnected or intercepted record. False: a rollover / error report
+// (usages 1..3), which says nothing about the keys
+static bool keyboard_usages(const KeyboardRecord *r, uint8_t out[32]) {
+    memset(out, 0, 32);
+    if (!r->connected || r->intercepted) return true;
+    for (int i = 0; i < 16; i++) {
+        unsigned u = r->keys[i];
+        if (u >= 1 && u <= 3) return false;
+        if (u >= 4 && u < 256) out[u >> 3] |= (uint8_t)(1u << (u & 7));
+    }
+    for (unsigned b = 0; b < 8; b++)
+        if (r->modifiers >> b & 1) out[(0xe0 + b) >> 3] |= (uint8_t)(1u << ((0xe0 + b) & 7));
+    return true;
+}
+
+static SDL_Keymod keyboard_mod(void) {
+    static const SDL_Keymod k_mod[8] = {SDL_KMOD_LCTRL, SDL_KMOD_LSHIFT, SDL_KMOD_LALT, SDL_KMOD_LGUI,
+                                        SDL_KMOD_RCTRL, SDL_KMOD_RSHIFT, SDL_KMOD_RALT, SDL_KMOD_RGUI};
+    SDL_Keymod m = SDL_KMOD_NONE;
+    for (unsigned b = 0; b < 8; b++)
+        if (usage_held(g_hid.keys, 0xe0 + b)) m |= k_mod[b];
+    return m;
+}
+
+static const char *key_name(unsigned u) {
+    static char buf[16];
+    const char *n = SDL_GetScancodeName((SDL_Scancode)u);
+    if (*n) return n;
+    snprintf(buf, sizeof buf, "usage %#x", u);
+    return buf;
+}
+
+static void key_event(unsigned u, bool down, int index) {
+    if (down) g_hid.keys[u >> 3] |= (uint8_t)(1u << (u & 7));
+    else g_hid.keys[u >> 3] &= (uint8_t)~(1u << (u & 7));
+    SDL_Event e;
+    memset(&e, 0, sizeof e);
+    e.type = down ? SDL_EVENT_KEY_DOWN : SDL_EVENT_KEY_UP;
+    e.key.which = (uint32_t)index + 1;
+    e.key.scancode = (SDL_Scancode)u;
+    e.key.mod = keyboard_mod();
+    e.key.key = SDL_GetKeyFromScancode(e.key.scancode, e.key.mod, true);
+    e.key.down = down;
+    push(&e);
+    if (!log_allowed()) return;
+    char held[256] = "";
+    size_t n = 0;
+    for (unsigned h = 4; h < 256 && n < sizeof held - 1; h++)
+        if (usage_held(g_hid.keys, h)) n += (size_t)snprintf(held + n, sizeof held - n, " [%s]", key_name(h));
+    LOG("[input] keyboard: %s %s | held:%s\n", key_name(u), down ? "down" : "up", n ? held : " (none)");
+}
+
+// The keys any keyboard holds, as events for each change: releases first (other keys, then modifiers), then presses
+// (modifiers, then other keys), so a chord's modifier is down before its key and up after it
+static void keyboard_publish(int index) {
+    uint8_t now[32] = {0};
+    for (int i = 0; i < HID_INDEXES; i++)
+        for (int b = 0; b < 32; b++) now[b] |= g_hid.dev[HID_KEYBOARD][i].keys[b];
+    for (unsigned u = 4; u < 0xe0; u++)
+        if (usage_held(g_hid.keys, u) && !usage_held(now, u)) key_event(u, false, index);
+    for (unsigned u = 0xe0; u < 256; u++)
+        if (usage_held(g_hid.keys, u) && !usage_held(now, u)) key_event(u, false, index);
+    for (unsigned u = 0xe0; u < 256; u++)
+        if (!usage_held(g_hid.keys, u) && usage_held(now, u)) key_event(u, true, index);
+    for (unsigned u = 4; u < 0xe0; u++)
+        if (!usage_held(g_hid.keys, u) && usage_held(now, u)) key_event(u, true, index);
+}
+
+// A mouse's buttons (bits 0..4) as SDL's, and their names
+static const uint8_t k_mouse_sdl[5] = {SDL_BUTTON_LEFT, SDL_BUTTON_RIGHT, SDL_BUTTON_MIDDLE, SDL_BUTTON_X1, SDL_BUTTON_X2};
+static const char *const k_mouse_name[5] = {"Left", "Right", "Middle", "X1", "X2"};
+
+static void mouse_publish(void) {
+    uint32_t now = 0;
+    for (int i = 0; i < HID_INDEXES; i++)
+        for (int b = 0; b < 5; b++)
+            if (g_hid.dev[HID_MOUSE][i].buttons >> b & 1) now |= 1u << k_mouse_sdl[b];
+    for (int b = 0; b < 5; b++) {
+        uint32_t bit = 1u << k_mouse_sdl[b];
+        if (!((now ^ g_hid.buttons) & bit)) continue;
+        bool down = now & bit;
+        g_hid.buttons ^= bit;
+        SDL_Event e;
+        memset(&e, 0, sizeof e);
+        e.type = down ? SDL_EVENT_MOUSE_BUTTON_DOWN : SDL_EVENT_MOUSE_BUTTON_UP;
+        e.button.button = k_mouse_sdl[b];
+        e.button.down = down;
+        push(&e);
+        if (!log_allowed()) continue;
+        char held[64] = "";
+        size_t n = 0;
+        for (int h = 0; h < 5; h++)
+            if (g_hid.buttons >> k_mouse_sdl[h] & 1) n += (size_t)snprintf(held + n, sizeof held - n, " %s", k_mouse_name[h]);
+        LOG("[input] mouse: %s %s | held:%s\n", k_mouse_name[b], down ? "down" : "up", n ? held : " (none)");
+    }
+}
+
+// A record's connection: one line when a device comes or goes (what it held is released then)
+static void hid_connection(int kind, int index, bool connected) {
+    HidDevice *d = &g_hid.dev[kind][index];
+    if (connected == d->connected) return;
+    d->connected = connected;
+    if (connected)
+        LOG("[input] %s connected: user %d, index %d, handle %d\n", k_hid_name[kind], g_pad.user, index, d->handle);
+    else
+        LOG("[input] %s disconnected: index %d, handle %d (%s released)\n", k_hid_name[kind], index, d->handle,
+            kind == HID_KEYBOARD ? "its keys" : "its buttons");
+}
+
+static void keyboard_read(int index) {
+    HidDevice *d = &g_hid.dev[HID_KEYBOARD][index];
+    KeyboardRecord rec[KEYBOARD_RECORDS];
+    int32_t n = sceKeyboardRead(d->handle, rec, KEYBOARD_RECORDS);
+    if (n < 0 || n > KEYBOARD_RECORDS) {
+        if (d->read_errors++ % 1000 == 0)
+            LOG("[input] sceKeyboardRead(handle %d) failed: %#x (%u failures)\n", d->handle, (unsigned)n, d->read_errors);
+        return;
+    }
+    for (int32_t i = 0; i < n; i++) {
+        uint8_t keys[32];
+        hid_connection(HID_KEYBOARD, index, rec[i].connected != 0);
+        if (!keyboard_usages(&rec[i], keys)) continue;
+        memcpy(d->keys, keys, sizeof keys);
+        keyboard_publish(index);
+    }
+}
+
+static void mouse_read(int index, int64_t sum[4]) {
+    HidDevice *d = &g_hid.dev[HID_MOUSE][index];
+    MouseRecord rec[MOUSE_RECORDS];
+    int32_t n = sceMouseRead(d->handle, rec, MOUSE_RECORDS);
+    if (n < 0 || n > MOUSE_RECORDS) {
+        if (d->read_errors++ % 1000 == 0)
+            LOG("[input] sceMouseRead(handle %d) failed: %#x (%u failures)\n", d->handle, (unsigned)n, d->read_errors);
+        return;
+    }
+    for (int32_t i = 0; i < n; i++) {
+        const MouseRecord *r = &rec[i];
+        hid_connection(HID_MOUSE, index, r->connected != 0);
+        bool usable = r->connected && !(r->buttons & MOUSE_INTERCEPTED);
+        d->buttons = usable ? r->buttons & 0x1fu : 0;
+        mouse_publish();
+        if (!usable) continue;
+        sum[0] += r->x, sum[1] += r->y, sum[2] += r->wheel, sum[3] += r->tilt;
+    }
+}
+
+// Every open keyboard's and mouse's new records; the mice's motion and wheel summed into one event each
+static void hid_poll(void) {
+    for (int i = 0; i < HID_INDEXES; i++)
+        if (g_hid.dev[HID_KEYBOARD][i].handle >= 0) keyboard_read(i);
+    int64_t sum[4] = {0, 0, 0, 0};
+    for (int i = 0; i < HID_INDEXES; i++)
+        if (g_hid.dev[HID_MOUSE][i].handle >= 0) mouse_read(i, sum);
+    SDL_Event e;
+    if (sum[0] || sum[1]) {
+        memset(&e, 0, sizeof e);
+        e.type = SDL_EVENT_MOUSE_MOTION;
+        e.motion.xrel = (float)sum[0], e.motion.yrel = (float)sum[1];
+        push(&e);
+    }
+    if (sum[2] || sum[3]) {
+        memset(&e, 0, sizeof e);
+        e.type = SDL_EVENT_MOUSE_WHEEL;
+        e.wheel.x = (float)sum[3], e.wheel.y = (float)sum[2];
+        push(&e);
+    }
+    for (int k = 0; k < 4; k++) g_hid.moved[k] += sum[k];
+    uint64_t now = plat_now_ns();
+    if (now < g_hid.moved_log_ns) return;
+    if (g_hid.moved[0] || g_hid.moved[1] || g_hid.moved[2] || g_hid.moved[3])
+        LOG("[input] mouse: moved %+lld,%+lld, wheel %+lld,%+lld in the last second\n", (long long)g_hid.moved[0],
+            (long long)g_hid.moved[1], (long long)g_hid.moved[3], (long long)g_hid.moved[2]);
+    memset(g_hid.moved, 0, sizeof g_hid.moved);
+    g_hid.moved_log_ns = now + 1000000000ull;
+}
+
+static void hid_open(int kind, int index) {
+    HidDevice *d = &g_hid.dev[kind][index];
+    uint64_t now = plat_now_ns();
+    if (!g_hid.lib[kind] || d->handle >= 0 || now < d->retry_ns) return;
+    const uint8_t params[8] = {0};
+    int32_t h = kind == HID_KEYBOARD ? sceKeyboardOpen(g_pad.user, 0, index, params)
+                                     : sceMouseOpen(g_pad.user, 0, index, params);
+    if (h < 0) {
+        if (d->open_error != h)
+            LOG("[input] %s(user %d, index %d) failed: %#x; trying again each second\n",
+                kind == HID_KEYBOARD ? "sceKeyboardOpen" : "sceMouseOpen", g_pad.user, index, (unsigned)h);
+        d->open_error = h;
+        d->retry_ns = now + 1000000000ull;
+        return;
+    }
+    d->handle = h;
+    d->open_error = 0;
+    d->read_errors = 0;
+    d->connected = false;
+    LOG("[input] user %d: %s index %d opened (handle %d)\n", g_pad.user, k_hid_name[kind], index, h);
+}
+
+static void hid_close(int kind, int index, const char *why) {
+    HidDevice *d = &g_hid.dev[kind][index];
+    if (d->handle < 0) return;
+    hid_connection(kind, index, false);
+    memset(d->keys, 0, sizeof d->keys);
+    d->buttons = 0;
+    if (kind == HID_KEYBOARD) keyboard_publish(index);
+    else mouse_publish();
+    int32_t r = kind == HID_KEYBOARD ? sceKeyboardClose(d->handle) : sceMouseClose(d->handle);
+    LOG("[input] user %d: %s index %d handle %d closed (%s): %#x\n", g_pad.user, k_hid_name[kind], index, d->handle,
+        why, (unsigned)r);
+    d->handle = -1;
+    d->retry_ns = 0;
+}
+
+// The libraries, once: the sysmodule, then its init (a kind whose library fails stays closed)
+static void hid_start(void) {
+    int32_t km = sceSysmoduleLoadModule(SYSMODULE_KEYBOARD);
+    int32_t ki = km >= 0 ? sceKeyboardInit() : km;
+    int32_t mm = sceSysmoduleLoadModule(SYSMODULE_MOUSE);
+    int32_t mi = mm >= 0 ? sceMouseInit() : mm;
+    g_hid.lib[HID_KEYBOARD] = ki >= 0, g_hid.lib[HID_MOUSE] = mi >= 0;
+    LOG("[input] keyboard sysmodule %#x, sceKeyboardInit %#x; mouse sysmodule %#x, sceMouseInit %#x\n", (unsigned)km,
+        (unsigned)ki, (unsigned)mm, (unsigned)mi);
+}
+
 // ---- the signed-in user's devices
-static void open_devices(void) {
-    if (g_pad.user < 0 || g_pad.handle >= 0 || plat_now_ns() < g_pad.retry_ns) return;
+static void pad_open(void) {
+    if (g_pad.handle >= 0 || plat_now_ns() < g_pad.retry_ns) return;
     int32_t h = scePadOpen(g_pad.user, 0, 0, NULL);
     if (h < 0) {
         static int32_t said;
@@ -390,6 +693,13 @@ static void open_devices(void) {
     LOG("[input] user %d: standard pad opened (handle %d)\n", g_pad.user, h);
 }
 
+static void open_devices(void) {
+    if (g_pad.user < 0) return;
+    pad_open();
+    for (int kind = 0; kind < HID_KINDS; kind++)
+        for (int i = 0; i < HID_INDEXES; i++) hid_open(kind, i);
+}
+
 static void close_devices(const char *why) {
     pad_remove(why);
     if (g_pad.handle >= 0) {
@@ -397,6 +707,8 @@ static void close_devices(const char *why) {
         LOG("[input] user %d: pad handle %d closed (%s): %#x\n", g_pad.user, g_pad.handle, why, (unsigned)r);
         g_pad.handle = -1;
     }
+    for (int kind = 0; kind < HID_KINDS; kind++)
+        for (int i = 0; i < HID_INDEXES; i++) hid_close(kind, i, why);
 }
 
 static void user_events(void) {
@@ -410,6 +722,8 @@ static void user_events(void) {
         } else if (ev.event_type == 0 && g_pad.user < 0) {
             g_pad.user = ev.user_id;
             g_pad.retry_ns = 0;
+            for (int kind = 0; kind < HID_KINDS; kind++)
+                for (int k = 0; k < HID_INDEXES; k++) g_hid.dev[kind][k].retry_ns = 0;
         }
     }
 }
@@ -422,6 +736,7 @@ static void start(void) {
     int32_t rp = scePadInit();
     LOG("[input] user service %#x, initial user %d (%#x), scePadInit %#x\n", (unsigned)r, user, (unsigned)ru, (unsigned)rp);
     if (ru >= 0 && user >= 0) g_pad.user = user;
+    hid_start();
 }
 
 void ps5_input_poll(void) {
@@ -432,6 +747,7 @@ void ps5_input_poll(void) {
     user_events();
     open_devices();
     if (g_pad.handle >= 0) pad_read();
+    hid_poll();
     if (g_pad.present) motion_log();
     if ((g_pad.rumble[0] || g_pad.rumble[1]) && g_pad.rumble_until_ns && now >= g_pad.rumble_until_ns)
         rumble_send(0, 0, " (its duration ended)");

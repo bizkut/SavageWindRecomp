@@ -375,6 +375,15 @@ the overlay menu and Savage Wind's Options pages (all M4), movies (M5), frame ge
 D8 complete. **Done when:** a scripted klog of each device: DualSense buttons/sticks/triggers/gyro aim/rumble; USB
 mouse camera and clicks; USB keyboard movement and menus; unplug/replug each device mid-game.
 
+USB keyboards and mice (`runtime/ps5/input.c`): the Keyboard (0x0106) and Mouse (0x00a9) sysmodules load once; indexes
+0 and 1 of each open for the signed-in user (an index that does not open is tried again each second) and stay open
+across unplugging, their records' `connected` flag giving connect / disconnect. Every record is processed oldest-first:
+keys (HID usages, modifier bits as Left Control..Right GUI) are SDL scancode events; mouse buttons are SDL buttons;
+a poll's motion and wheel, summed over every record of every mouse, are one SDL relative motion and one wheel event.
+The klog has one line per device connect / disconnect, a rate-limited line per key or button change, and the mouse's
+summed motion once a second while it moves. The Quit question's texts are the platform's (`opts::k_quit_texts`):
+on the PS5 both answers close the title, so it asks about closing the game, not "Desktop / Start screen".
+
 **PS5 Video page** in Savage Wind's existing Options pages (`runtime/ui/game_options.mm`, pause > System > Options
 and the title screen), enabled with input:
 - **Resolution: Auto / 1080p / 4K** replaces Window size and Fullscreen. Auto (default) is the D4 mode chosen at

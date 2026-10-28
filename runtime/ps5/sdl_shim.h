@@ -168,6 +168,7 @@ typedef struct { SDL_EVENT_HEAD; uint32_t windowID; uint32_t which; SDL_Scancode
 typedef struct { SDL_EVENT_HEAD; uint32_t windowID; const char *text; } SDL_TextInputEvent;
 typedef struct { SDL_EVENT_HEAD; float xrel, yrel; } SDL_MouseMotionEvent;
 typedef struct { SDL_EVENT_HEAD; Uint8 button; bool down; } SDL_MouseButtonEvent;
+typedef struct { SDL_EVENT_HEAD; float x, y; } SDL_MouseWheelEvent;  // (y > 0: away from the player; x > 0: right)
 typedef struct { SDL_EVENT_HEAD; SDL_JoystickID which; } SDL_GamepadDeviceEvent;
 typedef struct { SDL_EVENT_HEAD; SDL_JoystickID which; Uint8 axis; Sint16 value; } SDL_GamepadAxisEvent;
 typedef struct { SDL_EVENT_HEAD; SDL_JoystickID which; Uint8 button; bool down; } SDL_GamepadButtonEvent;
@@ -180,6 +181,7 @@ typedef union SDL_Event {
     SDL_TextInputEvent text;
     SDL_MouseMotionEvent motion;
     SDL_MouseButtonEvent button;
+    SDL_MouseWheelEvent wheel;
     SDL_GamepadDeviceEvent gdevice;
     SDL_GamepadAxisEvent gaxis;
     SDL_GamepadButtonEvent gbutton;

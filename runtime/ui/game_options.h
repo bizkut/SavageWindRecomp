@@ -1,7 +1,8 @@
 // Savage Wind's pages of the game's Options screen (runtime/ui/game_options.mm): their row model, and the Video page's
-// rows every platform has. Each platform composes its own Video page from them and its own rows (D2: the desktop's
-// window, VSync, HDR and frame generation in runtime/ui/video_page.mm; the PS5's display resolution in
-// runtime/ps5/video_page.cpp).
+// rows every platform has. Each platform composes its own Video page from them and its own rows, and words the Quit
+// question for what its answers do (D2: the desktop's window, VSync, HDR and frame generation, and quitting to the
+// desktop or the start screen, in runtime/ui/video_page.mm; the PS5's display resolution, and both answers closing the
+// title, in runtime/ps5/video_page.cpp).
 #pragma once
 #include <string>
 #include <vector>
@@ -55,5 +56,12 @@ Item video_shadows();
 
 // The platform's Video page, in order
 void video_page(std::vector<Item> &v);
+
+// The platform's Quit texts (English; shown through tr): the main page's Quit button's description, and the game's
+// two-button dialog's question and answers (lower: answer 1, the cursor's; upper: answer 0; game_options.mm quit_poll)
+struct QuitTexts {
+    const char *button_desc, *question, *lower, *upper;
+};
+extern const QuitTexts k_quit_texts;
 
 }  // namespace opts
