@@ -660,3 +660,20 @@ The scaling check confirms the heap lock as the contention: 1 worker 27/s; 16 wo
 (no repeated package opens), and no hitch occurs in the first windows (59.9 fps, max 18 ms). The user saw the
 "Compiling shaders" screen finish. Title heap peaks at 1,728 MB (freeing it after precompile is still open). The
 game's own threads still use the shared arenas.
+
+## 2026-10-28 — M6 benchmark: Great Plateau route, two runs (.41, ps5/evidence/m6/bench1-2.klog)
+
+Built-in benchmark (eboot `08f0e14f…`, 4K output, 1080p internal, no player), 60 s measured after 20 s settling:
+
+| | run 1 | run 2 |
+|---|---|---|
+| frame ms mean / p95 / p99 / max | 16.707 / 16.768 / 26.719 / 39.8 | 16.683 / 16.771 / 18.237 / 33.4 |
+| on time | 98.4 % | 98.8 % |
+| hitches | 37 (30 command translation, 4 pipeline creation, 3 shader compile) | 30 (all command translation) |
+| render thread CPU mean / p95 | 10.35 / 13.98 ms | 10.58 / 14.40 ms |
+| GPU mean / p95 | 7.74 / 8.48 ms | 7.77 / 8.47 ms |
+
+The runs agree within 2 % (mean −0.14 %, p95 +0.02 %): the benchmark meets its done-when. The frame target of 95 %
+on time is met on this route. **S6 / headroom:** the GPU uses ~47 % of a 60 fps frame; the render thread (translating
+NVN commands to Vulkan) uses 62 % on average and 86 % at p95, so it is the limit and the source of the remaining
+hitches. Guest-thread CPU figures are summed per-thread self-reports and are indicative only.
