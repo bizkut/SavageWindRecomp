@@ -116,7 +116,8 @@ Other displays (unmeasured): S4 on .41's 4K TV saw one display, one plane and tw
 picks the largest extent, preferring 119.88 Hz; the swapchain and internal resolution follow that extent. On a 60 Hz
 display, frame generation is off.
 
-**D5. Game code is built on the user's PC, never shipped.** The project's rule is that no build contains game code,
+**D5. Game code is built from the user's files, never shipped.** Today on the user's PC; M12 moves it onto the console
+(requested 2026-10-29) so the public release needs no PC. The project's rule is that no build contains game code,
 generated C included (`docs/SAVAGE-WIND.md` "Reglas legales"). The PS5 has no compiler, and `runtime/gamebuild.c`
 spawns one. Flow:
 
@@ -655,9 +656,9 @@ Actions on the self-hosted runner, catalog entry PPSA90212 (reserved, catalog PR
 deleting the local `ps5-backup-before-rewrite` branch (old history with game captures) before any push.
 
 Pending user decisions (asked 2026-10-29): (1) the fork rewrites the "never decrypts" rule for the PS5 port (player's
-own NSP/XCI and keys, nothing shipped) or supports only pre-extracted files; (2) release form: PS5 title plus a
-one-command PC builder for the game-code eboot, or a PC tool that outputs the whole title folder. Until (1) is
-decided, D11 keeps public release blocked; private builds are not evidence of approval.
+own NSP/XCI and keys, nothing shipped) or supports only pre-extracted files. Until (1) is decided, D11 keeps public
+release blocked; private builds are not evidence of approval. (2) Release form, answered 2026-10-29: the public
+release is the PS5 title alone, building the game code on the console (M12); the PC builder is an interim/fallback.
 
 For an unattended soak, put `soak = 60` in `/data/savagewind/benchmark.txt`. The benchmark continues a copied save,
 settles for 20 seconds, and repeats the 60-second camera route for the requested measured minutes. Cumulative frame
@@ -669,6 +670,41 @@ allocations, not every GPU allocation.
 `save_check = 1` reports unavailable after the route: the runtime exposes save filesystem operations and the
 benchmark's copied save directory, but no game-level save initiation, save completion, or reload trigger. It does
 not claim that filesystem I/O alone proves a save/load round trip.
+
+### M12 — On-console game-code build (PC-less public release; requested 2026-10-29)
+Goal: the release ZIP holds only the title (runtime, translator, compiler parts, licences). On first start the console
+generates and compiles the game code from the user's own ExeFS inside the packages, caches it under
+`/data/savagewind/cache/gamecode/` (keyed by `main` build id + generator version), and loads the cache on later
+starts. Nothing generated leaves the console; the legal position is the PC builder's, done on the user's console.
+
+What already supports it: the title reads ExeFS from the packages (M2/M10); executable memory works in a title
+(`ps5platform/exec.h`: direct memory made RX/RWX with `sceKernelMprotect`, placed `PS5_EXEC_NEAR` the runtime for
+rel32 calls; measured in `PS5_Vulkan` docs/PROBE.md); ProsperoEden runs a dynarmic ARM64→x86-64 JIT on PS5. What
+doesn't: the title cannot load modules (`sceKernelLoadStartModule`/`dlopen` fail, S3), there is no compiler on the
+console, and the generator is ~4,200 lines of Python (`tools/gen.py`, `lifter.py`, `simd_c.py`, `patches.py`,
+`game_sites.py`, `layout.py`, `nso.py`, `analyze.py`; capstone, unicorn, lz4).
+
+Paths, decided by the spikes below:
+- **A. Same pipeline in the title (preferred):** a C++ port of the generator (byte-identical C to the Python on the
+  host), compiled in-process by an embedded clang/LLVM (Apache-2.0 with LLVM exception) built with the Prospero
+  toolchain, and an in-title loader that places the objects in executable direct memory near the runtime, applies
+  relocations against the runtime's exports, and persists the linked image. Keeps desktop parity, the HLE patch
+  sites and current performance; costs LLVM's size and a long first build.
+- **B. Lifter to LLVM IR directly:** skips C parsing (faster compile); a second generator back end to keep in step.
+- **C. Runtime translation (dynarmic, ProsperoEden precedent):** no compile step, but loses static recompilation's
+  optimisations and the generated-function patch sites; a runtime redesign. Fallback only.
+
+Spikes (console .41): **S7** a 256+ MiB executable image near the runtime: load, relocate against runtime symbols,
+call through, reload from the cache file; measure load time. **S8** clang/LLVM static libraries for Prospero in a
+probe title: compile one real generated module (from the user's ExeFS on the console) to an object in memory;
+time and peak memory per module, extrapolated to all 996 objects (PC: 324 s on 24 threads at `-O1`). **S9** the
+generator port on the host: identical C output for `main`, `sdk`, `subsdk0` versus `tools/gen.py`; then its
+runtime on the console. UI: the first-start screen shows game-code build progress next to the shader precompile
+(both can overlap; the compile is CPU-bound, so measure).
+**Done when:** a console with only the release title, the user's packages and keys builds the game code on first
+start with a progress screen, plays, and on later starts loads the cached code in seconds; generated C equals the PC
+generator's; the benchmark is within 2 % of the PC-built eboot; first-start time and memory are recorded; the
+release ZIP's no-game-content check still passes. The D11 decryption decision still applies.
 
 ### After M11 (optional) — Community texture packs
 High-resolution texture packs dropped into the existing overlay folder (`runtime/services/fs.c`); never shipped by
