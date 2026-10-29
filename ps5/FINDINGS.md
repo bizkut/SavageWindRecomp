@@ -1382,10 +1382,10 @@ Largest free direct block 11.80 → 11.37 GiB with the region held; flexible mem
 time, render 11.12 vs 11.02–11.05 ms, GPU 12.42–12.50 vs 12.39–12.44 ms: no measurable cost. **These runs use the
 user's new 100 %-completion save** (uploaded 2026-10-29): the benchmark continues the latest save, so its route
 starts elsewhere (13–18 command-translation hitches in play) and on-time is ~80 % instead of ~96 %; compare only
-runs from that save onward. Dual view is the mode M12 needs. **Scope:** .41 is jailbroken (firmware spoofed to
-99.999.999; the real version wasn't readable from the title), and every mode worked there, so this does not show
-how a stock non-jailbroken console behaves; that dual view works where `mprotect` to RX is refused (fw 7.40) is
-ProsperoEden's report (`docs/FW740.md`), not measured here.
+runs from that save onward. Dual view is the mode M12 needs. **Scope:** .41 is jailbroken on firmware **5.50** (the
+user; the title reads a spoofed 99.999.999), and every mode worked there. Savage Wind is homebrew, so it only runs on
+jailbroken consoles; what varies is firmware and jailbreak. ProsperoEden reports `mprotect` to RX refused but dual
+view working on 7.40 (`docs/FW740.md`, not measured here), so dual view is the mode to rely on across firmwares.
 
 ## 2026-10-29 — M12 spike S8: clang/LLVM compiles game code inside a PS5 title (.41, ps5/evidence/m8/s8-b.klog)
 
