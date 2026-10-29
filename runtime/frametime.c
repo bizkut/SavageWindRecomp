@@ -310,6 +310,21 @@ void ft_frame(void) {
     }
     threads_step();
     frame++;
+#ifdef __PROSPERO__
+    // The counters include worker-thread builds completed during this presented frame.
+    static unsigned drs_w, drs_h;
+    if (dynamic_resolution_mode()) {
+        unsigned w, h;
+        dynamic_resolution_size(&w, &h);
+        if (w && h && drs_w && drs_h && (w != drs_w || h != drs_h))
+            LOG("[drs] step %ux%u->%ux%u frame %llu: compiles %llu pipelines %llu\n",
+                drs_w, drs_h, w, h, (unsigned long long)frame,
+                (unsigned long long)d[FT_SHADERS], (unsigned long long)d[FT_PIPELINES]);
+        drs_w = w; drs_h = h;
+    } else {
+        drs_w = drs_h = 0;
+    }
+#endif
     if (!last_t) { last_t = now, last_render = rc; return; }
     uint64_t dt = now - last_t, rcpu = rc - last_render;
     last_t = now, last_render = rc;

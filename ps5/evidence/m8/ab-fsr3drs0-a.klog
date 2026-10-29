@@ -1,0 +1,1470 @@
+# launch PPSA90212: ok launched PPSA90212 result=0x00000016 via lncUtilApp/foreground as user 486509363 (the console reports the title running)
+<118>[SceLncService] launchApp(PPSA90212)
+<118>[SceLncService] category={gd} appCategoryType={0x00000000} VRMode={0,0}
+<118>[SceLncService] hnm,psnf,pc,tk,ns,pf,pn={1,0,0,0,0,1,0} appBootMode={2}
+<118>[SceLncService] appType={SCE_LNC_APP_TYPE_BIG_APP} [] appVer={} contentVersion={00.001.000} appCategoryType={0x00000000}
+<118>[SceLncService] Waiting for LoginMgr
+<118>[SceLncService] Num. of logged-in users is 1
+<118>[SceLncService] BigApp Launch Ready: Waiting
+<118>[SceLncService] BigApp Launch Ready: OK
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck()
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck() returned
+<118>[SceLncService] EnsureBigAppBudget()
+<118>[ResArbitrator][api      ]sceResourceArbitratorEnsureBigAppBudget[187ec](238)  : categoryType[0x0], titleId[PPSA90212], isConfirmed[false]
+<118>[ResArbitrator][TestId   ]EnsureBudget            [187ec]( 41)  : EnsureBudget()
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [187ec]( 38)  : Enqueue(id[0], t[1], user[0] state[RUNNING]) queue.size[1]
+<118>[ResArbitrator][App      ]GetExecutable           [18930](136)  : Target id[0] budgets{vcn[  0] acp[ 0] mem[  0]} prio[2(2)]
+<118>[ResArbitrator][App      ]SetVCNBudget            [18930](610)  : pid/appId is INVALID_ID.vcn budget not set.
+<118>[ResArbitrator][RA_main  ]cbResult                [18930](350)  : Callback id[0] type[RESULT] result[true] state[RUNNING]
+<118>[ResArbitrator][TestId   ]raCallback              [18930](128)  : BigApp[0xffffffff] Changed state"RUNNING"
+<118>[ResArbitrator][QUEUE    ]Remove                  [18930]( 69)  : Remove:(id[0] state[RUNNING] type[1]) queue.size[0]
+<118>[SceLncService] EnsureBigAppBudget() returned
+<118>[ResArbitrator][App      ]Dump                    [18930](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18930](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0xffffffff]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x207e3c760)] userData[0x0] pid[0x42]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -3: Id[180] state[RUNNING] vcn[ 20] acp[270] mem[  0] prio[5(5)] from[IPMI(0x207e3c680)] userData[0x2000e2ae8] pid[0x3b]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -4: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x38]
+<118>[ResArbitrator][App      ]Dump                    [18930](819)  : -- No kicking Apps *************************
+<118>[SceSystemStateMgr] Power Mode Change: BIG_APP
+<118>[AvControl] Waiting for the pstate event 
+<118>[Syscore Umd] Set memory pstate (hasRunningGame=0, hasRunningMiniApp=0, isSplashDisplayed=0
+<118>[CRSUI][Info][OnAppLaunchStart::Other applications have been launched. (attribute is None, type is None.]
+<118>[CRSUI][Info][proceedRequest::command=[CommandCancel], comment=[gotoHome:]]
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [Render.NPXS40002 : AppScene] -> [SplashScreen.PPSA90212 : SplashScreen]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellUI] I/PSM.UI : SceneQ : Loaded[0.00msec] : SplashScreen.PPSA90212 : SplashScreen
+<118>[SceShellUI] I/PSM.UI : SceneQ : Loaded[0.00msec] : LaunchFlow.PPSA90212 : LaunchFlow
+<118>[AvControl] Waiting for the pstate event : done
+<118>[SceSystemStateMgr] CPU                                     HLT GC   GFX  F    U   ID       FAN BAPM
+<118>[SceSystemStateMgr]  800  800  800  800 3200 3200 3200 3200   0 gen2  696 1200 875 00840f60   1 off
+<118>[SceLncService] sceApplicationSave() categoryType={0x00000000}, debuggerRequestId={0xffffffff}
+<118>[Syscore App] No App needs to save. BigApp does not exist on the memory.
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2687) getAppType: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] BeginAppMount()
+[KERNEL] INFO: begin_app_mount 00000000
+appmgr_create_app(), appid=16 category=0
+[KERNEL] INFO: launch bigapp: category 0x00000000, container 1
+<118>[SceShellUI] I/BGLayer : SetBackgroundTransition (Ellapsed 3297msec since last call) ID=66 TransitionType=CustomImageFade Degree=CrossFade NextImageUri= NextBlurImageUri= NextFallbackImageUri= OverlayImageUri=  BasematType=None Retry=False UseImageViewerSequence=False Resize2K=False
+<118>[SceShellUI] I/BGLayer : Fallback Transition ID=66
+[Amm config] Page table memory : 64 MiB, VA range size 512 GiB, MultiMap VA range size 0 GiB
+wt_application_launch_callback:new target appid=0x16
+<118>[SceLncService] is_pkgstep={0}
+<118>[SceLncService] PrepareProcessLaunchDebugger()
+<118>[sceProcessStarter] MountDownloadData() title_id = [PPSA90212] data_path = [**************/PPSA90212/download0.dat] mount_path = [************/download/PPSA90212] budget = [game]
+<118>[PS]Error: W:\Build\J02159366\vsh\shell\shell_core\process_starter\process_starter_util.cpp at 1027
+<118>num is 2
+<118>[SceLncService] PrepareProcessLaunchDebugger() returned
+<118>[SceLncService] sandboxType={0x00000002}
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2687) getAppType: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] spawnApp
+<118>[Syscore App] createApp PPSA90212
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[AvControl] onAppLaunch(appid=0x16)
+<118>[AvControl] Entry appId(0x16) supplementaryInfo: 0x0 
+<118>[AvControl] -- app[0](appid=0x16 attr=0xaa0017)(GAME RUNNING)(HDR:o HFR:o VR:x VRR:TypeA) SpecialModeInBg(none) HDCP23(none) supInfo(0x0)
+<118>[AvControl] App Event[POST_BEGIN]: elapse 0[ms] 
+<118>[Syscore App] processSpawn(pid, 0x16, 0x10016620, appParam, processParam, 1, 1, 1, param, debug, 0)
+<118>[Syscore App] appParam: appType = 0, titleId = PPSA90212
+<118>[Syscore App] new pid=0xab[Syscore App] attributeExe= 0
+<118>[AvControl] AudioOut: shared (pid=0xab)
+<118>[AvControl] VideoOut: shared (pid=0xab appId=0x16)
+<118>[AvControl] video owner is switched to registered app(appId=0x16) 
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+[KERNEL] INFO: Disable workaround PPRREQ55470_NO_ADDITIONAL_DMEM_192MB
+<118>[SceShellUI] I/BGLayer : SetBackgroundTransition (Ellapsed 288msec since last call) ID=67 TransitionType=CustomImageFade Degree=CrossFade NextImageUri= NextBlurImageUri= NextFallbackImageUri= OverlayImageUri=  BasematType=None Retry=True UseImageViewerSequence=False Resize2K=False
+<118>[SceShellUI] I/BGLayer : cancelBackgroundTransition ID=66
+<118>[SceShellUI] I/BGLayer : Fallback Transition ID=67
+<118>[Syscore App] Add event : pid=0xab
+<118>[AppMgr Trace]: New Process, pid=0xab, created.
+<118>[AppMgr Trace]: New App, appId=0x16, created
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_common.cpp(889) getCurrentTick: LNC_RTRACE::0x80b50001
+<118>[SceLncService] update: appId={0x00000016} appSessionId={63928861359000000}
+<118>[SceLncUtil] blockAppSuspend: name={SceNpUds}, appId={0x00000006}, refCount={1}
+<118>[SceLncUtil] unblockAppSuspend: name={SceNpUds}, appId={0x00000006}, refCount={0}
+<118>[SceLncUtil] blockAppSuspend: name={SceSaveData}, appId={0x00000006}, refCount={1}
+<118>[SceLncUtil] unblockAppSuspend: name={SceSaveData}, appId={0x00000006}, refCount={0}
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [187e2]( 38)  : Enqueue(id[0], t[1], user[0] state[RUNNING]) queue.size[1]
+<118>[ResArbitrator][TestId   ]lncEventCallback        [187e2]( 64)  : Set Target BigAppId[0x16] pid[0xab]
+<118>[ResArbitrator][VA_main  ]GetMediaAppInfo         [187e2](122)  : sceKernelGetAppCategoryType(0xab) ret:SCE_OK categoryType[0x0]
+<118>[ResArbitrator][App      ]GetExecutable           [18930](136)  : Target id[0] budgets{vcn[  0] acp[ 0] mem[  0]} prio[2(2)]
+<118>[ResArbitrator][App      ]ChangeState             [18930]( 43)  : replace id[0] state:['RUNNING'->'RUNNING']
+<118>[ResArbitrator][App      ]SetVCNBudget            [18930](614)  : vcnType is TYPE_UNKNOWN.vcn budget not set.
+<118>[ResArbitrator][RA_main  ]cbResult                [18930](350)  : Callback id[0] type[RESULT] result[true] state[RUNNING]
+<118>[ResArbitrator][TestId   ]raCallback              [18930](128)  : BigApp[0x16] Changed state"RUNNING"
+<118>[ResArbitrator][QUEUE    ]Remove                  [18930]( 69)  : Remove:(id[0] state[RUNNING] type[1]) queue.size[0]
+<118>[ResArbitrator][App      ]Dump                    [18930](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18930](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0x16]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x207e3c760)] userData[0x0] pid[0x42]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -3: Id[180] state[RUNNING] vcn[ 20] acp[270] mem[  0] prio[5(5)] from[IPMI(0x207e3c680)] userData[0x2000e2ae8] pid[0x3b]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -4: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x38]
+<118>[ResArbitrator][App      ]Dump                    [18930](819)  : -- No kicking Apps *************************
+[KERNEL] INFO: pid 171
+[KERNEL] INFO: Application Category Type: 00000000
+[KERNEL] INFO: SDK vesion: PS4:08050001 PPR:02000009
+[KERNEL] INFO: Total Memory Size: 0x32d600000
+[KERNEL] INFO: DMEM size: 0x300000000
+[KERNEL] INFO: FMEM size: 0x1c000000
+[KERNEL] INFO: NDA Text size: 0
+[KERNEL] INFO: CPU/GPU page table count: 0x4000 0x4000
+[BAPM] CPU/GPU Frequency: Default
+[BAPM] Param Set: 2 (Ver:02000009)
+<118>sync call performance warning tid:0x00018905 kid:0x00000278 name:SceAppInfoIpc method id:0x00030000 time:0000000000021384 micro sec
+<171> EXEC /app0/eboot.bin [user], vm#1, dmem#1 abi=native category=native_game <18371848 msec>
+<118>@ mbusGetAudioOutDeviceInfoByBusType:L5950
+<118>sync call performance warning tid:0x00018905 kid:0x00000278 name:SceAppInfoIpc method id:0x00030000 time:0000000000014987 micro sec
+### GFX(pipe0) Game. proc gen:2 vmid:1 pid:171
+ +++ num clients 2
+### gc_gfx_queue_status : in_frame=0 rptr=0x00000000 wptr=0x00000000 IBlist(rptr=0x0000 wptr=0x0000 i_wptr=0x0000)
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [1892f]( 38)  : Enqueue(id[110], t[1], user[0] state[RUNNING]) queue.size[1]
+<118>[SceShellUI] I/BGLayer : SetBackgroundTransition (Ellapsed 448msec since last call) ID=68 TransitionType=HideGameSplash Degree=Strong NextImageUri= NextBlurImageUri= NextFallbackImageUri= OverlayImageUri=  BasematType=None Retry=False UseImageViewerSequence=False Resize2K=False
+<118>[ResArbitrator][App      ]GetExecutable           [18930](136)  : Target id[110] budgets{vcn[ 20] acp[368] mem[  0]} prio[10(10)]
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [SplashScreen.PPSA90212 : SplashScreen] -> [AppScreen : ApplicationScreenScene]
+<118>[ResArbitrator][IpcServer]Callback                [18930]( 78)  : S->C Callback Set(id[110] type[RESULT] result[true] state[RUNNING])
+<118>[ResArbitrator][QUEUE    ]Remove                  [18930]( 69)  : Remove:(id[110] state[RUNNING] type[1]) queue.size[0]
+<118>[ResArbitrator][App      ]Dump                    [18930](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18930](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0x16]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x207e3c760)] userData[0x0] pid[0x42]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -3: Id[110] state[RUNNING] vcn[ 20] acp[368] mem[  0] prio[10(10)] from[IPMI(0x207e3c6a0)] userData[0x0] pid[0x39]*HB*
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -4: Id[180] state[RUNNING] vcn[ 20] acp[270] mem[  0] prio[5(5)] from[IPMI(0x207e3c680)] userData[0x2000e2ae8] pid[0x3b]
+<118>[ResArbitrator][IpcServer]GetCallbackDataInt      [1892f](334)  : C->S Callback Get(id[110] type[RESULT] result[true] state[RUNNING] cb[143a6460])
+<118>[TTS Arbitrator][INF]  FG App was changed. 7 -> 16
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -5: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x38]
+<118>[ResArbitrator][App      ]Dump                    [18930](819)  : -- No kicking Apps *************************
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: SplashScreen.PPSA90212 : SplashScreen
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: LaunchFlow.PPSA90212 : LaunchFlow
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.00msec] : SplashScreen.PPSA90212 : SplashScreen
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.00msec] : LaunchFlow.PPSA90212 : LaunchFlow
+<118>[NoticeScreenSkip] NoticeScreenSkipGetFlag(notice_screen_skip_flag= 1, appId= 0x00000016)
+<118>MSG AsyncStorageInternal(getItem, 1208): key(@@.rnps-home-ui:query-cache:cached:experiences:486509363:20073) is not found.
+<118>MSG AsyncStorageInternal(getItem, 1208): key(@@.rnps-home-ui:query-cache:cached:experiences:486509363:20073) is not found.
+<118>[SceShellUI] I/PSM.UI : [NoDraw] : ClearFrameBuffer=False
+<118>[SceLncService] SetAppFocus(): SetControllerFocus(-1)
+<118>* updateVibrationTriggerEffectWeak:L7804 getVibrationTriggerEffectWeakWhileEmbeddedMicInUse return MBUS_ERROR_NO_PROCESS_INFO. pid = 0xffffffff
+<118>[SceLncService] SetControllerFocus(0x00000016)
+<118>[SceSystemStateMgr] Power Mode Change: BIG_APP
+<118>[SceSystemStateMgr] CPU                                     HLT GC   GFX  F    U   ID       FAN BAPM
+<118>[SceSystemStateMgr] 3200 3200 3200 3200 3200 3200 3200 2560   0 gen2 2230 1200 875 00840f60   1 default
+<118>[SceSystemStateMgr] Power Mode Change: BIG_APP
+<118>[SceSystemStateMgr] CPU                                     HLT GC   GFX  F    U   ID       FAN BAPM
+<118>[SceSystemStateMgr] 3200 3200 3200 3200 3200 3200 3200 2560   0 gen2 2230 1200 875 00840f60   1 default
+<118>[SceLncService] SetControllerFocus(0x00000016)
+savagewind: termination and allocation diagnostics installed
+savagewind: memory stage=startup heap_base=0 mapped=0 peak=0 segments=0 arenas=0 libc_fallbacks=0 flex_free=117440512 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12882804736 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=startup rc=0 base=7eedfc000 size=2097152 used=744
+savagewind: PPSA90212 M3 1.9.0 startup
+savagewind: [startup] 1 ms: main start
+savagewind: guest reserved 0x7000000000-0x7320000000
+savagewind: [startup] 100 ms: paths and permission repair done
+savagewind: [paths] permission repair: result=0 scanned=4176 changed=0 skipped=0 failed=0
+savagewind: [paths] root=/data/savagewind stat=0 errno=0 is_dir=1 broker_write=1 chdir=-1 errno=1
+savagewind-import: session=package-exefs step=open-package errno=0 type=begin what=/data/savagewind/import/E [[redacted]][v1114112][UPD1.9.0][US].nsp
+savagewind: [paths] data: /data/savagewind (absolute reads, broker writes)
+savagewind: [ps5] package open worker started (requested stack 8 MiB)
+savagewind-import: session=package-exefs step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild[[redacted]][US][v0].nsp
+savagewind-import: session=package-exefs step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild [The Legend of Zelda Breath of the Wild DLC Pack 1][[redacted]][US][v196608].nsp
+savagewind-import: session=package-exefs step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild [The Legend of Zelda Breath of the Wild DLC Pack 2][[redacted]][US][v196608].nsp
+savagewind-import: session=package-exefs step=parse-keys errno=0 type=begin what=
+<118>MSG AsyncStorageInternal(getItem, 1208): key(@@.rnps-home-ui:query-cache:cached:experiences:486509363:20073) is not found.
+<118>MSG AsyncStorageInternal(getItem, 1208): key(@@.rnps-home-ui:query-cache:cached:experiences:486509363:20073) is not found.
+savagewind-import: session=package-exefs step=scan-cnmt errno=0 type=begin what=
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind: [startup] 279 ms: ExeFS open_inputs finished
+savagewind-import: session=package-runtime step=exefs-nca-construct errno=0 type=begin what=
+savagewind: memory stage=exefs-nca-construct heap_base=0x2000000000 mapped=33554432 peak=33554432 segments=2 arenas=2 libc_fallbacks=0 flex_free=109051904 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12847153152 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=exefs-nca-construct rc=0 base=7ee5e4000 size=8388608 used=6808
+savagewind-import: session=package-runtime step=exefs-nca-set-keys errno=0 type=begin what=
+savagewind: memory stage=exefs-nca-set-keys heap_base=0x2000000000 mapped=33554432 peak=33554432 segments=2 arenas=2 libc_fallbacks=0 flex_free=109051904 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12847153152 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=exefs-nca-set-keys rc=0 base=7ee5e4000 size=8388608 used=6808
+savagewind-import: session=package-runtime step=exefs-nca-open-update errno=0 type=begin what=
+savagewind: memory stage=exefs-nca-open-update heap_base=0x2000000000 mapped=33554432 peak=33554432 segments=2 arenas=2 libc_fallbacks=0 flex_free=109051904 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12847153152 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=exefs-nca-open-update rc=0 base=7ee5e4000 size=8388608 used=6808
+savagewind-import: session=package-runtime step=exefs-nca-process errno=0 type=begin what=
+savagewind: memory stage=exefs-nca-process heap_base=0x2000000000 mapped=33554432 peak=33554432 segments=2 arenas=2 libc_fallbacks=0 flex_free=109051904 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12847153152 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=exefs-nca-process rc=0 base=7ee5e4000 size=8388608 used=6808
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+<118>[AvControl] ** set scanin(pid=0x3a scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 18402s:59us, savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+p:0:1, 52417:1206, 52416:0603, m:0, d:0x0, 0x1110
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-begin partition=1
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-partition partition=1
+savagewind-nca: step=mount-done partition=0
+savagewind: [startup] 396 ms: ExeFS NCA processed
+savagewind-import: session=package-runtime step=exefs-mount errno=0 type=begin what=
+savagewind: memory stage=exefs-mount heap_base=0x2000000000 mapped=33554432 peak=33554432 segments=2 arenas=2 libc_fallbacks=0 flex_free=109051904 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12847153152 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=exefs-mount rc=0 base=7ee5e4000 size=8388608 used=6808
+savagewind: [startup] 416 ms: ExeFS open finished
+savagewind: [startup] 420 ms: ExeFS build ID read finished
+savagewind-import: session=package-runtime step=open-package errno=0 type=begin what=/data/savagewind/import/E [[redacted]][v1114112][UPD1.9.0][US].nsp
+savagewind: [startup] 425 ms: packages opened
+savagewind-import: session=package-runtime step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild[[redacted]][US][v0].nsp
+savagewind-import: session=package-runtime step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild [The Legend of Zelda Breath of the Wild DLC Pack 1][[redacted]][US][v196608].nsp
+savagewind-import: session=package-runtime step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild [The Legend of Zelda Breath of the Wild DLC Pack 2][[redacted]][US][v196608].nsp
+savagewind-import: session=package-runtime step=parse-keys errno=0 type=begin what=
+savagewind-import: session=package-runtime step=scan-cnmt errno=0 type=begin what=
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind: [startup] 589 ms: RomFS open_inputs finished
+savagewind-import: session=package-runtime step=open-program-nca errno=0 type=begin what=
+savagewind: memory stage=open-program-nca heap_base=0x2000000000 mapped=100663296 peak=100663296 segments=5 arenas=3 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12780044288 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=open-program-nca rc=0 base=7edde0000 size=8388608 used=6824
+savagewind-import: session=package-runtime step=nca-construct errno=0 type=begin what=
+savagewind: memory stage=nca-construct heap_base=0x2000000000 mapped=100663296 peak=100663296 segments=5 arenas=3 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12747538432 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-construct rc=0 base=7edde0000 size=8388608 used=6824
+savagewind-import: session=package-runtime step=nca-set-keys errno=0 type=begin what=
+savagewind: memory stage=nca-set-keys heap_base=0x2000000000 mapped=100663296 peak=100663296 segments=5 arenas=3 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12747538432 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-set-keys rc=0 base=7edde0000 size=8388608 used=6824
+savagewind-import: session=package-runtime step=nca-keys-ready errno=0 type=begin what=
+savagewind: loaded main     at 7000000000 size 1e98000 syms 510
+savagewind: memory stage=nca-keys-ready heap_base=0x2000000000 mapped=100663296 peak=100663296 segments=5 arenas=3 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12747538432 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-keys-ready rc=0 base=7edde0000 size=8388608 used=6824
+savagewind-import: session=package-runtime step=nca-open-update errno=0 type=begin what=
+savagewind: memory stage=nca-open-update heap_base=0x2000000000 mapped=100663296 peak=100663296 segments=5 arenas=3 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12747538432 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-open-update rc=0 base=7edde0000 size=8388608 used=6824
+savagewind-import: session=package-runtime step=nca-open-base errno=0 type=begin what=
+savagewind: loaded subsdk0  at 7001e98000 size 66c000 syms 10111
+savagewind: memory stage=nca-open-base heap_base=0x2000000000 mapped=100663296 peak=100663296 segments=5 arenas=3 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12747538432 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-open-base rc=0 base=7edde0000 size=8388608 used=6824
+savagewind-import: session=package-runtime step=nca-process errno=0 type=begin what=
+savagewind: memory stage=nca-process heap_base=0x2000000000 mapped=100663296 peak=100663296 segments=5 arenas=3 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12740198400 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-process rc=0 base=7edde0000 size=8388608 used=6824
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-begin partition=1
+savagewind-nca: step=base-open-begin partition=1
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-begin partition=1
+savagewind-nca: step=hash-setup-begin partition=1
+savagewind: loaded sdk      at 7002504000 size c55000 syms 23066
+savagewind: relocated main     (223994 packed relative, 49 imports bound to host stubs)
+savagewind: relocated subsdk0  (3424 packed relative, 2 imports bound to host stubs)
+savagewind: relocated sdk      (15013 packed relative, 0 imports bound to host stubs)
+savagewind: [loader] symbol index and relocation: 28 ms
+savagewind: [startup] 812 ms: loader_load exefs finished
+savagewind: [ps5] ExeFS file reads: 3 files, 28354260 bytes in 0.288 s
+savagewind: [startup] 817 ms: fs_title_version_patch finished
+savagewind: [settings] loaded savagewind.ini
+savagewind: [startup] 822 ms: settings loaded
+savagewind: [log] could not lower logger priority
+savagewind: [log] asynchronous klog (queue 512 lines)
+savagewind: savagewind-import: sha256: 16KiB blocks software=254.4 MiB/s sha_ni=536.3 MiB/s check=0
+savagewind: savagewind-import: sha256: sha_ni selected
+<118>[AvControl] entry process(appid:0x16 pid:0xab)
+<118>[AvControl] -- app[0](appid=0x16 attr=0xaa0017)(GAME RUNNING)(HDR:o HFR:o VR:x VRR:TypeA) SpecialModeInBg(none) HDCP23(none) supInfo(0x0)
+<118>[AvControl]    process[0](0xab)
+<118>[AvControl] New session(appid=0x16 pid=0xab) system:0 bc:0 attr:0xaa0017
+savagewind: [ps5] HDR probe: VideoOut open=0x4e100100
+savagewind: [ps5] HDR probe: output status=0 current mode=0x80290018
+savagewind: [ps5] HDR probe: startup dynamic_range=1 mode_size=0 mode_color=0
+savagewind: [ps5] HDR probe: status +000 02000000010000000300000000000000
+savagewind: [ps5] HDR probe: status +010 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +020 00000000000000000000000000000000
+savagewind: ac_compute_device_uuid's output is based on invalid pci bus info.
+savagewind: [ps5] HDR probe: status +030 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +040 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +050 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +060 00000000000000000000000000000000
+savagewind: wsi/videoout: 119.88 Hz not supported (0); presenting at 59.94 Hz
+savagewind: [ps5] HDR probe: status +070 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +080 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +090 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +0a0 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +0b0 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: mode +000 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: mode +010 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: mode +020 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: mode +030 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: mode +040 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: mode +050 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: mode +060 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: mode +070 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: VideoOut close=0
+savagewind: [ps5] HDR at start: no (system output dynamic range)
+savagewind: [ps5] window: VideoOut display plane, its size from the display mode (asked 0x0), no SDL video
+savagewind: [ps5] Video page (savagewind.ini): frame rate 60 (0: off), upscaler 3, upscaler mode 1, anti-aliasing 0, field of view 100%
+savagewind: [window] VideoOut display plane, fullscreen in the display's mode (Video > Resolution applies at the next start)
+savagewind: [vk] application version 0.3.103 (Savage Wind 0.3.1-alpha.3)
+savagewind: [ps5] VideoOut: display "PS5 VideoOut" 3840x2160, 1 modes
+savagewind: [ps5] VideoOut: mode 0: 3840x2160 at 59.940 Hz
+savagewind: [ps5] Video > Resolution: Auto (the largest mode)
+<118>[AvControl] ** stop scanin(pid=0x3a scaninId = 2)
+[si] stop  pipe[1] 18402s: 2us, p:0:1, 52454:1110, 52453:0555, m:0, d:0x0, 0x1110
+savagewind: [ps5] first-launch video defaults: FG 0, upscaler 3, quality 1, HDR off (default)
+savagewind: [ps5] VideoOut: chose mode 0: display plane surface 3840x2160 at 59.940 Hz, present mode FIFO
+savagewind: [ps5] VideoOut: no 119.88 Hz mode offered (TV, console 120 Hz setting) (param.json attribute3 0x40040: VRR on, high frame rate declared)
+savagewind: [vk] gpu 0: PlayStation 5 GPU (RADV NAVI21) (api 1.4.354)
+savagewind: [vk] using PlayStation 5 GPU (RADV NAVI21)
+<118>[AvControl] ** set scanin(pid=0x3a scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 18402s:60us, savagewind: [vk] maintenance5 on (unwritten point size is 1.0)
+p:0:1, 52456:0857, 52455:0428, m:0, d:0x0, 0x1110
+savagewind: [vk] graphics pipeline libraries on (shaders compiled apart from the fixed state)
+savagewind: [vk] attachment feedback loops on (feedback loop layout)
+savagewind: [vk] device created: 1 queue(s), extensions: VK_KHR_swapchain VK_EXT_custom_border_color VK_EXT_vertex_attribute_divisor VK_EXT_external_memory_host VK_EXT_device_fault VK_KHR_maintenance5 VK_KHR_pipeline_library VK_EXT_graphics_pipeline_library VK_EXT_attachment_feedback_loop_layout VK_KHR_dynamic_rendering_local_read
+savagewind: [vk] device features: anisotropy 1, BC 1, int64 1, depth clamp 1, wide lines 1, precise occlusion 1, custom border 1, attribute divisor 1, host import 1
+savagewind-nca: step=hash-setup-done partition=1
+savagewind: [vk] pipeline cache: cache/vk_pipelines.bin, 5.3 MB
+savagewind-nca: step=partition-begin partition=2
+savagewind-nca: step=hash-setup-begin partition=2
+savagewind-nca: step=hash-setup-done partition=2
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-partition partition=1
+savagewind-nca: step=mount-partition partition=2
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=base-open-done partition=1
+savagewind-nca: step=bktr-open-begin partition=1
+savagewind: [startup] 2071 ms: RomFS base NCA parsed
+savagewind-nca: step=bktr-open-done partition=1
+savagewind: [startup] 2075 ms: RomFS BKTR built
+savagewind-nca: step=hash-setup-begin partition=1
+<118>[AvControl] ** stop scanin(pid=0x3a scaninId = 2)
+[si] stop  pipe[1] 18404s: 2us, p:0:1, 52533:0997, 52532:0498, m:0, d:0x0, 0x1110
+<118>[AvControl] ** set scanin(pid=0x3a scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 18404s:80us, p:0:1, 52536:0035, 52535:0017, m:0, d:0x0, 0x1110
+savagewind-nca: step=hash-setup-done partition=1
+savagewind: [startup] 2412 ms: RomFS hash layers verified: bytes=16384,16384,16384,65536,29556736 total=29671424
+savagewind: [vk] precompiled shaders: cache/vk_precompiled.bin, 110.8 MB
+savagewind: wsi/videoout: surface formats hdr_capable=1 (attribute=0x20000000 source=/app0/sce_sys/param.json read=ok) count=4: B8G8R8A8_UNORM/SRGB_NONLINEAR B8G8R8A8_SRGB/SRGB_NONLINEAR A2B10G10R10_UNORM_PACK32/HDR10_ST2084 A2R10G10B10_UNORM_PACK32/HDR10_ST2084
+savagewind: [ps5] VideoOut HDR10 format offered=1 colorspace_extension=1; display HDR capability unknown
+savagewind: wsi/videoout: create swapchain imageFormat=44 imageColorSpace=0 presentMode=2 extent=3840x2160 minImageCount=5
+savagewind: [vk] swapchain 3840x2160, 5 images, present mode fifo (VSync fifo; surface has fifo, mailbox, immediate), exclusive fullscreen (its own display mode), display 59.94 Hz
+savagewind: [ps5] VideoOut swapchain format=44 colorSpace=0 (SDR)
+savagewind: [pso] pipeline list: 3905 pipelines (0 damaged and 0 repeated records dropped)
+savagewind: [pso] pre-warm: 3905 pipelines on 12 threads
+savagewind: wsi/videoout: scanout attribute mode=register set=0 token=0x8000000000000000 result=0x00000000 status_before=0x00000000 dynamic_range=1 refresh=0x0000000000000003 flags=0x0000000000000000 status_after=0x00000000 dynamic_range=1 refresh=0x0000000000000003 flags=0x0000000000000000
+savagewind: [vk] recorder thread on (savagewind.ini vk_recorder)
+savagewind: [startup] 2567 ms: window up
+savagewind: wsi/videoout: 3840x2160 framebuffers registered as set 0, buffers 0-4 pixel_format=0x8000000000000000
+savagewind: [blur] distance blur's half-size read made depth-aware
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-partition partition=1
+savagewind: [blur] distance blur's half-size read made depth-aware
+savagewind: [pso] pre-warm done in 477 ms: 3905 pipelines built, 0 built first by draws, 0 skipped (shaders missing or state unsupported); pipeline cache 46 hits, 0 misses
+savagewind-nca: step=mount-done partition=0
+savagewind-import: session=package-runtime step=mount-romfs errno=0 type=begin what=
+savagewind: memory stage=mount-romfs heap_base=0x2000000000 mapped=536870912 peak=536870912 segments=30 arenas=8 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12062818304 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=mount-romfs rc=0 base=7edde0000 size=8388608 used=6824
+savagewind-import: session=package-runtime step=romfs-ready errno=0 type=begin what=
+savagewind: memory stage=romfs-ready heap_base=0x2000000000 mapped=536870912 peak=536870912 segments=30 arenas=8 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12062818304 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=romfs-ready rc=0 base=7edde0000 size=8388608 used=6824
+savagewind: [ps5] package RomFS opened: 15132662100 bytes in 3.203 s
+savagewind: [startup] 3623 ms: startup RomFS open finished
+savagewind: [precompile] done for this translator and driver: skipped
+savagewind: [startup] 3633 ms: precompile done or skipped
+savagewind: [startup] 3634 ms: entering game code
+savagewind: [ps5] entering linked game code at 7002614ee0
+savagewind: [sm] GetService lm
+savagewind: [ipc] control 3 on lm (handle 103)
+savagewind: [ipc] control 0 on lm (handle 103)
+savagewind: [sm] GetService apm
+savagewind: [sm] GetService appletOE
+savagewind: [ipc] control 3 on appletOE (handle 105)
+savagewind: [ipc] control 0 on appletOE (handle 105)
+savagewind: [am] ICommonStateGetter cmd 900 (unhandled, ok; logged once)
+savagewind: [am] ISelfController cmd 91 (unhandled, ok; logged once)
+savagewind: [kernel] CreateThread entry=700264c470 stack=722fae7fe0 prio=28 core 3 -> 10a
+savagewind: [am] IWindowController cmd 10 (unhandled, ok; logged once)
+savagewind: [am] ISelfController cmd 13 (unhandled, ok; logged once)
+savagewind: [am] ISelfController cmd 16 (unhandled, ok; logged once)
+savagewind: [sm] GetService aoc:u
+savagewind: [sm] GetService ectx:aw
+savagewind: [ipc] no HLE implementation for service 'ectx:aw', using logging stub
+savagewind: [ipc] control 3 on ectx:aw (handle 10c)
+savagewind: [ipc] control 0 on ectx:aw (handle 10c)
+savagewind: [sm] GetService pctl
+savagewind: [ipc] control 3 on pctl (handle 10d)
+savagewind: [options] title menu: Downloadable Content left out of 3 button lists
+savagewind: [ipc] control 0 on pctl (handle 10d)
+savagewind: [sm] GetService pctl:s
+savagewind: [ipc] control 3 on pctl:s (handle 10e)
+savagewind: [ipc] control 0 on pctl:s (handle 10e)
+savagewind: [ipc] close session pctl:s (handle 10e)
+savagewind: [sm] GetService pctl:a
+savagewind: [ipc] control 3 on pctl:a (handle 10e)
+savagewind: [ipc] control 0 on pctl:a (handle 10e)
+savagewind: [ipc] close session pctl:a (handle 10e)
+savagewind: [sm] GetService pctl:r
+savagewind: [ipc] control 3 on pctl:r (handle 10e)
+savagewind: [ipc] control 0 on pctl:r (handle 10e)
+savagewind: [ipc] close session pctl:r (handle 10e)
+savagewind: [pctl] IParentalControlService cmd 1 (ok)
+savagewind: [sm] GetService time:u
+savagewind: [ipc] control 3 on time:u (handle 10e)
+savagewind: [ipc] control 0 on time:u (handle 10e)
+savagewind: [time] shared memory mapped at 704ec49000
+savagewind: [input] user service 0, initial user 486509363 (0), scePadInit 0
+savagewind: [input] keyboard sysmodule 0, sceKeyboardInit 0; mouse sysmodule 0, sceMouseInit 0
+savagewind: [input] user service: user 486509363 logged in
+savagewind: [input] user 486509363: standard pad opened (handle 66651648)
+savagewind: [input] user 486509363: USB keyboard index 0 opened (handle 33162752)
+savagewind: [input] user 486509363: USB keyboard index 1 opened (handle 33228289)
+savagewind: [input] user 486509363: USB mouse index 0 opened (handle 16516608)
+savagewind: [input] user 486509363: USB mouse index 1 opened (handle 16582145)
+savagewind: [input] mouse held in the window (camera)
+savagewind: [lm] D:/home/Cafe/U-King/trunk/Game/Lib/sead/engine/library/modules/src/basis/nin/seadRawPrintNin.cpp | PrintStringImpl |  | MainThread | 0000002e
+
+savagewind: [am] ICommonStateGetter cmd 66 (unhandled, ok; logged once)
+savagewind: [am] ISelfController cmd 14 (unhandled, ok; logged once)
+savagewind: [am] ISelfController cmd 11 (unhandled, ok; logged once)
+savagewind: [am] ISelfController cmd 12 (unhandled, ok; logged once)
+savagewind: [sm] GetService fsp-srv
+savagewind: [ipc] control 3 on fsp-srv (handle 111)
+savagewind: [ipc] control 0 on fsp-srv (handle 111)
+savagewind: [ipc] control 2 on fsp-srv (handle 111)
+savagewind: [ipc] control 2 on fsp-srv (handle 112)
+savagewind: [startup] 3682 ms: IStorage(romfs) open finished
+savagewind: [fs] romfs image IStorage(romfs): 14431 MB, opened in 0.00 s
+savagewind: [vk] presents on the calling thread
+savagewind: [font] indexed 1 new 1024x1024 sheets (cells 18x22, grid 53x44)
+savagewind: [font] indexed 4 new 1024x1024 sheets (cells 31x39, grid 32x25)
+savagewind: [font] indexed 2 new 1024x1024 sheets (cells 24x30, grid 40x33)
+savagewind: [font] indexed 9 new 1024x1024 sheets (cells 91x108, grid 11x9)
+savagewind: [font] indexed 1 new 1024x1024 sheets (cells 18x21, grid 53x46)
+savagewind: [font] indexed 4 new 1024x1024 sheets (cells 31x39, grid 32x25)
+savagewind: [font] indexed 2 new 1024x1024 sheets (cells 24x30, grid 40x33)
+savagewind: [font] indexed 6 new 1024x1024 sheets (cells 79x89, grid 12x11)
+savagewind: [font] indexed 1 new 512x1024 sheets (cells 18x22, grid 26x44)
+savagewind: [font] indexed 2 new 1024x1024 sheets (cells 31x39, grid 32x25)
+savagewind: [font] indexed 1 new 1024x1024 sheets (cells 24x30, grid 40x33)
+savagewind: [font] indexed 2 new 1024x1024 sheets (cells 91x110, grid 11x9)
+savagewind: [sharp-ui] indexed Logo3DGameTitle_00_CN^d 596x187 format=0x1 hash=cba205e18c57b496
+savagewind: [sharp-ui] indexed Logo3DGameTitle_00_JPja^d 596x187 format=0x1 hash=87ed9c6c9ce1934d
+savagewind: [sharp-ui] indexed Logo3DGameTitle_00_TW^d 596x187 format=0x1 hash=3387d58fd30a4322
+savagewind: [sharp-ui] indexed Logo_W_00^l 382x300 format=0x38 hash=849562311751c078
+savagewind: [sharp-ui] indexed TitleBGLink_00^q 624x900 format=0x48 hash=480ddf90735e8936
+savagewind: [sharp-ui] indexed TitleBGMainA_00^o 1920x1080 format=0x46 hash=7d6dca395411a164
+savagewind: [sharp-ui] indexed TitleBGMainA_01^q 1920x800 format=0x48 hash=aeb99da7864582eb
+savagewind: [sharp-ui] indexed TitleBGMainB_00^o 1920x1080 format=0x46 hash=aad5f58abf4882eb
+savagewind: [sharp-ui] indexed TitleBGMainB_01^q 1920x1080 format=0x48 hash=10640a071a478a2e
+savagewind: [sharp-ui] indexed TitleBG_00^o 1347x720 format=0x46 hash=8e7f4eb46bdedc33
+savagewind: [sharp-ui] indexed TitleBG_01^q 732x800 format=0x48 hash=6a0a11c5eb04c4fd
+savagewind: [sharp-ui] indexed TitleBG_02^q 876x840 format=0x48 hash=8c9683cf8107ee09
+savagewind: [sharp-ui] indexed TitleBG_03^q 1000x709 format=0x48 hash=48840f1a40ec8095
+savagewind: [sharp-ui] indexed TitleBG_04^q 828x778 format=0x48 hash=ff03361c969ffbb9
+savagewind: [sharp-ui] archive indexing 66.53 ms
+savagewind: [input] DualSense added: user 486509363, pad handle 66651648, connection generation 1, SDL gamepad 1
+savagewind: [input] DualSense information 0: connection type 2 (remote, e.g. Remote Play), device class 0, stick dead zones 13 / 13, touch pad 1920x1080
+savagewind: [motion] DualSense sensors on 0, tilt correction off 0, angular-velocity deadband off 0, orientation reset 0: accelerometer and gyroscope to motion controls
+savagewind: [input] gamepad: DualSense Wireless Controller
+savagewind: [input] button prompts: PlayStation controller
+savagewind: [motion] DualSense Wireless Controller: gyroscope and accelerometer on (0 / 0 Hz)
+savagewind: [fs] HUD letters: 12 button letters use the icon font (archive 6348559 -> 6571550 bytes, pack +224 KB, 530 ms)
+savagewind: [fs] voices: 1 files bigger than the game's own, 1 ResourceSizeTable entries grown (17 KB in all)
+savagewind: [fs] overlay: 3 romfs files replaced
+savagewind: [fs] romfs index: 41062 files
+savagewind: [fs] romfs reads: 1 (0 KB)
+savagewind: [fs] romfs reads: 2 (0 KB)
+savagewind: [fs] romfs reads: 4 (36 KB)
+savagewind: [vk] PlayStation 5 GPU (RADV NAVI21), swapchain 3840x2160
+savagewind: [nvn] device initialized
+savagewind: [nvn] window origin mode 1
+savagewind: [nvn] window with 2 textures
+savagewind: [kernel] CreateThread entry=700264c470 stack=721d982fe0 prio=30 core -2 -> 118
+savagewind: [kernel] CreateThread entry=700264c470 stack=7223341fe0 prio=48 core -2 -> 119
+savagewind: [kernel] CreateThread entry=700264c470 stack=722b71dfe0 prio=43 core -2 -> 11a
+savagewind: [sm] GetService hid
+savagewind: [ipc] control 3 on hid (handle 11b)
+savagewind: [input] GetNpadStyleSet id 0
+savagewind: [input] GetNpadState id 0 lr 7000eb1afc
+savagewind: [motion] six-axis sensor handles for npad 0 (style 0x1): 1
+savagewind: [input] GetNpadStyleSet id 0x1
+savagewind: [input] GetNpadStyleSet id 0x2
+savagewind: [input] GetNpadStyleSet id 0x3
+savagewind: [kernel] CreateThread entry=700264c470 stack=7221e9efe0 prio=44 core -2 -> 11e
+savagewind: [input] GetNpadState id 0 lr 7000eb1afc
+savagewind: [am] GetDesiredLanguage -> en-US
+savagewind: [am] GetDesiredLanguage -> en-US
+savagewind: [sm] GetService acc:u0
+savagewind: [ipc] control 3 on acc:u0 (handle 11e)
+savagewind: [ipc] control 0 on acc:u0 (handle 11e)
+savagewind: [acc] acc:u0 cmd 160 (ok)
+savagewind: [svc] aoc:u cmd 50 (ok)
+savagewind: [kernel] CreateThread entry=700264c470 stack=723e582fe0 prio=44 core -2 -> 11f
+savagewind-import: session=package-runtime step=open-package errno=0 type=begin what=/data/savagewind/import/E [[redacted]][v1114112][UPD1.9.0][US].nsp
+savagewind: [kernel] CreateThread entry=700264c470 stack=720f167fe0 prio=44 core -2 -> 120
+savagewind: [kernel] CreateThread entry=700264c470 stack=723db32fe0 prio=44 core -2 -> 121
+savagewind-import: session=package-runtime step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild[[redacted]][US][v0].nsp
+savagewind: [kernel] CreateThread entry=700264c470 stack=7204360fe0 prio=45 core -2 -> 122
+savagewind: [kernel] CreateThread entry=700264c470 stack=720ec10fe0 prio=47 core -2 -> 123
+savagewind-import: session=package-runtime step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild [The Legend of Zelda Breath of the Wild DLC Pack 1][[redacted]][US][v196608].nsp
+savagewind: [kernel] CreateThread entry=700264c470 stack=720ae69fe0 prio=47 core -2 -> 124
+savagewind: [kernel] CreateThread entry=700264c470 stack=7214c42fe0 prio=48 core -2 -> 125
+savagewind: [kernel] CreateThread entry=700264c470 stack=7212331fe0 prio=48 core -2 -> 126
+savagewind-import: session=package-runtime step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild [The Legend of Zelda Breath of the Wild DLC Pack 2][[redacted]][US][v196608].nsp
+savagewind: [kernel] CreateThread entry=700264c470 stack=7230e77fe0 prio=48 core -2 -> 127
+savagewind-import: session=package-runtime step=parse-keys errno=0 type=begin what=
+savagewind: [kernel] CreateThread entry=700264c470 stack=7211f7afe0 prio=48 core -2 -> 128
+savagewind: [fs] romfs reads: 8 (2566 KB)
+savagewind: [startup] 4473 ms: add-on lookup finished
+savagewind: [fs] add-on content in the packages: 0x3 (looked up in 0.00 s)
+savagewind: [aoc] ListAddOnContent(0, 2): 2 of 2
+savagewind: [aoc] PrepareAddOnContent 1
+savagewind-import: session=package-runtime step=scan-cnmt errno=0 type=begin what=
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind: [fs] romfs reads: 16 (61984 KB)
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-import: session=package-runtime step=open-program-nca errno=0 type=begin what=
+savagewind: memory stage=open-program-nca heap_base=0x2000000000 mapped=654311424 peak=792199168 segments=34 arenas=8 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=8459190272 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=open-program-nca rc=0 base=1000000000 size=268435456 used=12440
+savagewind-import: session=package-runtime step=nca-construct errno=0 type=begin what=
+savagewind: memory stage=nca-construct heap_base=0x2000000000 mapped=654311424 peak=792199168 segments=34 arenas=8 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=8459190272 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-construct rc=0 base=1000000000 size=268435456 used=12440
+savagewind-import: session=package-runtime step=nca-set-keys errno=0 type=begin what=
+savagewind: memory stage=nca-set-keys heap_base=0x2000000000 mapped=654311424 peak=792199168 segments=34 arenas=8 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=8459190272 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-set-keys rc=0 base=1000000000 size=268435456 used=12440
+savagewind-import: session=package-runtime step=nca-keys-ready errno=0 type=begin what=
+savagewind: memory stage=nca-keys-ready heap_base=0x2000000000 mapped=654311424 peak=792199168 segments=34 arenas=8 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=8459190272 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-keys-ready rc=0 base=1000000000 size=268435456 used=12440
+savagewind-import: session=package-runtime step=nca-open-addon errno=0 type=begin what=
+savagewind: memory stage=nca-open-addon heap_base=0x2000000000 mapped=654311424 peak=792199168 segments=34 arenas=8 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=8459190272 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-open-addon rc=0 base=1000000000 size=268435456 used=12440
+savagewind-import: session=package-runtime step=nca-process errno=0 type=begin what=
+savagewind: memory stage=nca-process heap_base=0x2000000000 mapped=654311424 peak=792199168 segments=34 arenas=8 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=8459190272 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-process rc=0 base=1000000000 size=268435456 used=12440
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (436 reads, 432 empty, largest batch 1, 207.3-209.8 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+<118>[AvControl] ** stop scanin(pid=0x3a scaninId = 2)
+[si] stop  pipe[1] 18406s: 2us, p:0:1, 52692:0623, 52691:0311, m:f2af71e04c790000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3a scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 18406s:63us, p:0:1, 52694:0085, 52693:0042, m:f2af71e04c790000, d:0x2, 0x1100
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-import: session=package-runtime step=mount-romfs errno=0 type=begin what=
+savagewind: memory stage=mount-romfs heap_base=0x2000000000 mapped=687865856 peak=792199168 segments=36 arenas=8 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=8459190272 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=mount-romfs rc=0 base=1000000000 size=268435456 used=12440
+savagewind-import: session=package-runtime step=romfs-ready errno=0 type=begin what=
+savagewind: memory stage=romfs-ready heap_base=0x2000000000 mapped=687865856 peak=792199168 segments=36 arenas=8 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=8459190272 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=romfs-ready rc=0 base=1000000000 size=268435456 used=12440
+savagewind: [startup] 5146 ms: IStorage(aoc) open finished
+savagewind: [fs] romfs image IStorage(aoc): 1325 MB, opened in 0.67 s
+savagewind: [fs] romfs index: 7094 files
+savagewind: [fs] add-on content 1: /data/savagewind/game/aoc1
+savagewind: [aoc] PrepareAddOnContent 1
+savagewind: [fs] add-on content 1: /data/savagewind/game/aoc1
+savagewind: [svc] aoc:u cmd 11 (ok)
+savagewind: [input] GetNpadState id 0 lr 7000eb1afc
+savagewind: [input] GetNpadState id 0 lr 7000eb1afc
+savagewind: [input] GetNpadState id 0 lr 7000eb1afc
+savagewind: [input] GetNpadState id 0 lr 7000eb1afc
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (437 reads, 432 empty, largest batch 1, 146.8-260.6 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (437 reads, 432 empty, largest batch 1, 201.8-210.1 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [nvn] command lists run on the submission thread
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (438 reads, 433 empty, largest batch 1, 202.9-210.1 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [audren-sdk] OpenAudioRenderer 48000 Hz, 240 samples, 30 mix buffers, 96 voices, 14 effects, device 1, mode 1, work 0x68000 -> 0
+savagewind: [audio] AudioOut port 536870912: 48000 Hz, stereo S16, 256 frames per output, streams told 1024-frame periods
+savagewind: [audio] stream 0 opened: F32, 2 channels
+savagewind: [kernel] CreateThread entry=700264c470 stack=72201b2fe0 prio=28 core 3 -> 129
+savagewind: [audren] device 48000 Hz, 1024 frames/period; queue target 2288 samples
+savagewind: [kernel] CreateThread entry=700264c470 stack=720748efe0 prio=28 core 3 -> 12a
+savagewind: [kernel] CreateThread entry=700264c470 stack=723dc08fe0 prio=31 core 1 -> 12b
+savagewind: [kernel] CreateThread entry=700264c470 stack=722a0cbfe0 prio=32 core 1 -> 12c
+savagewind: [sm] GetService audren:u
+savagewind: [ipc] control 3 on IAudioDevice (handle 12e)
+savagewind: [ipc] close session IAudioDevice (handle 12e)
+savagewind: [ipc] control 3 on IAudioDevice (handle 12e)
+savagewind: [ipc] close session IAudioDevice (handle 12e)
+savagewind: [ipc] control 3 on IAudioDevice (handle 12e)
+savagewind: [ipc] close session IAudioDevice (handle 12e)
+savagewind: [ipc] control 3 on IAudioDevice (handle 12e)
+savagewind: [ipc] close session IAudioDevice (handle 12e)
+savagewind: [kernel] CreateThread entry=700264c470 stack=720c5b1fe0 prio=46 core -2 -> 12e
+savagewind: [ipc] close session IAudioDevice (handle 12f)
+savagewind: [ipc] close session IAudioDevice (handle 12f)
+savagewind: [kernel] CreateThread entry=700264c470 stack=7213345fe0 prio=36 core -2 -> 12f
+savagewind: [kernel] CreateThread entry=700264c470 stack=7220ab2fe0 prio=47 core -2 -> 132
+savagewind: [kernel] CreateThread entry=700264c470 stack=72232fdfe0 prio=44 core -2 -> 133
+savagewind: [kernel] CreateThread entry=700264c470 stack=7222beffe0 prio=44 core -2 -> 134
+savagewind: [kernel] CreateThread entry=700264c470 stack=7210238fe0 prio=44 core -2 -> 135
+savagewind: [kernel] CreateThread entry=700264c470 stack=720b945fe0 prio=44 core -2 -> 136
+savagewind: [kernel] CreateThread entry=700264c470 stack=722e632fe0 prio=44 core -2 -> 137
+savagewind: [kernel] CreateThread entry=700264c470 stack=7233cbefe0 prio=44 core -2 -> 138
+savagewind: [kernel] CreateThread entry=700264c470 stack=7211a29fe0 prio=48 core -2 -> 139
+savagewind: [kernel] CreateThread entry=700264c470 stack=72020c1fe0 prio=48 core -2 -> 13a
+savagewind: [kernel] CreateThread entry=700264c470 stack=7212a63fe0 prio=48 core -2 -> 13b
+savagewind: [kernel] CreateThread entry=700264c470 stack=72063a7fe0 prio=48 core -2 -> 13c
+savagewind: [kernel] CreateThread entry=700264c470 stack=7216f4ffe0 prio=46 core -2 -> 13d
+savagewind: [bench] benchmark.txt: the built-in benchmark runs (Great Plateau camera route, 60 s measured), then the game closes
+savagewind: [bench] the saves copied to benchmark/save: 8 files, 2 with a game_data.sav
+savagewind: [fs] mounted host directory benchmark/save/save_0
+savagewind: [sm] GetService nfp:user
+savagewind: [ipc] control 3 on nfp:user (handle 13e)
+savagewind: [ipc] control 0 on nfp:user (handle 13e)
+savagewind: [ipc] control 2 on nfp:user (handle 13e)
+savagewind: [ipc] control 2 on nfp:user (handle 13f)
+savagewind: [ipc] control 2 on nfp:user (handle 140)
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (437 reads, 432 empty, largest batch 1, 202.3-210.1 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [kernel] CreateThread entry=700264c470 stack=72029d9fe0 prio=45 core -2 -> 142
+savagewind: [kernel] CreateThread entry=700264c470 stack=722966ffe0 prio=45 core -2 -> 143
+savagewind: [kernel] CreateThread entry=700264c470 stack=72024e5fe0 prio=48 core -2 -> 144
+savagewind: [kernel] CreateThread entry=700264c470 stack=722d473fe0 prio=48 core -2 -> 145
+savagewind: [kernel] CreateThread entry=700264c470 stack=72208d8fe0 prio=48 core -2 -> 146
+savagewind: [kernel] CreateThread entry=700264c470 stack=720f666fe0 prio=45 core -2 -> 144
+savagewind: [time] StandardUserSystemClock::GetCurrentTime (host clock)
+savagewind: [kernel] CreateThread entry=700264c470 stack=721b1b7fe0 prio=48 core -2 -> 147
+savagewind: [ui] screen: play
+savagewind: [nvn] window present interval 2
+savagewind: [nvn] ReportCounter type 16
+savagewind: [nvn] ReportCounter type 0
+savagewind: [vk] guest heap imported for shader global memory: 3120 MB
+savagewind: [startup] 9410 ms: game first present
+savagewind: [frametime] thread CPU times available (a guest thread's as of its latest wait); a frame over 25.4 ms (1.5 periods, at least 25) is logged as a hitch
+savagewind: radv/ps5: scanout layout format=64 extent=3840x2160 bpe=4 swizzle=27 tile_swizzle=0x40 dcc_levels=0 meta_size=0 surf_size=33423360 alignment=65536 flags=0x22410301
+savagewind: [vk] first game frame presented: game image 1920x1080 into the 3840x2160 swapchain (fifo)
+savagewind: [am] ICommonStateGetter cmd 54 (unhandled, ok; logged once)
+savagewind: [am] IApplicationFunctions cmd 67 (unhandled, ok; logged once)
+savagewind: [kernel] CreateThread entry=700264c470 stack=721fb00fe0 prio=48 core -2 -> 148
+savagewind: [vk] GPU overlap on (the game's frame fence waited one frame late; SAVAGEWIND_GPU_OVERLAP=0: off)
+savagewind: [am] ICommonStateGetter cmd 50 (unhandled, ok; logged once)
+savagewind: [hd-ui] indexed 866 pack textures
+savagewind: [startup] 10612 ms: title screen first seen
+savagewind: [ui] screen: title
+savagewind: [bench] 1.2 s: title screen
+savagewind: [sharp-ui] TitleBGMainA_00^o 1920x1080 matched hash=7d6dca395411a164
+savagewind: [sharp-ui] TitleBGMainA_01^q 1920x800 matched hash=aeb99da7864582eb
+savagewind: [hd-ui] matched hash=849562311751c078 382x300 loaded=612688 gpu_bytes=983040 total_gpu_bytes=983040
+savagewind: [hd-ui] matched hash=5aa03bcdc1e5f7a4 512x512 loaded=699064 gpu_bytes=720896 total_gpu_bytes=1703936
+savagewind: [sharp-ui] TitleBGMainA_01^q worker 39.29 ms finished_frame=83
+savagewind: [sharp-ui] 1920x800 live_frame=84 levels=1
+savagewind: [sharp-ui] TitleBGMainA_00^o worker 95.31 ms finished_frame=86
+savagewind: [sharp-ui] 1920x1080 live_frame=87 levels=1
+savagewind: [vk] t=18381.8 frame 120 59.1 fps max 18ms internal=2560x1440 (1648 draws, 0 skipped, 1515 passes, 0 dispatches, 409 flushes, wait 0ms, compile 0 (warm 18), fbcopy 0 (+0 live), upload 59.3MB, sets 3296 (1920 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 2006 (1677 same), gcopy 2681 hit 1613 miss (0.5 MB)) | frame 16.9 ms (max 18.5), 99.2% on time, 0 hitches; cpu ms/frame: render 0.6 (max 14.3), guest 4.3 (max 21.6): 101 1.6 (max 10.2) 129 0.5 (max 0.9) 120 0.5 (max 0.9) 121 0.4 (max 0.7); gpu ms/frame 1.6 (max 53.7, 103 frames)
+savagewind: [time] StandardUserSystemClock::GetCurrentTime (host clock)
+savagewind: [kernel] CreateThread entry=700264c470 stack=7222893fe0 prio=48 core -2 -> 148
+savagewind: [font] 512x1024 format 0x49 hash 955a272b6e31a058 hit
+savagewind: [font] 512x1024 replacement=pending dispatch 0.43 ms output_height=2160 scale=4 target=1 levels=1 samples=0 layers=1
+savagewind: [font] 1024x1024 format 0x1 hash 40ad310dc3727b45 hit
+savagewind: [font] 1024x1024 replacement=pending dispatch 1.37 ms output_height=2160 scale=4 target=1 levels=1 samples=0 layers=1
+savagewind: [kernel] CreateThread entry=700264c470 stack=723bd39fe0 prio=48 core -2 -> 149
+savagewind: [font] 512x1024 hash=955a272b6e31a058 4x method=sdf sdf_glyphs=51 sharpen_glyphs=602 worker 640.64 ms finished_frame=212
+savagewind: [glyphs] high-resolution R8 image 2048x4096 (4x)
+savagewind: [font] 512x1024 addr=727db1c000 live_frame=212 (4x)
+savagewind: [font] 1024x1024 hash=40ad310dc3727b45 4x method=sdf sdf_glyphs=221 sharpen_glyphs=509 worker 906.24 ms finished_frame=228
+savagewind: [glyphs] high-resolution R8 image 4096x4096 (4x)
+savagewind: [font] 1024x1024 addr=727dc64000 live_frame=229 (4x)
+savagewind: [vk] t=18383.8 frame 238 58.9 fps max 18ms internal=2560x1440 (8155 draws, 0 skipped, 7140 passes, 0 dispatches, 236 flushes, wait 0ms, compile 0 (warm 5), fbcopy 0 (+0 live), upload 33.1MB, sets 16310 (10274 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 8066 (5682 same), gcopy 14877 hit 8532 miss (6.2 MB)) | frame 17.0 ms (max 18.4), 99.2% on time, 0 hitches; cpu ms/frame: render 0.7 (max 5.3), guest 23.7 (max 39.2): 144 6.7 (max 15.4) 101 2.5 (max 4.5) 126 2.1 (max 10.3) 145 1.9 (max 15.0); gpu ms/frame 2.2 (max 2.8, 118 frames)
+savagewind: radv/ps5 submissions: window count=681 kwords=3188 claim_ms=1.4 copy_ms=2.0 flush_ms=1.2 agc_ms=8.2 suspend_ms=13.3
+savagewind: [hd-ui] matched hash=3369b4b85d2ae52e 906x914 loaded=4423760 gpu_bytes=5636096 total_gpu_bytes=7340032
+savagewind: [font] 1024x1024 format 0x49 hash 7b75a0d566e1723f hit
+savagewind: [font] array 1024x1024 layer=0/2 output_height=2160 scale=4 target=4 levels=1 samples=0 state=pending
+savagewind: [font] 1024x1024 format 0x49 hash 68c1f1e7be2c5e49 hit
+savagewind: [font] array 1024x1024 layer=1/2 output_height=2160 scale=4 target=4 levels=1 samples=0 state=pending
+savagewind: [font] 1024x1024 format 0x49 hash a5c8ba166a69db69 hit
+savagewind: [font] array 1024x1024 layer=0/2 output_height=2160 scale=4 target=4 levels=1 samples=0 state=pending
+savagewind: [font] 1024x1024 format 0x49 hash f4268691d6f86d3c hit
+savagewind: [font] array 1024x1024 layer=1/2 output_height=2160 scale=4 target=4 levels=1 samples=0 state=pending
+savagewind: [hd-ui] matched hash=f4b610fe77b7a504 40x64 loaded=27352 gpu_bytes=65536 total_gpu_bytes=7405568
+savagewind: [font] 256x1024 format 0x49 hash 726127a3b63fbd95 miss
+savagewind: [glyphs] button glyph sheet 727dd68000: PlayStation icons, 32 glyphs redrawn
+savagewind: [glyphs] high-resolution R8 image 1024x4096 (4x)
+savagewind: [hitch] frame 275: 145.9 ms in title screen, cause: texture upload (render thread, 144.8 ms) | render thread cpu 99.5 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 144.8 ms (10.4 MB), GPU waits 0.0, present 0.2 (acquire 0.0), uploads 10.5 MB | present thread 118: cpu 0.0 wait 0.3 core 0.0 sleep 16.7 backend 0.0 read 0.0 | threads: 144 (prio 46) cpu 143.6 wait 0.0 core 2.3; 129 (prio 28) cpu 5.6 wait 0.0 core 0.0; 12c (prio 32) cpu 4.0 wait 143.9 core 1.5; 12e (prio 46) cpu 3.4 wait 143.0 core 2.9
+savagewind: [hitch] frame 291: 55.2 ms in title screen, cause: pacing (guest thread 118, 54.7 ms) | render thread cpu 0.6 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 0.0 ms (0.0 MB), GPU waits 0.0, present 0.3 (acquire 0.0), uploads 0.1 MB | present thread 118: cpu 0.1 wait 0.3 core 0.0 sleep 54.7 backend 0.0 read 0.0 | threads: 101 (prio 44) cpu 2.4 wait 51.9 core 0.3; 144 (prio 46) cpu 1.3 wait 0.0 core 25.6
+savagewind: [hitch] frame 297: 34.8 ms in title screen, cause: pacing (guest thread 118, 34.1 ms) | render thread cpu 0.9 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 0.0 ms (0.0 MB), GPU waits 0.0, present 0.4 (acquire 0.0), uploads 0.1 MB | present thread 118: cpu 0.1 wait 0.4 core 0.0 sleep 34.1 backend 0.0 read 0.0 | threads: 144 (prio 46) cpu 31.7 wait 0.0 core 3.0; 101 (prio 44) cpu 3.0 wait 31.4 core 0.6; 121 (prio 44) cpu 1.3 wait 7.8 core 0.0
+savagewind: [font] 1024x1024 hash=68c1f1e7be2c5e49 4x method=sdf sdf_glyphs=0 sharpen_glyphs=72 worker 522.65 ms finished_frame=293
+savagewind: [font] 1024x1024 hash=7b75a0d566e1723f 4x method=sdf sdf_glyphs=6 sharpen_glyphs=92 worker 552.17 ms finished_frame=296
+savagewind: [font] array layer=0 addr=727da19000 live_frame=297 (4x)
+savagewind: [font] array layer=1 addr=727da99000 live_frame=297 (4x)
+savagewind: [font] 1024x1024 hash=f4268691d6f86d3c 4x method=sdf sdf_glyphs=0 sharpen_glyphs=163 worker 730.86 ms finished_frame=306
+savagewind: [font] 1024x1024 hash=a5c8ba166a69db69 4x method=sdf sdf_glyphs=322 sharpen_glyphs=476 worker 880.34 ms finished_frame=315
+savagewind: [hd-ui] matched hash=27d2a286f68e8859 75x75 loaded=60536 gpu_bytes=98304 total_gpu_bytes=7503872
+savagewind: [hd-ui] matched hash=f69fc95974c042b7 90x90 loaded=86792 gpu_bytes=110592 total_gpu_bytes=7614464
+savagewind: [vk] t=18385.8 frame 346 54.0 fps max 146ms internal=2560x1440 (11475 draws, 0 skipped, 9447 passes, 0 dispatches, 216 flushes, wait 0ms, compile 0 (warm 17), fbcopy 0 (+0 live), upload 53.9MB, sets 22950 (14152 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 9683 (6205 same), gcopy 22114 hit 12721 miss (10.3 MB)) | frame 18.5 ms (max 145.9), 95.4% on time, 3 hitches; cpu ms/frame: render 1.8 (max 99.5), guest 22.3 (max 164.1): 144 13.6 (max 143.6) 101 2.7 (max 4.9) 120 1.3 (max 2.9) 129 0.8 (max 5.6); gpu ms/frame 2.3 (max 3.4, 108 frames)
+savagewind: [hd-ui] matched hash=582490f6bc0aaa85 20x32 loaded=6872 gpu_bytes=12288 total_gpu_bytes=1925120
+savagewind: [hd-ui] matched hash=01d123f385d0b4c3 20x32 loaded=6872 gpu_bytes=12288 total_gpu_bytes=1937408
+savagewind: [hd-ui] matched hash=a3fbd96771a49fdd 64x64 loaded=43704 gpu_bytes=65536 total_gpu_bytes=2002944
+savagewind: [hd-ui] matched hash=dd0c25ac200fd357 48x48 loaded=24600 gpu_bytes=36864 total_gpu_bytes=2039808
+savagewind: [vk] t=18387.8 frame 464 58.9 fps max 17ms internal=2560x1440 (20740 draws, 0 skipped, 10323 passes, 0 dispatches, 236 flushes, wait 0ms, compile 0 (warm 10), fbcopy 0 (+0 live), upload 18.7MB, sets 41480 (30074 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 10586 (6790 same), gcopy 38580 hit 25270 miss (17.0 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 0.9 (max 1.7), guest 7.2 (max 12.8): 101 2.3 (max 4.0) 120 1.3 (max 1.6) 129 0.7 (max 1.1) 121 0.6 (max 1.3); gpu ms/frame 2.4 (max 2.9, 118 frames)
+savagewind: [hd-ui] matched hash=698e0e8cca551b65 128x128 loaded=174776 gpu_bytes=196608 total_gpu_bytes=2236416
+savagewind: [audio] AudioOut 10.0 s: 1868 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams (1 resumed, lowest gain 1.00), queue peak 2512 frames; in 1998 puts, 479520 frames, peak -12.4 dBFS; ring read peak -12.4 dBFS; level peak -12.4 dBFS rms -36.9 dBFS
+savagewind: [audren-sdk] 2000 frames: render 140 us (max 344), mutex wait max 35 us, 0 underruns, peak 0.241; 2000 with the sink, voice sources 6 (max 6), command ids 0x218a9c0, gain 1.00
+savagewind: [hd-ui] matched hash=675f98b5f9782d4c 360x257 loaded=248064 gpu_bytes=319488 total_gpu_bytes=2555904
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4320 reads, 4272 empty, largest batch 1, 199.3-216.3 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=18389.8 frame 582 58.9 fps max 17ms internal=2560x1440 (19168 draws, 0 skipped, 10280 passes, 0 dispatches, 236 flushes, wait 0ms, compile 0 (warm 1), fbcopy 0 (+0 live), upload 19.0MB, sets 38336 (26982 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 10520 (6738 same), gcopy 35773 hit 23022 miss (17.3 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 0.9 (max 1.5), guest 7.1 (max 9.7): 101 2.2 (max 2.9) 120 1.2 (max 1.4) 129 0.9 (max 1.2) 121 0.5 (max 1.2); gpu ms/frame 2.6 (max 3.1, 118 frames)
+savagewind: [warp] Link starts at -1041.6, 250.2, 1812.1 on MainField/D-6
+savagewind: [sm] GetService prepo:u
+savagewind: [ipc] no HLE implementation for service 'prepo:u', using logging stub
+savagewind: [ipc] control 3 on prepo:u (handle 14a)
+savagewind: [ipc] control 0 on prepo:u (handle 14a)
+savagewind: [ipc] STUB prepo:u cmd 10105 (in 40 bytes, x1 a1 b0 c0) -> ok
+savagewind: [ui] screen: play
+savagewind: [font] array layer=0 addr=727db60000 live_frame=615 (4x)
+savagewind: [font] array layer=1 addr=727dbe0000 live_frame=615 (4x)
+savagewind: [ui] screen: loading
+savagewind: [bench] 10.7 s: loading
+savagewind: [vk] linear render target 1x1 format 0x25 stride 128 at 72e7e0bd60: copied back to guest memory
+savagewind: [vk] linear render target 1x1 format 0x2e stride 128 at 72e7e0bde0: copied back to guest memory
+savagewind: [fs] romfs reads: 32 (208785 KB)
+savagewind: [vk] linear render target 192x192 format 0x6 stride 384 at 72dc29d000: copied back to guest memory
+savagewind: [font] 512x512 format 0x49 hash 76bbcc835fe1eabe miss
+savagewind: [font] 512x512 format 0x49 hash 5dd8cc15d2bbd6e0 miss
+savagewind: [vk] linear render target 1x1 format 0x2e stride 128 at 72dbf21ee0: copied back to guest memory
+savagewind: [vk] linear render target 1x1 format 0x2e stride 128 at 72dbf21f60: copied back to guest memory
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 1428 not deferred
+savagewind: [hitch] frame 630: 113.0 ms in loading screen, cause: texture upload (render thread, 34.3 ms) | render thread cpu 37.8 ms: compiles 25.9 ms (2), pipelines 0.0 ms (0), build waits 26.5, textures 34.3 ms (56.8 MB), GPU waits 0.0, present 1.6 (acquire 0.0), uploads 56.9 MB | present thread 118: cpu 0.0 wait 47.6 core 0.0 sleep 0.0 backend 0.0 read 0.0 | threads: 101 (prio 44) cpu 61.1 wait 1.8 core 4.1; 124 (prio 47) cpu 21.3 wait 316.9 core 0.4 read 16.3 (6, 1.9 MB); 144 (prio 45) cpu 25.4 wait 5109.8 core 3.8; 126 (prio 48) cpu 3.3 wait 336.3 core 1.2 read 4.6 (5, 0.0 MB)
+savagewind: [vk] linear render target 192x192 format 0x6 stride 384 at 72dc2b7000: copied back to guest memory
+savagewind: [vk] linear render target 256x256 format 0xd stride 512 at 72e83ec000: copied back to guest memory
+savagewind: [vk] linear render target 512x512 format 0x25 stride 2048 at 72e840d000: copied back to guest memory
+savagewind: [vk] linear render target 128x128 format 0x25 stride 512 at 7265594000: copied back to guest memory
+savagewind: [vk] linear render target 128x128 format 0x25 stride 512 at 72655a4000: copied back to guest memory
+savagewind: [vk] linear render target 128x128 format 0x25 stride 512 at 72655b4000: copied back to guest memory
+savagewind: [vk] linear render target 128x128 format 0x25 stride 512 at 72655c4000: copied back to guest memory
+savagewind: [vk] linear render target 128x128 format 0x25 stride 512 at 72655d4000: copied back to guest memory
+savagewind: [vk] linear render target 128x128 format 0x25 stride 512 at 72655e4000: copied back to guest memory
+savagewind: [vk] linear render target 128x128 format 0x25 stride 512 at 72655f4000: copied back to guest memory
+savagewind: [vk] linear render target 128x128 format 0x25 stride 512 at 7265604000: copied back to guest memory
+savagewind: [fs] romfs reads: 64 (214606 KB)
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 1504 not deferred
+savagewind: [fs] romfs reads: 128 (224595 KB)
+savagewind: [vk] t=18391.8 frame 695 56.5 fps max 113ms internal=2560x1440 (11995 draws, 63 skipped, 4851 passes, 0 dispatches, 232 flushes, wait 3ms, compile 1 (warm 65), fbcopy 0 (+2422 live), upload 154.1MB, sets 23990 (19013 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 23382 (10346 same), gcopy 32841 hit 14268 miss (14.5 MB), build waits 1) | frame 17.7 ms (max 113.0), 97.3% on time, 1 hitches; cpu ms/frame: render 1.2 (max 37.8), guest 12.9 (max 133.7): 124 3.0 (max 21.3) 101 2.7 (max 61.1) 129 1.0 (max 6.0) 120 0.9 (max 2.9); gpu ms/frame 1.5 (max 2.7, 113 frames)
+savagewind: [fs] romfs reads: 256 (240339 KB)
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 1622 not deferred
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 1626 not deferred
+savagewind: [hitch] frame 732: 69.0 ms in loading screen, cause: guest-thread wait: thread 118 waited 68.0 ms, thread 101 ran 79.8 ms | render thread cpu 1.4 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 0.0 ms (0.0 MB), GPU waits 0.0, present 0.1 (acquire 0.0), uploads 0.2 MB | present thread 118: cpu 0.0 wait 68.0 core 0.0 sleep 0.0 backend 0.0 read 0.0 | threads: 101 (prio 44) cpu 79.8 wait 4.9 core 0.1; 124 (prio 47) cpu 12.1 wait 56.7 core 1.2 read 17.9 (6, 2.4 MB); 129 (prio 28) cpu 3.9 wait 0.0 core 0.0; 126 (prio 48) cpu 3.1 wait 75.9 core 2.5
+savagewind: [hd-ui] matched hash=a3fbd96771a49fdd 64x64 loaded=43704 gpu_bytes=65536 total_gpu_bytes=790528
+savagewind: [kernel] CreateThread entry=700264c470 stack=723a4cffe0 prio=48 core -2 -> 14b
+savagewind: [kernel] CreateThread entry=700264c470 stack=721fafffe0 prio=48 core -2 -> 14c
+savagewind: [kernel] CreateThread entry=700264c470 stack=722b03efe0 prio=48 core -2 -> 14d
+savagewind: [kernel] CreateThread entry=700264c470 stack=720383afe0 prio=49 core -2 -> 14e
+savagewind: [hd-ui] matched hash=90ef44dd16ae2d36 48x48 loaded=49200 gpu_bytes=61440 total_gpu_bytes=851968
+savagewind: [hd-ui] matched hash=24ff9aa2c600532b 48x48 loaded=24600 gpu_bytes=36864 total_gpu_bytes=888832
+savagewind: [fs] romfs reads: 512 (258465 KB)
+savagewind: [vk] t=18393.8 frame 810 57.4 fps max 69ms internal=2560x1440 (8248 draws, 0 skipped, 3741 passes, 0 dispatches, 230 flushes, wait 0ms, compile 0 (warm 15), fbcopy 0 (+619 live), upload 19.7MB, sets 16496 (11805 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 19116 (11004 same), gcopy 19231 hit 11358 miss (11.6 MB)) | frame 17.4 ms (max 69.0), 99.1% on time, 1 hitches; cpu ms/frame: render 0.6 (max 1.4), guest 21.4 (max 108.8): 124 4.8 (max 21.0) 101 3.2 (max 79.8) 123 1.7 (max 12.6) 14b 1.5 (max 15.6); gpu ms/frame 0.9 (max 1.8, 115 frames)
+savagewind: radv/ps5 submissions: window count=1150 kwords=11995 claim_ms=2.4 copy_ms=4.8 flush_ms=2.5 agc_ms=17.0 suspend_ms=29.3
+savagewind-import: session=package-runtime step=reader-open errno=0 type=info what=readers=2
+savagewind-import: session=package-runtime step=read-profile errno=0 type=info what=reads=1024 bytes=364774777 sequential=127 pool_waits=0 sizes_lt64k=651 lt512k=236 ge512k=137 io_ns=1965650482 aes_stream_ns=483845747 sha_ns=686105869 patch_ns=4458480 total_ns=3159648716 file_reads=890 file_bytes=145062640 broker_reads=284 broker_bytes=236140816 broker_ns=597723610
+savagewind: [fs] romfs reads: 1024 (344694 KB)
+savagewind: [vk] t=18395.8 frame 928 59.0 fps max 18ms internal=2560x1440 (6476 draws, 0 skipped, 3150 passes, 0 dispatches, 236 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 10.7MB, sets 12952 (8359 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13904 (8875 same), gcopy 10016 hit 9916 miss (10.0 MB)) | frame 17.0 ms (max 17.8), 100.0% on time, 0 hitches; cpu ms/frame: render 0.4 (max 0.8), guest 22.4 (max 40.0): 124 7.7 (max 17.9) 101 2.6 (max 3.5) 123 1.7 (max 8.4) 14b 1.4 (max 14.9); gpu ms/frame 0.9 (max 1.6, 118 frames)
+<118>[SceShellCore] Libc Heap Status: free 37%, in-use 3811.6 KB, trend +0.2 KB/min, peak 4800.7 KB, when 18393 [sec]
+savagewind: [vk] t=18397.8 frame 1046 58.9 fps max 18ms internal=2560x1440 (6480 draws, 0 skipped, 3150 passes, 0 dispatches, 236 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 10.7MB, sets 12960 (8348 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13908 (8869 same), gcopy 10020 hit 9934 miss (10.0 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 0.4 (max 0.8), guest 28.2 (max 47.1): 124 5.0 (max 11.6) 145 3.2 (max 11.6) 14b 3.2 (max 12.8) 101 2.9 (max 4.8); gpu ms/frame 0.9 (max 1.9, 118 frames)
+savagewind: [nvn] CommandBufferSetRasterizerDiscard called: not implemented
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams (1 resumed, lowest gain 1.00), queue peak 2512 frames; in 2000 puts, 480000 frames, peak -11.7 dBFS; ring read peak -11.7 dBFS; level peak -11.7 dBFS rms -32.0 dBFS
+savagewind: [audren-sdk] 4000 frames: render 266 us (max 459), mutex wait max 12 us, 0 underruns, peak 0.259; 2000 with the sink, voice sources 7 (max 9), command ids 0x4218adc0, gain 1.00
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4364 reads, 4315 empty, largest batch 1, 200.1-211.7 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=18399.8 frame 1164 58.9 fps max 18ms internal=2560x1440 (6348 draws, 0 skipped, 3018 passes, 0 dispatches, 236 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+0 live), upload 10.7MB, sets 12696 (8098 shared), fbloop 0 (0 barriers), gmem waits 0 holds 0, uub 13182 (8331 same), gcopy 9888 hit 9802 miss (10.0 MB)) | frame 17.0 ms (max 17.8), 99.2% on time, 0 hitches; cpu ms/frame: render 0.4 (max 0.8), guest 23.9 (max 40.9): 14b 6.2 (max 19.0) 124 4.4 (max 10.0) 101 3.1 (max 4.1) 123 2.1 (max 9.7); gpu ms/frame 0.9 (max 1.9, 118 frames)
+savagewind-import: session=package-runtime step=read-profile errno=0 type=info what=reads=2048 bytes=599330333 sequential=448 pool_waits=0 sizes_lt64k=1097 lt512k=490 ge512k=461 io_ns=3408469901 aes_stream_ns=803112118 sha_ns=1131598118 patch_ns=10111286 total_ns=5394929089 file_reads=1665 file_bytes=188489984 broker_reads=687 broker_bytes=444076800 broker_ns=1132675379
+savagewind: [fs] romfs reads: 2048 (576353 KB)
+<118>[SceShellCore] VM Stats: RSS 762.1, kernel 404.0, wire count 575.8, swap out 367.7, page table CPU 2913/8192 GPU 198/8192
+<118>[SceShellCore] FMEM   1.0/   4.1 NPXS40095 SceSysAvControl.elf
+<118>[SceShellCore] FMEM  10.9/  96.7 NPXS45091 SceSysCore.elf
+<118>[SceShellCore] FMEM  23.5/  53.9 NPXS40096 orbis_audiod.elf
+<118>[SceShellCore] FMEM   4.1/  27.2 NPXS40135 AgcCompositor.elf
+<118>[SceShellCore] FMEM  38.9/ 602.9 NPXS40082 SceShellCore
+<118>[SceShellCore] FMEM 435.2/1309.0 NPXS40087 SceShellUI
+<118>[SceShellCore] FMEM  13.6/  32.3 NPXS40100 SceAvCapture
+<118>[SceShellCore] FMEM  21.4/  77.8 NPXS40102 SceRemotePlay
+<118>[SceShellCore] FMEM   6.8/  46.5 NPXS40142 SceGameLiveStreaming
+<118>[SceShellCore] FMEM  16.2/ 105.6 NPXS40109 ScePartyDaemon
+<118>[SceShellCore] FMEM   3.9/  37.9 NPXS40039 SceMediaCoreServer
+<118>[SceShellCore] FMEM   5.9/  34.1 NPXS40153 ScePsNowClientDaemon
+<118>[SceShellCore] FMEM   3.1/  20.0 NPXS40112 SceSpZeroConf
+<118>[SceShellCore] FMEM   3.0/  19.9 NPXS40101 SceSocialScreenMgr
+<118>[SceShellCore] FMEM   8.8/  82.0 NPXS40094 SceVoiceAndAgent
+<118>[SceShellCore] FMEM   3.7/  30.6 NPXS40028 SceRedisServer
+<118>[SceShellCore] FMEM  63.7/ 220.4 NPXS40000 SceJSCd
+<118>[SceShellCore] FMEM   9.8/  45.0 NPXS40085 SceSystemLogger2
+<118>[SceShellCore] FMEM   2.7/  24.7 NPXS40173 SceVrTrackerDaemon
+<118>[SceShellCore] FMEM   1.7/  13.2 NPXS45093 fs_cleaner.elf
+<118>[SceShellCore] FMEM  10.5/ 170.1 NPXS40109 webrtc_daemon.self
+<118>[SceShellCore] FMEM   6.7/ 114.2 NPXS40087 SceNKUIProcess
+<118>[SceShellCore] FMEM   8.2/ 117.3 NPXS40087 SceNKNetworkProcess
+<118>[SceShellCore] FMEM   1.9/  31.9 elfldr.elf
+<118>[SceShellCore] FMEM   4.9/  32.1 pldmgr.elf
+<118>[SceShellCore] FMEM   3.6/  20.2 kstuff.elf
+<118>[SceShellCore] FMEM   2.1/  16.1 klogsrv.elf
+<118>[SceShellCore] FMEM   2.0/  16.3 nanodns.elf
+<118>[SceShellCore] FMEM   2.9/  16.9 payload.elf
+<118>[SceShellCore] FMEM   3.6/  19.7 ps5upload.elf
+<118>[SceShellCore] FMEM  15.7/  36.5 shadowmountplus.elf
+<118>[SceShellCore] FMEM   3.1/  17.4 ftpsrv.elf
+<118>[SceShellCore] FMEM  18.7/  32.7 payload.elf
+savagewind: [font] 512x512 format 0x49 hash 546abc603e958223 miss
+savagewind: [font] 256x256 format 0x49 hash f9aa384daf5d3bbd miss
+savagewind: [font] 256x256 format 0x49 hash 8b3450b75a48b6e8 miss
+savagewind: [font] 512x512 format 0x49 hash 338b431af70193bb miss
+savagewind: [font] 256x256 format 0x49 hash 527e743f96957139 miss
+savagewind: [hd-ui] matched hash=974a9f0d38896fb4 48x48 loaded=24600 gpu_bytes=36864 total_gpu_bytes=925696
+savagewind: [hd-ui] matched hash=c9fb37a84498bc25 64x64 loaded=87408 gpu_bytes=131072 total_gpu_bytes=1056768
+savagewind: [hd-ui] matched hash=a9c843398e936978 70x70 loaded=104992 gpu_bytes=163840 total_gpu_bytes=1220608
+savagewind: [hd-ui] matched hash=17e1b8367cd4c12b 56x56 loaded=66992 gpu_bytes=131072 total_gpu_bytes=1351680
+savagewind: [hd-ui] matched hash=15bc8201665b5c66 80x80 loaded=136640 gpu_bytes=163840 total_gpu_bytes=1515520
+savagewind: [hd-ui] matched hash=a239b872844408ea 36x36 loaded=27808 gpu_bytes=61440 total_gpu_bytes=1576960
+savagewind: [hitch] frame 1237: 167.0 ms in loading screen, cause: guest-thread wait: thread 118 waited 116.4 ms, thread 101 ran 77.2 ms | render thread cpu 46.3 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 47.1 ms (27.1 MB), GPU waits 0.0, present 0.2 (acquire 0.0), uploads 27.5 MB | present thread 118: cpu 0.0 wait 116.4 core 0.0 sleep 0.0 backend 0.0 read 0.0 | threads: 101 (prio 44) cpu 77.2 wait 28.2 core 0.0; 120 (prio 44) cpu 63.3 wait 68.7 core 4.1; 121 (prio 44) cpu 44.2 wait 43.0 core 33.8; 124 (prio 47) cpu 19.9 wait 443.2 core 97.9 read 23.9 (8, 3.4 MB)
+savagewind: [font] 512x512 format 0x49 hash e9ea17735fd630ab miss
+savagewind: [font] 512x512 format 0x49 hash 55c1a911bf7525ac miss
+savagewind: [font] 256x256 format 0x49 hash 6c5ec499bf5ffece miss
+savagewind: [hitch] frame 1238: 48.7 ms in loading screen, cause: texture upload (render thread, 33.5 ms) | render thread cpu 37.2 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 33.5 ms (20.6 MB), GPU waits 0.0, present 0.1 (acquire 0.0), uploads 20.8 MB | present thread 118: cpu 0.0 wait 62.3 core 0.0 sleep 0.0 backend 0.0 read 0.0 | threads: 124 (prio 47) cpu 17.2 wait 1.1 core 52.7 read 24.5 (9, 3.4 MB); 101 (prio 44) cpu 32.0 wait 27.1 core 0.0; 121 (prio 44) cpu 19.5 wait 4.9 core 35.1; 123 (prio 47) cpu 17.2 wait 11.5 core 55.1
+savagewind: [font] 256x256 format 0x49 hash f22636930da36717 miss
+savagewind: [font] 512x512 format 0x49 hash 80f755eb7156b69e miss
+savagewind: [font] 512x512 format 0x49 hash 665f9dc7f45a32cc miss
+savagewind: [font] 512x512 format 0x49 hash b832ec15dbc6ffbd miss
+savagewind: [font] 350x256 format 0x49 hash 597f89c7e351937b miss
+savagewind: [font] 128x128 format 0x49 hash d8921af18c67dbd8 miss
+savagewind: [nvn] SetDepthClamp on (depth clamp supported)
+savagewind: [font] 1024x1024 format 0x49 hash af59655976a2371c miss
+savagewind: [upsample] 800x450 target at 1.60x1.60: texel grid 1600x900 -> 2560x1440 (vertex constant buffer 72dbff9000 row 18)
+savagewind: [upsample] 1600x900 target at 1.60x1.60: texel grid 1600x900 -> 2560x1440 (vertex constant buffer 72dbff9000 row 18)
+savagewind: [font] 128x128 format 0x49 hash 79165db1e921dcc4 miss
+savagewind: [font] 200x200 format 0x49 hash 49c191b4f6a32c66 miss
+savagewind: [upsample] 1600x900 target at 1.60x1.60: texel grid 800x450 -> 1280x720 (vertex constant buffer 72dbf5f100 row 2)
+savagewind: [upsample] 800x450 texture at 1280x720: fragment texel size 0.00125 0.00222222 -> 0.00078125 0.00138889 (constant buffer 72dbf5f100 word 10)
+savagewind: [fsr3] frame 1238 skipped: camera reprojection unavailable (scene 2560x1440, target 2560x1440, vectors 0x0, depth 2560x1440)
+savagewind: [post] scene 2560x1440 fsr1 -> 3840x2160 (format 64)
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 2659 not deferred
+savagewind: [hitch] frame 1239: 61.4 ms in loading screen, cause: texture upload (render thread, 45.4 ms) | render thread cpu 59.1 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 45.4 ms (29.2 MB), GPU waits 0.0, present 0.2 (acquire 0.0), uploads 29.9 MB | present thread 118: cpu 0.0 wait 37.2 core 0.0 sleep 0.0 backend 0.0 read 0.0 | threads: 124 (prio 47) cpu 19.0 wait 11.5 core 12.6 read 32.3 (10, 3.8 MB); 123 (prio 47) cpu 21.8 wait 12.2 core 19.2; 120 (prio 44) cpu 12.2 wait 29.2 core 1.1; 101 (prio 44) cpu 9.7 wait 26.1 core 0.0
+savagewind: [font] 128x128 format 0x49 hash a0e3ff051425d839 miss
+savagewind: [font] 128x128 format 0x49 hash 19366c7aaaa2e369 miss
+savagewind: [upsample] 800x450 target at 1.60x1.60: texel grid 1600x900 -> 2560x1440 (vertex constant buffer 72dbff9a00 row 18)
+savagewind: [upsample] 800x450 texture at 1280x720: fragment texel size 0.00125 0.00222222 -> 0.00078125 0.00138889 (constant buffer 72dbf5f000 word 10)
+savagewind: [fsr3] context created 2560x1440 -> 3840x2160
+savagewind: [fsr3] render size 2560x1440 (allocation 2560x1440)
+savagewind: [fsr3] dispatches 1
+savagewind: [post] scene 2560x1440 fsr3 -> 3840x2160 (format 64)
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 2664 not deferred
+savagewind: [hitch] frame 1240: 289.8 ms in loading screen, cause: command translation (render thread, 282.8 ms) | render thread cpu 283.9 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 1.1 ms (0.5 MB), GPU waits 0.0, present 0.2 (acquire 0.0), uploads 1.2 MB | present thread 118: cpu 0.0 wait 65.2 core 0.0 sleep 0.0 backend 0.0 read 0.0 | threads: 14d (prio 48) cpu 103.5 wait 0.0 core 66.3; 124 (prio 47) cpu 41.3 wait 106.8 core 8.1 read 27.5 (9, 3.3 MB); 129 (prio 28) cpu 20.8 wait 0.0 core 0.0; 101 (prio 44) cpu 10.3 wait 23.1 core 0.0
+savagewind: [upsample] 800x450 texture at 1280x720: fragment texel size 0.00125 0.00222222 -> 0.00078125 0.00138889 (constant buffer 72dbf5f100 word 10)
+savagewind: [font] 512x512 format 0x49 hash 6c54aef65a45d8d1 miss
+savagewind: [upsample] 800x450 texture at 1280x720: fragment texel size 0.00125 0.00222222 -> 0.00078125 0.00138889 (constant buffer 72dbf5f000 word 10)
+savagewind: [font] 256x512 format 0x49 hash 73469f0785b38cc6 miss
+savagewind: [font] 128x256 format 0x49 hash a192b914ce5aa2e4 miss
+savagewind: [font] 256x512 format 0x49 hash 58576e6e4ad0cc3b miss
+savagewind: [font] 128x128 format 0x49 hash c09c0ce8befc1bc9 miss
+savagewind: [font] 128x128 format 0x49 hash 9c0b93faa35a5b95 miss
+savagewind: [font] 256x256 format 0x49 hash 20f274f1cf1f9097 miss
+savagewind: [font] 128x128 format 0x49 hash 49d261a174798be5 miss
+savagewind: [font] 256x256 format 0x49 hash 0cfce0a8b1d5578d miss
+savagewind: [hitch] frame 1243: 25.5 ms in loading screen, cause: command translation (render thread, 10.4 ms) | render thread cpu 15.1 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 4.7 ms (2.4 MB), GPU waits 0.0, present 1.6 (acquire 0.0), uploads 3.2 MB | present thread 118: cpu 0.1 wait 24.1 core 0.0 sleep 0.0 backend 0.0 read 0.0 | threads: 101 (prio 44) cpu 18.9 wait 1.5 core 0.0; 120 (prio 44) cpu 10.7 wait 7.1 core 2.1; 121 (prio 44) cpu 7.9 wait 7.9 core 0.7; 14d (prio 48) cpu 7.9 wait 0.0 core 9.0
+savagewind: [font] 128x128 format 0x49 hash f8958208bcafc3dc miss
+savagewind: [font] 256x256 format 0x49 hash 44b1fd441bba9563 miss
+savagewind: [font] 128x128 format 0x49 hash 82f6249a4e59353b miss
+savagewind: [font] 256x1024 format 0x49 hash c58bf43d06b2e6f6 miss
+savagewind: [glyphs] 256x1024 BC4 texture 72b0b9f000 is not the button glyph sheet (hash c58bf43d06b2e6f6)
+savagewind: [font] 2048x2048 format 0x49 hash d9b8f05da43ced5c miss
+savagewind: [font] 256x256 format 0x49 hash 34df470c02cdab2e miss
+savagewind: [nvn] ReportCounter type 1
+savagewind: [font] 128x128 format 0x49 hash d635bebb4e062497 miss
+savagewind: [hitch] frame 1244: 56.2 ms in loading screen, cause: texture upload (render thread, 34.0 ms) | render thread cpu 46.8 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 34.0 ms (16.9 MB), GPU waits 0.0, present 0.6 (acquire 0.0), uploads 17.8 MB | present thread 118: cpu 0.1 wait 72.2 core 0.0 sleep 0.0 backend 0.0 read 0.0 | threads: 14d (prio 48) cpu 31.3 wait 0.0 core 35.0; 101 (prio 44) cpu 28.4 wait 1.8 core 0.0; 121 (prio 44) cpu 23.9 wait 31.3 core 0.8; 120 (prio 44) cpu 19.7 wait 31.3 core 2.4
+savagewind: [font] 256x256 format 0x49 hash 9ea0cdbcec340885 miss
+savagewind: [vk] t=18401.8 frame 1251 43.3 fps max 290ms internal=2560x1440 (53850 draws, 11 skipped, 4208 passes, 123 dispatches, 231 flushes, wait 9ms, compile 0 (warm 1018), fbcopy 0 (+5215 live), upload 117.4MB, sets 107992 (95727 shared), fbloop 2590 (2564 barriers), gmem waits 0 holds 0, uub 15869 (7869 same), gcopy 242321 hit 40624 miss (17.1 MB)) | frame 23.1 ms (max 289.8), 92.0% on time, 6 hitches; cpu ms/frame: render 7.3 (max 283.9), guest 29.1 (max 246.0): 101 5.6 (max 77.2) 14b 4.5 (max 16.9) 120 3.1 (max 63.3) 124 3.1 (max 41.3); gpu ms/frame 1.6 (max 9.8, 99 frames)
+savagewind: [font] 256x256 format 0x49 hash 5b33e87644fb5049 miss
+savagewind: [hitch] frame 1324: 26.4 ms in loading screen, cause: command translation (render thread, 13.0 ms) | render thread cpu 13.5 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 0.6 ms (0.0 MB), GPU waits 0.0, present 0.6 (acquire 0.0), uploads 1.0 MB | present thread 118: cpu 0.1 wait 12.7 core 0.0 sleep 4.2 backend 0.0 read 0.0 | threads: 101 (prio 44) cpu 17.8 wait 8.4 core 0.0; 121 (prio 44) cpu 14.3 wait 8.9 core 1.8; 120 (prio 44) cpu 12.6 wait 12.4 core 0.7; 124 (prio 47) cpu 0.5 wait 23.7 core 0.3 read 1.7 (1, 0.0 MB)
+savagewind: [time] StandardUserSystemClock::GetCurrentTime (host clock)
+savagewind: [font] 128x128 format 0x49 hash 0a3aa212de9000bb miss
+savagewind: [mvec] frame 1325: the scene camera block (72dbff9a00, 2498 draws) is not the world camera's view and projection: no camera vectors
+savagewind: [fsr3] frame 1325 skipped: camera reprojection unavailable (scene 2560x1440, target 2560x1440, vectors 2560x1440, depth 2560x1440)
+savagewind: [post] scene 2560x1440 fsr1 -> 3840x2160 (format 64)
+savagewind: [font] 1024x1024 format 0x49 hash 0044cd1f23e45ea9 miss
+savagewind: [font] 200x200 format 0x49 hash 66a514037f2ccc99 miss
+savagewind: [font] 256x256 format 0x49 hash 527e743f96957139 miss
+savagewind: [font] 200x200 format 0x49 hash c697e48c2f98c88b miss
+savagewind: [hitch] frame 1327: 35.1 ms in loading screen, cause: package read on guest thread 124 (22.5 ms, 4 reads, 3.9 MB; thread 118 waited 24.9 ms) | render thread cpu 17.2 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 3.5 ms (1.3 MB), GPU waits 0.0, present 0.4 (acquire 0.0), uploads 2.2 MB | present thread 118: cpu 0.0 wait 24.9 core 0.0 sleep 0.0 backend 0.0 read 0.0 | threads: 124 (prio 47) cpu 16.7 wait 0.0 core 3.0 read 22.5 (4, 3.9 MB); 101 (prio 44) cpu 11.0 wait 24.4 core 0.0; 14b (prio 48) cpu 9.3 wait 0.0 core 31.7; 120 (prio 44) cpu 7.2 wait 25.5 core 2.5
+savagewind: [post] scene 2560x1440 fsr3 -> 3840x2160 (format 64)
+savagewind: [hitch] frame 1328: 26.1 ms in play, cause: command translation (render thread, 13.4 ms) | render thread cpu 15.8 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 2.4 ms (1.2 MB), GPU waits 0.0, present 0.4 (acquire 0.0), uploads 2.1 MB | present thread 118: cpu 0.1 wait 27.4 core 0.0 sleep 0.0 backend 0.0 read 0.0 | threads: 101 (prio 44) cpu 17.4 wait 6.9 core 0.0; 120 (prio 44) cpu 12.7 wait 11.0 core 1.3; 124 (prio 47) cpu 4.8 wait 13.5 core 5.0 read 6.3 (2, 0.5 MB); 121 (prio 44) cpu 8.0 wait 8.2 core 9.2
+savagewind: [ui] screen: play
+savagewind: [font] 512x512 format 0x49 hash 18009f2661bbbee3 miss
+savagewind: [vk] t=18403.8 frame 1366 57.2 fps max 35ms internal=2560x1440 (465915 draws, 7 skipped, 16472 passes, 1974 dispatches, 669 flushes, wait 0ms, compile 0 (warm 123), fbcopy 0 (+46397 live), upload 108.7MB, sets 935299 (847675 shared), fbloop 22886 (22656 barriers), gmem waits 0 holds 0, uub 48448 (11272 same), gcopy 2276617 hit 316526 miss (100.7 MB)) | frame 17.5 ms (max 35.1), 81.7% on time, 3 hitches; cpu ms/frame: render 12.9 (max 17.9), guest 43.3 (max 65.3): 101 11.6 (max 18.5) 120 8.3 (max 18.6) 121 8.2 (max 14.3) 14d 2.3 (max 13.9); gpu ms/frame 9.7 (max 11.0, 114 frames)
+savagewind: radv/ps5 submissions: window count=1683 kwords=28905 claim_ms=3.7 copy_ms=13.0 flush_ms=4.8 agc_ms=158.8 suspend_ms=774.6
+savagewind: [hd-ui] matched hash=90ef44dd16ae2d36 48x48 loaded=49200 gpu_bytes=61440 total_gpu_bytes=1540096
+savagewind: [hd-ui] matched hash=92a7bba49f4c566b 64x64 loaded=43704 gpu_bytes=65536 total_gpu_bytes=1605632
+savagewind: [hitch] frame 1390: 27.3 ms in play, cause: command translation (render thread, 14.1 ms) | render thread cpu 16.3 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 2.2 ms (0.1 MB), GPU waits 0.0, present 6.5 (acquire 0.0), uploads 1.2 MB | present thread 118: cpu 0.1 wait 23.2 core 0.0 sleep 10.6 backend 0.0 read 0.0 | threads: 101 (prio 44) cpu 21.9 wait 4.7 core 0.0; 121 (prio 44) cpu 15.0 wait 12.1 core 0.9; 120 (prio 44) cpu 14.2 wait 12.2 core 1.8; 14e (prio 49) cpu 6.0 wait 0.0 core 20.6
+savagewind: [bench] 25.4 s: settling
+savagewind: [bench] gpu_load = 8 ms for the first 20 s of the measured route
+savagewind: [vk] t=18405.8 frame 1486 59.6 fps max 28ms internal=2560x1440 (545278 draws, 0 skipped, 17629 passes, 3247 dispatches, 769 flushes, wait 0ms, compile 0 (warm 5), fbcopy 0 (+48764 live), upload 122.7MB, sets 1095363 (997820 shared), fbloop 23782 (23542 barriers), gmem waits 0 holds 0, uub 47844 (9885 same), gcopy 2720399 hit 364895 miss (116.1 MB)) | frame 16.8 ms (max 27.3), 96.7% on time, 1 hitches; cpu ms/frame: render 14.2 (max 16.4), guest 43.8 (max 83.1): 101 12.4 (max 21.9) 121 8.3 (max 15.0) 120 8.3 (max 14.2) 14e 2.7 (max 6.7); gpu ms/frame 10.3 (max 11.9, 120 frames)
+savagewind: [fsr3] dispatches 300
+savagewind: [vk] t=18407.8 frame 1604 58.9 fps max 18ms internal=2560x1440 (537907 draws, 0 skipped, 17186 passes, 3274 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+47908 live), upload 122.4MB, sets 1080622 (983695 shared), fbloop 23364 (23128 barriers), gmem waits 0 holds 0, uub 46158 (9066 same), gcopy 2688894 hit 359419 miss (115.7 MB)) | frame 17.0 ms (max 17.4), 100.0% on time, 0 hitches; cpu ms/frame: render 14.0 (max 15.7), guest 41.1 (max 50.5): 101 12.3 (max 15.5) 121 8.2 (max 11.8) 120 8.0 (max 10.4) 129 2.1 (max 3.2); gpu ms/frame 10.2 (max 11.1, 119 frames)
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams (1 resumed, lowest gain 1.00), queue peak 2512 frames; in 2000 puts, 480000 frames, peak -30.8 dBFS; ring read peak -30.8 dBFS; level peak -30.8 dBFS rms -53.9 dBFS
+savagewind: [audren-sdk] 6000 frames: render 448 us (max 825), mutex wait max 15 us, 0 underruns, peak 0.029; 2000 with the sink, voice sources 18 (max 23), command ids 0x4218adc0, gain 1.00
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4361 reads, 4313 empty, largest batch 1, 200.0-210.3 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=18409.8 frame 1722 58.9 fps max 18ms internal=2560x1440 (539298 draws, 0 skipped, 17658 passes, 3285 dispatches, 754 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+47908 live), upload 122.6MB, sets 1083415 (984937 shared), fbloop 23364 (23128 barriers), gmem waits 0 holds 0, uub 46848 (9602 same), gcopy 2698157 hit 359701 miss (115.6 MB)) | frame 17.0 ms (max 17.3), 100.0% on time, 0 hitches; cpu ms/frame: render 14.2 (max 16.3), guest 40.2 (max 52.2): 101 12.3 (max 13.3) 121 8.1 (max 9.3) 120 8.0 (max 9.2) 129 2.2 (max 3.4); gpu ms/frame 10.3 (max 11.2, 117 frames)
+savagewind: [vk] t=18411.8 frame 1840 58.9 fps max 20ms internal=2560x1440 (540449 draws, 1 skipped, 17639 passes, 2847 dispatches, 756 flushes, wait 0ms, compile 0 (warm 7), fbcopy 0 (+47908 live), upload 122.8MB, sets 1085279 (986395 shared), fbloop 23364 (23128 barriers), gmem waits 0 holds 0, uub 46842 (9601 same), gcopy 2704550 hit 360533 miss (116.1 MB)) | frame 17.0 ms (max 19.6), 99.2% on time, 0 hitches; cpu ms/frame: render 14.0 (max 16.5), guest 40.1 (max 49.6): 101 12.3 (max 16.7) 121 8.1 (max 11.4) 120 8.0 (max 11.9) 129 2.1 (max 3.1); gpu ms/frame 10.3 (max 11.1, 118 frames)
+savagewind: [fsr3] dispatches 600
+savagewind: [vk] t=18413.8 frame 1958 58.9 fps max 18ms internal=2560x1440 (540386 draws, 0 skipped, 17600 passes, 2733 dispatches, 754 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+47908 live), upload 122.6MB, sets 1085039 (985998 shared), fbloop 23364 (23128 barriers), gmem waits 0 holds 0, uub 46842 (9592 same), gcopy 2706629 hit 359541 miss (115.9 MB)) | frame 17.0 ms (max 17.4), 100.0% on time, 0 hitches; cpu ms/frame: render 13.9 (max 16.3), guest 40.4 (max 48.3): 101 12.2 (max 13.3) 121 8.1 (max 9.6) 120 8.1 (max 9.1) 129 2.2 (max 3.2); gpu ms/frame 10.2 (max 11.1, 118 frames)
+savagewind: radv/ps5 submissions: window count=3777 kwords=105726 claim_ms=8.5 copy_ms=43.1 flush_ms=13.6 agc_ms=696.7 suspend_ms=3373.3
+savagewind: [vk] t=18415.8 frame 2076 58.9 fps max 18ms internal=2560x1440 (540938 draws, 0 skipped, 17340 passes, 2403 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+47908 live), upload 122.1MB, sets 1085813 (987107 shared), fbloop 23364 (23128 barriers), gmem waits 0 holds 0, uub 46862 (9614 same), gcopy 2712303 hit 357648 miss (115.8 MB)) | frame 17.0 ms (max 17.3), 100.0% on time, 0 hitches; cpu ms/frame: render 14.0 (max 15.5), guest 39.3 (max 47.2): 101 12.1 (max 13.3) 121 8.1 (max 9.6) 120 8.0 (max 9.6) 129 2.2 (max 3.2); gpu ms/frame 10.1 (max 11.0, 118 frames)
+savagewind: [fsr3] dispatches 900
+savagewind: [vk] t=18417.8 frame 2194 58.9 fps max 18ms internal=2560x1440 (540833 draws, 0 skipped, 17069 passes, 2265 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+47908 live), upload 121.9MB, sets 1085465 (986679 shared), fbloop 23364 (23128 barriers), gmem waits 0 holds 0, uub 46130 (9066 same), gcopy 2712605 hit 357393 miss (115.7 MB)) | frame 17.0 ms (max 17.9), 99.2% on time, 0 hitches; cpu ms/frame: render 14.1 (max 16.2), guest 40.0 (max 51.0): 101 12.1 (max 16.3) 121 8.1 (max 12.4) 120 8.0 (max 11.6) 129 2.2 (max 3.3); gpu ms/frame 10.1 (max 11.0, 119 frames)
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams (1 resumed, lowest gain 1.00), queue peak 2512 frames; in 2000 puts, 480000 frames, peak -21.4 dBFS; ring read peak -21.4 dBFS; level peak -21.4 dBFS rms -45.7 dBFS
+savagewind: [audren-sdk] 8000 frames: render 578 us (max 816), mutex wait max 22 us, 0 underruns, peak 0.085; 2000 with the sink, voice sources 18 (max 21), command ids 0x4218adc0, gain 1.00
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4360 reads, 4311 empty, largest batch 1, 200.2-210.2 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=18419.9 frame 2312 58.9 fps max 18ms internal=2560x1440 (540444 draws, 0 skipped, 17175 passes, 2242 dispatches, 754 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+47908 live), upload 121.7MB, sets 1084664 (985879 shared), fbloop 23364 (23128 barriers), gmem waits 0 holds 0, uub 46842 (9596 same), gcopy 2710234 hit 356738 miss (115.6 MB)) | frame 17.0 ms (max 17.3), 100.0% on time, 0 hitches; cpu ms/frame: render 14.1 (max 16.0), guest 39.8 (max 49.5): 101 12.1 (max 13.3) 121 8.1 (max 9.3) 120 7.9 (max 9.0) 129 2.1 (max 3.1); gpu ms/frame 10.1 (max 10.9, 117 frames)
+savagewind: [vk] t=18421.9 frame 2430 58.9 fps max 18ms internal=2560x1440 (540979 draws, 0 skipped, 17177 passes, 2242 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+47908 live), upload 121.9MB, sets 1085734 (986656 shared), fbloop 23364 (23128 barriers), gmem waits 0 holds 0, uub 46848 (9606 same), gcopy 2713498 hit 357065 miss (115.7 MB)) | frame 17.0 ms (max 17.4), 100.0% on time, 0 hitches; cpu ms/frame: render 14.1 (max 15.6), guest 39.6 (max 50.6): 101 12.1 (max 13.4) 121 8.1 (max 9.7) 120 8.0 (max 9.0) 129 2.1 (max 3.2); gpu ms/frame 10.0 (max 10.9, 118 frames)
+savagewind: [fsr3] dispatches 1200
+savagewind: [vk] t=18423.9 frame 2548 58.9 fps max 17ms internal=2560x1440 (540855 draws, 0 skipped, 17286 passes, 2385 dispatches, 754 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+47908 live), upload 122.1MB, sets 1085629 (985559 shared), fbloop 23364 (23128 barriers), gmem waits 0 holds 0, uub 46842 (9600 same), gcopy 2715102 hit 356988 miss (115.6 MB)) | frame 17.0 ms (max 17.3), 100.0% on time, 0 hitches; cpu ms/frame: render 14.2 (max 16.3), guest 39.6 (max 54.1): 101 12.1 (max 13.3) 121 8.1 (max 9.5) 120 8.0 (max 9.7) 129 2.0 (max 3.0); gpu ms/frame 10.1 (max 11.0, 118 frames)
+savagewind: radv/ps5 submissions: window count=3775 kwords=105602 claim_ms=8.4 copy_ms=42.8 flush_ms=13.7 agc_ms=620.7 suspend_ms=3188.8
+savagewind: [bench] 45.4 s: route
+savagewind: [bench] gpu_load active: 8 ms per game frame (timestamp calibrated)
+savagewind: [vk] t=18425.9 frame 2664 57.9 fps max 19ms internal=2560x1440 (532881 draws, 0 skipped, 17016 passes, 2454 dispatches, 744 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+47096 live), upload 122.6MB, sets 1069724 (971358 shared), fbloop 22968 (22736 barriers), gmem waits 0 holds 0, uub 45496 (8984 same), gcopy 2680857 hit 350017 miss (113.7 MB)) | frame 17.3 ms (max 18.8), 76.7% on time, 0 hitches; cpu ms/frame: render 13.8 (max 15.7), guest 39.4 (max 49.3): 101 12.1 (max 13.3) 121 8.0 (max 9.4) 120 7.9 (max 9.3) 129 2.0 (max 2.9); gpu ms/frame 12.2 (max 18.7, 117 frames)
+savagewind: [fsr3] dispatches 1500
+savagewind: [vk] t=18427.9 frame 2774 54.6 fps max 20ms internal=2560x1440 (505067 draws, 0 skipped, 16349 passes, 2521 dispatches, 704 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+44660 live), upload 120.6MB, sets 1014085 (920661 shared), fbloop 21780 (21560 barriers), gmem waits 0 holds 0, uub 43534 (8838 same), gcopy 2542925 hit 329920 miss (107.3 MB)) | frame 18.3 ms (max 19.2), 0.0% on time, 0 hitches; cpu ms/frame: render 13.8 (max 16.4), guest 38.7 (max 49.3): 101 12.0 (max 13.4) 121 7.8 (max 9.0) 120 7.7 (max 9.2) 129 2.2 (max 3.1); gpu ms/frame 18.2 (max 18.9, 110 frames)
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams (1 resumed, lowest gain 1.00), queue peak 2512 frames; in 2000 puts, 480000 frames, peak -25.8 dBFS; ring read peak -25.8 dBFS; level peak -25.8 dBFS rms -49.5 dBFS
+savagewind: [audren-sdk] 10000 frames: render 553 us (max 820), mutex wait max 13 us, 0 underruns, peak 0.051; 2000 with the sink, voice sources 21 (max 21), command ids 0x4218adc0, gain 1.00
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4359 reads, 4311 empty, largest batch 1, 200.1-216.0 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=18429.9 frame 2883 54.5 fps max 23ms internal=2560x1440 (500394 draws, 0 skipped, 16242 passes, 2527 dispatches, 697 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+44254 live), upload 119.6MB, sets 1004732 (911910 shared), fbloop 21582 (21364 barriers), gmem waits 0 holds 0, uub 43216 (8818 same), gcopy 2519976 hit 327079 miss (106.4 MB)) | frame 18.3 ms (max 23.2), 5.5% on time, 0 hitches; cpu ms/frame: render 13.8 (max 16.0), guest 38.7 (max 50.0): 101 12.1 (max 13.2) 121 7.8 (max 8.8) 120 7.7 (max 8.4) 129 2.4 (max 3.4); gpu ms/frame 18.2 (max 22.5, 109 frames)
+savagewind: [hitch] frame 2923: 28.6 ms in play, cause: command translation (render thread, 15.8 ms) | render thread cpu 27.7 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 11.9 ms (6.5 MB), GPU waits 0.0, present 1.0 (acquire 0.0), uploads 7.8 MB | present thread 118: cpu 0.1 wait 27.9 core 0.0 sleep 0.0 backend 0.3 read 0.0 | threads: 101 (prio 44) cpu 13.4 wait 2.0 core 0.0; 121 (prio 44) cpu 8.9 wait 19.7 core 0.1; 120 (prio 44) cpu 8.5 wait 19.1 core 1.3; 129 (prio 28) cpu 3.1 wait 0.0 core 0.0
+savagewind: [font] 128x128 format 0x49 hash d390065fb84d7325 miss
+savagewind: [font] 128x128 format 0x49 hash eee9a3a622826ba0 miss
+savagewind: [font] 256x256 format 0x49 hash e8af4ae9e5a2dcc0 miss
+savagewind: [font] 128x128 format 0x49 hash 66dd399f905a821f miss
+savagewind: [font] 200x200 format 0x49 hash 66a514037f2ccc99 miss
+savagewind: [font] 512x233 format 0x49 hash d875de9f376186fb miss
+savagewind: [font] 200x200 format 0x49 hash 51f9fc97b6b86fad miss
+savagewind: [font] 128x256 format 0x49 hash 62a006dd81bab165 miss
+savagewind: [font] 512x512 format 0x49 hash 7cf84b89baa70a74 miss
+savagewind: [font] 512x512 format 0x49 hash 4b378a2b3f2e2ad0 miss
+savagewind: [font] 256x256 format 0x49 hash 63e447c803f0b2d3 miss
+savagewind: [font] 128x128 format 0x49 hash ed36e515658e3f2b miss
+savagewind: [font] 128x128 format 0x49 hash f447d728c5d880bd miss
+savagewind: [font] 256x256 format 0x49 hash 323eb44424739e96 miss
+savagewind: [font] 256x256 format 0x49 hash a8600ecc2fdad05a miss
+savagewind: [font] 200x200 format 0x49 hash 85cbd832bbf4b7f3 miss
+savagewind: [font] 512x512 format 0x49 hash 6d6742635a2d8df4 miss
+savagewind: [vk] t=18431.9 frame 2989 52.8 fps max 29ms internal=2560x1440 (477795 draws, 0 skipped, 16117 passes, 2248 dispatches, 678 flushes, wait 0ms, compile 0 (warm 322), fbcopy 0 (+57383 live), upload 189.0MB, sets 959216 (868752 shared), fbloop 25573 (25314 barriers), gmem waits 0 holds 0, uub 46424 (9832 same), gcopy 2458575 hit 332322 miss (113.3 MB)) | frame 19.0 ms (max 28.6), 0.0% on time, 1 hitches; cpu ms/frame: render 15.5 (max 27.7), guest 43.9 (max 70.8): 101 12.7 (max 17.3) 121 8.5 (max 12.4) 120 8.4 (max 13.3) 129 2.4 (max 3.4); gpu ms/frame 18.5 (max 19.6, 105 frames)
+savagewind: [font] 128x128 format 0x49 hash 25d84207463d2a65 miss
+savagewind: [font] 128x128 format 0x49 hash ba8477e0fd5a427c miss
+savagewind: [font] 256x256 format 0x49 hash 0ae0052fb6ab940c miss
+savagewind: [font] 128x128 format 0x49 hash d4bcc035c5ef2022 miss
+savagewind: [font] 256x256 format 0x49 hash cffc2e2abb8a71f2 miss
+savagewind: [font] 128x128 format 0x49 hash 094c4453d0a55a9e miss
+savagewind: [fsr3] dispatches 1800
+savagewind: [font] 512x512 format 0x49 hash 3c6661d2bff174eb miss
+savagewind: [vk] t=18433.9 frame 3095 52.9 fps max 20ms internal=2560x1440 (403574 draws, 0 skipped, 16042 passes, 2503 dispatches, 685 flushes, wait 0ms, compile 0 (warm 156), fbcopy 0 (+48861 live), upload 144.4MB, sets 811029 (732248 shared), fbloop 26354 (26006 barriers), gmem waits 0 holds 0, uub 48031 (10161 same), gcopy 2232988 hit 264491 miss (96.1 MB)) | frame 18.9 ms (max 19.9), 0.0% on time, 0 hitches; cpu ms/frame: render 12.4 (max 15.9), guest 44.6 (max 63.2): 101 12.5 (max 15.7) 121 8.3 (max 12.3) 120 8.3 (max 12.1) 14b 2.9 (max 9.4); gpu ms/frame 18.8 (max 19.9, 107 frames)
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 14535 not deferred
+savagewind: radv/ps5 submissions: window count=3490 kwords=98054 claim_ms=7.4 copy_ms=36.8 flush_ms=12.5 agc_ms=3511.9 suspend_ms=7354.8
+savagewind: [shot] crop 0 0 3840 2160 at route 10.017 screen 0 elapsed -1.000 frame 537
+savagewind: [hitch] frame 3163: 48.9 ms in play, cause: command translation (render thread, 32.4 ms) | render thread cpu 33.3 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 0.9 ms (0.0 MB), GPU waits 16.2, present 31.2 (acquire 0.0), uploads 1.3 MB | present thread 118: cpu 0.1 wait 18.3 core 0.1 sleep 0.0 backend 0.4 read 0.0 | threads: 101 (prio 44) cpu 24.5 wait 4.0 core 0.0; 120 (prio 44) cpu 17.3 wait 14.2 core 1.7; 121 (prio 44) cpu 16.1 wait 16.6 core 0.3; 129 (prio 28) cpu 6.5 wait 0.0 core 0.0
+savagewind: [vk] t=18435.9 frame 3199 52.0 fps max 49ms internal=2560x1440 (474724 draws, 0 skipped, 15866 passes, 2940 dispatches, 674 flushes, wait 23ms, compile 0 (warm 10), fbcopy 0 (+56026 live), upload 154.6MB, sets 953740 (864329 shared), fbloop 25600 (25368 barriers), gmem waits 0 holds 0, uub 46717 (9636 same), gcopy 2447685 hit 327227 miss (111.2 MB)) | frame 19.2 ms (max 48.9), 1.9% on time, 1 hitches; cpu ms/frame: render 15.1 (max 33.3), guest 46.1 (max 78.9): 101 13.0 (max 24.5) 121 8.8 (max 16.1) 120 8.7 (max 17.3) 129 2.5 (max 6.5); gpu ms/frame 18.7 (max 19.4, 103 frames)
+savagewind: [fg] capture screenshots/shot-1793261235.png written (3840x2160, 11644722 bytes)
+savagewind: [vk] t=18437.9 frame 3304 52.3 fps max 25ms internal=2560x1440 (397214 draws, 1 skipped, 16081 passes, 3110 dispatches, 673 flushes, wait 0ms, compile 0 (warm 1), fbcopy 0 (+49864 live), upload 134.8MB, sets 798903 (720015 shared), fbloop 26353 (25986 barriers), gmem waits 0 holds 0, uub 46827 (9525 same), gcopy 2203080 hit 263593 miss (95.8 MB)) | frame 19.1 ms (max 24.4), 0.0% on time, 0 hitches; cpu ms/frame: render 12.5 (max 15.0), guest 45.4 (max 63.4): 101 12.6 (max 16.3) 121 8.4 (max 9.7) 120 8.3 (max 10.1) 14b 2.5 (max 9.5); gpu ms/frame 19.0 (max 23.7, 106 frames)
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 15940 not deferred
+savagewind: [fsr3] dispatches 2100
+savagewind: [audio] AudioOut 10.0 s: 1876 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams (1 resumed, lowest gain 1.00), queue peak 2512 frames; in 2001 puts, 480240 frames, peak -23.4 dBFS; ring read peak -23.4 dBFS; level peak -23.4 dBFS rms -48.3 dBFS
+savagewind: [audren-sdk] 12000 frames: render 573 us (max 794), mutex wait max 17 us, 0 underruns, peak 0.067; 2000 with the sink, voice sources 18 (max 21), command ids 0x4218adc0, gain 1.00
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4359 reads, 4311 empty, largest batch 1, 200.7-211.3 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [perf] last 60 s: 3402 frames, 76.4% on time, frame ms p50 17.00 p95 19.25 p99 20.25, 17 hitches; per frame: render thread cpu 9.30 ms, guest threads cpu 32.89 ms, gpu 8.92 ms
+savagewind: [vk] t=18439.9 frame 3410 52.8 fps max 24ms internal=2560x1440 (481619 draws, 0 skipped, 16143 passes, 3103 dispatches, 690 flushes, wait 7ms, compile 0 (warm 10), fbcopy 0 (+54580 live), upload 159.5MB, sets 967719 (877643 shared), fbloop 25840 (25622 barriers), gmem waits 0 holds 0, uub 48164 (10283 same), gcopy 2493371 hit 327147 miss (111.5 MB)) | frame 19.0 ms (max 24.3), 0.9% on time, 0 hitches; cpu ms/frame: render 14.8 (max 19.1), guest 45.9 (max 61.1): 101 13.0 (max 18.1) 121 8.8 (max 12.7) 120 8.6 (max 11.5) 14b 2.6 (max 8.7); gpu ms/frame 18.7 (max 19.8, 105 frames)
+savagewind: [hitch] frame 3449: 25.7 ms in play, cause: guest-thread wait: thread 118 waited 25.2 ms, thread 101 ran 11.7 ms | render thread cpu 11.8 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 0.6 ms (0.0 MB), GPU waits 0.0, present 1.1 (acquire 0.0), uploads 1.1 MB | present thread 118: cpu 0.0 wait 25.2 core 0.0 sleep 0.0 backend 0.5 read 0.0 | threads: 101 (prio 44) cpu 11.7 wait 1.6 core 0.0; 120 (prio 44) cpu 8.0 wait 17.1 core 0.8; 121 (prio 44) cpu 7.2 wait 18.1 core 0.2; 129 (prio 28) cpu 3.6 wait 0.0 core 0.0
+savagewind: [vk] t=18441.9 frame 3515 52.5 fps max 26ms internal=2560x1440 (398890 draws, 0 skipped, 15891 passes, 2701 dispatches, 673 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+52441 live), upload 135.3MB, sets 801846 (722503 shared), fbloop 26610 (26224 barriers), gmem waits 0 holds 0, uub 47211 (10008 same), gcopy 2208302 hit 267533 miss (97.1 MB)) | frame 19.1 ms (max 25.7), 0.0% on time, 1 hitches; cpu ms/frame: render 12.4 (max 15.5), guest 44.0 (max 60.9): 101 12.4 (max 14.2) 121 8.2 (max 9.5) 120 8.1 (max 9.8) 14b 2.7 (max 9.2); gpu ms/frame 18.9 (max 25.1, 105 frames)
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 17377 not deferred
+savagewind: [vk] t=18443.9 frame 3622 53.1 fps max 25ms internal=2560x1440 (479235 draws, 0 skipped, 15962 passes, 3008 dispatches, 693 flushes, wait 8ms, compile 0 (warm 16), fbcopy 0 (+53509 live), upload 148.4MB, sets 962869 (871769 shared), fbloop 26407 (26191 barriers), gmem waits 0 holds 0, uub 47362 (9590 same), gcopy 2508669 hit 320147 miss (109.0 MB)) | frame 18.8 ms (max 25.0), 1.9% on time, 0 hitches; cpu ms/frame: render 14.5 (max 18.5), guest 43.5 (max 70.1): 101 12.7 (max 15.8) 121 8.6 (max 12.0) 120 8.5 (max 11.5) 129 2.3 (max 3.3); gpu ms/frame 18.7 (max 24.5, 107 frames)
+savagewind: radv/ps5 submissions: window count=3389 kwords=96077 claim_ms=7.1 copy_ms=35.7 flush_ms=12.4 agc_ms=4124.7 suspend_ms=8073.6
+savagewind: [fsr3] dispatches 2400
+savagewind: [hitch] frame 3652: 25.7 ms in play, cause: guest-thread wait: thread 118 waited 25.0 ms, thread 101 ran 12.1 ms | render thread cpu 12.7 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 0.6 ms (0.0 MB), GPU waits 0.0, present 1.2 (acquire 0.0), uploads 1.1 MB | present thread 118: cpu 0.1 wait 25.0 core 0.0 sleep 0.0 backend 0.5 read 0.0 | threads: 101 (prio 44) cpu 12.1 wait 2.3 core 0.0; 120 (prio 44) cpu 8.3 wait 16.5 core 1.0; 121 (prio 44) cpu 8.2 wait 17.4 core 0.2; 129 (prio 28) cpu 3.0 wait 0.0 core 0.0
+savagewind: [bench] gpu_load = 0 ms (first 20 measured seconds elapsed)
+savagewind: [vk] t=18445.9 frame 3733 55.4 fps max 25ms internal=2560x1440 (424176 draws, 0 skipped, 17076 passes, 3258 dispatches, 711 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+56618 live), upload 146.2MB, sets 853053 (769272 shared), fbloop 28195 (27796 barriers), gmem waits 0 holds 0, uub 49406 (10221 same), gcopy 2339110 hit 288763 miss (104.9 MB)) | frame 18.0 ms (max 25.7), 38.7% on time, 1 hitches; cpu ms/frame: render 12.8 (max 15.2), guest 43.8 (max 70.1): 101 12.6 (max 15.8) 121 8.5 (max 12.1) 120 8.4 (max 11.3) 14b 2.4 (max 8.7); gpu ms/frame 16.0 (max 25.1, 112 frames)
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 18864 not deferred
+savagewind: [vk] t=18447.9 frame 3851 58.5 fps max 22ms internal=2560x1440 (521481 draws, 0 skipped, 18201 passes, 3840 dispatches, 765 flushes, wait 4ms, compile 0 (warm 24), fbcopy 0 (+56657 live), upload 156.4MB, sets 1048336 (948625 shared), fbloop 28771 (28522 barriers), gmem waits 0 holds 0, uub 52647 (11074 same), gcopy 2752189 hit 345605 miss (118.3 MB)) | frame 17.1 ms (max 21.7), 90.7% on time, 0 hitches; cpu ms/frame: render 14.8 (max 20.0), guest 46.4 (max 60.4): 101 13.0 (max 16.5) 121 9.0 (max 12.7) 120 8.8 (max 11.9) 14b 2.6 (max 6.9); gpu ms/frame 10.8 (max 11.9, 117 frames)
+savagewind: [audren-sdk] 14000 frames: render 577 us (max 792), mutex wait max 11 us, 0 underruns, peak 0.035; 2000 with the sink, voice sources 20 (max 21), command ids 0x4218adc0, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1876 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams (1 resumed, lowest gain 1.00), queue peak 2512 frames; in 2001 puts, 480240 frames, peak -29.1 dBFS; ring read peak -29.1 dBFS; level peak -29.1 dBFS rms -47.6 dBFS
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4360 reads, 4311 empty, largest batch 1, 200.1-210.3 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [fsr3] dispatches 2700
+savagewind: [vk] t=18449.9 frame 3970 59.4 fps max 21ms internal=2560x1440 (462544 draws, 0 skipped, 18368 passes, 3444 dispatches, 762 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+62303 live), upload 148.2MB, sets 930079 (838911 shared), fbloop 30034 (29615 barriers), gmem waits 0 holds 0, uub 52743 (10928 same), gcopy 2525225 hit 322911 miss (115.7 MB)) | frame 16.8 ms (max 21.0), 92.4% on time, 0 hitches; cpu ms/frame: render 13.5 (max 17.9), guest 47.2 (max 71.8): 101 13.0 (max 17.5) 121 9.0 (max 12.5) 120 8.9 (max 12.4) 14b 2.6 (max 7.2); gpu ms/frame 11.1 (max 12.0, 119 frames)
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 20527 not deferred
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 20533 not deferred
+savagewind: [vk] t=18451.9 frame 4088 58.9 fps max 18ms internal=2560x1440 (295857 draws, 0 skipped, 17710 passes, 3566 dispatches, 755 flushes, wait 0ms, compile 0 (warm 72), fbcopy 0 (+49162 live), upload 99.7MB, sets 596814 (531627 shared), fbloop 33193 (32918 barriers), gmem waits 0 holds 0, uub 50305 (10346 same), gcopy 1745809 hit 191046 miss (71.4 MB)) | frame 17.0 ms (max 17.8), 100.0% on time, 0 hitches; cpu ms/frame: render 8.6 (max 14.8), guest 42.0 (max 67.7): 101 11.9 (max 16.0) 121 8.0 (max 11.9) 120 7.9 (max 10.0) 14b 2.4 (max 9.2); gpu ms/frame 10.1 (max 11.7, 118 frames)
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 21601 not deferred
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 21608 not deferred
+savagewind: [vk] t=18453.9 frame 4206 58.9 fps max 17ms internal=2560x1440 (203321 draws, 0 skipped, 16832 passes, 3284 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+42882 live), upload 59.3MB, sets 411460 (360774 shared), fbloop 31508 (31272 barriers), gmem waits 0 holds 0, uub 46972 (9611 same), gcopy 1246295 hit 135890 miss (51.6 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 5.8 (max 8.0), guest 35.3 (max 46.7): 101 10.9 (max 12.4) 120 7.1 (max 8.5) 121 6.9 (max 8.3) 129 2.1 (max 3.3); gpu ms/frame 9.1 (max 10.5, 118 frames)
+savagewind: radv/ps5 submissions: window count=3757 kwords=84887 claim_ms=8.2 copy_ms=35.1 flush_ms=11.9 agc_ms=939.5 suspend_ms=3295.2
+savagewind: [fsr3] dispatches 3000
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 21885 not deferred
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 21892 not deferred
+savagewind: [vk] t=18456.0 frame 4324 58.9 fps max 18ms internal=2560x1440 (423098 draws, 0 skipped, 17464 passes, 3423 dispatches, 793 flushes, wait 5ms, compile 0 (warm 21), fbcopy 0 (+58560 live), upload 110.1MB, sets 851153 (774029 shared), fbloop 37554 (37225 barriers), gmem waits 0 holds 0, uub 49135 (9703 same), gcopy 2466723 hit 251314 miss (89.0 MB)) | frame 17.0 ms (max 17.4), 100.0% on time, 0 hitches; cpu ms/frame: render 11.5 (max 15.0), guest 41.8 (max 57.3): 101 12.3 (max 14.6) 121 8.4 (max 10.8) 120 8.3 (max 10.0) 14b 2.2 (max 8.2); gpu ms/frame 11.0 (max 12.5, 119 frames)
+savagewind: [vk] t=18458.0 frame 4442 58.9 fps max 18ms internal=2560x1440 (376406 draws, 0 skipped, 17380 passes, 3273 dispatches, 755 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+58508 live), upload 94.1MB, sets 757619 (695485 shared), fbloop 39981 (39745 barriers), gmem waits 0 holds 0, uub 49348 (10234 same), gcopy 2218141 hit 208073 miss (72.1 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.2 (max 11.3), guest 41.9 (max 57.3): 101 11.9 (max 14.0) 120 8.2 (max 9.7) 121 8.1 (max 11.5) 14b 2.3 (max 7.9); gpu ms/frame 11.2 (max 12.0, 117 frames)
+savagewind: [audren-sdk] 16000 frames: render 579 us (max 795), mutex wait max 34 us, 0 underruns, peak 0.052; 2000 with the sink, voice sources 20 (max 22), command ids 0x4218adc0, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams (1 resumed, lowest gain 1.00), queue peak 2512 frames; in 2000 puts, 480000 frames, peak -25.6 dBFS; ring read peak -25.6 dBFS; level peak -25.6 dBFS rms -47.4 dBFS
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4360 reads, 4312 empty, largest batch 1, 200.0-210.2 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [fsr3] dispatches 3300
+savagewind: [vk] t=18460.0 frame 4560 58.9 fps max 18ms internal=2560x1440 (373430 draws, 0 skipped, 17004 passes, 2669 dispatches, 757 flushes, wait 0ms, compile 0 (warm 3), fbcopy 0 (+58474 live), upload 84.6MB, sets 751063 (689657 shared), fbloop 40125 (39889 barriers), gmem waits 0 holds 0, uub 47863 (9852 same), gcopy 2207310 hit 206346 miss (71.4 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.2 (max 10.9), guest 40.8 (max 60.6): 101 12.0 (max 13.3) 120 8.2 (max 9.3) 121 8.1 (max 9.9) 129 2.2 (max 3.3); gpu ms/frame 11.0 (max 11.8, 119 frames)
+savagewind: [vk] t=18462.0 frame 4678 58.9 fps max 18ms internal=2560x1440 (373835 draws, 0 skipped, 16918 passes, 2546 dispatches, 754 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+58455 live), upload 83.8MB, sets 751750 (690228 shared), fbloop 40160 (39924 barriers), gmem waits 0 holds 0, uub 47597 (9797 same), gcopy 2209181 hit 206334 miss (71.3 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.2 (max 12.4), guest 40.9 (max 50.3): 101 11.9 (max 12.8) 121 8.1 (max 9.3) 120 8.0 (max 9.5) 14e 2.2 (max 7.1); gpu ms/frame 11.0 (max 11.9, 117 frames)
+savagewind: [vk] t=18464.0 frame 4796 58.9 fps max 18ms internal=2560x1440 (373134 draws, 0 skipped, 17106 passes, 2860 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+58409 live), upload 85.5MB, sets 750662 (688865 shared), fbloop 40093 (39857 barriers), gmem waits 0 holds 0, uub 47865 (9847 same), gcopy 2209038 hit 206738 miss (71.3 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.4 (max 11.2), guest 40.4 (max 53.4): 101 11.7 (max 13.3) 120 8.1 (max 9.8) 121 8.0 (max 11.6) 129 2.2 (max 3.3); gpu ms/frame 11.0 (max 12.0, 118 frames)
+savagewind: radv/ps5 submissions: window count=3805 kwords=76944 claim_ms=8.6 copy_ms=33.4 flush_ms=11.3 agc_ms=104.1 suspend_ms=1175.0
+savagewind: [fsr3] dispatches 3600
+savagewind: [vk] t=18466.0 frame 4914 58.9 fps max 18ms internal=2560x1440 (374317 draws, 0 skipped, 16803 passes, 2311 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+58470 live), upload 83.4MB, sets 752479 (691265 shared), fbloop 40175 (39939 barriers), gmem waits 0 holds 0, uub 46842 (9262 same), gcopy 2216878 hit 205268 miss (71.0 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.3 (max 11.2), guest 40.0 (max 53.0): 101 11.8 (max 12.9) 120 8.1 (max 9.3) 121 8.0 (max 9.3) 129 2.0 (max 3.0); gpu ms/frame 10.9 (max 11.9, 119 frames)
+savagewind: [vk] t=18468.0 frame 5032 58.9 fps max 18ms internal=2560x1440 (370611 draws, 0 skipped, 17020 passes, 2346 dispatches, 754 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+58426 live), upload 83.7MB, sets 745102 (684385 shared), fbloop 40093 (39857 barriers), gmem waits 0 holds 0, uub 47900 (9844 same), gcopy 2194944 hit 204191 miss (70.5 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.1 (max 11.3), guest 39.8 (max 53.3): 101 11.7 (max 13.0) 120 8.0 (max 9.3) 121 7.9 (max 9.2) 129 2.3 (max 3.4); gpu ms/frame 10.9 (max 12.0, 117 frames)
+savagewind: [audren-sdk] 18000 frames: render 584 us (max 837), mutex wait max 12 us, 0 underruns, peak 0.108; 2000 with the sink, voice sources 21 (max 22), command ids 0x4218adc0, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1876 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams (1 resumed, lowest gain 1.00), queue peak 2512 frames; in 2001 puts, 480240 frames, peak -19.3 dBFS; ring read peak -19.3 dBFS; level peak -19.3 dBFS rms -43.3 dBFS
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4358 reads, 4309 empty, largest batch 1, 200.3-210.5 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [fsr3] dispatches 3900
+savagewind: [vk] t=18470.0 frame 5150 58.9 fps max 18ms internal=2560x1440 (373482 draws, 0 skipped, 16910 passes, 2239 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+58458 live), upload 82.7MB, sets 750737 (690213 shared), fbloop 40165 (39929 barriers), gmem waits 0 holds 0, uub 47562 (9805 same), gcopy 2209897 hit 206328 miss (70.8 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.1 (max 11.2), guest 40.7 (max 56.2): 101 11.8 (max 14.7) 120 8.1 (max 10.2) 121 7.9 (max 9.6) 129 2.3 (max 3.4); gpu ms/frame 10.9 (max 11.8, 118 frames)
+savagewind: [vk] t=18472.0 frame 5268 58.9 fps max 17ms internal=2560x1440 (369776 draws, 0 skipped, 17049 passes, 2395 dispatches, 754 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+58353 live), upload 83.7MB, sets 743481 (682962 shared), fbloop 40038 (39802 barriers), gmem waits 0 holds 0, uub 47894 (9839 same), gcopy 2188957 hit 203760 miss (70.3 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.0 (max 11.6), guest 39.4 (max 53.7): 101 11.7 (max 15.7) 120 8.0 (max 9.9) 121 7.9 (max 9.1) 129 2.1 (max 3.0); gpu ms/frame 11.0 (max 11.8, 118 frames)
+savagewind: [vk] t=18474.0 frame 5386 58.9 fps max 18ms internal=2560x1440 (373524 draws, 0 skipped, 17129 passes, 2486 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+58363 live), upload 83.0MB, sets 751068 (689683 shared), fbloop 40102 (39866 barriers), gmem waits 0 holds 0, uub 47597 (9817 same), gcopy 2213435 hit 205530 miss (71.0 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.1 (max 11.7), guest 40.0 (max 60.0): 101 11.8 (max 13.9) 120 8.1 (max 9.7) 121 7.9 (max 9.4) 129 2.1 (max 2.9); gpu ms/frame 11.1 (max 11.8, 118 frames)
+savagewind: radv/ps5 submissions: window count=3774 kwords=73834 claim_ms=8.5 copy_ms=32.0 flush_ms=11.0 agc_ms=65.2 suspend_ms=915.9
+savagewind: [fsr3] dispatches 4200
+savagewind: [vk] t=18476.0 frame 5504 58.9 fps max 18ms internal=2560x1440 (371009 draws, 0 skipped, 16911 passes, 2308 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+58396 live), upload 83.6MB, sets 745860 (685180 shared), fbloop 40061 (39825 barriers), gmem waits 0 holds 0, uub 47197 (9324 same), gcopy 2197648 hit 203872 miss (70.9 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.0 (max 11.8), guest 40.4 (max 56.5): 101 11.8 (max 16.8) 120 8.0 (max 10.0) 121 7.9 (max 9.4) 129 2.1 (max 3.2); gpu ms/frame 11.0 (max 11.9, 119 frames)
+savagewind: [vk] t=18478.0 frame 5622 58.9 fps max 17ms internal=2560x1440 (389081 draws, 0 skipped, 17097 passes, 2580 dispatches, 754 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+58637 live), upload 78.7MB, sets 782276 (720609 shared), fbloop 40543 (40307 barriers), gmem waits 0 holds 0, uub 46904 (9608 same), gcopy 2317157 hit 210505 miss (72.1 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.1 (max 11.1), guest 39.8 (max 58.1): 101 11.7 (max 13.3) 120 8.0 (max 9.6) 121 7.9 (max 8.9) 129 2.3 (max 3.4); gpu ms/frame 11.0 (max 11.8, 117 frames)
+savagewind: [audren-sdk] 20000 frames: render 584 us (max 819), mutex wait max 12 us, 0 underruns, peak 0.064; 2000 with the sink, voice sources 21 (max 23), command ids 0x4218adc0, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams (1 resumed, lowest gain 1.00), queue peak 2512 frames; in 2000 puts, 480000 frames, peak -23.9 dBFS; ring read peak -23.9 dBFS; level peak -23.9 dBFS rms -50.5 dBFS
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4359 reads, 4311 empty, largest batch 1, 200.3-210.3 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=18480.0 frame 5740 59.0 fps max 17ms internal=2560x1440 (389993 draws, 0 skipped, 17332 passes, 2870 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+58570 live), upload 78.7MB, sets 784390 (722347 shared), fbloop 40516 (40280 barriers), gmem waits 0 holds 0, uub 46842 (9603 same), gcopy 2324126 hit 211285 miss (72.3 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.1 (max 11.3), guest 38.7 (max 48.7): 101 11.7 (max 12.7) 120 8.0 (max 9.4) 121 7.9 (max 9.1) 129 2.3 (max 3.4); gpu ms/frame 11.0 (max 11.9, 118 frames)
+savagewind: [fsr3] dispatches 4500
+savagewind: [vk] t=18482.0 frame 5858 58.9 fps max 18ms internal=2560x1440 (389360 draws, 0 skipped, 17253 passes, 2727 dispatches, 754 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+58565 live), upload 78.1MB, sets 782981 (721337 shared), fbloop 40511 (40275 barriers), gmem waits 0 holds 0, uub 46842 (9603 same), gcopy 2321383 hit 210141 miss (71.9 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.0 (max 10.8), guest 38.5 (max 46.8): 101 11.7 (max 12.6) 120 8.0 (max 9.1) 121 7.9 (max 9.1) 129 2.1 (max 3.1); gpu ms/frame 11.0 (max 11.8, 118 frames)
+savagewind: [vk] t=18484.0 frame 5976 58.9 fps max 18ms internal=2560x1440 (389885 draws, 0 skipped, 17127 passes, 2553 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+58569 live), upload 77.7MB, sets 783857 (722443 shared), fbloop 40515 (40279 barriers), gmem waits 0 holds 0, uub 46862 (9616 same), gcopy 2324827 hit 210115 miss (71.8 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.1 (max 10.8), guest 38.5 (max 47.8): 101 11.7 (max 13.0) 120 8.0 (max 9.1) 121 7.9 (max 9.3) 129 2.1 (max 3.1); gpu ms/frame 10.9 (max 11.9, 118 frames)
+savagewind: radv/ps5 submissions: window count=3772 kwords=74995 claim_ms=8.5 copy_ms=32.3 flush_ms=11.1 agc_ms=65.7 suspend_ms=881.1
+savagewind: [fsr3] dispatches 4800
+savagewind: [bench] internal size min 2560x1440 mean 2560.0x1440.0 max 2560x1440; step seconds 2560x1440:59.986; gpu_load 8 ms
+savagewind: [bench] Savage Wind benchmark, 2026-10-29 16:08:05: Great Plateau camera route, 60 s measured after 20 s settling; internal resolution 2560x1440 (the settings)
+savagewind: [bench] frames 3420: frame ms mean 17.540 p50 16.988 p95 19.294 p99 19.852 max 48.9; 68.9% on time; 4 hitches: command translation 2, guest-thread wait 2
+savagewind: [bench] cpu ms per frame: render thread mean 10.92 p95 15.84 max 33.3 (of it the present 0.19, frame generation's recording 0.00; frame generation off, 0 of 3421 frames); guest threads (summed) mean 41.45 p95 52.04 max 78.9
+savagewind: [bench] gpu ms per frame (3414 frames): mean 13.26 p95 19.08 max 25.1
+savagewind: [bench] presents 3421: 57.0 presented fps (0 in frame generation's slot); game frames 57.0 fps
+savagewind: [bench] present intervals ms: mean 17.54 p50 16.99 p95 19.30 p99 19.87 max 43.4; under 6.5 0.0%, 6.5-10 0.0%, 10-15 0.4%, 15-18.4 75.8%, 18.4-25 23.7%, over 25 0.1%
+savagewind: [bench] frame generation: off
+savagewind: [bench] previous run: mean 17.188 p95 18.210; this one +2.05% / +5.95%: do not agree within 2%
+savagewind: [bench] result mean_ms=17.540 p95_ms=19.294 p99_ms=19.852 on_time=68.9 hitches=4 render_ms=10.92 guest_ms=41.45 gpu_ms=13.26 frames=3420 presented_fps=57.0 game_fps=57.0 present_iv_p95_ms=19.30 fg_gpu_ms=0.000 internal=2560x1440 internal_min=2560x1440 internal_mean=2560.0x1440.0 internal_max=2560x1440 steps=2560x1440:59.986 gpu_load=8
+savagewind: [bench] summary in benchmark/last.txt (and benchmark/history.txt); 10 s of fast motion follow
+savagewind: [bench] 105.4 s: fast motion (not measured: frame generation's captures)
+savagewind: [hitch] frame 6047: 30.5 ms in play, cause: pacing (guest thread 118, 16.6 ms) | render thread cpu 10.5 ms: compiles 0.0 ms (0), pipelines 0.0 ms (0), build waits 0.0, textures 0.2 ms (0.0 MB), GPU waits 0.0, present 1.0 (acquire 0.0), uploads 0.6 MB | present thread 118: cpu 0.1 wait 8.0 core 0.0 sleep 16.6 backend 5.3 read 0.0 | threads: 101 (prio 44) cpu 11.4 wait 11.6 core 0.0; 121 (prio 44) cpu 7.4 wait 26.1 core 0.2; 120 (prio 44) cpu 7.3 wait 25.5 core 0.8; 129 (prio 28) cpu 4.2 wait 0.0 core 0.0
+savagewind: [vk] t=18486.0 frame 6094 58.9 fps max 39ms internal=2560x1440 (389604 draws, 0 skipped, 16928 passes, 2427 dispatches, 756 flushes, wait 0ms, compile 0 (warm 0), fbcopy 0 (+58565 live), upload 77.7MB, sets 783169 (721415 shared), fbloop 40511 (40275 barriers), gmem waits 0 holds 0, uub 46130 (9068 same), gcopy 2322904 hit 210752 miss (71.9 MB)) | frame 17.0 ms (max 30.5), 99.2% on time, 1 hitches; cpu ms/frame: render 9.0 (max 10.7), guest 38.2 (max 46.7): 101 11.7 (max 14.5) 120 7.9 (max 10.1) 121 7.9 (max 10.7) 129 2.1 (max 4.2); gpu ms/frame 10.9 (max 11.7, 119 frames)
+savagewind: [font] 256x320 format 0x49 hash 022f3b38d7f8eaf1 miss
+savagewind: [vk] t=18488.0 frame 6212 58.9 fps max 23ms internal=2560x1440 (375665 draws, 0 skipped, 17036 passes, 2259 dispatches, 758 flushes, wait 0ms, compile 0 (warm 8), fbcopy 0 (+58878 live), upload 92.4MB, sets 755123 (693428 shared), fbloop 40217 (39981 barriers), gmem waits 0 holds 0, uub 49594 (10318 same), gcopy 2221715 hit 208029 miss (72.0 MB)) | frame 17.0 ms (max 23.2), 99.2% on time, 0 hitches; cpu ms/frame: render 9.3 (max 11.4), guest 42.5 (max 63.3): 101 12.2 (max 15.7) 120 8.2 (max 10.5) 121 8.1 (max 11.0) 129 2.3 (max 3.5); gpu ms/frame 10.9 (max 11.9, 118 frames)
+savagewind: [audren-sdk] 22000 frames: render 592 us (max 875), mutex wait max 10 us, 0 underruns, peak 0.106; 2000 with the sink, voice sources 22 (max 26), command ids 0x4218adc0, gain 1.00
+savagewind: [audio] AudioOut 10.0 s: 1875 periods, 0 underruns (0 frames short), 0 errors (last 0), 0 frames dropped, 1 streams (1 resumed, lowest gain 1.00), queue peak 2512 frames; in 2000 puts, 480000 frames, peak -19.5 dBFS; ring read peak -19.5 dBFS; level peak -19.5 dBFS rms -48.4 dBFS
+savagewind: [motion] DualSense: accelerometer -0.0001 1.0000 -0.0001 G, gyroscope -0.0005 -0.0005 -0.0005 rad/s, pad orientation -0.001 -0.001 -0.001 1.000, 5 samples/s (4358 reads, 4309 empty, largest batch 1, 199.6-217.2 ms apart); latest state 0: 0.0 ms newer, gyroscope -0.0005 -0.0005 -0.0005
+savagewind: [vk] t=18490.0 frame 6330 58.9 fps max 18ms internal=2560x1440 (382096 draws, 0 skipped, 16926 passes, 2704 dispatches, 761 flushes, wait 0ms, compile 0 (warm 1), fbcopy 0 (+58450 live), upload 108.4MB, sets 768430 (706278 shared), fbloop 39397 (39161 barriers), gmem waits 0 holds 0, uub 52027 (10888 same), gcopy 2242521 hit 210477 miss (74.4 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.4 (max 11.6), guest 43.0 (max 54.4): 101 12.2 (max 15.9) 120 8.2 (max 11.0) 121 8.1 (max 10.3) 14b 2.4 (max 7.7); gpu ms/frame 11.0 (max 11.9, 118 frames)
+savagewind: [fsr3] dispatches 5100
+savagewind: [font] 128x256 format 0x49 hash 818e2bd95c2983e8 miss
+savagewind: [vk] t=18492.0 frame 6448 58.9 fps max 17ms internal=2560x1440 (371058 draws, 0 skipped, 16906 passes, 2891 dispatches, 757 flushes, wait 0ms, compile 0 (warm 1), fbcopy 0 (+58675 live), upload 98.3MB, sets 746541 (684261 shared), fbloop 39803 (39567 barriers), gmem waits 0 holds 0, uub 50897 (10515 same), gcopy 2182787 hit 207171 miss (72.2 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.1 (max 10.5), guest 42.5 (max 61.9): 101 12.1 (max 13.4) 121 8.2 (max 10.0) 120 8.2 (max 9.8) 129 2.4 (max 3.5); gpu ms/frame 11.0 (max 11.8, 117 frames)
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 36213 not deferred
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 36219 not deferred
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={18489} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [PlayGo]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/playgo/np/v00/playgo.env}
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={18489} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [M2SsdDevicelist]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/m2ssddevicelist/np/v00/m2-ssd-devicelist.env}
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={18489} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [RevokeList]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/hid_config/np/v00/hid_config.env}
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 36774 not deferred
+savagewind: [vk] GPU overlap: a one-off readback, wait on submission 36781 not deferred
+savagewind: [vk] t=18494.0 frame 6566 58.9 fps max 18ms internal=2560x1440 (367482 draws, 0 skipped, 17120 passes, 2879 dispatches, 760 flushes, wait 7ms, compile 0 (warm 8), fbcopy 0 (+59048 live), upload 112.7MB, sets 739377 (675342 shared), fbloop 39783 (39547 barriers), gmem waits 0 holds 0, uub 52536 (10985 same), gcopy 2156689 hit 208400 miss (75.0 MB)) | frame 17.0 ms (max 17.1), 100.0% on time, 0 hitches; cpu ms/frame: render 9.2 (max 11.5), guest 44.3 (max 56.1): 101 12.4 (max 16.4) 120 8.4 (max 10.4) 121 8.3 (max 12.3) 129 2.6 (max 4.0); gpu ms/frame 11.1 (max 12.1, 118 frames)
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+savagewind: radv/ps5 submissions: window count=3789 kwords=74773 claim_ms=8.6 copy_ms=32.3 flush_ms=11.1 agc_ms=78.0 suspend_ms=1065.3
+savagewind: exit(0)
+savagewind: [bench] fast motion done: the game closes
+savagewind: atexit invoked
+savagewind: memory stage=romfs-ready heap_base=0x2000000000 mapped=1409286144 peak=1409286144 segments=68 arenas=8 libc_fallbacks=0 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=5309988864 direct_total=12884901888 direct_rc=0
+# process pid=171, eboot.bin calls exit() exit_value=0.
+#
+# A user thread receives a fatal signal
+#
+# signal: 12 (SIGSYS)
+# thread ID: 102140
+# thread name: 
+# proc ID: 171
+# proc name: eboot.bin
+#
+# registers:
+# rax: 0000000000000000  rbx: 0000000000000000
+# rcx: 0000000000000000  rdx: 0000000000000000
+# rsi: 0000000000000000  rdi: 0000000000000000
+# rbp: 0000000402b430b0  rsp: 0000000402b43088
+# r8 : 0000000000000000  r9 : 0000000880000010
+# r10: 000000000515ca11  r11: 0000000000000207
+# r12: 0000000002348b70  r13: 000000000086d788
+# r14: 0000000000000000  r15: 00000000000019ed
+# rip: 00000008000003ac  eflags: 00000246
+# lbf: 000000082bcaad71  lbt: 000000082bc9c430
+# lb0: ffffffffffffffff  lb1: ffffffffffffffff
+# lb2: ffffffffffffffff  lb3: ffffffffffffffff
+# lb4: ffffffffffffffff  lb5: ffffffffffffffff
+# lb6: ffffffffffffffff  lb7: ffffffffffffffff
+#
+# backtrace:
+copyin:  has nonsleeping lock
+# 000000000040346d
+# 00000000004192c8
+# 000000000041dbc1
+# 00000000004d1e09
+# 00000000004b285b
+# 000000000fc646c9
+# 0000000800007450
+# 24924924924900ff
+#
+# dynamic libraries:
+# /app0/eboot.bin
+#  xotext: 0000000000400000:000000000fc68000 nsegs: 4
+#  fingerprint: b1e192e0ae319be3814a8ec9f9a4c56300000000
+# /leGrTVOyJy/common/lib/libkernel.sprx
+#  xotext: 0000000800000000:0000000800044000 nsegs: 4
+#  fingerprint: b1d61fffc2ea64936961e4be0bb7219400000000
+# /leGrTVOyJy/common/lib/libSceLibcInternal.sprx
+#  xotext: 000000080009c000:0000000800178000 nsegs: 4
+#  fingerprint: 19232fcba5d1363844b0b513662c891500000000
+# /leGrTVOyJy/common/lib/libSceSysmodule.sprx
+#  xotext: 00000008001e4000:00000008001f0000 nsegs: 4
+#  fingerprint: bd700c4843e5b8bfad9031776733823900000000
+# /leGrTVOyJy/common/lib/libSceAmpr.sprx
+#  xotext: 0000000800210000:0000000800218000 nsegs: 4
+#  fingerprint: 57fce5dc3bd3882d2bf3e909ca65558100000000
+# /app0/sce_module/libc.prx
+#  xotext: 0000000080000000:00000000800cc000 nsegs: 4
+#  fingerprint: 5f73a9defd7d02be9079d4d6dbd9617455b4d62b
+# /leGrTVOyJy/common/lib/libSceNet.sprx
+#  xotext: 0000000800224000:0000000800254000 nsegs: 4
+#  fingerprint: 6dbebc4586453cd58ae7a336c0ad7c2b00000000
+# /leGrTVOyJy/common/lib/libSceIpmi.sprx
+#  xotext: 0000000800408000:0000000800410000 nsegs: 4
+#  fingerprint: 354b9ad891282eae7696c64151dca2d900000000
+# /leGrTVOyJy/common/lib/libSceMbus.sprx
+#  xotext: 000000080042c000:0000000800434000 nsegs: 4
+#  fingerprint: 6ad5890a7dfd3f35b1a5ad9678de66e100000000
+# /leGrTVOyJy/common/lib/libSceRegMgr.sprx
+#  xotext: 0000000800440000:0000000800444000 nsegs: 4
+#  fingerprint: d9510dd68093f938cfe93e6b019c4ccf00000000
+# /leGrTVOyJy/common/lib/libSceRtc.sprx
+#  xotext: 0000000800450000:0000000800454000 nsegs: 4
+#  fingerprint: 5e3b614a1bfeae88cfcd085a6935e2b700000000
+# /leGrTVOyJy/common/lib/libSceRazorCpu.sprx
+#  xotext: 0000000800460000:000000080046c000 nsegs: 4
+#  fingerprint: ef3c5b426f6f17c38d4b658ebf4a9f0000000000
+# /leGrTVOyJy/common/lib/libSceAvSetting.sprx
+#  xotext: 0000000800478000:0000000800488000 nsegs: 4
+#  fingerprint: c07f1109b1082052d83774b30ea795e000000000
+# /leGrTVOyJy/common/lib/libSceVideoOut.sprx
+#  xotext: 0000000800498000:00000008004b4000 nsegs: 4
+#  fingerprint: bbe2350d9b3ed95f8b0b03728f65154800000000
+# /leGrTVOyJy/common/lib/libSceAgcDriver.sprx
+#  xotext: 00000008004cc000:00000008004d8000 nsegs: 4
+#  fingerprint: bce00921a63b128e226d18e02959ba0500000000
+# /leGrTVOyJy/common/lib/libSceAgc.sprx
+#  xotext: 00000008004e8000:00000008004fc000 nsegs: 4
+#  fingerprint: 0225aa6eb1789c586e9efc6b91db2dc300000000
+# /leGrTVOyJy/common/lib/libSceAudioOut.sprx
+#  xotext: 000000080051c000:0000000800564000 nsegs: 4
+#  fingerprint: 1e9ef669f071d476b18c9ff2a61d114c00000000
+# /leGrTVOyJy/common/lib/libSceAudioIn.sprx
+#  xotext: 000000080075c000:0000000800764000 nsegs: 4
+#  fingerprint: c27804ab5d5099e2428e75cde34bd7f400000000
+# /leGrTVOyJy/common/lib/libSceAjmi.sprx
+#  xotext: 0000000800770000:0000000800774000 nsegs: 4
+#  fingerprint: 9ccb973d18451219ba2564bfddc2a5ac00000000
+# /leGrTVOyJy/common/lib/libSceAjm.native.sprx
+#  xotext: 0000000800780000:0000000800788000 nsegs: 4
+#  fingerprint: 65f2ca60f2b572bf8cadc6497a4a5bcb00000000
+# /leGrTVOyJy/common/lib/libScePad.sprx
+#  xotext: 00000008007a4000:00000008007b8000 nsegs: 4
+#  fingerprint: fb9dd4a3dc5f389eeeef09bc5bd2e52e00000000
+# /leGrTVOyJy/common/lib/libSceNetCtl.sprx
+#  xotext: 00000008007cc000:00000008007d4000 nsegs: 4
+#  fingerprint: b458c76410295870657b23837de38e7c00000000
+# /leGrTVOyJy/common/lib/libSceSsl.sprx
+#  xotext: 00000008007e0000:00000008008bc000 nsegs: 4
+#  fingerprint: 31e56e7197d5fb3ab99ce7f5fb78505c00000000
+# /leGrTVOyJy/common/lib/libSceHttpCache.sprx
+#  xotext: 0000000800934000:000000080097c000 nsegs: 4
+#  fingerprint: 17c392837e543a90190a780eccf80f5900000000
+# /leGrTVOyJy/common/lib/libSceHttp.sprx
+#  xotext: 0000000800998000:00000008009c4000 nsegs: 4
+#  fingerprint: 397c5768e8cc87dcf5aa1f4e4ffbad0c00000000
+# /leGrTVOyJy/common/lib/libSceHttp2.sprx
+#  xotext: 00000008009dc000:0000000800a04000 nsegs: 4
+#  fingerprint: d4017f414afb113b32cb0db6d5f5cb0200000000
+# /leGrTVOyJy/common/lib/libSceNpCommon.sprx
+#  xotext: 0000000800a18000:0000000800a4c000 nsegs: 4
+#  fingerprint: 40d0389059a99c2a4961c874d16d07eb00000000
+# /leGrTVOyJy/common/lib/libSceNpManager.sprx
+#  xotext: 0000000800a68000:0000000800aac000 nsegs: 4
+#  fingerprint: 1e52add37ef71089d2c412739b6e18f500000000
+# /leGrTVOyJy/common/lib/libSceNpGameIntent.sprx
+#  xotext: 0000000800acc000:0000000800ad4000 nsegs: 4
+#  fingerprint: 53acb6749ca0ce06d4418d61af3b896c00000000
+# /leGrTVOyJy/common/lib/libSceNpWebApi2.sprx
+#  xotext: 0000000800ae0000:0000000800afc000 nsegs: 4
+#  fingerprint: 4589d64dd889cca4b19d1bf834daaa8800000000
+# /leGrTVOyJy/common/lib/libSceSaveData.native.sprx
+#  xotext: 0000000800b0c000:0000000800b3c000 nsegs: 4
+#  fingerprint: 6428c0af640deeba36bd2d982c0afe8000000000
+# /leGrTVOyJy/common/lib/libSceSystemService.sprx
+#  xotext: 0000000800b54000:0000000800b84000 nsegs: 4
+#  fingerprint: 1e187e42d8573597334a158368cd101c00000000
+# /leGrTVOyJy/common/lib/libSceUserService.sprx
+#  xotext: 0000000800bb0000:0000000800bc0000 nsegs: 4
+#  fingerprint: 2a6e01fa0892fda20cb450fac151b43200000000
+# /leGrTVOyJy/common/lib/libSceCommonDialog.sprx
+#  xotext: 0000000800bd0000:0000000800bd4000 nsegs: 4
+#  fingerprint: 3f13b47341dd5274094187f5deee122800000000
+# /leGrTVOyJy/common/lib/libSceSysUtil.sprx
+#  xotext: 0000000800be0000:0000000800be4000 nsegs: 4
+#  fingerprint: d0cf585abaf33c7838eb0722e59f50ef00000000
+# /leGrTVOyJy/common/lib/libSceKeyboard.sprx
+#  xotext: 0000000800bf0000:0000000800bf4000 nsegs: 4
+#  fingerprint: cc1427c34177cdc7ee03997cee40ec1500000000
+# /leGrTVOyJy/common/lib/libSceMouse.sprx
+#  xotext: 0000000800c00000:0000000800c04000 nsegs: 4
+#  fingerprint: db5f73c5fef0382eaf6ae359548fb0e700000000
+mDBG: Sending signal(pid: 171, tid: 102140, signo: 0xc)
+<118>[Syscore App] App Crash : PID=0xab, reason=0xc
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_APP_CRASH
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_APP_CRASH
+savagewind: [vi] vsync timer late by 292ms (host throttling?)
+mDBG: Waiting for debug suspend .. 1
+<118>[SceLncService] AppCrash: pid={0x000000ab} appId={0x00000016} appLocalPid={0x10016620}
+<118>[ResArbitrator][TestId   ]lncEventCallback        [187e2]( 87)  : CRASH KILL_END event->appId[0x16] event->pid[0xab] 
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [187e2]( 38)  : Enqueue(id[0], t[1], user[0] state[STOP]) queue.size[1]
+<118>[ResArbitrator][App      ]ChangeState             [18930]( 43)  : replace id[0] state:['RUNNING'->'STOP']
+<118>[ResArbitrator][RA_main  ]cbResult                [18930](350)  : Callback id[0] type[RESULT] result[true] state[STOP]
+<118>[ResArbitrator][TestId   ]raCallback              [18930](128)  : BigApp[0x16] Changed state"STOP"
+<118>[ResArbitrator][QUEUE    ]Remove                  [18930]( 69)  : Remove:(id[0] state[STOP] type[1]) queue.size[0]
+<118>[ResArbitrator][App      ]Dump                    [18930](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -1: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x207e3c760)] userData[0x0] pid[0x42]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -2: Id[110] state[RUNNING] vcn[ 20] acp[368] mem[  0] prio[10(10)] from[IPMI(0x207e3c6a0)] userData[0x0] pid[0x39]*HB*
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -3: Id[180] state[RUNNING] vcn[ 20] acp[270] mem[  0] prio[5(5)] from[IPMI(0x207e3c680)] userData[0x2000e2ae8] pid[0x3b]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -4: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x38]
+<118>[ResArbitrator][App      ]Dump                    [18930](819)  : -- No kicking Apps *************************
+<118>[SceLncUtil] blockAppSuspend: name={SceNpUds}, appId={0x00000006}, refCount={1}
+<118>[SceLncUtil] unblockAppSuspend: name={SceNpUds}, appId={0x00000006}, refCount={0}
+<118>[CRS][coredump_seq] enableCrashReport={0}, crashReportMode={0}, isAllowed={1}
+<118>[CRS][coredump_seq] prepare() pid=0x000000ab, appId=0x00000016, localPid=0x10016620, path=/user/devlog/system/sce_coredumps.0/PPSA90212_1793261295/prosperocore-1793261295-0x000000ab-eboot.bin.prosperodmp
+<118>[CRS][coredump_seq] hasProcess=true
+<118>[CRS][coredump_seq] canCoredump=false
+<118>[CRS][coredump_seq] needsShellUiCoredump=false
+<118>[CRS][coredump_seq] needsToNotifyCoredumpUi=false, needsProgressBar=true
+<118>[CRS][coredump_seq] needsToNotifyHost=false
+<118>[CRS][coredump_seq] canPostCoredumpInfo=false
+<118>[CRS][coredump_seq] canKill=true
+<118>[CRS][coredump_seq] canContinue=false
+<118>[CRS][coredump_seq] needsToNotifyWatcher=false
+<118>[CRS][coredump_seq] killing app (appId=0x00000016) ...
+<118>[SceLncService] KillApp() appId={0x00000016}, withSuspend={0}, forceKill={1} killReason={0}
+<118>[SceLncService] BlockingKill() appId={0x00000016}, titleId={PPSA90212}, is_coredumpFinished={0}, forceKill={1}
+<118>[SceLncService] convertToSysCoreKillReason: {0x00000000}->{0x00000000}
+<118>[Syscore App] Kill App : 0x16 PPSA90212
+<118>[Syscore App] Kill process: 0xab
+Terminating pid=171
+<118>[TTS Arbitrator][INF]  FG App was changed. 16 -> 7
+<118>[SceShellUI] I/BGLayer : SetBackgroundTransition (Ellapsed 123731msec since last call) ID=69 TransitionType=CustomImageFade Degree=CrossFade NextImageUri= NextBlurImageUri= NextFallbackImageUri= OverlayImageUri=  BasematType=None Retry=False UseImageViewerSequence=False Resize2K=False
+<118>[SceShellUI] I/BGLayer : SetBackgroundTransition (Ellapsed 0msec since last call) ID=70 TransitionType=CustomImageFade Degree=CrossFade NextImageUri=/system_ex/vsh_asset/bg_hub_default.dds NextBlurImageUri= NextFallbackImageUri= OverlayImageUri=  BasematType=None Retry=False UseImageViewerSequence=False Resize2K=False
+<118>[SceShellUI] I/BGLayer : cancelBackgroundTransition ID=69
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [AppScreen : ApplicationScreenScene] -> [Render.NPXS40002 : AppScene]
+<118>SetDeviceIndexBehavior: mode=SpecificUser, param=0x1cff8b33
+<118>[SceShellUI] I/PSM.UI : [FirstClear] : ClearFrameBuffer=False
+<118>[AvControl] current video owner process is removed (appid=0x16 pid=0xab)
+<118>[AvControl] delete process(appid:0x16 pid:0xab)
+<118>[mbus] onSessionKilled. pid=171
+[BAPM] universal mode exit
+<118>@ removeSession:L184
+<118>@ removeSession:L197
+### gc_gfx_queue_status : in_frame=0 rptr=0x00000000 wptr=0x00000000 IBlist(rptr=0x1775 wptr=0x1775 i_wptr=0x1775)

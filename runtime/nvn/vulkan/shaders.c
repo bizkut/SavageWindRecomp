@@ -1301,7 +1301,7 @@ static const char *builtin_src(const char *name, int *stage) {
     // and the game's NDC y is that times a.x (-1 when the vertex shaders flip y, ShaderKey.flip_y). a.y: 1 when the
     // game's depth range is [-1, 1] (depth = (z + 1) / 2). a.z: 1 = camera vectors everywhere, 2 = camera minus object
     // vector where there is one (SAVAGEWIND_MVEC_CAMONLY). b.xy: this frame's jitter minus the previous frame's in the
-    // game's NDC (mvec_reprojection), taken out of every vector: what remains is the motion alone.
+    // game's NDC (mvec_reprojection), taken out of every vector: what remains is the motion alone. b.zw: used size.
     if (!strcmp(name, "mvec_fill.frag")) {
         *stage = STAGE_FRAGMENT;
         return "#version 450\n"
@@ -1315,7 +1315,7 @@ static const char *builtin_src(const char *name, int *stage) {
                "  vec2 jit = vec2(pc.b.x, pc.b.y * pc.a.x);\n"
                "  if (v.a > 0.5 && pc.a.z == 0.0) { o = vec4(v.xy - jit, v.zw); return; }\n"
                "  if (v.a < 0.5 && pc.a.z == 2.0) { o = vec4(0.0); return; }\n"
-               "  vec2 fb = gl_FragCoord.xy / vec2(textureSize(t0, 0)) * 2.0 - 1.0;\n"
+               "  vec2 fb = gl_FragCoord.xy / pc.b.zw * 2.0 - 1.0;\n"
                "  vec2 clip = vec2(fb.x, -fb.y);\n"
                "  float d = texelFetch(t1, p, 0).r;\n"
                "  vec4 q = pc.m * vec4(clip.x, clip.y * pc.a.x, pc.a.y != 0.0 ? d * 2.0 - 1.0 : d, 1.0);\n"

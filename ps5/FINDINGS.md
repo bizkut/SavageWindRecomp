@@ -978,6 +978,10 @@ sharp HUD; a green/blue arc and glow near the sun side look like the game's sun 
 run captured a different frame). The run tool's control payload timed out twice during DRS-on runs (the title kept
 running; the klog was captured directly).
 
+`drs_lean = 1` (ini, default 0) selects ordinary shaders at full DRS size and the remapping variants at reduced size;
+the DRS controller and FSR 3 dynamic-resolution context remain enabled. Lean mode precompiles both variants under a
+separate completion marker. Its performance and transition behavior have not yet been measured on console.
+
 ## 2026-10-28 — HDR default follows the system output (.41, ps5/evidence/m7/hdrdet-sys*.klog, hdr-default-on.klog)
 
 `sceVideoOutGetOutputStatus` on a handle opened before RADV (layout: RADV's `struct videoout_output_status`) reads
@@ -1260,3 +1264,30 @@ layers). The three modules read identical bytes in both modes (SHA-256 of main, 
 10.77 s**; 95.5 / 96.4 % on time. Now on by default (`ab-exefs-default`: title 10.71 s). The RomFS open still
 bounds game entry: open_inputs 0.18 s, base NCA parse 1.5 s, BKTR 5 ms, hash layers 0.35 s (29.7 MB), then 1.2 s
 to the finished RomFS reader. Start-up is 20.9 → 10.7 s overall.
+
+## 2026-10-29 — DRS: no step stutter now; DRS with FSR 3.1 works but DRS mode costs render time (.41, ps5/evidence/m8/ab-drsdiag-*, ab-fsr3drs*, ab-still*, ab-noload*.klog)
+
+**Step stutter (FSR 1 DRS, `gpu_load = 8`, diagnostic eboot `dde7ae34…`):** the `[drs] step` lines show 0 shader
+compiles at every step and 2 pipelines at one step up; no compile/pipeline hitches in play (4–5 per run, all
+guest-thread waits, pacing or command translation); 99.8 / 99.6 % on time. The 12 compile / 13 pipeline hitches
+of 2026-10-28 were DRS variants not yet precompiled; DRS mode already uses the DRS variant at full size, so a step
+changes no shader key.
+
+**DRS with FSR 3.1 (`drs_fsr3 = 1`, eboot `2016b629…`, Quality 1440p → 4K, 60 Hz, FG off):** FSR 3.1's context has
+the dynamic-resolution flag; each dispatch gets the used part. Under `gpu_load = 8` the size steps 2560×1440 →
+2138×1202 → 1715×965 (21.8 s) and back, 0 compiles / 0 pipelines at every step, no context recreation.
+
+| FSR 3.1, `gpu_load = 8` | Runs | On time | Render ms | GPU ms |
+|---|---|---|---|---|
+| Fixed 1440p | `fsr3drs0-a/b`, `still0` | 68.9, 68.8, 70.1 % | 10.92, 10.96, 10.81 | 13.26, 13.23, 13.11 |
+| DRS | `fsr3drs1-b`, `still1` | 90.6, 92.2 % | 11.97, 11.91 | 13.16, 12.98 |
+
+**DRS mode costs ~1.1 ms render-thread CPU per frame even without steps:** `noload1-a` (DRS on, no load, size
+stayed 1440p): render 12.05 ms, 92.1 % on time, against 10.8–11.2 ms and 95–97 % for FSR 3.1 without DRS. Likely
+cause [inference]: DRS mode selects the remapping shader variants and processes the texture fractions per shader
+stage even at fraction 1.0 (~3,800 draws a frame: ~0.29 µs a draw). `drs_lean = 1` (eboot `42f90d22…`) uses the
+ordinary variants at full size; not yet measured. Captures at route 10 s (965p) show a full, unstretched frame;
+one showed a green arc and blue disc near the sun that the fixed-size run at a slightly different camera angle did
+not: lens flare or artifact is unresolved (the still-camera pair at route 3 s was taken but the console went
+offline before it could be fetched; `noload0-a/b` and `noload1-b` were cut short with it). FG with DRS waits for
+the 120 Hz TV.

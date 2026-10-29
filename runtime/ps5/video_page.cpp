@@ -15,6 +15,7 @@
 #include "upscale_label.h"
 
 extern "C" {
+#include "dynamic_resolution.h"
 #include "../settings.h"
 #include "../window_size.h"
 #include "../nvn/output_scale.h"
@@ -103,12 +104,14 @@ void video_page(std::vector<Item> &v) {
         static char buf[256];
         WinSize out = winsize_effective(true);
         double factor = g_settings.upscaler == UPSCALE_OFF || !upscale_modes_available() ? 1.0 : upscale_mode_factor(x);
-        ps5_upscale_label(buf, sizeof buf, mode_name(it, x), out.w, out.h, factor, g_settings.dynamic_resolution);
+        bool drs = dynamic_resolution_allowed(g_settings.dynamic_resolution, g_settings.antialias == AA_TAA,
+                                              g_settings.upscaler == UPSCALE_FSR3, g_settings.drs_fsr3);
+        ps5_upscale_label(buf, sizeof buf, mode_name(it, x), out.w, out.h, factor, drs);
         return (const char *)buf;
     };
     v.push_back(mode);
     v.push_back(video_antialiasing());
-    v.push_back(toggle(P_VIDEO, "Dynamic resolution", "Off while TAA or FSR 3 is enabled.",
+    v.push_back(toggle(P_VIDEO, "Dynamic resolution", "Off with TAA; FSR 3 requires drs_fsr3 = 1 in the ini.",
                        [](const Item &) { return (int)g_settings.dynamic_resolution; },
                        [](const Item &, int x) { g_settings.dynamic_resolution = x != 0; settings_save(); }, 0));
     v.push_back(video_anisotropy());

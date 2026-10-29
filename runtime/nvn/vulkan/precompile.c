@@ -33,6 +33,7 @@
 #include "shaders.h"
 #include "vk.h"
 #ifdef __PROSPERO__
+#include "../../ps5/dynamic_resolution.h"
 #include "../../settings.h"
 #include "../../storage_ps5.h"
 #endif
@@ -377,9 +378,9 @@ static void add_job(Jobs *J, int shader, const ShaderKey *k) {
 
 static void status_path(char *out, size_t n) {
 #ifdef __PROSPERO__
-    const bool drs = g_settings.dynamic_resolution && g_settings.antialias != AA_TAA &&
-                     g_settings.upscaler != UPSCALE_FSR3;
-    vk_cache_path(out, n, drs ? "precompiled-drs.txt" : "precompiled.txt");
+    const bool drs = dynamic_resolution_allowed(g_settings.dynamic_resolution, g_settings.antialias == AA_TAA,
+                                                g_settings.upscaler == UPSCALE_FSR3, g_settings.drs_fsr3);
+    vk_cache_path(out, n, drs ? (g_settings.drs_lean ? "precompiled-drs-lean.txt" : "precompiled-drs.txt") : "precompiled.txt");
 #else
     vk_cache_path(out, n, "precompiled.txt");
 #endif
@@ -432,8 +433,8 @@ bool shader_precompile_run(ShaderPrecompile *p, RomfsImage *img, const char *exe
     Jobs J = {0};
 #ifdef __PROSPERO__
     // Precompilation may run before the renderer starts a frame; use the configured effective mode.
-    const bool drs = g_settings.dynamic_resolution && g_settings.antialias != AA_TAA &&
-                     g_settings.upscaler != UPSCALE_FSR3;
+    const bool drs = dynamic_resolution_allowed(g_settings.dynamic_resolution, g_settings.antialias == AA_TAA,
+                                                g_settings.upscaler == UPSCALE_FSR3, g_settings.drs_fsr3);
 #endif
     for (int i = 0; i < set.nshaders; i++) {
         const SaShader *s = &set.shaders[i];
@@ -469,6 +470,13 @@ bool shader_precompile_run(ShaderPrecompile *p, RomfsImage *img, const char *exe
         }
         vk_key_normalize(s->code, s->stage, &k);
         add_job(&J, i, &k);
+        #ifdef __PROSPERO__
+        if (drs && g_settings.drs_lean) {
+            k.drs = 0;
+            vk_key_normalize(s->code, s->stage, &k);
+            add_job(&J, i, &k);
+        }
+        #endif
     }
     for (int i = 0; i < nlog; i++) {
         int k = shader_archive_find(&set, log[i].code);
@@ -480,6 +488,12 @@ bool shader_precompile_run(ShaderPrecompile *p, RomfsImage *img, const char *exe
                 variant.drs = 1;
                 vk_key_normalize(set.shaders[k].code, set.shaders[k].stage, &variant);
                 add_job(&J, k, &variant);
+                if (g_settings.drs_lean) {
+                    variant = log[i].key;
+                    variant.drs = 0;
+                    vk_key_normalize(set.shaders[k].code, set.shaders[k].stage, &variant);
+                    add_job(&J, k, &variant);
+                }
             }
 #endif
         }

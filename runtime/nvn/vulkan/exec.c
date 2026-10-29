@@ -32,6 +32,11 @@
 #include "../../ps5/dynamic_resolution.h"
 #include <errno.h>
 #endif
+#ifdef __PROSPERO__
+static inline bool drs_shader_remap(void) {
+    return dynamic_resolution_remap(dynamic_resolution_mode(), g_settings.drs_lean, dynamic_resolution_fraction());
+}
+#endif
 uint64_t renderer_present_count(void);
 
 static uint64_t stat_build_waits;  // draws that waited for their pipeline (draw_must_happen)
@@ -933,7 +938,14 @@ static TexBackend *mvec_pass_target(NvnTexture *depth, uint32_t minw, uint32_t m
     if ((uint64_t)minw * minh > (uint64_t)mw * mh) mw = minw, mh = minh;
     if (minw != mw || minh != mh) return NULL;
     mvec_target_img = post_image(8, mw, mh, VK_FORMAT_R16G16B16A16_SFLOAT);
-    rt_jitter_set_size(mw, mh);
+    uint32_t jw = mw, jh = mh;
+#ifdef __PROSPERO__
+    if (dynamic_resolution_fsr3_mode()) {
+        jw = (uint32_t)fmaxf(1, roundf(mw * dynamic_resolution_fraction()));
+        jh = (uint32_t)fmaxf(1, roundf(mh * dynamic_resolution_fraction()));
+    }
+#endif
+    rt_jitter_set_size(jw, jh);
     return mvec_target_img;
 }
 // (debugging) SAVAGEWIND_TRACE_TEX (textures.c): texture write histories
@@ -4003,7 +4015,7 @@ static VkDescriptorSet stage_set(Prog *p, VkDescriptorSetLayout layout, uint32_t
                 rs[1 + t][0] = tex_sc[sg][t][0]; rs[1 + t][1] = tex_sc[sg][t][1];
             }
 #ifdef __PROSPERO__
-            if (dynamic_resolution_mode()) {
+            if (drs_shader_remap()) {
                 float active = dynamic_resolution_fraction();
                 for (int t = 0; t < si->ntex && t < 64; t++) if (!si->tex[t].is_image) {
                     float f = 1.0f;
@@ -4133,20 +4145,20 @@ static CsProg *compute_program(NvnProgram *np) {
     int n = g_cs_n;
     for (int i = 0; i < n; i++) if (tab[i].addr == ss->code_addr
 #ifdef __PROSPERO__
-        && tab[i].drs == dynamic_resolution_mode()
+        && tab[i].drs == drs_shader_remap()
 #endif
         ) return tab[i].cp;
     CsProg *cp = calloc(1, sizeof *cp);
     if (n < 256) { tab[n].addr = ss->code_addr; tab[n].cp = cp; g_cs_n = n + 1; }
 #ifdef __PROSPERO__
-    if (n < 256) tab[n].drs = dynamic_resolution_mode();
+    if (n < 256) tab[n].drs = drs_shader_remap();
 #endif
     maxwell_gmem_base = HEAP_BASE;
     maxwell_gmem_size = HEAP_MAX;
     ShaderKey k = {0};
     k.glsl = 1;
 #ifdef __PROSPERO__
-    k.drs = dynamic_resolution_mode();
+    k.drs = drs_shader_remap();
 #endif
     k.shared_size = ss->control ? *(const uint32_t *)(ss->control + 0x754) : 0;  // (next to the group size at 0x748)
     pthread_mutex_lock(&translate_lock);
@@ -4821,7 +4833,7 @@ static void draw_(CmdRec *r, bool indexed) {
     bool vkey_flip = origin == 0;
     if (!no_key_gen && pm.pr && pm.gen == key_gen && pm.np == st.program && pm.origin == origin && pm.dmode == dmode
 #ifdef __PROSPERO__
-        && pm.drs == dynamic_resolution_mode()
+        && pm.drs == drs_shader_remap()
 #endif
         ) {
         pr = pm.pr;
@@ -4829,7 +4841,7 @@ static void draw_(CmdRec *r, bool indexed) {
         ShaderKey vkey = {0}, fkey = {0};
         vkey.glsl = fkey.glsl = 1;
 #ifdef __PROSPERO__
-        vkey.drs = fkey.drs = dynamic_resolution_mode();
+        vkey.drs = fkey.drs = drs_shader_remap();
 #endif
         vkey.flip_y = fkey.flip_y = origin == 0;
         vkey.depth_minus_one = dmode == 0;
@@ -4999,7 +5011,11 @@ static void draw_(CmdRec *r, bool indexed) {
     // Full-screen triangles and quads that write depth (BOTW fills the scene's depth with several: sky, far plane)
     // keep no vector: drawn after the geometry, their camera-independent positions would cover it with zeros (they get
     // the camera's motion in the fallback).
-    bool fullscreen = r->x[2] <= 6 && st.viewport[0][2] >= pass_w * 0.9f / pass_sx && st.viewport[0][3] >= pass_h * 0.9f / pass_sy;
+    int motion_w = (int)pass_w, motion_h = (int)pass_h;
+#ifdef __PROSPERO__
+    if (dynamic_resolution_mode()) pass_size(&motion_w, &motion_h);
+#endif
+    bool fullscreen = r->x[2] <= 6 && st.viewport[0][2] >= motion_w * 0.9f / pass_sx && st.viewport[0][3] >= motion_h * 0.9f / pass_sy;
     if (pass_mvec >= 0 && st.ds[0] && st.ds[1]) {
         MvecDrawIn md;
         md.iaddr = 0; md.first = 0; md.base_vertex = 0;
@@ -5037,7 +5053,7 @@ static void draw_(CmdRec *r, bool indexed) {
             ShaderKey mvk = {0}, mfk = {0};
             mvk.glsl = mfk.glsl = 1;
 #ifdef __PROSPERO__
-            mvk.drs = mfk.drs = dynamic_resolution_mode();
+            mvk.drs = mfk.drs = drs_shader_remap();
 #endif
             mvk.flip_y = mfk.flip_y = origin == 0;
             mvk.depth_minus_one = dmode == 0;
@@ -5063,7 +5079,7 @@ static void draw_(CmdRec *r, bool indexed) {
         ShaderKey mvk = {0}, mfk = {0};
         mvk.glsl = mfk.glsl = 1;
 #ifdef __PROSPERO__
-        mvk.drs = mfk.drs = dynamic_resolution_mode();
+        mvk.drs = mfk.drs = drs_shader_remap();
 #endif
         mvk.flip_y = mfk.flip_y = origin == 0;
         mvk.depth_minus_one = dmode == 0;
@@ -6339,7 +6355,7 @@ static void scene_post(Prog *pr, CmdRec *r) {
     bool fsr = fsr_on && g_settings.upscaler == UPSCALE_FSR1, cas = cas_on && g_settings.sharpening > 0;
     bool fsr3 = fsr_on && rt_fsr3() && mvec_enabled();  // (FSR 3: its own sharpening, RCAS, in place of CAS)
     #ifdef __PROSPERO__
-    if (dynamic_resolution_fraction() < 1.0f) fsr = true;
+    if (!fsr3 && dynamic_resolution_fraction() < 1.0f) fsr = true;
     #endif
     if (!fsr3) rt_jitter_set_phases(8);
     if (!fsr && !cas && !taa && !fsr3) return;
@@ -7134,6 +7150,13 @@ static bool mvec_scene_view(Prog *pr, CmdRec *r, NvnTexture **taa_t, TexBackend 
             pc[17] = nvn_depth_mode() == 0 ? 1.0f : 0.0f;
             pc[18] = (float)mvec_camera_only();
             pc[20] = jit[0], pc[21] = jit[1];
+            pc[22] = (float)mvec_target_img->width, pc[23] = (float)mvec_target_img->height;
+#ifdef __PROSPERO__
+            if (dynamic_resolution_mode()) {
+                pc[22] = fmaxf(1, roundf(pc[22] * dynamic_resolution_fraction()));
+                pc[23] = fmaxf(1, roundf(pc[23] * dynamic_resolution_fraction()));
+            }
+#endif
             VkImageView in[3] = {post_view(mvec_target_img), dv};
             post_pass_pc(cb, "mvec_fill.frag", in, 2, mvec_vectors_img, pc, sizeof pc, false);
             vk_full_barrier(cb);
@@ -7303,6 +7326,15 @@ static TexBackend *fsr3_scene(VkCommandBuffer cb, TexBackend *b, uint32_t ow, ui
     lwhy = why;
     if (why) return NULL;
     uint32_t w = b->width, h = b->height;
+    uint32_t rw = w, rh = h;
+    bool dynamic = false;
+#ifdef __PROSPERO__
+    dynamic = dynamic_resolution_fsr3_mode();
+    if (dynamic) {
+        rw = (uint32_t)fmaxf(1, roundf(w * dynamic_resolution_fraction()));
+        rh = (uint32_t)fmaxf(1, roundf(h * dynamic_resolution_fraction()));
+    }
+#endif
     static const VkComponentMapping id = {0};
     TexBackend *dep = post_image(14, w, h, VK_FORMAT_R32_SFLOAT), *rea = post_image(15, w, h, VK_FORMAT_R8_UNORM);
     TexBackend *out = post_image_ex(13, ow, oh, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_STORAGE_BIT);
@@ -7323,8 +7355,9 @@ static TexBackend *fsr3_scene(VkCommandBuffer cb, TexBackend *b, uint32_t ow, ui
         .color = {b->image, b->format, w, h}, .depth = {dep->image, dep->format, w, h},
         .motion = {v->image, v->format, w, h}, .reactive = {rea->image, rea->format, w, h},
         .output = {out->image, out->format, ow, oh},
-        .jitter = {jit[0] * (float)w * 0.5f, -jit[1] * flip * (float)h * 0.5f},
-        .motion_scale = {-0.5f * (float)w, 0.5f * (float)h},
+        .render_width = rw, .render_height = rh, .dynamic_resolution = dynamic,
+        .jitter = {jit[0] * (float)rw * 0.5f, -jit[1] * flip * (float)rh * 0.5f},
+        .motion_scale = {-0.5f * (float)rw, 0.5f * (float)rh},
         .dt_ms = last_ns && ns > last_ns ? (float)((ns - last_ns) / 1e6) : 16.7f,
         .near_ = nr, .far_ = fr, .fov_y = fov,
         .sharpness = g_settings.sharpening / 10.0f,
@@ -7340,7 +7373,7 @@ static TexBackend *fsr3_scene(VkCommandBuffer cb, TexBackend *b, uint32_t ow, ui
     if (!dispatched) return NULL;
     last = frame;
     vk_full_barrier(cb);
-    rt_jitter_set_phases((uint32_t)fsr3_jitter_phases(w, ow));
+    rt_jitter_set_phases((uint32_t)fsr3_jitter_phases(rw, ow));
     return out;
 }
 

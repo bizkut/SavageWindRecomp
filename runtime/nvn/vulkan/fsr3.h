@@ -25,6 +25,8 @@ typedef struct {
     // (R32F, [0, 1], not inverted), the motion vectors (.xy: see motion_scale) and the reactive mask (R8); the output
     // (storage) at the upscaled size
     Fsr3Image color, depth, motion, reactive, output;
+    uint32_t render_width, render_height;  // the top-left used part; image dimensions remain the allocation size
+    bool dynamic_resolution;
     float jitter[2];        // the camera's jitter this frame, render pixels (FSR's convention: x right, y down)
     float motion_scale[2];  // .xy times this (over the render size) is the UV offset to where the pixel was
     float dt_ms;            // time since the last frame

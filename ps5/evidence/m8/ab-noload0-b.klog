@@ -1,0 +1,48 @@
+# launch PPSA90212: err launch PPSA90212 foreground user -1, login user -1, attempts: none (no user id to launch as)
+<118>[SceShellUI][PowerManager]EvalShutdown syncPoint:UnregisterDelayer CurrentState:Suspend
+<118>[SceShellUI][PowerManager]EvalShutdown WaitVshAutoUpdateVerifyDone
+<118>[SceSystemStateMgr] sceSystemStateMgrWaitVshAutoUpdateVerifyDone: start
+<118>[SceSystemStateMgr] sceSystemStateMgrWaitVshAutoUpdateVerifyDone: finish (ret=0x0, 0 msec)
+<118>[SceSystemStateMgr] Extended standby timer.
+<118>[SceShellUI][PowerManager]EvalShutdown syncPoint:UnregisterDelayer CurrentState:Suspend
+<118>[SceShellUI][PowerManager]EvalShutdown AppSystem.TaskDisposer.Count:1
+<118>[SceShellUI][PowerManager]EvalShutdown syncPoint:AppSystem.TaskDisposer.DisposeCompletedAction CurrentState:Suspend
+<118>[SceShellUI][PowerManager]EvalShutdown FadeoutMaskScene()
+<118>[SceSystemStateMgr] Extended standby timer.
+<118>[SceSystemStateMgr] Due to power saving, the system will enter rest mode in 0 seconds.
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={19330} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [PlayGo]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/playgo/np/v00/playgo.env}
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={19330} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [M2SsdDevicelist]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/m2ssddevicelist/np/v00/m2-ssd-devicelist.env}
+<118>[SceHidConfigService] PERIODIC_DOWNLOAD_INTERVAL_SEC={86400} elapsed={19330} isFirstTime={1}
+<118>[SceHidConfigService] start DownloadFile
+<118>[SceHidConfigService] DownloadFile : [RevokeList]
+<118>[SceHidConfigService] ifModifiedSince={}
+<118>[SceHidConfigService] SERVER_URL={https://envelope2.np.dl.playstation.net/envelope2/hid_config/np/v00/hid_config.env}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\http_client.cpp(141) Get: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(245) DownloadFile: HCS_ISOK::0x8041013d
+<118>[SceHidConfigService] W:\Build\J02159366\vsh\shell\shell_core\hid_config_service\hid_config_service_manager.cpp(373) Run: HCS_CONTINUE::0x8041013d
+<118>[SceHidConfigService] PERIODIC_CHECK_INTERVAL_SEC={420}
+<118>[SceShellUI][PowerManager]EvalShutdown syncPoint:UnregisterDelayer CurrentState:Suspend
+<118>[SceShellUI][PowerManager]EvalShutdown PowerManager.Terminate()
+<118>[SceShellUI][PowerManager] PowerManager.Terminate start state:Suspend reason:SCE_SHELL_CORE_UTIL_REQUEST_SHUTDOWN_TYPE_AUTO_POWER_DOWN bootFlag:Eap
+<118>[SceSystemStateMgr] Enter Standby Mode Request from ShellUI
+<118>[SceSystemStateMgr] State Change: MAIN_ON_STANDBY
+<118>[SceSystemStateMgr] Power Mode Change: MAIN_ON_STANDBY
+<118>[SceSystemStateMgr] CPU                                     HLT GC   GFX  F    U   ID       FAN BAPM
+<118>[SceSystemStateMgr]  800  800  800  800 1600 1600 1600 1600   0 gen2  400  250 225 00840f60   0 off
+<118>[SceLncUtil] blockAppSuspend: name={Sce

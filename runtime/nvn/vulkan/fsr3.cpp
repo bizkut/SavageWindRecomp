@@ -24,6 +24,7 @@ static FfxUInt32 shared_ctx;
 static FfxResourceInternal shared[3];
 static void *scratch;
 static uint32_t ctx_rw, ctx_rh, ctx_ow, ctx_oh;
+static bool ctx_dynamic;
 static VkDevice ctx_dev;
 
 // The scratch memory the backend lays its contexts out in: 64-byte aligned (they are alignas(32), and the vendored
@@ -97,6 +98,7 @@ static bool make_context(const Fsr3Dispatch *d) {
     // (LDR input, low-resolution and jitter-free motion vectors, standard depth; FFX_FSR3UPSCALER_ENABLE_DEBUG_CHECKING
     // with SAVAGEWIND_FSR3_DEBUG=1: its checks of the inputs, in the log)
     cd.flags = getenv("SAVAGEWIND_FSR3_DEBUG") ? FFX_FSR3UPSCALER_ENABLE_DEBUG_CHECKING : 0;
+    if (d->dynamic_resolution) cd.flags |= FFX_FSR3UPSCALER_ENABLE_DYNAMIC_RESOLUTION;
     cd.maxRenderSize = {d->color.width, d->color.height};
     cd.maxUpscaleSize = {d->output.width, d->output.height};
     cd.fpMessage = message;
@@ -131,7 +133,9 @@ static bool make_context(const Fsr3Dispatch *d) {
     have_ctx = true;
     ctx_dev = d->dev;
     ctx_rw = d->color.width, ctx_rh = d->color.height, ctx_ow = d->output.width, ctx_oh = d->output.height;
-    LOG("[fsr3] context created %ux%u -> %ux%u\n", ctx_rw, ctx_rh, ctx_ow, ctx_oh);
+    ctx_dynamic = d->dynamic_resolution;
+    LOG("[fsr3] context created %ux%u -> %ux%u%s\n", ctx_rw, ctx_rh, ctx_ow, ctx_oh,
+        ctx_dynamic ? " dynamic resolution" : "");
     return true;
 }
 
@@ -151,7 +155,7 @@ extern "C" bool fsr3_dispatch(const Fsr3Dispatch *d) {
     const char *stage = "context creation";
     try {
     if ((!have_ctx || d->color.width != ctx_rw || d->color.height != ctx_rh || d->output.width != ctx_ow ||
-         d->output.height != ctx_oh) && !make_context(d)) {
+         d->output.height != ctx_oh || d->dynamic_resolution != ctx_dynamic) && !make_context(d)) {
         failed = true;  // (no FSR 3 this run: the scene goes on with the game's own composite)
         return false;
     }
@@ -168,7 +172,7 @@ extern "C" bool fsr3_dispatch(const Fsr3Dispatch *d) {
     dd.reconstructedPrevNearestDepth = iface.fpGetResource(&iface, shared[2]);
     dd.jitterOffset = {d->jitter[0], d->jitter[1]};
     dd.motionVectorScale = {d->motion_scale[0], d->motion_scale[1]};
-    dd.renderSize = {d->color.width, d->color.height};
+    dd.renderSize = {d->render_width, d->render_height};
     dd.upscaleSize = {d->output.width, d->output.height};
     dd.enableSharpening = d->sharpness > 0;
     dd.sharpness = d->sharpness;
@@ -191,6 +195,12 @@ extern "C" bool fsr3_dispatch(const Fsr3Dispatch *d) {
     }
     static uint64_t dispatches;
     ++dispatches;
+    static uint32_t last_w, last_h;
+    if (last_w != d->render_width || last_h != d->render_height) {
+        LOG("[fsr3] render size %ux%u (allocation %ux%u)\n", d->render_width, d->render_height,
+            d->color.width, d->color.height);
+        last_w = d->render_width, last_h = d->render_height;
+    }
     if (dispatches == 1 || dispatches % 300 == 0)
         LOG("[fsr3] dispatches %llu\n", (unsigned long long)dispatches);
     return true;

@@ -65,7 +65,9 @@ typedef struct {
     bool frame_gen;      // frame generation: a frame made between each two the game draws (vulkan/framegen.h: AMD FSR 3 on
                          // desktop, PS5_MihawkGen on the PS5, there at 119.88 Hz only)
 #ifdef __PROSPERO__
-    bool dynamic_resolution; // DRS is disabled by default and while temporal upscaling is active
+    bool dynamic_resolution; // DRS is disabled by default and while TAA is active
+    bool drs_fsr3;           // opt in to experimental DRS with FSR 3.1
+    bool drs_lean;           // use non-remapping shaders at full DRS size (A/B)
 #endif
     int fg_upscale;      // FG_UP_* (savagewind.ini only: fg_upscale = fsr1 | bilinear)
     bool fg_separate;    // (A/B, savagewind.ini only: fg_passes = separate) MihawkGen's passes after it unfused, as before

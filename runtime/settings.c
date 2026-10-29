@@ -145,6 +145,8 @@ void settings_load(void) {
         else if (!strcmp(key, "frame_generation")) g_settings.frame_gen = atoi(val) != 0;
 #ifdef __PROSPERO__
         else if (!strcmp(key, "dynamic_resolution")) g_settings.dynamic_resolution = atoi(val) != 0;
+        else if (!strcmp(key, "drs_fsr3")) g_settings.drs_fsr3 = atoi(val) != 0;
+        else if (!strcmp(key, "drs_lean")) g_settings.drs_lean = atoi(val) != 0;
 #endif
         else if (!strcmp(key, "fg_upscale")) g_settings.fg_upscale = !strcmp(val, "bilinear") ? FG_UP_BILINEAR : FG_UP_FSR1;
         else if (!strcmp(key, "fg_passes")) g_settings.fg_separate = !strcmp(val, "separate");
@@ -296,6 +298,8 @@ void settings_save(void) {
     fprintf(f, "frame_generation = %d\n", g_settings.frame_gen ? 1 : 0);
 #ifdef __PROSPERO__
     fprintf(f, "dynamic_resolution = %d\n", g_settings.dynamic_resolution ? 1 : 0);
+    fprintf(f, "drs_fsr3 = %d\n", g_settings.drs_fsr3 ? 1 : 0);
+    fprintf(f, "drs_lean = %d\n", g_settings.drs_lean ? 1 : 0);
 #endif
     fprintf(f, "fg_upscale = %s\n", g_settings.fg_upscale == FG_UP_BILINEAR ? "bilinear" : "fsr1");
     if (g_settings.fg_separate) fprintf(f, "fg_passes = separate\n");  // (A/B only: written while set)

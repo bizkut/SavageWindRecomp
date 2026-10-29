@@ -29,6 +29,21 @@ int dynamic_resolution_update(DynamicResolution *dr, bool enabled, bool temporal
 
     return dr->step;
 }
+
+float dynamic_resolution_level_fraction(float height, int step, bool fsr3) {
+    if (height <= 0 || step <= 0) return 1.0f;
+    float target;
+    if (fsr3) {
+        float floor = height * 0.67f;
+        if (floor < 720.0f) floor = 720.0f;
+        if (floor > height) floor = height;
+        target = step == 1 ? (height + floor) * 0.5f : floor;
+    } else {
+        target = step == 1 ? 900.0f : step == 2 ? 720.0f : height;
+    }
+    return target < height ? target / height : 1.0f;
+}
+
 #ifdef __PROSPERO__
 #include "../platform.h"
 #include "../settings.h"
@@ -40,12 +55,14 @@ static uint64_t last_sample;
 static double fg_ms;
 float g_dynamic_resolution_fraction = 1.0f;
 bool g_dynamic_resolution_mode;
+bool g_dynamic_resolution_fsr3_mode;
 static unsigned internal_w, internal_h;
 
 void dynamic_resolution_fg_gpu(uint64_t ns) { fg_ms = ns / 1e6; }
 
 void dynamic_resolution_gpu(uint64_t ns) {
-    if (!g_settings.dynamic_resolution || g_settings.antialias == AA_TAA || g_settings.upscaler == UPSCALE_FSR3) {
+    if (!dynamic_resolution_allowed(g_settings.dynamic_resolution, g_settings.antialias == AA_TAA,
+                                    g_settings.upscaler == UPSCALE_FSR3, g_settings.drs_fsr3)) {
         if (last_sample) { state = (DynamicResolution){0}; last_sample = 0; }
         return;
     }
@@ -56,17 +73,18 @@ void dynamic_resolution_gpu(uint64_t ns) {
     double game_ms = ns / 1e6;
     double generation_ms = g_settings.frame_gen ? fg_ms : 0;
     if (game_ms > generation_ms) game_ms -= generation_ms;
-    dynamic_resolution_update(&state, g_settings.dynamic_resolution,
-                              g_settings.antialias == AA_TAA || g_settings.upscaler == UPSCALE_FSR3,
+    dynamic_resolution_update(&state, true, false,
                               game_ms, generation_ms, dt);
 }
 
 void dynamic_resolution_begin_frame(float sx, float sy) {
-    g_dynamic_resolution_mode = g_settings.dynamic_resolution && g_settings.antialias != AA_TAA && g_settings.upscaler != UPSCALE_FSR3;
+    bool fsr3 = g_settings.upscaler == UPSCALE_FSR3;
+    g_dynamic_resolution_mode = dynamic_resolution_allowed(g_settings.dynamic_resolution, g_settings.antialias == AA_TAA,
+                                                            fsr3, g_settings.drs_fsr3);
+    g_dynamic_resolution_fsr3_mode = g_dynamic_resolution_mode && fsr3;
     int step = g_dynamic_resolution_mode ? state.step : 0;
     float height = 900.0f * sy;
-    float target = step == 1 ? 900.0f : step == 2 ? 720.0f : height;
-    g_dynamic_resolution_fraction = height > 0 && target < height ? target / height : 1.0f;
+    g_dynamic_resolution_fraction = dynamic_resolution_level_fraction(height, step, g_dynamic_resolution_fsr3_mode);
     __atomic_store_n(&internal_w, (unsigned)lroundf(1600.0f * sx * g_dynamic_resolution_fraction), __ATOMIC_RELAXED);
     __atomic_store_n(&internal_h, (unsigned)lroundf(height * g_dynamic_resolution_fraction), __ATOMIC_RELAXED);
 }

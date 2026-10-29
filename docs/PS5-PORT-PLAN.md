@@ -593,23 +593,25 @@ lowering the resolution would only blur the picture. Step down after a few frame
 after a longer stretch well under it (hysteresis, so the size doesn't oscillate). MihawkGen runs at the game image's
 size (M7), so it must accept the current used part of a max-size image too.
 
-The PS5 Video page exposes `dynamic_resolution` (default `0` in `savagewind.ini`); TAA and FSR 3.1 force it off.
-The GPU-timestamp controller uses the configured scene size, 900p, and 720p with three-frame downshift and
-two-second recovery hysteresis. Benchmark diagnostics accept `gpu_load = N` in `benchmark.txt` for the first
-20 seconds of the measured route and report the internal-size distribution. This implementation is not yet
-qualified on the console; the visual, timing, and hitch criteria above still apply.
+The PS5 Video page exposes `dynamic_resolution` (default `0` in `savagewind.ini`); TAA forces it off.
+FSR 3.1 also requires the experimental `drs_fsr3 = 1` ini switch (default `0`). With FSR 3.1 the three
+levels are the configured height, the midpoint, and a floor of 67% of configured height or 720p, whichever
+is higher (never above the configured height). Other upscalers retain their configured, 900p and 720p levels.
+The GPU-timestamp controller uses three-frame downshift and two-second recovery hysteresis. Benchmark diagnostics
+accept `gpu_load = N` in `benchmark.txt` for the first 20 seconds of the measured route and report the
+internal-size distribution. Visual, timing, and hitch criteria above still apply.
 When DRS is enabled at startup, shader precompilation uses a separate completion marker and includes DRS variants
 of observed shader keys and their pipeline libraries. Enabling DRS during play does not rerun that precompilation;
 restart with DRS enabled to run it. Pipeline-state and hitch coverage still require a console measurement.
+The `[drs] step` log reports the internal-size change and shader and pipeline builds completed in the presented-frame
+interval; asynchronous work may have started earlier, so the counts alone do not establish causation.
 
-**DRS with FSR 3.1 (optional, after the render-thread work; requested 2026-10-29).** Today TAA and FSR 3.1 force DRS
-off (`runtime/ps5/dynamic_resolution.c`): the DRS remap renders into the used part of max-size targets, while the
-temporal paths assume a fixed scene size. FSR 3.1 supports per-frame render sizes: create its context for the
-maximum size with its dynamic-resolution flag, pass the current size on each dispatch, scale motion vectors and
-jitter to it, and read colour/depth only from the used part. Same GPU-timestamp controller and hysteresis. Value:
-lets a higher target (e.g. Quality 1440p) run by default and drop toward 1080p only in GPU-heavy scenes; it does not
-help render-thread-bound frames. **Done when:** with `gpu_load` the size steps down and back on the benchmark, no
-smearing/flicker at the steps in same-frame captures, on-time not worse than fixed size, and DRS off is unchanged.
+**DRS with FSR 3.1 (experimental; requested 2026-10-29).** With `drs_fsr3 = 1`, FSR 3.1 receives a per-frame
+render size and the DRS remap renders into the used part of max-size targets. The same GPU-timestamp controller
+and hysteresis apply. This lets a higher target (e.g. Quality 1440p) run by default and drop only in GPU-heavy
+scenes; it does not help render-thread-bound frames. **Done when:** with `gpu_load` the size steps down and back on
+the benchmark, no smearing/flicker at the steps in same-frame captures, on-time not worse than fixed size, and DRS
+off is unchanged.
 
 ### After M7 — Render-thread CPU (done 2026-10-28/29)
 The render thread (NVN → Vulkan translation) was the frame-time limit. Kept, each measured on .41: PR #189's recorder
