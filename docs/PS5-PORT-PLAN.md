@@ -717,6 +717,11 @@ names after subtracting archive definitions, including `rt_dispatch`, `rt_svc`, 
 `setjmp`, `memset`, `g_fnprof` and the `rt_*` patch hooks; derive the actual set from every build, not this list.
 The title map confirms the layout and function tables and `rt_setjmp_slot` in the linked image.
 
+The interim static title also builds a retained `GameExport` table from the available game-code archives and
+generator/HLE hook names. Its digest covers the sorted names, symbol kinds, title compilation flags and linked
+runtime inputs; it is an ABI/cache identity, not proof of loader or console operation. The title still links the
+game-code archive normally.
+
 - **Format/link:** clang 18 emits ELF64 x86-64 relocatable objects in memory for the 997 generated C files
   (including layout and tables). A small deterministic in-title static linker consumes them in stable input order,
   resolves local/global/weak definitions and lays out aligned allocatable text, rodata, data and zero-filled bss.

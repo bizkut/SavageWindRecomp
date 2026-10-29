@@ -1426,3 +1426,21 @@ second after the final sources). **All modules on the console** (eboot `4c375c52
 560 files / 432,658,261 bytes in 14.4 s, subsdk0 180 / 70,251,623 in 2.5 s, sdk 255 / 129,478,358 in 4.4 s, plus
 `layout.c`; sampled heap peak 311 MiB; all **997** files' SHA-256 equal to the PC run of the same probe (itself
 identical to `tools/gen.py`). Generation on the console is ~21 s; compiling the 996 C files (S8) dominates.
+
+## 2026-10-30 — M12 loader: in-title linker, host
+
+`bash tools/test_gamecode_link.sh --real` on the Linux host extracted the private
+`build/ps5/gamecode/libgamecode.a`, linked its **996 objects** in sorted extracted-filename order against dummy addresses
+for the **40 names** from `build/ps5/gamecode_exports.c` (ABI digest `d76b50d35e2e6dac62748a9729fb6629855e6d06856b8de9f6c4f2ef90f58cf5`),
+and found **0 undefined names outside that set** after subtracting object definitions. The host uses distinct shared
+RW and RX mappings; it does not execute the real game objects. The resulting layout in bytes: text **220,996,720**,
+rodata **22,282,888**, data **1,437,912**, bss **0**, total reserved image **246,019,552**, including alignment,
+**133,144** object-local GOT slots and reserved thunk space. **0** thunks were needed with these dummy addresses.
+Link time was **0.649 s** and process peak RSS **738,104 KiB** (including mapped input and the host census).
+The synthetic clang-18 objects exercised the five supported relocations, dual-view execution, GOT loads, code
+pointers, zeroed bss, alignment, weak/strong selection, range failure and the explicit unsupported-input errors.
+
+This is a host result, not a console loader or game execution result. The earlier archive census found `.eh_frame`
+in 992 objects; it is preserved and relocated here, but unwinder registration is not implemented or measured.
+Whether C++ exceptions cross generated C frames remains unaudited; the census alone cannot establish that contract.
+Console allocation/reach, loader integration, unwinding, startup and cache behavior remain unmeasured.

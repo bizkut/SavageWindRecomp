@@ -92,6 +92,25 @@ agc_driver=$(stub libSceAgcDriver agc_driver_link_stub.c)
 # shellcheck source=ps5/tools/link-recipe.sh
 source "$root/ps5/tools/link-recipe.sh"
 link_recipe "$sdk" "$build" "${PS5_RADV_ARCHIVE:-}" || exit 2
+if [[ ${PS5_GAMECODE_EXPORTS:-0} == 1 ]]; then
+    export_args=()
+    for archive in "$root"/build/ps5/gamecode*/libgamecode.a; do
+        [[ -f $archive ]] && export_args+=(--archive "$archive")
+    done
+    for object in "${objects[@]}"; do
+        export_args+=(--object "$object")
+    done
+    for library in "${link_inputs[@]}" "${link_stubs[@]}"; do
+        [[ -f $library ]] && export_args+=(--library "$library")
+    done
+    python3 "$root/ps5/tools/gen-gamecode-exports.py" --nm "$sdk/bin/llvm-nm" \
+        --output "$root/build/ps5/gamecode_exports.c" \
+        --abi "ps5-x86_64-v3-clang18-emulated-tls:$PS5_CFLAGS" "${export_args[@]}"
+    export_object="$build/obj/gamecode_exports.o"
+    cc -std=gnu11 -O2 -Iruntime -c "$root/build/ps5/gamecode_exports.c" -o "$export_object"
+    objects+=("$export_object")
+    link_flags+=(--undefined=game_exports --undefined=game_export_count --undefined=game_export_abi_digest)
+fi
 # shellcheck disable=SC2086
 "$sdk/bin/prospero-lld" -T "$native/ps5-pie-unwind.ld" -L "$native" --eh-frame-hdr --error-limit=0 \
     --Map="$build/title.map" --version-script "$native/app-symbols.map" --exclude-libs=ALL \
