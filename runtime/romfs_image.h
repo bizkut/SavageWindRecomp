@@ -19,6 +19,8 @@ RomfsImage *romfs_image_open(const char *dir, char *why, size_t why_size);
 // Open the merged game (addon=0) or an AOC image (addon=1..8).
 RomfsImage *romfs_image_open_package(const char *keys, const char *const *packages, size_t count,
                                      unsigned addon, char *why, size_t why_size);
+// Takes ownership of package, including on failure.
+RomfsImage *romfs_image_adopt_package(void *package, char *why, size_t why_size);
 #endif
 uint64_t romfs_image_size(const RomfsImage *img);
 // n bytes of the image at off, past its end zeros; any thread. n, or -1 when a file couldn't be read (logged).

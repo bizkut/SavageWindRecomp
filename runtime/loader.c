@@ -132,7 +132,46 @@ uint64_t loader_find_symbol_in(const char *module, const char *name) {
     return 0;
 }
 
+// Name -> address of every defined dynamic symbol, built by loader_load once its modules are in (each import of the
+// relocations looked its name up by comparing it with every symbol of every module, ~34,000 of them). The first
+// module, then the first index, wins, as the linear scan's order did.
+typedef struct { const char *name; uint64_t addr; } SymSlot;
+static SymSlot *sym_index;
+static uint64_t sym_index_mask;
+
+static uint64_t name_hash(const char *s) {  // (FNV-1a)
+    uint64_t h = 14695981039346656037ull;
+    while (*s) h = (h ^ (uint8_t)*s++) * 1099511628211ull;
+    return h;
+}
+
+static void sym_index_build(void) {
+    free(sym_index);
+    uint64_t n = 0, cap = 64;
+    for (int mi = 0; mi < g_nmodules; mi++) n += g_modules[mi].nsyms;
+    while (cap < 2 * n) cap *= 2;
+    sym_index = calloc(cap, sizeof *sym_index);
+    if (!sym_index) FATAL("no memory for the symbol index (%llu slots)\n", (unsigned long long)cap);
+    sym_index_mask = cap - 1;
+    for (int mi = 0; mi < g_nmodules; mi++) {
+        Module *m = &g_modules[mi];
+        for (uint64_t i = 1; i < m->nsyms; i++) {
+            Elf64Sym *s = sym(m, i);
+            if (!s->shndx) continue;
+            const char *name = symname(m, s);
+            uint64_t k = name_hash(name) & sym_index_mask;
+            while (sym_index[k].name && strcmp(sym_index[k].name, name)) k = (k + 1) & sym_index_mask;
+            if (!sym_index[k].name) sym_index[k] = (SymSlot){name, m->base + s->value};
+        }
+    }
+}
+
 uint64_t loader_find_symbol(const char *name) {
+    if (sym_index) {
+        for (uint64_t k = name_hash(name) & sym_index_mask; sym_index[k].name; k = (k + 1) & sym_index_mask)
+            if (!strcmp(sym_index[k].name, name)) return sym_index[k].addr;
+        return 0;
+    }
     for (int mi = 0; mi < g_nmodules; mi++) {
         Module *m = &g_modules[mi];
         for (uint64_t i = 1; i < m->nsyms; i++) {
@@ -234,6 +273,8 @@ static void relocate(Module *m) {
 // The modules the game code was generated for, in its layout's order (tools/layout.py: main, subsdk0..9, sdk).
 void loader_load(const char *exefs) {
     char path[1024];
+    free(sym_index);  // (a reboot loads the modules again: runtime/main.c)
+    sym_index = NULL;
     const GameLibTables *g = gamelib_tables();
     if (*g->nmodules > MAX_MODULES) FATAL("the game code has %u modules\n", *g->nmodules);
     for (uint32_t i = 0; i < *g->nmodules; i++) {
@@ -265,5 +306,8 @@ void loader_load(const char *exefs) {
         if (!known) FATAL("%s is not in the game code: build it again\n", path);
         LOG("[loader] %s is not one of the game's modules (a mod?): left out\n", path);
     }
+    uint64_t t0 = plat_now_ns();
+    sym_index_build();
     for (int i = 0; i < g_nmodules; i++) relocate(&g_modules[i]);
+    LOG("[loader] symbol index and relocation: %.0f ms\n", (plat_now_ns() - t0) / 1e6);
 }

@@ -81,6 +81,11 @@ RomfsImage *romfs_image_open_package(const char *keys, const char *const *packag
 #endif
     void *package = savagewind_package_open(keys, packages, count, addon, why, why_size);
     if (!package) return NULL;
+    return romfs_image_adopt_package(package, why, why_size);
+}
+
+RomfsImage *romfs_image_adopt_package(void *package, char *why, size_t why_size) {
+    if (!package) return NULL;
     uint64_t size = savagewind_package_size(package);
     if (size == UINT64_MAX) {
         if (why && why_size) snprintf(why, why_size, "cannot query package RomFS size");

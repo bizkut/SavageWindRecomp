@@ -1232,3 +1232,22 @@ display opens the system shows the launch background (`sce_sys/pic1.dds`, now Sa
 title draws that picture with a loading indicator until the game's first present. `startup_splash = 1` vs `0`:
 title at 20.69 / 20.91 s vs 20.88 / 20.90 s, first present 19.49 / 19.70 vs 19.67 / 19.69 s: no start-up cost.
 The system-phase picture is not yet visually confirmed on the TV.
+
+## 2026-10-29 — Faster start: the RomFS opened once, overlapped; loader symbol index (.41, ps5/evidence/m8/ab-fast*.klog)
+
+Start-up opened the game's RomFS twice: once before the display only to log its size (3.23 s, then closed), and
+again when the game first read it (3.65 s), plus a third package parse for the add-on lookup (0.21 s).
+`fast_start = 1`: the ExeFS opens first, the RomFS opens once on a worker while the loader, settings and display
+start, and the game adopts that open package (add-on mask reused). Same binary `e666f366…`, alternating runs:
+
+| `fast_start` | Runs | Window up s | Entering game s | First present s | Title s |
+|---|---|---|---|---|---|
+| 0 | `fast0-a/b` | 10.18, 10.21 | 10.19, 10.23 | 19.67, 19.66 | 20.87, 20.86 |
+| 1 | `fast1-a/b` | 6.70, 6.72 | 6.76, 6.79 | 12.48, 12.58 | 13.69, 13.78 |
+
+The 2.6 s after the ExeFS reads (0.29 s for 28.4 MB) was symbol resolution: every import compared its name with
+each of ~34,000 symbols (`loader_find_symbol`, linear). A hash index built once per load gives the same
+first-match result; index and relocation now take 28–33 ms (`fastidx-a/b`, `fast_start` default on): window up
+4.41 / 4.45 s. The title still came at 13.63 / 13.73 s: the RomFS open (3.5 s, started after the 3.1 s ExeFS open,
+both serialized by nstool's process lock) now bounds start-up; the ExeFS open itself processes the update NCA's
+RomFS partition too (BKTR, nested base-NCA parse, eager hash-layer verification).

@@ -3,6 +3,8 @@
 #include "../gamelib.h"
 #include "../game_versions.h"
 #include "../rt.h"
+#include "../romfs_image.h"
+#include "../settings.h"
 #include "../../ps5/importer/package_exefs.h"
 
 #include <dirent.h>
@@ -16,6 +18,74 @@ extern void savagewind_package_close(void *);
 
 
 static void *exefs;
+static uint64_t exefs_bytes, exefs_read_ns, exefs_reads;
+static struct {
+    pthread_t thread;
+    char keys[1200], why[512];
+    char **paths;
+    size_t count;
+    int addons;
+    void *package;
+    bool started, joined, success;
+} startup_romfs;
+
+extern void savagewind_package_set_coalesce(int);
+extern void savagewind_package_set_broker(int);
+extern int savagewind_package_open_addons(void *);
+
+static void *open_startup_romfs(void *unused) {
+    (void)unused;
+    plat_thread_heap_own();
+    uint64_t start = plat_now_ns();
+    startup_romfs.package = savagewind_package_open(startup_romfs.keys, (const char *const *)startup_romfs.paths,
+                                                     startup_romfs.count, 0, startup_romfs.why, sizeof startup_romfs.why);
+    ps5_startup_mark("startup RomFS open finished");
+    if (startup_romfs.package)
+        fprintf(stderr, "[ps5] package RomFS opened: %llu bytes in %.3f s\n",
+                (unsigned long long)savagewind_package_size(startup_romfs.package), (plat_now_ns() - start) / 1e9);
+    return NULL;
+}
+bool ps5_startup_romfs_enabled(void) { return startup_romfs.started; }
+
+
+bool ps5_startup_romfs_wait(char *why, size_t why_size) {
+    if (!startup_romfs.started) return true;
+    if (!startup_romfs.joined) {
+        int rc = pthread_join(startup_romfs.thread, NULL);
+        if (rc) { fprintf(stderr, "[ps5] package thread join failed: %d\n", rc); abort(); }
+        startup_romfs.joined = true;
+        startup_romfs.success = startup_romfs.package != NULL;
+        startup_romfs.addons = savagewind_package_open_addons(startup_romfs.package);
+        for (size_t i = 0; i < startup_romfs.count; i++) free(startup_romfs.paths[i]);
+        free(startup_romfs.paths);
+        startup_romfs.paths = NULL;
+    }
+    if (!startup_romfs.success) {
+        snprintf(why, why_size, "%s", startup_romfs.why);
+        return false;
+    }
+    return true;
+}
+int ps5_startup_romfs_addons(void) {
+    char why[512];
+    return startup_romfs.started && ps5_startup_romfs_wait(why, sizeof why) ? startup_romfs.addons : -1;
+}
+
+
+RomfsImage *ps5_startup_romfs_take(char *why, size_t why_size) {
+    if (!ps5_startup_romfs_wait(why, why_size) || !startup_romfs.package) return NULL;
+    savagewind_package_set_coalesce(g_settings.package_read_coalesce);
+    savagewind_package_set_broker(g_settings.package_read_broker);
+    void *package = startup_romfs.package;
+    startup_romfs.package = NULL;
+    return romfs_image_adopt_package(package, why, why_size);
+}
+
+void ps5_exefs_read_summary(void) {
+    fprintf(stderr, "[ps5] ExeFS file reads: %llu files, %llu bytes in %.3f s\n",
+            (unsigned long long)exefs_reads, (unsigned long long)exefs_bytes, exefs_read_ns / 1e9);
+}
+
 
 static uint8_t *read_exefs(const char *path, size_t *len, size_t max) {
     const char *name = strrchr(path, '/');
@@ -27,12 +97,16 @@ static uint8_t *read_exefs(const char *path, size_t *len, size_t max) {
         savagewind_exefs_file_close(file);
         return NULL;
     }
+    uint64_t start = plat_now_ns();
     uint8_t *data = malloc(size ? (size_t)size : 1);
     if (!data || savagewind_exefs_file_pread(file, data, (size_t)size, 0) != size) {
         free(data);
         data = NULL;
     } else *len = (size_t)size;
     savagewind_exefs_file_close(file);
+    exefs_reads++;
+    exefs_bytes += (uint64_t)size;
+    exefs_read_ns += plat_now_ns() - start;
     return data;
 }
 
@@ -43,17 +117,35 @@ typedef struct {
     char *why;
     size_t why_size;
     void *exefs;
+    bool fast;
 } PackageOpenTask;
 
 static void *open_package_thread(void *arg) {
     PackageOpenTask *task = arg;
-    uint64_t start = plat_now_ns();
-    void *romfs = savagewind_package_open(task->keys, task->paths, task->count, 0, task->why, task->why_size);
-    if (romfs) {
+    if (!task->fast) {
+        uint64_t start = plat_now_ns();
+        void *romfs = savagewind_package_open(task->keys, task->paths, task->count, 0, task->why, task->why_size);
+        ps5_startup_mark("startup RomFS open finished");
+        if (!romfs) return NULL;
         fprintf(stderr, "[ps5] package RomFS opened: %llu bytes in %.3f s\n",
                 (unsigned long long)savagewind_package_size(romfs), (plat_now_ns() - start) / 1e9);
         savagewind_package_close(romfs);
-        task->exefs = savagewind_exefs_open(task->keys, task->paths, task->count, task->why, task->why_size);
+    }
+    task->exefs = savagewind_exefs_open(task->keys, task->paths, task->count, task->why, task->why_size);
+    ps5_startup_mark("ExeFS open finished");
+    if (task->fast && task->exefs) {
+        pthread_attr_t attr;
+        int rc = pthread_attr_init(&attr);
+        if (!rc) {
+            rc = pthread_attr_setstacksize(&attr, 8u << 20);
+            if (!rc) rc = pthread_create(&startup_romfs.thread, &attr, open_startup_romfs, NULL);
+            pthread_attr_destroy(&attr);
+        }
+        if (rc) {
+            snprintf(task->why, task->why_size, "package thread creation failed: %d", rc);
+            savagewind_exefs_close(task->exefs);
+            task->exefs = NULL;
+        } else startup_romfs.started = true;
     }
     return NULL;
 }
@@ -98,11 +190,19 @@ bool ps5_exefs_init(const char *directory, char *why, size_t why_size) {
     if (n < 0 || (size_t)n >= sizeof keys) failed = true;
     if (failed) snprintf(why, why_size, "unable to enumerate package directory");
     else {
-        PackageOpenTask task = {keys, (const char *const *)paths, count, why, why_size, NULL};
+        bool fast = settings_fast_start_enabled();
+        if (fast) {
+            snprintf(startup_romfs.keys, sizeof startup_romfs.keys, "%s", keys);
+            startup_romfs.paths = paths;
+            startup_romfs.count = count;
+        }
+        PackageOpenTask task = {keys, (const char *const *)paths, count, why, why_size, NULL, fast};
         if (open_package_with_stack(&task)) exefs = task.exefs;
     }
-    for (size_t i = 0; i < count; i++) free(paths[i]);
-    free(paths);
+    if (!startup_romfs.started) {
+        for (size_t i = 0; i < count; i++) free(paths[i]);
+        free(paths);
+    }
     if (!exefs) return false;
 
     void *file = savagewind_exefs_file_open(exefs, "main");
@@ -110,6 +210,7 @@ bool ps5_exefs_init(const char *directory, char *why, size_t why_size) {
     bool valid = file && savagewind_exefs_file_pread(file, header, sizeof header, 0) == sizeof header &&
                  !memcmp(header, "NSO0", 4);
     savagewind_exefs_file_close(file);
+    ps5_startup_mark("ExeFS build ID read finished");
     char id[65];
     if (valid) for (int i = 0; i < 32; i++) snprintf(id + i * 2, 3, "%02x", header[0x40 + i]);
     bool supported = false;

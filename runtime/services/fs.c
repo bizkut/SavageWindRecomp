@@ -1011,7 +1011,14 @@ static int package_addons(void) {
     char keys[1200], why[256] = "", **paths = NULL;
     size_t count = 0;
     uint64_t t0 = plat_now_ns();
-    mask = list_packages(keys, &paths, &count, why, sizeof why) ? savagewind_package_addons(keys, (const char *const *)paths, count) : -1;
+#ifdef __PROSPERO__
+    if (ps5_startup_romfs_enabled()) mask = ps5_startup_romfs_addons();
+    else
+#endif
+        mask = list_packages(keys, &paths, &count, why, sizeof why) ? savagewind_package_addons(keys, (const char *const *)paths, count) : -1;
+#ifdef __PROSPERO__
+    ps5_startup_mark("add-on lookup finished");
+#endif
     free_packages(paths, count);
     LOG("[fs] add-on content in the packages: %s%#x (looked up in %.2f s)\n", mask < 0 ? "can't be read, " : "",
         mask < 0 ? 0 : (unsigned)mask, (plat_now_ns() - t0) / 1e9);
@@ -1028,7 +1035,28 @@ static bool load_image(int k, const char *dir, const char *name) {
 #ifdef ROMFS_PACKAGE
         int addons = k ? package_addons() : -1;  // (an add-on the packages don't hold: not opened again and again)
         if (k && addons >= 0 && !(k <= 8 && ((addons >> (k - 1)) & 1))) return false;
-        m->img = open_package_image((unsigned)k, why, sizeof why);
+#ifdef __PROSPERO__
+        if (!k && ps5_startup_romfs_enabled())
+            m->img = ps5_startup_romfs_take(why, sizeof why);
+        else
+#endif
+            m->img = open_package_image((unsigned)k, why, sizeof why);
+#ifdef __PROSPERO__
+        if (!k) {
+            static bool marked_romfs;
+            if (!marked_romfs) {
+                marked_romfs = true;
+                ps5_startup_mark("IStorage(romfs) open finished");
+            }
+        }
+        else {
+            static bool marked_aoc;
+            if (!marked_aoc) {
+                marked_aoc = true;
+                ps5_startup_mark("IStorage(aoc) open finished");
+            }
+        }
+#endif
 #else
         m->img = romfs_image_open(dir, why, sizeof why);
 #endif

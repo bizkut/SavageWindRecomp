@@ -8,6 +8,7 @@ extern "C" void *savagewind_package_open(const char *, const char *const *, size
 extern "C" uint64_t savagewind_package_size(void *);
 extern "C" ssize_t savagewind_package_pread(void *, void *, size_t, uint64_t);
 extern "C" void savagewind_package_close(void *);
+extern "C" int savagewind_package_open_addons(void *);
 
 int main() {
     char why[256] = {};
@@ -15,6 +16,7 @@ int main() {
         !std::strstr(why, "keys_missing")) return 1;
     if (savagewind_package_size(nullptr) != UINT64_MAX ||
         savagewind_package_pread(nullptr, nullptr, 0, 0) != -1) return 1;
+    if (savagewind_package_open_addons(nullptr) != -1) return 1;
     savagewind_package_close(nullptr);
     why[0] = 0;
     if (savagewind_exefs_open(nullptr, nullptr, 0, why, sizeof why) ||

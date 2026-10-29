@@ -21,6 +21,13 @@ extern "C" {
 void ps5_logf(const char *format, ...);
 void ps5_log_init(bool sync);
 void ps5_log_fatal_mode(void);
+void ps5_startup_mark(const char *step);
+struct RomfsImage;
+bool ps5_startup_romfs_wait(char *why, size_t why_size);
+bool ps5_startup_romfs_enabled(void);
+int ps5_startup_romfs_addons(void);
+struct RomfsImage *ps5_startup_romfs_take(char *why, size_t why_size);
+void ps5_exefs_read_summary(void);
 // Close the title (runtime/platform/main_ps5.c: sceSystemServiceLoadExec("exit")); stderr is flushed first
 __attribute__((noreturn)) void ps5_exit_title(void);
 #endif

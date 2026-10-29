@@ -163,6 +163,15 @@ extern "C" void *savagewind_package_open(const char *keys_path, const char *cons
     }
     return nullptr;
 }
+extern "C" int savagewind_package_open_addons(void *handle) {
+    if (!handle) return -1;
+    const auto &addons = static_cast<PackageStream *>(handle)->importer.addons;
+    int mask = 0;
+    for (size_t i = 0; i < addons.size(); i++)
+        if (addons[i].content.pkg) mask |= 1 << i;
+    return mask;
+}
+
 
 // Which add-on content indexes (bit i-1: index i) the packages hold, from one look at them: runtime/services/fs.c asks
 // once per process instead of opening the packages for every index the game probes. -1: they can't be read.

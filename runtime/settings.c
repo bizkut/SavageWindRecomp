@@ -41,6 +41,7 @@ Settings g_settings = {
     .startup_splash = true,
     .package_read_coalesce = true,
     .package_read_broker = true,
+    .fast_start = true,
     .sharp_text_sharpen = SHARP_TEXT_SHARPEN_DEFAULT,
     .hd_ui = true,
     .vsync = VSYNC_DEFAULT,
@@ -68,6 +69,22 @@ static const char *const k_hdr[HDR_COUNT] = {"auto", "on", "off"};             /
 static const char *const k_icons[ICONS_COUNT] = {"auto", "keyboard", "xbox", "playstation", "nintendo"};
 
 static const char *const k_quality[UPQ_COUNT] = {"ultra_quality", "quality", "balanced", "performance"};
+// fast_start before settings_load (the packages open before it, ExeFS first): only this key, default on.
+bool settings_fast_start_enabled(void) {
+    char path[2048], line[256];
+    bool enabled = true;
+    if (!rt_data_path(SETTINGS_FILE, path, sizeof path)) return true;
+    FILE *f = fopen(path, "r");
+    if (!f) return true;
+    while (fgets(line, sizeof line, f)) {
+        char key[64], val[128] = "";
+        if (sscanf(line, " %63[^= ] = %127[^\r\n]", key, val) >= 1 && !strcmp(key, "fast_start"))
+            enabled = atoi(val) != 0;
+    }
+    fclose(f);
+    return enabled;
+}
+
 
 void settings_load(void) {
     static bool loaded;
@@ -191,6 +208,7 @@ void settings_load(void) {
         else if (!strcmp(key, "log_sync")) g_settings.log_sync = atoi(val) != 0;
         else if (!strcmp(key, "package_read_coalesce")) g_settings.package_read_coalesce = atoi(val) != 0;
         else if (!strcmp(key, "package_read_broker")) g_settings.package_read_broker = atoi(val) != 0;
+        else if (!strcmp(key, "fast_start")) g_settings.fast_start = atoi(val) != 0;
         else bind_settings_load(key, val);  // bind_pad_* / bind_key_*: runtime/hle/bindings.c
     }
     fclose(f);
@@ -280,6 +298,7 @@ void settings_save(void) {
     if (g_settings.fg_split_submits) fprintf(f, "fg_split_submits = 1\n");
     if (!g_settings.package_read_coalesce) fprintf(f, "package_read_coalesce = 0\n");  // (A/B only: written while off)
     if (!g_settings.package_read_broker) fprintf(f, "package_read_broker = 0\n");
+    if (!g_settings.fast_start) fprintf(f, "fast_start = 0\n");  // (A/B only: written while off)
     fprintf(f, "dpad_move = %d\n", g_settings.dpad_move);
     fprintf(f, "left_stick_deadzone = %.0f\n", g_settings.stick_deadzone[0] * 100);
     fprintf(f, "right_stick_deadzone = %.0f\n", g_settings.stick_deadzone[1] * 100);

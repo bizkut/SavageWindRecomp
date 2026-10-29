@@ -117,6 +117,7 @@ typedef struct {
     bool log_sync;       // PS5 klog A/B: write on the calling thread instead of the logger
     bool package_read_coalesce; // PS5: one aligned file read per verified package request (A/B: ini 0)
     bool package_read_broker;   // PS5: package reads >= 256 KiB through the root storage broker (A/B: ini 0)
+    bool fast_start;            // PS5: the start-up RomFS open kept, overlapping ExeFS/loader/window (A/B: ini 0)
 } Settings;
 
 #define STICK_DEADZONE_DEFAULT 0.10f  // (the Switch's own input service has one: the game expects 0 at rest)
@@ -129,4 +130,5 @@ enum { ICONS_AUTO, ICONS_KEYBOARD, ICONS_XBOX, ICONS_PLAYSTATION, ICONS_NINTENDO
 extern Settings g_settings;
 
 void settings_load(void);
+bool settings_fast_start_enabled(void);
 void settings_save(void);

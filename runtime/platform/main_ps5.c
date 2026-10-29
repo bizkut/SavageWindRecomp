@@ -219,10 +219,13 @@ int main(void) {
     }
     ps5_startup_mark("packages opened");
     loader_load("exefs");
+    ps5_exefs_read_summary();
+    ps5_startup_mark("loader_load exefs finished");
     extern void fs_title_version_patch(void);
     extern void settings_load(void);
     extern void language_booted(void);
     fs_title_version_patch();
+    ps5_startup_mark("fs_title_version_patch finished");
     settings_load();
     ps5_startup_mark("settings loaded");
     ps5_log_init(g_settings.log_sync);
@@ -253,6 +256,10 @@ int main(void) {
     extern void ui_window_init(void);  // runtime/nvn/vulkan/device.c: the display plane and device
     ui_window_init();
     ps5_startup_mark("window up");
+    if (!ps5_startup_romfs_wait(why, sizeof why)) {
+        fprintf(stderr, "startup failed: %s\n", why);
+        exit_title();
+    }
     first_start_precompile();
     ps5_startup_mark("precompile done or skipped");
     extern void ps5_startup_splash_start(void);

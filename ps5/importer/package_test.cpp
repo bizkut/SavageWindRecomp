@@ -17,6 +17,10 @@
 
 using Clock = std::chrono::steady_clock;
 extern "C" void savagewind_package_set_coalesce(int);
+extern "C" void *savagewind_package_open(const char *, const char *const *, size_t, unsigned, char *, size_t);
+extern "C" void savagewind_package_close(void *);
+extern "C" int savagewind_package_open_addons(void *);
+extern "C" int savagewind_package_addons(const char *, const char *const *, size_t);
 static void test_coalesced_reads(RomfsImage *image) {
     uint64_t size = romfs_image_size(image);
     for (uint64_t offset : {uint64_t(0), uint64_t(1), uint64_t(16383), uint64_t(16384),
@@ -234,7 +238,15 @@ int main(int argc, char **argv) {
         savagewind_exefs_close(exefs);
         char why[256] = {};
         auto start = Clock::now();
-        RomfsImage *image = romfs_image_open_package(argv[1], const_cast<const char *const *>(argv + 4), size_t(argc - 4), 0, why, sizeof why);
+        const auto paths = const_cast<const char *const *>(argv + 4);
+        size_t count = size_t(argc - 4);
+        void *package = savagewind_package_open(argv[1], paths, count, 0, why, sizeof why);
+        if (!package) throw std::runtime_error(why);
+        if (savagewind_package_open_addons(package) != savagewind_package_addons(argv[1], paths, count)) {
+            savagewind_package_close(package);
+            throw std::runtime_error("cached add-on selection differs from a fresh lookup");
+        }
+        RomfsImage *image = romfs_image_adopt_package(package, why, sizeof why);
         double open_time = seconds(start);
         if (!image) throw std::runtime_error(why);
         test_coalesced_reads(image);
