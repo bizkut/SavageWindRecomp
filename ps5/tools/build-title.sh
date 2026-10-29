@@ -67,6 +67,8 @@ for source in "$@"; do
             extra=(-include "$root/third_party/FidelityFX/ffx_compat.h") ;;
         runtime/nvn/hd_ui_ncnn.cpp)
             extra=(-I"$PS5_NCNN_SRC/src" -I"$PS5_NCNN_SRC/../build/src") ;;
+        runtime/gamecode_compile.cpp)
+            extra=(-fno-rtti) ;;
     esac
     # shellcheck disable=SC2086
     cc "${std[@]}" "${extra[@]}" -O2 -g1 -Wall -Wextra -fno-omit-frame-pointer -ffunction-sections -fdata-sections \
@@ -94,9 +96,13 @@ source "$root/ps5/tools/link-recipe.sh"
 link_recipe "$sdk" "$build" "${PS5_RADV_ARCHIVE:-}" || exit 2
 if [[ ${PS5_GAMECODE_EXPORTS:-0} == 1 ]]; then
     export_args=()
-    for archive in "$root"/build/ps5/gamecode*/libgamecode.a; do
-        [[ -f $archive ]] && export_args+=(--archive "$archive")
-    done
+    if [[ -n ${PS5_GAMECODE_EXPORT_MANIFEST:-} ]]; then
+        export_args+=(--manifest "$PS5_GAMECODE_EXPORT_MANIFEST")
+    else
+        for archive in "$root"/build/ps5/gamecode*/libgamecode.a; do
+            [[ -f $archive ]] && export_args+=(--archive "$archive")
+        done
+    fi
     for object in "${objects[@]}"; do
         export_args+=(--object "$object")
     done

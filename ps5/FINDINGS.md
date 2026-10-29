@@ -1410,6 +1410,39 @@ bytes from one module]. The first console object differed from the PC's in 38 by
 With `LLVM_APPEND_VC_REV=OFF` in `build-llvm-ps5.sh` both give `clang version 18.1.8` and the console and PC
 objects are **byte-identical** (897,016 bytes, SHA-256 `267ea1a1…`, 0 differing 4 KiB blocks).
 
+**LLVM 18 verifier issue (host, 1.9.0):** compiling generated `main_137.c`, function
+`f_7000330b98`, with LLVM 18.1.3 or 18.1.8 and the backend verifier enabled aborts with
+`Instruction does not dominate all uses!`: a `sunkaddr` GEP used by a store is not dominated by its definition.
+The name identifies LLVM's CodeGenPrepare address-sinking transformation; the exact cause and whether the emitted
+machine code is correct are not yet verified. The shipped PC driver uses `-disable-llvm-verifier`, and the M12
+compiler follows that driver setting. A function-only, game-derived reproducer is retained privately under
+`build/gamecode-verifier-repro.c`; it is not distributed. This is not evidence that the offending function is safe.
+
+**M12 pipeline, host 1.9.0:** `tools/test_gamecode_compile.sh` generated and compiled **996** objects in archive
+order with eight workers, then obtained **996/996 cache hits** on a second run. Cold combined generation/compile
+wall time was **488.16 s**, peak RSS **3,867,864 KiB**; the generation producer's **475.53 s** includes waiting for
+the bounded compile queue and overlaps compilation. The warm build took **15.57 s** / **718,124 KiB** peak RSS.
+All 996 objects differ bytewise from the PC archive; in each, every ELF section and its semantic metadata except
+`.comment` matched. The archive was built by Ubuntu clang **18.1.3**, while the in-process compiler reports
+**18.1.8** in `.comment`. This is a host comparison, not a console qualification.
+
+**Trailing-object PS5 ABI defect (host analysis of `gamecode-cold.klog`):** the faulting instruction read the
+last `MachineMemOperand *` in an out-of-line `MachineInstr::ExtraInfo` array. PS5 Clang lays out `ExtraInfo` at
+size 12, alignment 4 despite its empty aligned trailing-object base; the old `TrailingObjects` size calculation
+reserved `12 + 8*N` bytes while its accessor aligned the first pointer to offset 16. That underallocation is
+consistent with the observed corrupted pointer; the crash's full cause is not proven by the log alone.
+`llvm-18-ps5-trailingobjects.patch` accounts for the actual base size and every legal base-address alignment
+residue in both size APIs. `llvm-ps5-layout-check.cpp` checks the PS5 record layouts at compile time: with the
+original header the checks fail for `ExtraInfo`, `DeclGroup`, `TemplateParameterList`, and the synthetic probe;
+with the patch they pass. The target and host LLVM archives were rebuilt. A host cold/warm test with patched
+LLVM produced 996 objects in order and 996 cache hits, and all 996 objects were byte-identical to the pre-patch
+host output (both differ from the Ubuntu 18.1.3 PC archive only in `.comment`). This is not console validation.
+
+The header census found the same empty-base assumption in `SmallVector` (already patched). Other manual
+base-relative storage worth retaining as ABI guards includes Clang's `CapturedStmt`, `CXXConstructExpr`,
+`OverloadedTemplateStorage`, and template argument storage in `AutoType` and template-specialization types;
+their targeted alignment assertions pass. This audit is not proof that every unexamined template is safe.
+
 ## 2026-10-29 — M12 spike S9: the generator in C++, identical to Python, and running on the console (host; .41, ps5/evidence/m8/s9-console*.klog)
 
 `tools/gen_cpp` (C++17, slices 1–5) replaces `tools/gen.py` for generation: NSO/layout/unwind parsing, the AArch64
@@ -1439,6 +1472,13 @@ rodata **22,282,888**, data **1,437,912**, bss **0**, total reserved image **246
 Link time was **0.649 s** and process peak RSS **738,104 KiB** (including mapped input and the host census).
 The synthetic clang-18 objects exercised the five supported relocations, dual-view execution, GOT loads, code
 pointers, zeroed bss, alignment, weak/strong selection, range failure and the explicit unsupported-input errors.
+
+With symbolic fixup recording enabled, the same 996-object input produced **5,391,386 fixups**. Replaying its
+canonical image at a second pair of host views was byte-identical to a fresh link at those views; the synthetic
+test also covered a direct PLT32 call becoming a thunk after relocation. The recorded PC32 census had **0**
+references between the image's RW and RX views; external PC32 references and future input can still exceed range.
+This run linked in **1.250 s** with process peak RSS **1,260,728 KiB**; this includes the mapped input, metadata,
+canonical image and census, not a console memory measurement.
 
 This is a host result, not a console loader or game execution result. The earlier archive census found `.eh_frame`
 in 992 objects; it is preserved and relocated here, but unwinder registration is not implemented or measured.

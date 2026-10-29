@@ -190,6 +190,76 @@ static void first_start_precompile(void) {
         g_pc.shaders, g_pc.keys, g_pc.made, g_pc.cached, g_pc.failed, g_pc.pipelines, st == SP_FAILED ? ": " : "",
         st == SP_FAILED ? g_pc.why : "", heap.mapped_bytes / 1048576.0, heap.peak_bytes / 1048576.0);
 }
+#ifdef GAMECODE_CONSOLE
+bool ps5_gamecode_prepare(void (*progress)(void *, const char *, size_t, size_t), void *context,
+                          char *why, size_t why_size);
+bool ps5_exefs_validate_gamecode(char *why, size_t why_size);
+static struct {
+    atomic_int stage, done, total, finished;
+    bool success;
+    char why[512];
+} g_gamecode;
+
+static void gamecode_progress(void *unused, const char *stage, size_t done, size_t total) {
+    (void)unused;
+    int value = strstr(stage, "generat") ? 1 :
+                (strstr(stage, "compil") || !strcmp(stage, "cache")) ? 2 : strstr(stage, "link") ? 3 : 0;
+    atomic_store(&g_gamecode.stage, value);
+    atomic_store(&g_gamecode.done, (int)done);
+    atomic_store(&g_gamecode.total, (int)total);
+}
+
+static void *gamecode_main(void *unused) {
+    (void)unused;
+    plat_thread_heap_own();
+    g_gamecode.success = ps5_gamecode_prepare(gamecode_progress, NULL, g_gamecode.why, sizeof g_gamecode.why);
+    atomic_store(&g_gamecode.finished, 1);
+    return NULL;
+}
+
+static bool first_start_gamecode(char *why, size_t why_size) {
+    extern void vk_present_progress(float done, const char *const *lines);
+    extern void gpu_lock(void), gpu_unlock(void);
+    pthread_attr_t attr;
+    pthread_t thread;
+    int rc = pthread_attr_init(&attr);
+    if (rc) {
+        snprintf(why, why_size, "game code thread attributes failed: %d", rc);
+        return false;
+    }
+    rc = pthread_attr_setstacksize(&attr, 8u << 20);
+    if (!rc) rc = pthread_create(&thread, &attr, gamecode_main, NULL);
+    pthread_attr_destroy(&attr);
+    if (rc) {
+        snprintf(why, why_size, "game code thread creation failed: %d", rc);
+        return false;
+    }
+    while (!atomic_load(&g_gamecode.finished)) {
+        int stage = atomic_load(&g_gamecode.stage);
+        int done = atomic_load(&g_gamecode.done);
+        int total = atomic_load(&g_gamecode.total);
+        if (stage == 2 && !total) total = 996;
+        float part = total > 0 ? (float)done / (float)total : 0;
+        if (part > 1) part = 1;
+        float fraction = stage == 1 ? part * 0.1f : stage == 2 ? 0.1f + part * 0.8f : stage == 3 ? 0.9f : 0;
+        char pct[32], step[160];
+        snprintf(pct, sizeof pct, "%d %%", (int)(fraction * 100));
+        if (stage == 1) snprintf(step, sizeof step, "Building game code: generating");
+        else if (stage == 2) snprintf(step, sizeof step, "Building game code: compiling %d of %d", done, total);
+        else if (stage == 3) snprintf(step, sizeof step, "Building game code: linking");
+        else snprintf(step, sizeof step, "Building game code: checking cache");
+        const char *lines[] = {"Building game code", pct, step, "This happens only on the first start and after an update."};
+        gpu_lock();
+        vk_present_progress(fraction, lines);
+        gpu_unlock();
+        usleep(100000);
+    }
+    pthread_join(thread, NULL);
+    if (!g_gamecode.success) snprintf(why, why_size, "%s", g_gamecode.why);
+    return g_gamecode.success;
+}
+#endif
+
 
 int main(void) {
     startup_ns = plat_now_ns();
@@ -213,7 +283,25 @@ int main(void) {
     rt_paths_init();
     ps5_startup_mark("paths and permission repair done");
     char why[512] = "";
-    if (!gamelib_load(NULL, why, sizeof why) || !ps5_exefs_init("/data/savagewind/import", why, sizeof why)) {
+#ifdef GAMECODE_CONSOLE
+    extern void ui_window_init(void);
+    ui_window_init();
+    bool startup_ok = ps5_exefs_init("/data/savagewind/import", why, sizeof why) &&
+        first_start_gamecode(why, sizeof why) && gamelib_load(NULL, why, sizeof why) &&
+        ps5_exefs_validate_gamecode(why, sizeof why);
+#else
+    bool startup_ok = gamelib_load(NULL, why, sizeof why) && ps5_exefs_init("/data/savagewind/import", why, sizeof why);
+#endif
+    if (!startup_ok) {
+#ifdef GAMECODE_CONSOLE
+        extern void vk_present_progress(float done, const char *const *lines);
+        extern void gpu_lock(void), gpu_unlock(void);
+        const char *lines[] = {"Startup failed", "", why, "Check the log and restart."};
+        gpu_lock();
+        vk_present_progress(0, lines);
+        gpu_unlock();
+        sleep(8);
+#endif
         fprintf(stderr, "startup failed: %s\n", why);
         exit_title();
     }

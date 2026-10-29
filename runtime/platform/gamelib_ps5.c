@@ -8,18 +8,38 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef GAMECODE_CONSOLE
+#include "../gamecode_link.h"
+
+static GameLibTables tables = {GAMELIB_ABI, GAMELIB_ID, NULL, NULL, NULL, NULL, NULL};
+
+void ps5_gamelib_set_image(const GameLinkImage *image) {
+    tables.modules = image->game_modules;
+    tables.nmodules = image->game_module_count;
+    tables.version = image->game_version;
+    tables.sites = image->game_sites;
+    tables.nsites = image->game_site_count;
+}
+#define game_version (tables.version)
+#define game_sites (tables.sites)
+#define game_site_count (*tables.nsites)
+#define game_module_count (*tables.nmodules)
+#else
 extern const GameLibModule game_modules[];
 extern const uint32_t game_module_count;
 extern const char game_version[];
 extern const GameLibSite game_sites[];
 extern const uint32_t game_site_count;
+#endif
 
 GameSites g_site;
 const char *g_game_version = "";
+#ifndef GAMECODE_CONSOLE
 static const GameLibTables tables = {
     GAMELIB_ABI, GAMELIB_ID, game_modules, &game_module_count,
     game_version, game_sites, &game_site_count
 };
+#endif
 static bool loaded;
 
 bool gamelib_load(const char *game_dir, char *why, size_t why_size) {
@@ -32,6 +52,12 @@ bool gamelib_load(const char *game_dir, char *why, size_t why_size) {
 #undef GAME_SITE_ENTRY
 #undef GAME_SITE_OPTIONAL_ENTRY
     };
+#ifdef GAMECODE_CONSOLE
+    if (!tables.modules || !tables.nmodules || !tables.version || !tables.sites || !tables.nsites) {
+        if (why && why_size) snprintf(why, why_size, "game code layout symbols are missing");
+        return false;
+    }
+#endif
     if (strcmp(game_version, "1.9.0")) {
         if (why && why_size) snprintf(why, why_size, "linked game code is not version 1.9.0");
         return false;
@@ -50,7 +76,11 @@ bool gamelib_load(const char *game_dir, char *why, size_t why_size) {
     return true;
 }
 const GameLibTables *gamelib_tables(void) { return loaded ? &tables : NULL; }
+#ifdef GAMECODE_CONSOLE
+bool gamelib_present(const char *game_dir) { (void)game_dir; return tables.nmodules && game_module_count != 0; }
+#else
 bool gamelib_present(const char *game_dir) { (void)game_dir; return game_module_count != 0; }
+#endif
 bool gamelib_compat(void) { return false; }
 const char *gamelib_id(void) { return GAMELIB_ID; }
 const char *gamelib_cpu_problem(void) { return NULL; } // PS5 is the fixed x86-64-v3 target.

@@ -95,12 +95,19 @@ struct Emitter {
     PatchContext patch_context;
     std::map<U, std::string> patches;
 
-    explicit Emitter(Discovery &dis, const std::string &hle_path, const std::map<std::string, U> &sites)
+    explicit Emitter(Discovery &dis, const std::string &hle_path, const std::map<std::string, U> &sites,
+                     const std::string *hle_text = nullptr)
         : d(dis), patch_context{dis.nso.image.data(), dis.nso.image.size(), dis.base, sites},
           patches(make_patches(patch_context))
     {
         std::set<std::string> want;
-        std::ifstream f(hle_path);
+        std::ifstream file_stream;
+        std::istringstream memory_stream;
+        if (hle_text)
+            memory_stream.str(*hle_text);
+        else
+            file_stream.open(hle_path);
+        std::istream &f = hle_text ? static_cast<std::istream &>(memory_stream) : file_stream;
         std::string s;
         while (std::getline(f, s)) {
             if (!s.empty() && s[0] == '#')
@@ -267,9 +274,10 @@ struct Options {
 };
 
 static void generate(const std::string &name, const fs::path &input, U base, const fs::path &outdir,
-                     const Options &opts, const std::map<std::string, U> *resolved_sites = nullptr)
+                     const Options &opts, const std::map<std::string, U> *resolved_sites = nullptr,
+                     const Bytes *input_bytes = nullptr, const std::string *hle_text = nullptr)
 {
-    Nso n(file(input));
+    Nso n(input_bytes ? *input_bytes : file(input));
     std::map<std::string, U> sites;
     if (name == "main" && !opts.no_sites) {
         if (resolved_sites)
@@ -278,7 +286,7 @@ static void generate(const std::string &name, const fs::path &input, U base, con
             sites = game_sites::for_module(n, base, opts.any_version).sites;
     }
     Discovery d(n, base);
-    Emitter e(d, opts.hlepath, sites);
+    Emitter e(d, opts.hlepath, sites, hle_text);
     auto order = d.run(false);
     auto full_order = order;
     if (opts.limit && opts.limit < order.size())

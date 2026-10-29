@@ -41,6 +41,8 @@ typedef struct Link {
     size_t export_count;
     size_t alignment, size, got_base, thunk_base;
     size_t got_reserved, thunk_reserved, thunk_extra, thunk_used;
+    GameLinkFixup *fixups;
+    size_t fixup_count, fixup_written;
     unsigned char *rw;
     uintptr_t rx;
     char *error;
@@ -214,7 +216,7 @@ static int classify(const Elf64_Shdr *s)
     return (s->sh_flags & SHF_WRITE) ? 2 : 1;
 }
 
-static int symbol_address(Link *l, size_t oi, size_t si, uintptr_t *address)
+static int symbol_target(Link *l, size_t oi, size_t si, GameLinkTarget *target)
 {
     LinkObject *o = &l->objects[oi];
     const Elf64_Sym *s = &o->symbols[si];
@@ -228,11 +230,11 @@ static int symbol_address(Link *l, size_t oi, size_t si, uintptr_t *address)
         } else {
             const GameExport *e = find_export(l, name);
             if (e) {
-                *address = (uintptr_t)e->address;
+                *target = (GameLinkTarget){(uint64_t)(e - l->exports), GAME_LINK_TARGET_EXPORT};
                 return 1;
             }
             if (bind == STB_WEAK) {
-                *address = 0;
+                *target = (GameLinkTarget){0, GAME_LINK_TARGET_ABSOLUTE};
                 return 1;
             }
             return fail(l, "%s: unresolved symbol %s", o->name, name);
@@ -240,20 +242,20 @@ static int symbol_address(Link *l, size_t oi, size_t si, uintptr_t *address)
     }
     if (s->st_shndx == SHN_UNDEF) {
         if (bind == STB_WEAK) {
-            *address = 0;
+            *target = (GameLinkTarget){0, GAME_LINK_TARGET_ABSOLUTE};
             return 1;
         }
         return fail(l, "%s: unresolved symbol %s", o->name, name);
     }
     if (s->st_shndx == SHN_ABS) {
-        *address = s->st_value;
+        *target = (GameLinkTarget){s->st_value, GAME_LINK_TARGET_ABSOLUTE};
         return 1;
     }
     const Elf64_Shdr *sec = &o->sections[s->st_shndx];
     if (o->offsets[s->st_shndx] == SIZE_MAX || s->st_value > sec->sh_size)
         return fail(l, "%s: symbol %s points outside an allocated section", o->name, name);
-    uintptr_t base = (sec->sh_flags & SHF_WRITE) ? (uintptr_t)l->rw : l->rx;
-    *address = base + o->offsets[s->st_shndx] + s->st_value;
+    target->kind = (sec->sh_flags & SHF_WRITE) ? GAME_LINK_TARGET_RW : GAME_LINK_TARGET_RX;
+    target->value = o->offsets[s->st_shndx] + s->st_value;
     return 1;
 }
 
@@ -286,6 +288,9 @@ static int relocation_sections(Link *l, int apply)
                 if (o->offsets[r->sh_info] == SIZE_MAX)
                     continue;
                 if (!apply) {
+                    if (l->fixup_count == SIZE_MAX)
+                        return fail(l, "too many relocations");
+                    l->fixup_count++;
                     if ((type == R_X86_64_GOTPCRELX || type == R_X86_64_REX_GOTPCRELX) &&
                         o->got[si] == SIZE_MAX)
                         o->got[si] = l->got_reserved++;
@@ -297,58 +302,236 @@ static int relocation_sections(Link *l, int apply)
                     }
                     continue;
                 }
-                size_t extra_slot = 0;
-                if (type == R_X86_64_PLT32 && rel[k].r_addend != -4)
-                    extra_slot = l->thunk_reserved + extra_index++;
-                uintptr_t s;
-                if (!symbol_address(l, oi, si, &s))
+                GameLinkFixup *fixup = &l->fixups[l->fixup_written++];
+                fixup->offset = o->offsets[r->sh_info] + rel[k].r_offset;
+                fixup->addend = rel[k].r_addend;
+                fixup->type = type;
+                fixup->place_view = (target->sh_flags & SHF_WRITE) ? GAME_LINK_TARGET_RW : GAME_LINK_TARGET_RX;
+                fixup->slot_offset = UINT64_MAX;
+                if (!symbol_target(l, oi, si, &fixup->target))
                     return 0;
-                size_t pos = o->offsets[r->sh_info] + rel[k].r_offset;
-                uintptr_t p = ((target->sh_flags & SHF_WRITE) ? (uintptr_t)l->rw : l->rx) + pos;
-                __int128 value;
-                if (type == R_X86_64_GOTPCRELX || type == R_X86_64_REX_GOTPCRELX) {
-                    size_t slot = l->got_base + o->got[si] * 8;
-                    memcpy(l->rw + slot, &s, 8);
-                    value = (__int128)l->rx + slot + rel[k].r_addend - p;
-                } else if (type == R_X86_64_64) {
-                    value = (__int128)s + rel[k].r_addend;
-                } else {
-                    value = (__int128)s + rel[k].r_addend - p;
-                    if (type == R_X86_64_PLT32 && (value < INT32_MIN || value > INT32_MAX)) {
-                        size_t used_flag = (size_t)1 << (sizeof(size_t) * CHAR_BIT - 1);
-                        int extra = rel[k].r_addend != -4;
-                        size_t index = extra ? extra_slot : (o->thunks[si] & ~used_flag);
-                        size_t slot = l->thunk_base + index * 16;
-                        __int128 destination = (__int128)s + rel[k].r_addend + 4;
-                        if (destination < 0 || destination > UINTPTR_MAX)
-                            return fail(l, "%s: PLT32 thunk destination overflow", o->name);
-                        uintptr_t thunk_target = (uintptr_t)destination;
-                        unsigned char thunk[16] = {0xff, 0x25, 0, 0, 0, 0};
-                        memcpy(thunk + 6, &thunk_target, 8);
-                        memcpy(l->rw + slot, thunk, sizeof thunk);
-                        value = (__int128)l->rx + slot - 4 - p;
-                        if (extra || !(o->thunks[si] & used_flag)) {
-                            l->thunk_used++;
-                            if (!extra)
-                                o->thunks[si] |= used_flag;
-                        }
-                    }
-                }
-                if (type == R_X86_64_64) {
-                    if (value < 0 || value > UINT64_MAX)
-                        return fail(l, "%s: absolute relocation overflow", o->name);
-                    uint64_t v = (uint64_t)value;
-                    memcpy(l->rw + pos, &v, sizeof v);
-                } else {
-                    if (value < INT32_MIN || value > INT32_MAX)
-                        return fail(l, "%s: PC-relative relocation out of range", o->name);
-                    int32_t v = (int32_t)value;
-                    memcpy(l->rw + pos, &v, sizeof v);
+                if (type == R_X86_64_GOTPCRELX || type == R_X86_64_REX_GOTPCRELX)
+                    fixup->slot_offset = l->got_base + o->got[si] * 8;
+                else if (type == R_X86_64_PLT32) {
+                    size_t index = rel[k].r_addend == -4 ? o->thunks[si] : l->thunk_reserved + extra_index++;
+                    fixup->slot_offset = l->thunk_base + index * 16;
                 }
             }
         }
     }
     return 1;
+}
+
+static int resolve_target(Link *l, const GameLinkImage *image, GameLinkTarget target, uintptr_t *address)
+{
+    uintptr_t base;
+    switch (target.kind) {
+    case GAME_LINK_TARGET_RW:
+    case GAME_LINK_TARGET_RX:
+        if (target.value > image->size)
+            return fail(l, "fixup target outside image");
+        base = target.kind == GAME_LINK_TARGET_RW ? (uintptr_t)l->rw : l->rx;
+        if (target.value > UINTPTR_MAX - base)
+            return fail(l, "fixup target address overflow");
+        *address = base + (uintptr_t)target.value;
+        return 1;
+    case GAME_LINK_TARGET_EXPORT:
+        if (target.value >= l->export_count)
+            return fail(l, "fixup export index out of range");
+        *address = (uintptr_t)l->exports[target.value].address;
+        return 1;
+    case GAME_LINK_TARGET_ABSOLUTE:
+        if (target.value > UINTPTR_MAX)
+            return fail(l, "absolute target address overflow");
+        *address = (uintptr_t)target.value;
+        return 1;
+    default:
+        return fail(l, "invalid fixup target kind");
+    }
+}
+
+static int apply_fixups(Link *l, const GameLinkImage *image)
+{
+    size_t *owners = NULL;
+    unsigned char *covered = NULL;
+    size_t owner_count, covered_size;
+    int ok = 0;
+    if (!image->canonical || (image->fixup_count && !image->fixups) || !l->rw ||
+        !image->alignment || (image->alignment & (image->alignment - 1)) ||
+        ((uintptr_t)l->rw & (image->alignment - 1)) || (l->rx & (image->alignment - 1)) ||
+        image->size > UINTPTR_MAX - (uintptr_t)l->rw || image->size > UINTPTR_MAX - l->rx ||
+        image->got_offset > image->size || image->got_count > (image->size - image->got_offset) / 8 ||
+        image->thunk_offset > image->size ||
+        image->thunk_capacity > (image->size - image->thunk_offset) / 16 ||
+        image->got_offset % 8 || image->thunk_offset % 16 ||
+        image->got_offset + image->got_count * 8 > image->thunk_offset ||
+        image->thunk_offset + image->thunk_capacity * 16 != image->size ||
+        image->size > UINTPTR_MAX - (uintptr_t)image->canonical ||
+        ((uintptr_t)image->canonical < (uintptr_t)l->rw + image->size &&
+         (uintptr_t)l->rw < (uintptr_t)image->canonical + image->size))
+        return fail(l, "invalid image metadata or view alignment");
+    for (size_t i = image->got_offset; i < image->size; i++) {
+        if (image->canonical[i])
+            return fail(l, "nonzero canonical GOT or thunk storage");
+    }
+    for (size_t i = 0; i < 5; i++) {
+        GameLinkTarget t = image->layout[i];
+        if ((t.kind != GAME_LINK_TARGET_NONE && t.kind != GAME_LINK_TARGET_RW && t.kind != GAME_LINK_TARGET_RX) ||
+            (t.kind == GAME_LINK_TARGET_NONE && t.value) ||
+            (t.kind != GAME_LINK_TARGET_NONE && t.value > image->got_offset))
+            return fail(l, "invalid layout symbol");
+    }
+    if (image->got_count > SIZE_MAX - image->thunk_capacity)
+        return fail(l, "slot count overflow");
+    owner_count = image->got_count + image->thunk_capacity;
+    covered_size = image->got_offset / 8 + !!(image->got_offset % 8);
+    owners = calloc(owner_count ? owner_count : 1, sizeof(*owners));
+    covered = calloc(covered_size ? covered_size : 1, 1);
+    if (!owners || !covered) {
+        fail(l, "out of memory validating fixups");
+        goto done_apply;
+    }
+    for (size_t i = 0; i < image->fixup_count; i++) {
+        const GameLinkFixup *f = &image->fixups[i];
+        size_t width = f->type == R_X86_64_64 ? 8 : 4;
+        size_t slot_index = SIZE_MAX;
+        uintptr_t unused;
+        if (f->type != R_X86_64_64 && f->type != R_X86_64_PC32 && f->type != R_X86_64_PLT32 &&
+            f->type != R_X86_64_GOTPCRELX && f->type != R_X86_64_REX_GOTPCRELX) {
+            fail(l, "unsupported fixup type %u", f->type);
+            goto done_apply;
+        }
+        if ((f->place_view != GAME_LINK_TARGET_RW && f->place_view != GAME_LINK_TARGET_RX) ||
+            f->offset > SIZE_MAX || !within((size_t)f->offset, width, image->got_offset) ||
+            !resolve_target(l, image, f->target, &unused)) {
+            if (l->error && l->error_size && !l->error[0])
+                fail(l, "invalid fixup position");
+            goto done_apply;
+        }
+        for (size_t b = 0; b < width; b++) {
+            size_t pos = (size_t)f->offset + b;
+            unsigned char mask = (unsigned char)(1u << (pos % 8));
+            if (covered[pos / 8] & mask) {
+                fail(l, "overlapping fixups");
+                goto done_apply;
+            }
+            covered[pos / 8] |= mask;
+        }
+        if (f->type == R_X86_64_GOTPCRELX || f->type == R_X86_64_REX_GOTPCRELX) {
+            if (f->slot_offset < image->got_offset || f->slot_offset - image->got_offset >= image->got_count * 8 ||
+                (f->slot_offset - image->got_offset) % 8) {
+                fail(l, "invalid GOT slot");
+                goto done_apply;
+            }
+            slot_index = (size_t)(f->slot_offset - image->got_offset) / 8;
+        } else if (f->type == R_X86_64_PLT32) {
+            if (f->slot_offset < image->thunk_offset ||
+                f->slot_offset - image->thunk_offset >= image->thunk_capacity * 16 ||
+                (f->slot_offset - image->thunk_offset) % 16) {
+                fail(l, "invalid thunk slot");
+                goto done_apply;
+            }
+            slot_index = image->got_count + (size_t)(f->slot_offset - image->thunk_offset) / 16;
+        } else if (f->slot_offset != UINT64_MAX) {
+            fail(l, "unexpected fixup slot");
+            goto done_apply;
+        }
+        if (slot_index != SIZE_MAX) {
+            if (owners[slot_index]) {
+                const GameLinkFixup *previous = &image->fixups[owners[slot_index] - 1];
+                if (previous->target.kind != f->target.kind || previous->target.value != f->target.value ||
+                    (f->type == R_X86_64_PLT32 && previous->addend != f->addend)) {
+                    fail(l, "conflicting shared fixup slot");
+                    goto done_apply;
+                }
+            } else {
+                owners[slot_index] = i + 1;
+            }
+        }
+    }
+    memcpy(l->rw, image->canonical, image->size);
+    for (size_t i = 0; i < image->fixup_count; i++) {
+        const GameLinkFixup *f = &image->fixups[i];
+        uintptr_t s;
+        if (!resolve_target(l, image, f->target, &s))
+            goto done_apply;
+        uintptr_t p = (f->place_view == GAME_LINK_TARGET_RW ? (uintptr_t)l->rw : l->rx) + f->offset;
+        __int128 value;
+        if (f->type == R_X86_64_GOTPCRELX || f->type == R_X86_64_REX_GOTPCRELX) {
+            memcpy(l->rw + f->slot_offset, &s, 8);
+            value = (__int128)l->rx + f->slot_offset + f->addend - p;
+        } else if (f->type == R_X86_64_64) {
+            value = (__int128)s + f->addend;
+        } else {
+            value = (__int128)s + f->addend - p;
+            if (f->type == R_X86_64_PLT32 && (value < INT32_MIN || value > INT32_MAX)) {
+                __int128 destination = (__int128)s + f->addend + 4;
+                if (destination < 0 || destination > UINTPTR_MAX) {
+                    fail(l, "PLT32 thunk destination overflow");
+                    goto done_apply;
+                }
+                uintptr_t thunk_target = (uintptr_t)destination;
+                unsigned char thunk[16] = {0xff, 0x25, 0, 0, 0, 0};
+                if (!l->rw[f->slot_offset])
+                    l->thunk_used++;
+                memcpy(thunk + 6, &thunk_target, 8);
+                memcpy(l->rw + f->slot_offset, thunk, sizeof thunk);
+                value = (__int128)l->rx + f->slot_offset - 4 - p;
+            }
+        }
+        if (f->type == R_X86_64_64) {
+            if (value < 0 || value > UINT64_MAX) {
+                fail(l, "absolute relocation overflow");
+                goto done_apply;
+            }
+            uint64_t v = (uint64_t)value;
+            memcpy(l->rw + f->offset, &v, sizeof v);
+        } else {
+            if (value < INT32_MIN || value > INT32_MAX) {
+                fail(l, "PC-relative relocation out of range");
+                goto done_apply;
+            }
+            int32_t v = (int32_t)value;
+            memcpy(l->rw + f->offset, &v, sizeof v);
+        }
+    }
+    ok = 1;
+done_apply:
+    free(owners);
+    free(covered);
+    return ok;
+}
+
+int gamecode_link_apply_fixups(const GameLinkImage *image, void *rw, uintptr_t rx,
+                               const GameExport *exports, size_t count, char *error, size_t error_size)
+{
+    Link l = {0};
+    l.error = error;
+    l.error_size = error_size;
+    l.rw = rw;
+    l.rx = rx;
+    l.exports = exports;
+    l.export_count = count;
+    if (error && error_size)
+        error[0] = 0;
+    if (!image || (count && !exports))
+        return fail(&l, "invalid replay arguments");
+    for (size_t i = 0; i < count; i++) {
+        if (!exports[i].name || (i && strcmp(exports[i - 1].name, exports[i].name) >= 0))
+            return fail(&l, "export table is not strictly sorted");
+    }
+    return apply_fixups(&l, image);
+}
+
+void gamecode_link_free_metadata(GameLinkImage *image)
+{
+    if (image) {
+        free(image->canonical);
+        free(image->fixups);
+        image->canonical = NULL;
+        image->fixups = NULL;
+        image->fixup_count = 0;
+    }
 }
 
 int gamecode_link(const GameLinkObject *objects, size_t count, const GameExport *exports,
@@ -487,13 +670,28 @@ int gamecode_link(const GameLinkObject *objects, size_t count, const GameExport 
         fail(&l, "image views have invalid alignment or range");
         goto done;
     }
-    memset(l.rw, 0, l.size);
+    image->rw = l.rw;
+    image->rx = l.rx;
+    image->size = l.size;
+    image->alignment = l.alignment;
+    image->got_offset = l.got_base;
+    image->got_count = l.got_reserved;
+    image->thunk_offset = l.thunk_base;
+    image->thunk_capacity = l.thunk_reserved + l.thunk_extra;
+    image->fixup_count = l.fixup_count;
+    image->canonical = calloc(l.size ? l.size : 1, 1);
+    image->fixups = calloc(l.fixup_count ? l.fixup_count : 1, sizeof(*image->fixups));
+    if (!image->canonical || !image->fixups) {
+        fail(&l, "out of memory recording image");
+        goto done;
+    }
+    l.fixups = image->fixups;
     for (size_t i = 0; i < count; i++) {
         LinkObject *o = &l.objects[i];
         for (size_t j = 0; j < o->section_count; j++) {
             const Elf64_Shdr *s = &o->sections[j];
             if (o->offsets[j] != SIZE_MAX && s->sh_type != SHT_NOBITS)
-                memcpy(l.rw + o->offsets[j], o->bytes + s->sh_offset, s->sh_size);
+                memcpy(image->canonical + o->offsets[j], o->bytes + s->sh_offset, s->sh_size);
         }
     }
     if (!relocation_sections(&l, 1))
@@ -505,22 +703,23 @@ int gamecode_link(const GameLinkObject *objects, size_t count, const GameExport 
         Definition *d = definition(&l, names[i]);
         uintptr_t address;
         if (d->name) {
-            if (!symbol_address(&l, d->object, d->symbol, &address))
+            if (!symbol_target(&l, d->object, d->symbol, &image->layout[i]) ||
+                !resolve_target(&l, image, image->layout[i], &address))
                 goto done;
             *outputs[i] = (void *)address;
         }
     }
-    image->rw = l.rw;
-    image->rx = l.rx;
-    image->size = l.size;
-    image->got_count = l.got_reserved;
+    if (!apply_fixups(&l, image))
+        goto done;
     image->thunk_count = l.thunk_used;
     ok = 1;
 done:
     if (!ok && l.rw)
         allocator->release(allocator->context, l.rw, l.size);
-    if (!ok)
+    if (!ok) {
+        gamecode_link_free_metadata(image);
         memset(image, 0, sizeof(*image));
+    }
     for (size_t i = 0; i < count; i++) {
         free(l.objects[i].offsets);
         free(l.objects[i].got);

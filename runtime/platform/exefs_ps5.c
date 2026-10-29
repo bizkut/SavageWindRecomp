@@ -109,6 +109,36 @@ static uint8_t *read_exefs(const char *path, size_t *len, size_t max) {
     exefs_read_ns += plat_now_ns() - start;
     return data;
 }
+#ifdef GAMECODE_CONSOLE
+uint8_t *ps5_exefs_read_module(const char *name, size_t *size) {
+    return read_exefs(name, size, 256u * 1024u * 1024u);
+}
+
+bool ps5_exefs_validate_gamecode(char *why, size_t why_size) {
+    static const char *const names[] = {"main", "subsdk0", "sdk"};
+    const GameLibTables *tables = gamelib_tables();
+    if (!tables || *tables->nmodules != sizeof names / sizeof names[0]) {
+        snprintf(why, why_size, "game code module layout is invalid");
+        return false;
+    }
+    for (size_t i = 0; i < sizeof names / sizeof names[0]; i++) {
+        const GameLibModule *module = &tables->modules[i];
+        void *file = savagewind_exefs_file_open(exefs, names[i]);
+        unsigned char header[0x60];
+        bool valid = file && savagewind_exefs_file_pread(file, header, sizeof header, 0) == sizeof header &&
+                     !memcmp(header, "NSO0", 4);
+        savagewind_exefs_file_close(file);
+        char id[65];
+        if (valid) for (size_t j = 0; j < 32; j++) snprintf(id + j * 2, 3, "%02x", header[0x40 + j]);
+        if (!valid || !module->name || strcmp(module->name, names[i]) || !module->build_id ||
+            strcmp(module->build_id, id)) {
+            snprintf(why, why_size, "package %s build ID does not match game code", names[i]);
+            return false;
+        }
+    }
+    return true;
+}
+#endif
 
 typedef struct {
     const char *keys;
@@ -220,6 +250,7 @@ bool ps5_exefs_init(const char *directory, char *why, size_t why_size) {
     if (valid && ok && !strcmp(version, "1.9.0") && !strncmp(id, build_id, 16)) supported = true;
     GAME_VERSIONS(CHECK_VERSION)
 #undef CHECK_VERSION
+#ifndef GAMECODE_CONSOLE
     const GameLibTables *tables = gamelib_tables();
     const char *linked_id = NULL;
     if (tables) for (uint32_t i = 0; i < *tables->nmodules; i++)
@@ -230,6 +261,14 @@ bool ps5_exefs_init(const char *directory, char *why, size_t why_size) {
         exefs = NULL;
         return false;
     }
+#else
+    if (!supported) {
+        snprintf(why, why_size, "package main is not the supported 1.9.0 game");
+        savagewind_exefs_close(exefs);
+        exefs = NULL;
+        return false;
+    }
+#endif
     loader_set_file_reader(read_exefs);
     return true;
 }

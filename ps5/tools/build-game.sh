@@ -9,11 +9,21 @@ root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$root"
 sdk=$(bash ps5/tools/setup-deps.sh)
 export PS5_PAYLOAD_SDK="$sdk"
-# PS5_GAMECODE_OPT=-O2 (A/B; default -O1): the game code build-gamecode.sh made with that flag
+variant=${PS5_GAMECODE:-linked}
+[[ $variant == linked || $variant == console ]] || { echo "invalid PS5_GAMECODE: $variant" >&2; exit 1; }
 gamecode_opt=${PS5_GAMECODE_OPT:--O1}
 game="$root/build/ps5/gamecode$([[ $gamecode_opt == -O1 ]] || printf '%s' "$gamecode_opt")/libgamecode.a"
-[[ -f $game ]] || { echo "Build the user game code first with PS5_GAMECODE_OPT=$gamecode_opt ps5/tools/build-gamecode.sh" >&2; exit 1; }
-echo "game code: $game" >&2
+if [[ $variant == linked ]]; then
+    [[ -f $game ]] || { echo "Build the user game code first with PS5_GAMECODE_OPT=$gamecode_opt ps5/tools/build-gamecode.sh" >&2; exit 1; }
+    echo "game code: $game" >&2
+else
+    game=
+    llvm="$root/build/ps5/llvm"
+    llvm_src="$llvm/llvm-project-18.1.8.src"
+    llvm_target="$llvm/target"
+    [[ -f $llvm_target/lib/libclangCodeGen.a ]] || bash ps5/tools/build-llvm-ps5.sh
+    [[ -f $root/build/ps5/capstone/libcapstone.a ]] || bash ps5/tools/build-capstone-ps5.sh
+fi
 package="$root/build/ps5/importer/ps5-build"
 [[ -f $package/build.ninja ]] || bash ps5/tools/build-importer.sh
 PS5_PAYLOAD_SDK="$sdk" cmake --build "$package" -j1 --target savagewind-package
@@ -78,11 +88,36 @@ export PS5_CFLAGS="-fexceptions -Iruntime -Iruntime/nvn -Iruntime/ps5/include -I
 -I$mh -I$mh/framegen/include -I$ffx/sdk/include -I$ffx/sdk/include/FidelityFX/gpu \
 -I$ffx/sdk/src/components -I$ffx/sdk/src/shared -I$ffx/sdk/src/backends/shared -I$ffx/spirv \
 -DSW_FSR3=1 -DROMFS_PACKAGE -DTRANSLATOR_ID=\"$translator_id\" -DSPIRV_ID=\"$spirv_id\" -march=x86-64-v3 -Wno-format"
+console_sources=()
+title_name=game
+if [[ $variant == console ]]; then
+    title_name=gamecode-console
+    generator_id=$(cat tools/gen_cpp/*.cpp tools/gen_cpp/*.h runtime/hle/hle_symbols.txt \
+        "$root/build/ps5/capstone/libcapstone.a" | sha256sum | cut -d' ' -f1)
+    compile_id=$(
+        {
+            cat runtime/gamecode_compile.cpp runtime/cpu.h runtime/gamelib.h runtime/simd*.h
+            sha256sum "$llvm_target"/lib/libclang*.a "$llvm_target"/lib/libLLVM*.a
+            (cd "$sdk/target/include" && find -L . -type f -print0 | sort -z | xargs -0 sha256sum)
+            (cd "$(clang-18 -print-resource-dir)/include" && find -L . -type f -print0 | sort -z | xargs -0 sha256sum)
+        } | sha256sum | cut -d' ' -f1
+    )
+    export PS5_GAMECODE_EXPORT_MANIFEST="$root/runtime/gamecode_export_symbols.txt"
+    export PS5_CFLAGS="$PS5_CFLAGS -DGAMECODE_CONSOLE -DGAMECODE_GENERATOR_SHA256=\"$generator_id\" \
+-DGAMECODE_COMPILE_SHA256=\"$compile_id\" -I$llvm_src/clang/include -I$llvm_target/tools/clang/include \
+-I$llvm_src/llvm/include -I$llvm_target/include -I$root/build/s9-cpp/deps/capstone-5.0.9/src/include"
+    console_sources=(runtime/platform/gamecode_ps5.c runtime/gamecode_compile.cpp runtime/gamecode_link.c \
+        runtime/gamecode_cache.c tools/gen_cpp/patches.cpp ps5/probe/s8_compat.c)
+fi
 # (--wrap=ps5_heap_*: the SDK's malloc wrappers go through runtime/ps5/heap_arenas.c, arenas of their own per thread)
 export PS5_GAMECODE_EXPORTS=1
-export PS5_LINK_INPUTS="--gc-sections --wrap=exit --wrap=_exit --wrap=_Exit --wrap=quick_exit --wrap=abort --wrap=sceSystemServiceLoadExec --wrap=ps5_heap_malloc --wrap=ps5_heap_calloc --wrap=ps5_heap_memalign --wrap=ps5_heap_free --start-group $game $package/libsavagewind-package.a $ncnn/build/src/libncnn.a $ns/libpietendo/bin/linux/libpietendo.a $ns/libtoolchain/bin/linux/libtoolchain.a $ns/libfmt/bin/linux/libfmt.a $ns/liblz4/bin/linux/liblz4.a $ns/libmbedtls/bin/linux/libmbedtls.a $shaderc/lib/libshaderc_combined.a ${ffmpeg[*]:1} --end-group"
-app=$(bash ps5/tools/build-title.sh game \
-    runtime/platform/main_ps5.c runtime/platform/s7_ps5.c runtime/platform/ps5.c runtime/platform/gamelib_ps5.c \
+console_libs=
+if [[ $variant == console ]]; then
+    console_libs="$root/build/ps5/capstone/libcapstone.a $llvm_target/lib/*.a"
+fi
+export PS5_LINK_INPUTS="--gc-sections --wrap=exit --wrap=_exit --wrap=_Exit --wrap=quick_exit --wrap=abort --wrap=sceSystemServiceLoadExec --wrap=ps5_heap_malloc --wrap=ps5_heap_calloc --wrap=ps5_heap_memalign --wrap=ps5_heap_free --start-group $game $console_libs $package/libsavagewind-package.a $ncnn/build/src/libncnn.a $ns/libpietendo/bin/linux/libpietendo.a $ns/libtoolchain/bin/linux/libtoolchain.a $ns/libfmt/bin/linux/libfmt.a $ns/liblz4/bin/linux/liblz4.a $ns/libmbedtls/bin/linux/libmbedtls.a $shaderc/lib/libshaderc_combined.a ${ffmpeg[*]:1} --end-group"
+app=$(bash ps5/tools/build-title.sh "$title_name" \
+    "${console_sources[@]}" runtime/platform/main_ps5.c runtime/platform/s7_ps5.c runtime/platform/ps5.c runtime/platform/gamelib_ps5.c \
     runtime/platform/exefs_ps5.c runtime/ps5/sdl_shim.c runtime/ps5/log.c runtime/ps5/unavailable.c runtime/ps5/diagnostics.cpp \
     runtime/ps5/window.c runtime/ps5/input.c runtime/ps5/audio.c runtime/ps5/heap_arenas.c runtime/ps5/dynamic_resolution.c runtime/ps5/libc_aliases.S \
     build/ps5/game-gen/vk_globals.c \
@@ -115,4 +150,20 @@ cp "$model/realesr-animevideov3-x2.param" "$model/realesr-animevideov3-x4.param"
 cp ps5/REAL-ESRGAN-LICENSE.txt "$app/REAL-ESRGAN-LICENSE.txt"
 cp "$ncnn/src/LICENSE.txt" "$app/NCNN-LICENSE.txt"
 cp "$bc7/LICENSE" "$app/BC7ENC-LICENSE.txt"
+if [[ $variant == console ]]; then
+    includes="$app/gamecode-include"
+    mkdir -p "$includes/runtime"
+    cp runtime/cpu.h runtime/gamelib.h runtime/simd*.h "$includes/runtime/"
+    cp runtime/hle/hle_symbols.txt "$includes/"
+    cp -aL "$sdk/target/include" "$includes/include"
+    cp -aL "$(clang-18 -print-resource-dir)/include" "$includes/clang-include"
+    cp "$llvm_src/llvm/LICENSE.TXT" "$app/LLVM-LICENSE.txt"
+    cp "$root/build/s9-cpp/deps/capstone-5.0.9/src/LICENSE.TXT" "$app/Capstone-LICENSE.txt"
+    cp "$root/build/s9-cpp/deps/capstone-5.0.9/src/LICENSE_LLVM.TXT" "$app/Capstone-LLVM-LICENSE.txt"
+    variant_dir="$root/build/ps5/variants/$title_name"
+    mkdir -p "$variant_dir"
+    rm -rf -- "$variant_dir/PPSA90212"
+    cp -a "$app" "$variant_dir/PPSA90212"
+    app="$variant_dir/PPSA90212"
+fi
 printf '%s\n' "$app"

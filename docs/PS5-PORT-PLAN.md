@@ -721,6 +721,10 @@ The interim static title also builds a retained `GameExport` table from the avai
 generator/HLE hook names. Its digest covers the sorted names, symbol kinds, title compilation flags and linked
 runtime inputs; it is an ABI/cache identity, not proof of loader or console operation. The title still links the
 game-code archive normally.
+The optional `PS5_GAMECODE_EXPORT_MANIFEST` build setting selects a checked-in, game-content-free symbol list
+(`runtime/gamecode_export_symbols.txt`) instead of inspecting player archives while generating the export table.
+The linker still rejects any generated object's unresolved runtime symbol absent from that table.
+
 
 - **Format/link:** clang 18 emits ELF64 x86-64 relocatable objects in memory for the 997 generated C files
   (including layout and tables). A small deterministic in-title static linker consumes them in stable input order,
@@ -764,6 +768,10 @@ game-code archive normally.
   replace completed files through the storage broker. A corrupt, incomplete or mismatched cache is rebuilt, never
   executed. Cache individual compiled objects by source digest plus compiler, flags, headers and ABI identity,
   with atomic completion, so an interrupted build resumes without trusting partial files.
+  The console variant stores the versioned cache record in `image.bin` and publishes a size/SHA-256 `manifest`
+  last; the record contains the unrelocated image, section and layout metadata, identity and checked fixups.
+  Both files and each object plus its checksum sidecar are replaced through the broker. Cache reads validate the
+  manifest and record before relocation. This describes the implementation, not console qualification.
 - **Cutover and startup:** build a release variant without `libgamecode.a` or static references to its symbols.
   Resolve the five layout symbols from the finished image and construct `GameLibTables` in the runtime; keep
   `gamelib_load`'s version/site checks, `gamelib_tables`' lifetime and all existing dispatch consumers unchanged.

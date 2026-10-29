@@ -1,5 +1,9 @@
 #define _GNU_SOURCE
 #include "../runtime/gamecode_link.h"
+#ifdef GAMECODE_CACHE_TEST
+#include "../runtime/gamecode_cache.h"
+#include <mbedtls/sha256.h>
+#endif
 
 #include <elf.h>
 #include <errno.h>
@@ -127,6 +131,49 @@ static void expect_failure(GameLinkObject *objects, size_t count, GameExport *ex
     }
 }
 
+static void replay_matches_fresh(const GameLinkImage *first, const GameLinkObject *objects, size_t count,
+                                 const GameExport *exports, size_t export_count, int distant_rx)
+{
+    size_t size = first->size;
+    int fd = memfd_create("gamecode-link-replay", 0);
+    CHECK(fd >= 0 && !ftruncate(fd, size));
+    void *rw = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    void *rx = mmap(NULL, size, PROT_READ | PROT_EXEC, MAP_SHARED, fd, 0);
+    close(fd);
+    CHECK(rw != MAP_FAILED && rx != MAP_FAILED && rw != rx && rw != first->rw);
+    uintptr_t rx_base = (uintptr_t)rx + (distant_rx ? UINT64_C(0x100000000) : 0);
+    Buffer second = {rw, size, rx_base};
+    GameLinkAllocator allocator = {&second, allocate_image, release_image};
+    char error[256];
+    if (!gamecode_link_apply_fixups(first, rw, rx_base, exports, export_count, error, sizeof error)) {
+        fprintf(stderr, "replay failed: %s\n", error);
+        exit(1);
+    }
+    void *snapshot = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    CHECK(snapshot != MAP_FAILED);
+    memcpy(snapshot, rw, size);
+    GameLinkImage fresh;
+    if (!gamecode_link(objects, count, exports, export_count, &allocator, &fresh, error, sizeof error)) {
+        fprintf(stderr, "fresh link failed: %s\n", error);
+        exit(1);
+    }
+    CHECK(fresh.size == size && fresh.alignment == first->alignment);
+    if (distant_rx)
+        CHECK(first->thunk_count == 0 && fresh.thunk_count > 0);
+    CHECK(!memcmp(snapshot, rw, size));
+    CHECK(!memcmp(first->canonical, fresh.canonical, size));
+    CHECK(first->fixup_count == fresh.fixup_count);
+    for (size_t i = 0; i < 5; i++) {
+        CHECK(first->layout[i].kind == fresh.layout[i].kind);
+        CHECK(first->layout[i].value == fresh.layout[i].value);
+    }
+    gamecode_link_free_metadata(&fresh);
+    munmap(snapshot, size);
+    munmap(rw, size);
+    munmap(rx, size);
+    printf("replay equals fresh link: objects=%zu fixups=%zu\n", count, first->fixup_count);
+}
+
 static void synthetic(const char *path, GameLinkAllocator *a)
 {
     GameLinkObject object = load(path);
@@ -145,6 +192,38 @@ static void synthetic(const char *path, GameLinkAllocator *a)
     if (distance < INT32_MIN || distance > INT32_MAX)
         CHECK(image.thunk_count > 0);
     CHECK(image.got_count > 0 && image.text_size > 0 && image.bss_size >= 128);
+    replay_matches_fresh(&image, &object, 1, exports, 2, 0);
+    CHECK(image.fixup_count > 1);
+    GameLinkFixup saved = image.fixups[0];
+    image.fixups[0].target.kind = 99;
+    CHECK(!gamecode_link_apply_fixups(&image, image.rw, image.rx, exports, 2, error, sizeof error));
+    image.fixups[0] = saved;
+    image.fixups[0].target.kind = GAME_LINK_TARGET_EXPORT;
+    image.fixups[0].target.value = 2;
+    CHECK(!gamecode_link_apply_fixups(&image, image.rw, image.rx, exports, 2, error, sizeof error));
+    image.fixups[0] = saved;
+    image.fixups[0].offset = image.size;
+    CHECK(!gamecode_link_apply_fixups(&image, image.rw, image.rx, exports, 2, error, sizeof error));
+    image.fixups[0] = saved;
+    image.fixups[0].slot_offset = image.size;
+    CHECK(!gamecode_link_apply_fixups(&image, image.rw, image.rx, exports, 2, error, sizeof error));
+    image.fixups[0] = saved;
+    uint64_t second_offset = image.fixups[1].offset;
+    image.fixups[1].offset = image.fixups[0].offset;
+    CHECK(!gamecode_link_apply_fixups(&image, image.rw, image.rx, exports, 2, error, sizeof error));
+    image.fixups[1].offset = second_offset;
+    GameLinkTarget saved_layout = image.layout[0];
+    image.layout[0].value = image.size + 1;
+    CHECK(!gamecode_link_apply_fixups(&image, image.rw, image.rx, exports, 2, error, sizeof error));
+    image.layout[0] = saved_layout;
+    gamecode_link_free_metadata(&image);
+    void *external_address = exports[1].address;
+    exports[1].address = (void *)(image.rx + 64);
+    CHECK(gamecode_link(&object, 1, exports, 2, a, &image, error, sizeof error));
+    CHECK(image.thunk_count == 0);
+    replay_matches_fresh(&image, &object, 1, exports, 2, 1);
+    gamecode_link_free_metadata(&image);
+    exports[1].address = external_address;
     GameLinkObject pair[] = {object, object};
     expect_failure(pair, 2, exports, 2, a, "duplicate strong");
     expect_failure(&object, 1, exports, 1, a, "unresolved symbol");
@@ -227,10 +306,15 @@ static void synthetic(const char *path, GameLinkAllocator *a)
     CHECK(gamecode_link(mixed, 2, exports, 2, a, &image, error, sizeof error));
     CHECK(*(int *)image.game_module_count == 7);
     CHECK(((int (*)(void))image.game_version)() == 34);
+    gamecode_link_free_metadata(&image);
     munmap((void *)weak_object.data, weak_object.size);
     munmap((void *)object.data, object.size);
     puts("synthetic linker tests passed");
 }
+
+#ifdef GAMECODE_CACHE_TEST
+#include "test_gamecode_cache.inc"
+#endif
 
 int main(int argc, char **argv)
 {
@@ -247,7 +331,7 @@ int main(int argc, char **argv)
     if (!strcmp(argv[1], "--synthetic")) {
         synthetic(argv[2], &allocator);
     } else {
-        CHECK(!strcmp(argv[1], "--real"));
+        CHECK(!strcmp(argv[1], "--real") || !strcmp(argv[1], "--cache"));
         CHECK(argc >= 4);
         size_t count = (size_t)argc - 3;
         GameLinkObject *objects = calloc(count, sizeof(*objects));
@@ -284,6 +368,25 @@ int main(int argc, char **argv)
                "seconds=%.3f peak_rss_kib=%ld\n", count, image.text_size, image.rodata_size,
                image.data_size, image.bss_size, image.size, image.got_count, image.thunk_count,
                (end.tv_sec - begin.tv_sec) + (end.tv_nsec - begin.tv_nsec) / 1e9, usage.ru_maxrss);
+        size_t cross_view_pc32 = 0;
+        for (size_t i = 0; i < image.fixup_count; i++) {
+            const GameLinkFixup *f = &image.fixups[i];
+            if (f->type == R_X86_64_PC32 &&
+                ((f->place_view == GAME_LINK_TARGET_RW && f->target.kind == GAME_LINK_TARGET_RX) ||
+                 (f->place_view == GAME_LINK_TARGET_RX && f->target.kind == GAME_LINK_TARGET_RW)))
+                cross_view_pc32++;
+        }
+        printf("cross_view_pc32=%zu\n", cross_view_pc32);
+#ifdef GAMECODE_CACHE_TEST
+        if (!strcmp(argv[1], "--cache"))
+            cache_test(objects, count, exports, export_count, &allocator, &image);
+        else {
+#else
+        {
+#endif
+            replay_matches_fresh(&image, objects, count, exports, export_count, 0);
+            gamecode_link_free_metadata(&image);
+        }
         for (size_t i = 0; i < export_count; i++)
             free((void *)exports[i].name);
         free(exports);

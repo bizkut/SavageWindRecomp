@@ -47,14 +47,20 @@ def emitted_names():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--nm', required=True)
-    parser.add_argument('--archive', action='append', required=True)
+    parser.add_argument('--archive', action='append', default=[])
+    parser.add_argument('--manifest', type=Path)
     parser.add_argument('--object', action='append', default=[])
     parser.add_argument('--library', action='append', default=[])
     parser.add_argument('--output', required=True)
     parser.add_argument('--abi', required=True)
     args = parser.parse_args()
+    if not args.archive and not args.manifest:
+        parser.error('at least one --archive or --manifest is required')
     game_defs, game_undef = symbols(args.nm, args.archive)
     required = (game_undef - game_defs.keys()) | emitted_names()
+    if args.manifest:
+        required.update(line.strip() for line in args.manifest.read_text().splitlines()
+                        if line.strip() and not line.lstrip().startswith('#'))
     runtime_defs, _ = symbols(args.nm, args.object + args.library)
     missing = sorted(required - runtime_defs.keys())
     if missing:

@@ -1,0 +1,24 @@
+--- a/llvm/include/llvm/Support/TrailingObjects.h
++++ b/llvm/include/llvm/Support/TrailingObjects.h
+@@ -314,4 +314,14 @@
+   additionalSizeToAlloc(typename trailing_objects_internal::ExtractSecondType<
+                         TrailingTys, size_t>::type... Counts) {
+-    return ParentType::additionalSizeToAllocImpl(0, Counts...);
++    // Some ABIs do not propagate alignment from an empty base into BaseTy.
++    // The accessors align the absolute address after BaseTy, not an offset
++    // from zero. Reserve for every address permitted by BaseTy's alignment.
++    constexpr size_t MaxAlignment =
++        trailing_objects_internal::AlignmentCalcHelper<TrailingTys...>::Alignment;
++    constexpr size_t BaseAlignment = alignof(BaseTy);
++    constexpr size_t Slop = MaxAlignment > BaseAlignment
++                                ? MaxAlignment - BaseAlignment
++                                : 0;
++    return ParentType::additionalSizeToAllocImpl(sizeof(BaseTy) + Slop,
++                                                 Counts...) - sizeof(BaseTy);
+   }
+@@ -326,4 +336,4 @@
+   totalSizeToAlloc(typename trailing_objects_internal::ExtractSecondType<
+                    TrailingTys, size_t>::type... Counts) {
+-    return sizeof(BaseTy) + ParentType::additionalSizeToAllocImpl(0, Counts...);
++    return sizeof(BaseTy) + additionalSizeToAlloc<Tys...>(Counts...);
+   }
