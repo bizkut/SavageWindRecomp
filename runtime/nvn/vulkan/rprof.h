@@ -21,6 +21,10 @@ enum {
     RP_EXEC_IN, RP_EXEC_SUBMIT,
     // the steps of a draw (exec.c draw_; the rest of RP_OP_DRAW is "other")
     RP_D_PRE, RP_D_PASS, RP_D_KEY, RP_D_DYN, RP_D_VSET, RP_D_TEX, RP_D_FSET, RP_D_VTX,
+    // FSR 3's recorder synchronization and direct FidelityFX dispatch (subsets of draw)
+    RP_FSR3_DRAIN, RP_FSR3_DISPATCH,
+    RP_MVEC_RECORD, RP_MVEC_FRAME, RP_MVEC_MATCH, RP_MVEC_COPY, RP_MVEC_VARIANT, RP_SCENE_POST,
+    RP_PRE_PROGRAM, RP_PRE_DEBUG, RP_PRE_FEEDBACK, RP_PRE_FG, RP_PRE_SNAPSHOT, RP_PRE_GW, RP_PRE_MOTION, RP_PRE_REACTIVE,
     RP_COUNT
 };
 extern int g_rprof;              // the profile is on (rprof_init)

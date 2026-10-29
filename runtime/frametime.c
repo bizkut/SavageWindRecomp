@@ -9,6 +9,10 @@
 #include "framepace.h"
 #include "kernel.h"
 #include "rt.h"
+#ifdef __PROSPERO__
+#include "nvn/vulkan/record.h"
+#include "nvn/vulkan/rprof.h"
+#endif
 
 #ifdef __PROSPERO__
 #include "ps5/dynamic_resolution.h"
@@ -26,6 +30,40 @@ void ft_present_thread(void) {
 static uint64_t gpu_frame = ~0ull, gpu_ns;          // the frame being added up
 static uint64_t gpu_win_sum, gpu_win_max, gpu_win_n;  // closed frames of this window
 static uint64_t gpu_min_sum, gpu_min_n;               // ... of this minute ([perf])
+#ifdef __PROSPERO__
+// The GPU timestamp query arrives a few submissions later. Pair it with the same presented-frame number rather
+// than attributing the most recently resolved GPU time to a different frame.
+typedef struct {
+    uint64_t frame, dt, render, recorder_ticks, gpu, gpu_wait, recorder_wait;
+    uint64_t rp[RP_COUNT], draws, driver_ticks, driver_calls;
+    bool have_frame, have_gpu, late;
+} LateSample;
+static LateSample late_samples[256];
+static unsigned late_logged, normal_logged;
+static void late_report(LateSample *s) {
+    if (!s->have_frame || !s->have_gpu || (s->late ? late_logged >= 64 : normal_logged >= 16)) return;
+    double k = rprof_tick_ns() / 1e6;
+    LOG("[lateprofile] %s frame %llu dt %.3f render %.3f recorder_window %.3f gpu %.3f gpu_wait %.3f recorder_wait %.3f"
+        " draws %llu pre %.3f pass %.3f vset %.3f tex %.3f fset %.3f state %.3f list %.3f mvec %.3f match %.3f"
+        " scene %.3f fsr %.3f driver %.3f calls %llu ms\n",
+        s->late ? "late" : "normal", (unsigned long long)s->frame, s->dt / 1e6, s->render / 1e6,
+        s->recorder_ticks * k, s->gpu / 1e6, s->gpu_wait / 1e6, s->recorder_wait / 1e6,
+        (unsigned long long)s->draws, s->rp[RP_D_PRE] * k, s->rp[RP_D_PASS] * k, s->rp[RP_D_VSET] * k,
+        s->rp[RP_D_TEX] * k, s->rp[RP_D_FSET] * k, s->rp[RP_OP_STATE] * k, s->rp[RP_OP_LIST] * k,
+        s->rp[RP_MVEC_RECORD] * k, s->rp[RP_MVEC_MATCH] * k, s->rp[RP_SCENE_POST] * k,
+        s->rp[RP_FSR3_DISPATCH] * k, s->driver_ticks * k, (unsigned long long)s->driver_calls);
+    if (s->late) late_logged++; else normal_logged++;
+    s->have_frame = false;
+}
+static LateSample *late_slot(uint64_t frame) {
+    LateSample *s = &late_samples[frame % 256];
+    if ((!s->have_frame && !s->have_gpu) || s->frame != frame) {
+        memset(s, 0, sizeof *s);
+        s->frame = frame;
+    }
+    return s;
+}
+#endif
 
 static void gpu_close(void) {
     if (gpu_frame == ~0ull) return;
@@ -33,6 +71,14 @@ static void gpu_close(void) {
     if (gpu_ns > gpu_win_max) gpu_win_max = gpu_ns;
     gpu_min_sum += gpu_ns, gpu_min_n++;
     benchmark_gpu(gpu_frame, gpu_ns);
+#ifdef __PROSPERO__
+    if (g_rprof && benchmark_segment() >= 0) {
+        LateSample *s = late_slot(gpu_frame);
+        s->gpu = gpu_ns;
+        s->have_gpu = true;
+        late_report(s);
+    }
+#endif
     #ifdef __PROSPERO__
     dynamic_resolution_gpu(gpu_ns);
     #endif
@@ -274,6 +320,35 @@ void ft_frame(void) {
     if (thr_env == ~0ull) thr_env = getenv("SAVAGEWIND_HITCH_MS") ? (uint64_t)atoi(getenv("SAVAGEWIND_HITCH_MS")) * 1000000ull : 0;
     uint64_t thr = thr_env ? thr_env : period * 3 / 2 > 25000000 ? period * 3 / 2 : 25000000;
     bool on_time = dt <= period + period / 20, hitch = dt > thr;
+#ifdef __PROSPERO__
+    if (g_rprof) {
+        extern uint64_t renderer_present_count(void);
+        extern uint64_t g_vk_driver_ticks[], g_vk_driver_calls[];
+        extern const int g_vk_driver_count;
+        static uint64_t last_rp[RP_COUNT], last_draws, last_driver, last_driver_calls;
+        uint64_t driver = 0, calls = 0;
+        for (int i = 0; i < g_vk_driver_count; i++) driver += g_vk_driver_ticks[i], calls += g_vk_driver_calls[i];
+        static RecStats last_rec;
+        RecStats rec;
+        rec_stats(&rec);
+        if (benchmark_segment() >= 0) {
+            LateSample *s = late_slot(renderer_present_count());
+            s->dt = dt; s->render = rcpu; s->gpu_wait = d[FT_GPU_WAIT_NS];
+            s->recorder_ticks = rec.busy_ticks - last_rec.busy_ticks;
+            s->recorder_wait = rec.drain_ns - last_rec.drain_ns + rec.seq_wait_ns - last_rec.seq_wait_ns +
+                               rec.full_ns - last_rec.full_ns;
+            for (int i = 0; i < RP_COUNT; i++) s->rp[i] = g_rp[i] - last_rp[i];
+            s->draws = g_rp_n[RP_OP_DRAW] - last_draws;
+            s->driver_ticks = driver - last_driver;
+            s->driver_calls = calls - last_driver_calls;
+            s->have_frame = true; s->late = !on_time;
+            late_report(s);
+        }
+        memcpy(last_rp, g_rp, sizeof last_rp);
+        last_draws = g_rp_n[RP_OP_DRAW]; last_driver = driver; last_driver_calls = calls;
+        last_rec = rec;
+    }
+#endif
     win_frames++, win_dt_sum += dt, win_on_time += on_time, win_hitches += hitch;
     if (dt > win_dt_max) win_dt_max = dt;
     win_render_sum += rcpu, win_guest_sum += guest;

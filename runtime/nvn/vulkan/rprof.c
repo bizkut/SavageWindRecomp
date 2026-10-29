@@ -96,6 +96,23 @@ static void format(const Bucket *b, char *out, size_t n) {
         (double)b->ft[F_ACQUIRE] / 1e6 / f, (double)b->ft[F_GPU_WAIT] / 1e6 / f, (double)b->ft[F_BUILD_WAIT] / 1e6 / f,
         (double)b->ft[F_TEXTURE] / 1e6 / f, (double)b->ft[F_BUILD_INLINE] / 1e6 / f,
         cpu - (accounted - (double)(b->ft[F_GPU_WAIT] + b->ft[F_BUILD_WAIT] + b->ft[F_ACQUIRE]) / 1e6 / f));
+    if (at < n)
+        at += (size_t)snprintf(out + at, n - at, " | fsr3: drain %.2f dispatch %.2f (%.2f/f)",
+                               ms_of(r[RP_FSR3_DRAIN], k, f), ms_of(r[RP_FSR3_DISPATCH], k, f),
+                               b->rp_n[RP_FSR3_DISPATCH] / f);
+    if (at < n)
+        at += (size_t)snprintf(out + at, n - at, " | mvec: record %.2f (%.0f/f, frame %.2f match %.2f copy %.2f %.1f KB/f) variant %.2f; scene post %.2f",
+                               ms_of(r[RP_MVEC_RECORD], k, f), b->rp_n[RP_MVEC_RECORD] / f,
+                               ms_of(r[RP_MVEC_FRAME], k, f), ms_of(r[RP_MVEC_MATCH], k, f),
+                               ms_of(r[RP_MVEC_COPY], k, f), b->rp_n[RP_MVEC_COPY] / f / 1024.0,
+                               ms_of(r[RP_MVEC_VARIANT], k, f), ms_of(r[RP_SCENE_POST], k, f));
+    if (at < n)
+        at += (size_t)snprintf(out + at, n - at, " | pre split: program %.2f debug %.2f feedback %.2f fg %.2f"
+                               " snapshot %.2f gw %.2f motion %.2f reactive %.2f",
+                               ms_of(r[RP_PRE_PROGRAM], k, f), ms_of(r[RP_PRE_DEBUG], k, f),
+                               ms_of(r[RP_PRE_FEEDBACK], k, f), ms_of(r[RP_PRE_FG], k, f),
+                               ms_of(r[RP_PRE_SNAPSHOT], k, f), ms_of(r[RP_PRE_GW], k, f),
+                               ms_of(r[RP_PRE_MOTION], k, f), ms_of(r[RP_PRE_REACTIVE], k, f));
     if (at < n && rec_on()) {
         const RecStats *s = &b->rec;
         at += (size_t)snprintf(out + at, n - at, " | recorder thread: busy %.2f, %.0f packets/f (%.0f KB), queuing %.2f; render "

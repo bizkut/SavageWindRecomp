@@ -4806,6 +4806,7 @@ static void wait_built(_Atomic int *state) {  // (0 building: until built or fai
 
 static void draw_(CmdRec *r, bool indexed) {
     if (profd) prof_tp_ = rp_now();
+    uint64_t pre_t = g_rprof ? rp_now() : 0;
     fg_before_draw();
     if (!st.program) { stat_skipped++; return; }
     static int no_key_gen = -1;
@@ -4847,6 +4848,7 @@ static void draw_(CmdRec *r, bool indexed) {
         stat_skipped++;
         return;
     }
+    if (g_rprof) { uint64_t now = rp_now(); g_rp[RP_PRE_PROGRAM] += now - pre_t; pre_t = now; }
     {   // fragment-shader hash: skip lists (SAVAGEWIND_SKIP_FSHASH), debug logs, GPU profile labels
         static uint64_t last_fs, last_hash;
         static bool last_skip;
@@ -4896,8 +4898,11 @@ static void draw_(CmdRec *r, bool indexed) {
         }
     }
     {   // (SAVAGEWIND_TRACE_TEX) a draw into a traced texture: its fragment shader and the textures it samples
+        static int trace_enabled = -1;
+        if (trace_enabled < 0) trace_enabled = getenv("SAVAGEWIND_TRACE_TEX") != NULL;
         bool any = false;
-        for (int i = 0; i < st.rt.ncolor && i < 8 && !any; i++) any = vk_trace_tex(st.rt.color[i]);
+        if (trace_enabled)
+            for (int i = 0; i < st.rt.ncolor && i < 8 && !any; i++) any = vk_trace_tex(st.rt.color[i]);
         if (any) {
             NvnTexture *srcs[16];
             int ns = 0;
@@ -4957,26 +4962,35 @@ static void draw_(CmdRec *r, bool indexed) {
                 st.scissor[0][3], (unsigned long long)st.program->stages[1].code_addr, buf);
         }
     }
+    if (g_rprof) { uint64_t now = rp_now(); g_rp[RP_PRE_DEBUG] += now - pre_t; pre_t = now; }
     fb_draws++;
     if (lst_on > 0) lst_draw(pr);
     resolve_feedback(pr);
+    if (g_rprof) { uint64_t now = rp_now(); g_rp[RP_PRE_FEEDBACK] += now - pre_t; pre_t = now; }
+    uint64_t scene_t = g_rprof ? rp_now() : 0;
     scene_post(pr, r);
+    if (g_rprof) g_rp[RP_SCENE_POST] += rp_now() - scene_t;
+    if (g_rprof) pre_t = rp_now();
     fg_draw(pr, r);
+    if (g_rprof) { uint64_t now = rp_now(); g_rp[RP_PRE_FG] += now - pre_t; pre_t = now; }
     snap_reason = "draw-depthwrite";
     if (st.rt.depth && st.ds[0] && st.ds[1]) snapshots_invalidate(st.rt.depth);
     snap_reason = "draw-colorwrite";
     for (int i = 0; i < st.rt.ncolor; i++)
         if (st.rt.color[i] && ((st.channel_mask >> (i * 4)) & 0xF)) snapshots_invalidate(st.rt.color[i]);
+    if (g_rprof) { uint64_t now = rp_now(); g_rp[RP_PRE_SNAPSHOT] += now - pre_t; pre_t = now; }
     {
         uint32_t sm = st.program->stage_mask, all = ~0u;  // (geometry and tessellation stages: every bound buffer)
         uint32_t cbufs[6] = {pr->vi->cbuf_mask, pr->fi->cbuf_mask, sm & 4 ? all : 0, sm & 8 ? all : 0, sm & 16 ? all : 0, 0};
         gw_check(cbufs, true, indexed ? r->x[3] : 0, indexed ? (uint64_t)r->x[2] * 4 : 0);
     }
+    if (g_rprof) { uint64_t now = rp_now(); g_rp[RP_PRE_GW] += now - pre_t; }
     uint64_t prof_tb_ = profd ? rp_now() : 0;
     begin_pass();
     uint64_t prof_pass_ = profd ? rp_now() - prof_tb_ : 0;
     g_rp[RP_D_PASS] += prof_pass_;
     if (pass_void) { stat_skipped++; return; }
+    if (g_rprof) pre_t = rp_now();
     // ---- motion vectors (mvec.c): an opaque draw of a pass with the motion target is recorded (its identity and the
     // vertex shader's inputs, for the next frame); matched with one of the previous frame, it is drawn with its motion
     // program: the vertex shader also run on the previous frame's inputs, the fragment shader also writing the distance
@@ -4987,7 +5001,9 @@ static void draw_(CmdRec *r, bool indexed) {
     // the camera's motion in the fallback).
     bool fullscreen = r->x[2] <= 6 && st.viewport[0][2] >= pass_w * 0.9f / pass_sx && st.viewport[0][3] >= pass_h * 0.9f / pass_sy;
     if (pass_mvec >= 0 && st.ds[0] && st.ds[1]) {
-        MvecDrawIn md = {0};
+        MvecDrawIn md;
+        md.iaddr = 0; md.first = 0; md.base_vertex = 0;
+        md.vs_streams = 0; md.ncb = 0;
         md.frame = renderer_present_count();
         md.gen = __atomic_load_n(&gcopy_gen, __ATOMIC_RELAXED);
         md.vs = st.program->stages[0].code_addr;
@@ -5012,9 +5028,12 @@ static void draw_(CmdRec *r, bool indexed) {
             if (size > u.size && u.size) size = u.size;
             md.cb[md.ncb].slot = (uint8_t)k; md.cb[md.ncb].addr = u.addr; md.cb[md.ncb++].size = size;
         }
+        uint64_t mvec_t = g_rprof ? rp_now() : 0;
         int rec = mvec_record(&md);
+        if (g_rprof) { g_rp[RP_MVEC_RECORD] += rp_now() - mvec_t; ++g_rp_n[RP_MVEC_RECORD]; }
         bool pushed = rec >= 0 && !fullscreen && mvec_push(rec, mvec_pc);
         if (pushed) {
+            uint64_t variant_t = g_rprof ? rp_now() : 0;
             ShaderKey mvk = {0}, mfk = {0};
             mvk.glsl = mfk.glsl = 1;
 #ifdef __PROSPERO__
@@ -5027,9 +5046,11 @@ static void draw_(CmdRec *r, bool indexed) {
             mvk.mvec = 1;
             mfk.mvec_rt = (uint8_t)(pass_mvec + 1);
             Prog *mp = get_program(st.program, &mvk, &mfk);
+            if (g_rprof) g_rp[RP_MVEC_VARIANT] += rp_now() - variant_t;
             if (mp && atomic_load(&mp->state) == 1) { pr = mp; mvec_draw = true; mvec_drawn(); }  // (else built later)
         }
     }
+    if (g_rprof) { uint64_t now = rp_now(); g_rp[RP_PRE_MOTION] += now - pre_t; pre_t = now; }
     // ---- reactive mask (mvec.c): a blended effect in a pass with the motion target (not writing depth, not full-screen:
     // those are BOTW's fog and light composites) marks its pixels in the motion target's .z (its alpha, kept by MAX), for
     // a temporal upscaler to trust its history less there
@@ -5059,6 +5080,7 @@ static void draw_(CmdRec *r, bool indexed) {
             pass_color_unsynced |= (uint8_t)(1u << i);
         }
     VkCommandBuffer cb = vk_cmd();
+    if (g_rprof) { uint64_t now = rp_now(); g_rp[RP_PRE_REACTIVE] += now - pre_t; }
 
     uint32_t mode = (uint32_t)r->x[0];
     VkPrimitiveTopology topo;
@@ -7309,8 +7331,11 @@ static TexBackend *fsr3_scene(VkCommandBuffer cb, TexBackend *b, uint32_t ow, ui
         .reset = last == ~0ull || last + 1 != frame,
     };
     last_ns = ns;
+    uint64_t fsr3_t = g_rprof ? rp_now() : 0;
     rec_drain();  // FidelityFX records directly into this command buffer.
+    if (g_rprof) { uint64_t now = rp_now(); g_rp[RP_FSR3_DRAIN] += now - fsr3_t; fsr3_t = now; }
     bool dispatched = fsr3_dispatch(&d);
+    if (g_rprof) { g_rp[RP_FSR3_DISPATCH] += rp_now() - fsr3_t; ++g_rp_n[RP_FSR3_DISPATCH]; }
     vk_dyn_forget();  // FSR can bind pipelines and sets even when dispatch fails.
     if (!dispatched) return NULL;
     last = frame;

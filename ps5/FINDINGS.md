@@ -1145,3 +1145,15 @@ source px) 0.1974 (+37 %, bold); fixed build `43ed3e99` 0.137 (−5 %). The game
 threshold to the sheet values, so the 4× sheet now encodes the original value-vs-distance curve (ramp width kept in
 source pixels) on the improved outline, for both the SDF and sharpen paths. The user confirmed on the TV: "much
 better". Benchmark (benchmark.txt `internal = …`) now keeps the configured upscaler instead of forcing FSR 1.
+
+## 2026-10-29 — FSR 3.1 render-thread cost: motion vectors, not the dispatch (.41, ps5/evidence/m8/ab-*.klog)
+
+Render profiles (FSR 3.1 Performance + FG, 1080p→4K, matched ~4,580-draw windows): render thread 15.2 ms vs 12.4
+with FSR 1; FSR 3.1's dispatch only 0.20 ms. The difference is per-draw motion-vector work (PR #194):
+`pre` 4.6 vs 2.0 ms, of which motion 2.3 ms (up to 2,740 records/frame in busy scenes; matching 0.56–1.35, snapshot
+copies only 0.02–0.06 ms, 96–243 KB). Every late frame was the render thread (17.5–19.8 ms; GPU 11.7–12.6 ms, no
+GPU or recorder waits). Retained: SIMD candidate distances (match 0.56→0.36 ms), stable radix sort of previous
+indices, no zero-init of motion inputs. Tried and dropped (no gain): match-range cache, reuse of the motion snapshot
+as the draw's uniform upload. The profiler itself costs ~1 ms, so on-time is judged with it off.
+Plain benchmark, default settings, eboot `add37208…`: **97.6 % and 98.0 %** on time (before: 95.1 %), render
+11.1 ms, GPU 12.4 ms, 59.6 / 119.3 fps. FSR 1: 99.9 %. Remaining: motion ~2.2 ms in busy scenes.

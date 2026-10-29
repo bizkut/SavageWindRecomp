@@ -19,11 +19,15 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(__SSE2__)
+#include <emmintrin.h>
+#endif
 
 #include "../../rt.h"
 #include "../../settings.h"
 #include "../output_scale.h"
 #include "mvec.h"
+#include "rprof.h"
 
 #define MVEC_SLOTS 5
 #define HIST_START (2ull << 20)  // (the Great Plateau uses ~0.3 MB a frame; a fuller frame grows it, losing one frame's motion)
@@ -231,6 +235,14 @@ static int log_every(void) {
     if (every < 0) every = getenv("SAVAGEWIND_MVEC_LOG") ? atoi(getenv("SAVAGEWIND_MVEC_LOG")) : 0;
     return every;
 }
+static bool match_by_order(void) {
+    static int order = -1;  // SAVAGEWIND_MVEC_MATCH=order: match by draw order alone
+    if (order < 0) {
+        const char *e = getenv("SAVAGEWIND_MVEC_MATCH");
+        order = e && !strcmp(e, "order");
+    }
+    return order;
+}
 static void log_stats(uint64_t frame) {
     int every = log_every();
     if (every <= 0 || ++stat.frames < (uint64_t)every) return;
@@ -267,6 +279,34 @@ static int cmp_by_key2(const void *a, const void *b) {
     return *(const int32_t *)a < *(const int32_t *)b ? -1 : *(const int32_t *)a > *(const int32_t *)b;
 }
 
+// Stable LSD sort: input indices are in draw order, so equal keys retain the same ordering as the qsort comparator.
+static void sort_indices(int32_t *idx, int n, bool loose) {
+    static int32_t *tmp;
+    static int cap;
+    if (n > cap) {
+        int32_t *p = realloc(tmp, (size_t)n * sizeof *tmp);
+        if (!p) { qsort(idx, (size_t)n, sizeof *idx, loose ? cmp_by_key2 : cmp_by_key); return; }
+        tmp = p;
+        cap = n;
+    }
+    int32_t *src = idx, *dst = tmp;
+    for (int shift = 0; shift < 64; shift += 8) {
+        uint32_t count[256] = {0}, pos[256];
+        for (int i = 0; i < n; i++) {
+            const MvecRec *r = &sort_prev->rec[src[i]];
+            count[((loose ? r->key2 : r->key) >> shift) & 255]++;
+        }
+        uint32_t sum = 0;
+        for (int i = 0; i < 256; i++) { pos[i] = sum; sum += count[i]; }
+        for (int i = 0; i < n; i++) {
+            const MvecRec *r = &sort_prev->rec[src[i]];
+            unsigned b = (unsigned)(((loose ? r->key2 : r->key) >> shift) & 255);
+            dst[pos[b]++] = src[i];
+        }
+        int32_t *swap = src; src = dst; dst = swap;
+    }
+}
+
 static int32_t prev_match(MvecRec *r);
 
 // A new presented frame: the slot it records into, the previous frame's index
@@ -288,9 +328,13 @@ static void frame_begin(uint64_t frame) {
     s->frame = frame;
     prev = last >= 0 && slots[last].frame + 1 == frame ? last : -1;
     memset(dedupe, 0, sizeof dedupe);
-    for (int i = 0; i < INDEX; i++) prev_index[i].rec = ord_index[i].rec = -1;
+    bool need_order_index = match_by_order() || log_every() > 0;
+    for (int i = 0; i < INDEX; i++) {
+        ord_index[i].rec = -1;
+        if (need_order_index) prev_index[i].rec = -1;
+    }
     if (prev < 0) return;
-    for (int i = 0; i < slots[prev].nrec; i++) {  // (key, ordinal) -> record
+    for (int i = 0; need_order_index && i < slots[prev].nrec; i++) {  // (key, ordinal) -> record
         const MvecRec *r = &slots[prev].rec[i];
         uint32_t h = slot_hash(r->key, r->ord);
         while (prev_index[h].rec >= 0) h = (h + 1) & (INDEX - 1);
@@ -308,11 +352,11 @@ static void frame_begin(uint64_t frame) {
     }
     for (int i = 0; i < npk; i++) pidx[i] = i;
     sort_prev = &slots[prev];
-    qsort(pidx, (size_t)npk, sizeof *pidx, cmp_by_key);
+    sort_indices(pidx, npk, false);
     for (int i = 0; i < npk; i++) pkeys[i] = slots[prev].rec[pidx[i]].key;
     memset(ptaken, 0, (size_t)npk * sizeof *ptaken);
     for (int i = 0; i < npk; i++) pidx2[i] = i;
-    qsort(pidx2, (size_t)npk, sizeof *pidx2, cmp_by_key2);
+    sort_indices(pidx2, npk, true);
     for (int i = 0; i < npk; i++) pkeys2[i] = slots[prev].rec[pidx2[i]].key2;
     memset(rtaken, 0, (size_t)npk * sizeof *rtaken);
 }
@@ -324,7 +368,35 @@ static float fingerprint_distance(const MvecRec *a, const MvecRec *b) {
     if (!n || a->nfeat != b->nfeat) return 1;
     if (!memcmp(a->feat, b->feat, (size_t)n * sizeof a->feat[0])) return 0;  // (a still object: most draws)
     float d = 0;
-    for (int i = 0; i < n; i++) {
+    int i = 0;
+#if defined(__SSE2__)
+    {
+        const __m128 abs_mask = _mm_castsi128_ps(_mm_set1_epi32(0x7fffffff));
+        const __m128i exp_mask = _mm_set1_epi32(0x7f800000);
+        for (; i + 4 <= n; i += 4) {
+            __m128 x = _mm_loadu_ps(&a->feat[i]), y = _mm_loadu_ps(&b->feat[i]);
+            __m128i xe = _mm_and_si128(_mm_castps_si128(x), exp_mask);
+            __m128i ye = _mm_and_si128(_mm_castps_si128(y), exp_mask);
+            if (_mm_movemask_epi8(_mm_or_si128(_mm_cmpeq_epi32(xe, exp_mask), _mm_cmpeq_epi32(ye, exp_mask)))) {
+                for (int j = 0; j < 4; j++) {
+                    float xx = a->feat[i + j], yy = b->feat[i + j];
+                    if (!isfinite(xx) || !isfinite(yy)) d += memcmp(&xx, &yy, 4) ? 1.0f : 0.0f;
+                    else { float s = fabsf(xx) + fabsf(yy); d += s > 1e-6f ? fabsf(xx - yy) / s : 0.0f; }
+                }
+            } else {
+                __m128 sum = _mm_add_ps(_mm_and_ps(x, abs_mask), _mm_and_ps(y, abs_mask));
+                __m128 diff = _mm_and_ps(_mm_sub_ps(x, y), abs_mask);
+                __m128 active = _mm_cmpgt_ps(sum, _mm_set1_ps(1e-6f));
+                // Avoid dividing inactive zero lanes; the original contributes zero for these.
+                __m128 divisor = _mm_or_ps(_mm_and_ps(active, sum), _mm_andnot_ps(active, _mm_set1_ps(1.0f)));
+                float v[4];
+                _mm_storeu_ps(v, _mm_and_ps(active, _mm_div_ps(diff, divisor)));
+                d += v[0]; d += v[1]; d += v[2]; d += v[3];
+            }
+        }
+    }
+#endif
+    for (; i < n; i++) {
         float x = a->feat[i], y = b->feat[i];
         if (!isfinite(x) || !isfinite(y)) { d += memcmp(&x, &y, 4) ? 1.0f : 0.0f; continue; }
         float s = fabsf(x) + fabsf(y);
@@ -426,7 +498,9 @@ static uint32_t copy_in(uint64_t addr, uint64_t size, uint64_t gen, bool share) 
         if (want > s->grow) s->grow = want;
         return UINT32_MAX;
     }
+    uint64_t copy_t = g_rprof ? rp_now() : 0;
     memcpy(s->ptr + off, (const void *)(uintptr_t)addr, size);
+    if (g_rprof) { g_rp[RP_MVEC_COPY] += rp_now() - copy_t; g_rp_n[RP_MVEC_COPY] += size; }
     stat.copied += size;
     s->used = off + size;
     if (share) dedupe[h] = (Dedupe){addr, size, gen, (uint32_t)off};
@@ -435,7 +509,11 @@ static uint32_t copy_in(uint64_t addr, uint64_t size, uint64_t gen, bool share) 
 
 int mvec_record(const MvecDrawIn *d) {
     if (!mvec_enabled()) return -1;
-    if (d->frame != cur_frame) frame_begin(d->frame);
+    if (d->frame != cur_frame) {
+        uint64_t t = g_rprof ? rp_now() : 0;
+        frame_begin(d->frame);
+        if (g_rprof) g_rp[RP_MVEC_FRAME] += rp_now() - t;
+    }
     Slot *s = &slots[cur];
     stat.draws++;
     if (s->full) { stat.dropped++; return -1; }
@@ -490,12 +568,13 @@ int mvec_record(const MvecDrawIn *d) {
     r->key = key;
     r->key2 = key2;
     r->ord = next_ordinal(key);
-    static int by_order = -1;  // SAVAGEWIND_MVEC_MATCH=order: (testing) match by draw order alone
-    if (by_order < 0) by_order = getenv("SAVAGEWIND_MVEC_MATCH") && !strcmp(getenv("SAVAGEWIND_MVEC_MATCH"), "order");
+    bool by_order = match_by_order();
+    uint64_t match_t = g_rprof ? rp_now() : 0;
     r->prev = by_order ? prev_lookup(key, r->ord) : prev_match(r);
     static int loose = -1;  // SAVAGEWIND_MVEC_LOOSE=0: (testing) no prev_match_loose
     if (loose < 0) loose = !getenv("SAVAGEWIND_MVEC_LOOSE") || atoi(getenv("SAVAGEWIND_MVEC_LOOSE")) != 0;
     if (r->prev < 0 && !by_order && loose) r->prev = prev_match_loose(r);
+    if (g_rprof) g_rp[RP_MVEC_MATCH] += rp_now() - match_t;
     if (log_every() > 0) {  // (statistics) the object's world position (slot 4's translation) against each matching's previous draw
         int32_t po = prev_lookup(key, r->ord), pf = by_order ? -1 : r->prev;
         if (r->nfeat >= 12 && r->cb_slot[0] == 3 && r->cb_slot[1] == 4 && po >= 0 && pf >= 0) {
