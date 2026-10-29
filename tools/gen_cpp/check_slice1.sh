@@ -11,8 +11,10 @@ make -C "$root/tools/gen_cpp"
 status=0
 for module in main subsdk0 sdk; do
     echo "== $module =="
-    /usr/bin/time -f 'python wall=%e maxrss_kib=%M' "$python" "$root/tools/gen_cpp/dump_py.py" "$exefs" "$out/layout.txt" "$module" > "$out/$module.python.txt"
-    /usr/bin/time -f 'c++ wall=%e maxrss_kib=%M' "$out/dump" "$exefs" "$out/layout.txt" "$module" > "$out/$module.cpp.txt"
+    /usr/bin/time -f 'python wall=%e maxrss_kib=%M' "$python" "$root/tools/gen_cpp/dump_py.py" \
+        "$exefs" "$out/layout.txt" "$module" > "$out/$module.python.txt"
+    /usr/bin/time -f 'c++ wall=%e maxrss_kib=%M' "$out/dump" \
+        "$exefs" "$out/layout.txt" "$module" > "$out/$module.cpp.txt"
     if cmp -s "$out/$module.python.txt" "$out/$module.cpp.txt"; then
         echo 'identical'
     else

@@ -12,8 +12,11 @@ for module in subsdk0 sdk main synthetic; do
     input="$exefs/$module"
     [[ $module == synthetic ]] && input=synthetic
     echo "== $module =="
-    /usr/bin/time -f 'python wall=%e maxrss_kib=%M' "$python" "$root/tools/gen_cpp/lift_words.py" "$input" "$out/$module.words" > "$out/$module.lift.python"
-    /usr/bin/time -f 'c++ wall=%e maxrss_kib=%M' "$out/lift_words" < "$out/$module.words" > "$out/$module.lift.cpp"
-    "$python" "$root/tools/gen_cpp/lift_compare.py" "$out/$module.lift.python" "$out/$module.lift.cpp" || status=1
+    /usr/bin/time -f 'python wall=%e maxrss_kib=%M' "$python" "$root/tools/gen_cpp/lift_words.py" \
+        "$input" "$out/$module.words" > "$out/$module.lift.python"
+    /usr/bin/time -f 'c++ wall=%e maxrss_kib=%M' "$out/lift_words" \
+        < "$out/$module.words" > "$out/$module.lift.cpp"
+    "$python" "$root/tools/gen_cpp/lift_compare.py" \
+        "$out/$module.lift.python" "$out/$module.lift.cpp" || status=1
 done
 exit "$status"

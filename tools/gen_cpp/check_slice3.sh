@@ -11,8 +11,10 @@ make -C "$root/tools/gen_cpp" ../../build/s9-cpp/discover
 status=0
 for module in subsdk0 sdk main; do
     echo "== $module =="
-    /usr/bin/time -f 'python wall=%e maxrss_kib=%M' "$python" "$root/tools/gen_cpp/discover_py.py" "$exefs" "$out/layout.txt" "$module" > "$out/$module.discovery.python"
-    /usr/bin/time -f 'c++ wall=%e maxrss_kib=%M' "$out/discover" "$exefs" "$out/layout.txt" "$module" > "$out/$module.discovery.cpp"
+    /usr/bin/time -f 'python wall=%e maxrss_kib=%M' "$python" "$root/tools/gen_cpp/discover_py.py" \
+        "$exefs" "$out/layout.txt" "$module" > "$out/$module.discovery.python"
+    /usr/bin/time -f 'c++ wall=%e maxrss_kib=%M' "$out/discover" \
+        "$exefs" "$out/layout.txt" "$module" > "$out/$module.discovery.cpp"
     if cmp -s "$out/$module.discovery.python" "$out/$module.discovery.cpp"; then
         echo identical
     else
