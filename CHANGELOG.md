@@ -6,9 +6,10 @@ On PS5, loading screens hitch far less: the title reads the game's packages with
 reads of 256 KiB or more go through the root storage broker (loading-screen package-read hitches 55 → 2, loading
 2.9 s shorter in the benchmark). `package_read_coalesce = 0` / `package_read_broker = 0` turn them off for comparisons.
 
-On PS5, the game starts about 7 s sooner (title at 13.7 s instead of 20.9 s): the game's data opens once, in the
-background while the game code loads and the display starts, and the code's symbols are resolved through an index
-(2.6 s → 30 ms). `fast_start = 0` restores the old order for comparisons.
+On PS5, the game starts in about half the time (title at 10.7 s instead of 20.9 s): the game's data opens once, in
+the background while the game code loads and the display starts; the game code's package is opened without the
+game data's patch tables; and the code's symbols are resolved through an index (2.6 s → 30 ms). `fast_start = 0`
+and `fast_exefs = 0` restore the old steps for comparisons.
 
 On PS5, the title includes original Savage Wind menu and launch backgrounds and shows an animated startup picture
 until the first game present. A player's `splash.jpg`, `splash.jpeg` or `splash.png` in the data root overrides the

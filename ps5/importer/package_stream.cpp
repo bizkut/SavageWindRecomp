@@ -5,6 +5,18 @@
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
+static std::atomic<bool> use_fast_exefs{false};
+static void (*startup_mark_callback)(const char *);
+extern "C" void savagewind_package_set_fast_exefs(int enabled) {
+    use_fast_exefs.store(enabled != 0, std::memory_order_relaxed);
+}
+extern "C" void savagewind_package_set_startup_mark(void (*callback)(const char *)) {
+    startup_mark_callback = callback;
+}
+extern "C" void savagewind_nca_startup_mark(const char *step) {
+    if (startup_mark_callback) startup_mark_callback(step);
+}
+
 static std::atomic<bool> use_package_coalesce{false};
 extern "C" void savagewind_package_set_coalesce(int enabled) {
     use_package_coalesce.store(enabled != 0, std::memory_order_relaxed);
@@ -109,10 +121,15 @@ extern "C" void *savagewind_package_open(const char *keys_path, const char *cons
         std::lock_guard<std::mutex> guard(nstool_process_mutex);
         auto result = std::make_unique<PackageStream>();
         auto &importer = result->importer;
+        static bool marked_romfs;
+        bool trace_romfs = !addon && !marked_romfs && startup_mark_callback;
+        if (trace_romfs) marked_romfs = true;
         importer.open_inputs(keys_path, paths, count);
+        if (trace_romfs) savagewind_nca_startup_mark("RomFS open_inputs finished");
         report_stage("open-program-nca");
         report_stage("nca-construct");
         nstool::NcaProcess proc;
+        proc.setStartupTrace(trace_romfs);
         report_stage("nca-set-keys");
         proc.setKeyCfg(*importer.keys);
         report_stage("nca-keys-ready");
@@ -298,17 +315,24 @@ extern "C" void *savagewind_exefs_open(const char *keys_path, const char *const 
         std::lock_guard<std::mutex> guard(nstool_process_mutex);
         auto result = std::make_unique<PackageExefs>();
         auto &importer = result->importer;
+        bool fast = use_fast_exefs.load(std::memory_order_relaxed);
         importer.open_inputs(keys_path, paths, count);
+        savagewind_nca_startup_mark("ExeFS open_inputs finished");
         report_stage("exefs-nca-construct");
         nstool::NcaProcess proc;
+        if (fast) proc.setPartitionFilter(0);
         report_stage("exefs-nca-set-keys");
         proc.setKeyCfg(*importer.keys);
         report_stage("exefs-nca-open-update");
         proc.setInputFile(vopen(importer.update.pkg->vfs, importer.update.pkg->prefix + "/" + importer.update.name));
-        report_stage("exefs-nca-open-base");
-        proc.setBaseNcaStream(vopen(importer.base.pkg->vfs, importer.base.pkg->prefix + "/" + importer.base.name));
+        if (!fast) {
+            report_stage("exefs-nca-open-base");
+            proc.setBaseNcaStream(vopen(importer.base.pkg->vfs, importer.base.pkg->prefix + "/" + importer.base.name));
+        }
         report_stage("exefs-nca-process");
         proc.process();
+        savagewind_nca_startup_mark("ExeFS NCA processed");
+        if (fast && !proc.isPartitionFs(0)) fail("content_corrupt", "Cannot open ExeFS partition.");
         report_stage("exefs-mount");
         result->vfs = proc.getFileSystem();
         if (!result->vfs) fail("content_corrupt", "Cannot open ExeFS partition.");

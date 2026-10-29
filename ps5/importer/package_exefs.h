@@ -9,6 +9,8 @@ extern "C" {
 #endif
 // Optional process-owned diagnostics, installed before package work starts.
 void savagewind_package_set_diagnostic(void (*callback)(const char *stage));
+void savagewind_package_set_fast_exefs(int enabled);
+void savagewind_package_set_startup_mark(void (*callback)(const char *step));
 void *savagewind_exefs_open(const char *keys, const char *const *packages, size_t count, char *why, size_t why_size);
 void *savagewind_exefs_file_open(void *handle, const char *name);
 int64_t savagewind_exefs_file_size(void *file);

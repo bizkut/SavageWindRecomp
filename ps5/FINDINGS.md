@@ -1251,3 +1251,12 @@ first-match result; index and relocation now take 28–33 ms (`fastidx-a/b`, `fa
 4.41 / 4.45 s. The title still came at 13.63 / 13.73 s: the RomFS open (3.5 s, started after the 3.1 s ExeFS open,
 both serialized by nstool's process lock) now bounds start-up; the ExeFS open itself processes the update NCA's
 RomFS partition too (BKTR, nested base-NCA parse, eager hash-layer verification).
+
+`fast_exefs = 1` (same binary `196ad7f6…`, alternating, ps5/evidence/m8/ab-exefs*.klog): the ExeFS open processes
+only the update NCA's ExeFS partition (header, keys, PFS0 with its hash check; no base NCA, BKTR or RomFS hash
+layers). The three modules read identical bytes in both modes (SHA-256 of main, subsdk0, sdk in
+`exefs-digest-0/1.klog`, from a digest-logging variant). ExeFS open done 3.23 / 3.20 → 0.51 / 0.39 s, display up
+4.42 / 4.45 → 1.85 / 1.78 s, game code entered 6.81 / 6.78 → 3.71 / 3.79 s, title **13.80 / 13.76 → 10.69 /
+10.77 s**; 95.5 / 96.4 % on time. Now on by default (`ab-exefs-default`: title 10.71 s). The RomFS open still
+bounds game entry: open_inputs 0.18 s, base NCA parse 1.5 s, BKTR 5 ms, hash layers 0.35 s (29.7 MB), then 1.2 s
+to the finished RomFS reader. Start-up is 20.9 → 10.7 s overall.

@@ -166,6 +166,8 @@ static bool open_package_with_stack(PackageOpenTask *task) {
 }
 
 bool ps5_exefs_init(const char *directory, char *why, size_t why_size) {
+    savagewind_package_set_startup_mark(ps5_startup_mark);
+    savagewind_package_set_fast_exefs(settings_fast_exefs_enabled());
     DIR *d = opendir(directory);
     if (!d) { snprintf(why, why_size, "cannot open package directory (load ShadowMountPlus)"); return false; }
     char **paths = NULL;

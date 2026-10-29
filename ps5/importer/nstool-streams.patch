@@ -818,3 +818,109 @@ diff --git a/deps/libpietendo/src/hac/HierarchicalIntegrityStream.cpp b/deps/lib
      size_t bad_block = block_num;
      for (size_t i = 0; i < block_num; i++)
      {
+diff --git a/src/NcaProcess.cpp b/src/NcaProcess.cpp
+--- a/src/NcaProcess.cpp
++++ b/src/NcaProcess.cpp
+@@ -10,6 +10,8 @@
+ #include <pietendo/hac/HierarchicalSha256Stream.h>
+ #include <pietendo/hac/PartitionFsSnapshotGenerator.h>
+ #include <pietendo/hac/RomFsSnapshotGenerator.h>
++extern "C" void savagewind_nca_startup_mark(const char *);
++
+ 
+ #ifdef __PROSPERO__
+ #include <ps5platform/klog.h>
+@@ -122,6 +124,12 @@
+ {
+     return index < mPartitions.size() ? mPartitions[index].reader : nullptr;
+ }
++bool nstool::NcaProcess::isPartitionFs(size_t index) const
++{
++    return index < mPartitions.size() && mPartitions[index].fs_reader != nullptr &&
++           mPartitions[index].format_type == pie::hac::nca::FormatType_PartitionFs;
++}
++
+ 
+ nstool::NcaProcess::PartitionReaderFactory nstool::NcaProcess::getPartitionReaderFactory(size_t index) const
+ {
+@@ -395,6 +403,12 @@
+ 
+         // output structure
+         sPartitionInfo &info = mPartitions[partition.header_index];
++        if (mPartitionFilter >= 0 && partition.header_index != static_cast<uint32_t>(mPartitionFilter))
++        {
++            info.size = 0;
++            continue;
++        }
++
+ 
+         // validate header hash
+         pie::hac::detail::sha256_hash_t fs_header_hash;
+@@ -493,6 +507,7 @@
+                     savage_nca_trace("base-open-begin", i);
+                     NcaProcess nca_base = readBaseNCA();
+                     savage_nca_trace("base-open-done", i);
++                    if (mStartupTrace) savagewind_nca_startup_mark("RomFS base NCA parsed");
+ 
+                     if (nca_base.mHdr.getProgramId() != mHdr.getProgramId())
+                     {
+@@ -527,6 +542,7 @@
+                     info.decrypt_key = partition_key;
+                     info.decrypt_ctr = partition_ctr;
+                     savage_nca_trace("bktr-open-done", i);
++                    if (mStartupTrace) savagewind_nca_startup_mark("RomFS BKTR built");
+                 }
+                 else if (info.enc_type == pie::hac::nca::EncryptionType_AesXts)
+                 {
+@@ -567,6 +583,20 @@
+                         "HashType({:s}): UNKNOWN", pie::hac::ContentArchiveUtil::getHashTypeAsString(info.hash_type)));
+             }
+             savage_nca_trace("hash-setup-done", i);
++            if (mStartupTrace && info.hash_type == pie::hac::nca::HashType_HierarchicalIntegrity)
++            {
++                const auto &layers = info.hierarchicalintegrity_hdr.getLayerInfo();
++                std::string detail = "RomFS hash layers verified: bytes=";
++                uint64_t total = 0;
++                for (size_t layer = 0; layer + 1 < layers.size(); ++layer)
++                {
++                    if (layer) detail += ",";
++                    detail += fmt::format("{}", layers[layer].size);
++                    total += layers[layer].size;
++                }
++                detail += fmt::format(" total={}", total);
++                savagewind_nca_startup_mark(detail.c_str());
++            }
+ 
+             // filter out unrecognised format types
+             switch (info.format_type)
+@@ -946,6 +976,8 @@
+     {
+         savage_nca_trace("mount-partition", i);
+         uint32_t index = mHdr.getPartitionEntryList()[i].header_index;
++        if (mPartitionFilter >= 0 && index != static_cast<uint32_t>(mPartitionFilter))
++            continue;
+         struct sPartitionInfo &partition = mPartitions[index];
+ 
+         // SKip if the reader is null.
+diff --git a/src/NcaProcess.h b/src/NcaProcess.h
+--- a/src/NcaProcess.h
++++ b/src/NcaProcess.h
+@@ -27,6 +27,9 @@
+     void setVerifyMode(bool verify);
+     void setBaseNcaPath(const tc::Optional<tc::io::Path> &nca_path);
+     void setBaseNcaStream(const std::shared_ptr<tc::io::IStream> &stream);
++    void setPartitionFilter(int index) { mPartitionFilter = index; }
++    void setStartupTrace(bool enabled) { mStartupTrace = enabled; }
++    bool isPartitionFs(size_t index) const;
+ 
+     // fs specific
+     void setShowFsTree(bool show_fs_tree);
+@@ -58,6 +61,8 @@
+     bool mVerify;
+     tc::Optional<tc::io::Path> mBaseNcaPath;
+     std::shared_ptr<tc::io::IStream> mBaseNcaStream;
++    int mPartitionFilter = -1;
++    bool mStartupTrace = false;
+ 
+     // fs processing
+     std::shared_ptr<tc::io::IFileSystem> mFileSystem;

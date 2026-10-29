@@ -235,6 +235,29 @@ int main(int argc, char **argv) {
         if (savagewind_exefs_file_open(exefs, "../main") ||
             savagewind_exefs_file_open(exefs, "nonexistent"))
             throw std::runtime_error("package ExeFS accepted invalid or missing file");
+        savagewind_package_set_fast_exefs(1);
+        void *fast_exefs = savagewind_exefs_open(argv[1], const_cast<const char *const *>(argv + 4),
+                                                size_t(argc - 4), exefs_why, sizeof exefs_why);
+        if (!fast_exefs) throw std::runtime_error(exefs_why);
+        for (const char *name : {"main", "subsdk0", "sdk", "main.npdm"}) {
+            void *a = savagewind_exefs_file_open(exefs, name);
+            void *b = savagewind_exefs_file_open(fast_exefs, name);
+            int64_t size = savagewind_exefs_file_size(a);
+            if (!a || !b || size < 0 || savagewind_exefs_file_size(b) != size)
+                throw std::runtime_error("fast ExeFS file size differs");
+            std::vector<unsigned char> left(65536), right(65536);
+            for (int64_t off = 0; off < size; off += left.size()) {
+                size_t n = std::min<int64_t>(left.size(), size - off);
+                if (savagewind_exefs_file_pread(a, left.data(), n, off) != ssize_t(n) ||
+                    savagewind_exefs_file_pread(b, right.data(), n, off) != ssize_t(n) ||
+                    std::memcmp(left.data(), right.data(), n))
+                    throw std::runtime_error("fast ExeFS file content differs");
+            }
+            savagewind_exefs_file_close(a);
+            savagewind_exefs_file_close(b);
+        }
+        savagewind_exefs_close(fast_exefs);
+        savagewind_package_set_fast_exefs(0);
         savagewind_exefs_close(exefs);
         char why[256] = {};
         auto start = Clock::now();
