@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #define S9_DISCOVERY_ONLY
 #include "discover.cpp"
+#include "sites.h"
+#include "patches.h"
 #include <regex>
 
 static std::string hx(U a)
@@ -90,8 +92,12 @@ struct Emitter {
     Discovery &d;
     std::set<U> setjmps;
     std::map<U, std::string> hle;
+    PatchContext patch_context;
+    std::map<U, std::string> patches;
 
-    explicit Emitter(Discovery &dis, const std::string &hle_path) : d(dis)
+    explicit Emitter(Discovery &dis, const std::string &hle_path, const std::map<std::string, U> &sites)
+        : d(dis), patch_context{dis.nso.image.data(), dis.nso.image.size(), dis.base, sites},
+          patches(make_patches(patch_context))
     {
         std::set<std::string> want;
         std::ifstream f(hle_path);
@@ -153,6 +159,12 @@ struct Emitter {
             auto i = instruction(d.word(a), a);
             if (all || scan.labels.count(a))
                 out.push_back(label(a) + ":;");
+            auto patch = patches.find(a);
+            if (patch != patches.end()) {
+                out.push_back("    " + apply_patch(patch_context, patch->second, a));
+                last = "op";
+                continue;
+            }
             if (i.kind == "op" || i.kind == "trap")
                 out.push_back("    " + i.code);
             else if (i.kind == "b")
@@ -222,8 +234,15 @@ struct Emitter {
         return r;
     }
 };
+#ifdef S9_OUTPUT_SINK
+extern void s9_output_sink(const std::string &filename, const std::string &text);
+#endif
+
 static void save(const fs::path &path, const std::string &text)
 {
+#ifdef S9_OUTPUT_SINK
+    s9_output_sink(path.string(), text);
+#else
     std::ifstream input(path, std::ios::binary);
     if (input) {
         std::string old((std::istreambuf_iterator<char>(input)), {});
@@ -234,61 +253,39 @@ static void save(const fs::path &path, const std::string &text)
     require(bool(output), "cannot write output");
     output << text;
     require(bool(output), "output write failed");
+#endif
 }
 
-int main(int argc, char **argv) try {
-    require(argc >= 5, "usage: gen MODULE NSO LAYOUT OUTDIR [--hle FILE] [--simd c] "
-                       "[--chunk N] [--chunk-bytes N] [--big-fn N] [--limit N]");
-    std::string name = argv[1], hlepath;
-    require(name != "main" && name != "all" && name != "layout", "main and layout generation require slice 5");
-    size_t chunk = 1500, bytes = 1500000, big = 100000, limit = 0;
-    for (int i = 5; i < argc; i++) {
-        std::string arg = argv[i];
-        require(i + 1 < argc, "missing option value");
-        std::string val = argv[++i];
-        if (arg == "--hle")
-            hlepath = val;
-        else if (arg == "--simd")
-            require(val == "c", "only portable C SIMD is supported");
-        else if (arg == "--chunk")
-            chunk = std::stoull(val);
-        else if (arg == "--chunk-bytes")
-            bytes = std::stoull(val);
-        else if (arg == "--big-fn")
-            big = std::stoull(val);
-        else if (arg == "--limit")
-            limit = std::stoull(val);
+struct Options {
+    std::string hlepath;
+    size_t chunk = 1500;
+    size_t bytes = 1500000;
+    size_t big = 100000;
+    size_t limit = 0;
+    bool any_version = false;
+    bool no_sites = false;
+};
+
+static void generate(const std::string &name, const fs::path &input, U base, const fs::path &outdir,
+                     const Options &opts, const std::map<std::string, U> *resolved_sites = nullptr)
+{
+    Nso n(file(input));
+    std::map<std::string, U> sites;
+    if (name == "main" && !opts.no_sites) {
+        if (resolved_sites)
+            sites = *resolved_sites;
         else
-            throw std::runtime_error("unknown option: " + arg);
+            sites = game_sites::for_module(n, base, opts.any_version).sites;
     }
-    require(chunk && bytes, "chunk limits must be positive");
-    Nso n(file(argv[2]));
-    std::ifstream layoutfile(argv[3]);
-    require(bool(layoutfile), "layout unavailable");
-    std::string line;
-    U base = 0;
-    bool found = false;
-    while (std::getline(layoutfile, line)) {
-        if (line.empty() || line[0] == '#')
-            continue;
-        std::istringstream s(line);
-        std::string nm, b, sz, id;
-        require(bool(s >> nm >> b >> sz >> id), "bad layout");
-        if (nm == name) {
-            require(id == n.h.id, "module build ID mismatch");
-            base = std::stoull(b, nullptr, 16);
-            found = true;
-        }
-    }
-    require(found, "module absent from layout");
     Discovery d(n, base);
-    Emitter e(d, hlepath);
+    Emitter e(d, opts.hlepath, sites);
     auto order = d.run(false);
     auto full_order = order;
-    if (limit && limit < order.size())
-        order.resize(limit);
-    fs::path outdir = argv[4];
+    if (opts.limit && opts.limit < order.size())
+        order.resize(opts.limit);
+#ifndef S9_OUTPUT_SINK
     fs::create_directories(outdir);
+#endif
     struct Pending {
         U addr;
         std::vector<std::string> lines;
@@ -301,7 +298,7 @@ int main(int argc, char **argv) try {
         std::set<U> refs;
         std::vector<U> fns;
         size_t size = 0;
-        while ((pending || ci < order.size()) && fns.size() < chunk && size < bytes) {
+        while ((pending || ci < order.size()) && fns.size() < opts.chunk && size < opts.bytes) {
             Pending p;
             if (pending) {
                 p = std::move(*pending);
@@ -314,7 +311,7 @@ int main(int argc, char **argv) try {
             size_t nbytes = 0;
             for (auto &l : p.lines)
                 nbytes += l.size() + 1;
-            if (nbytes > big && !fns.empty()) {
+            if (nbytes > opts.big && !fns.empty()) {
                 pending = std::move(p);
                 break;
             }
@@ -322,7 +319,7 @@ int main(int argc, char **argv) try {
             fns.push_back(p.addr);
             refs.insert(p.refs.begin(), p.refs.end());
             body.insert(body.end(), p.lines.begin(), p.lines.end());
-            if (nbytes > big)
+            if (nbytes > opts.big)
                 break;
         }
         std::string text = "#include \"cpu.h\"\n#include \"simd.h\"\n";
@@ -347,6 +344,7 @@ int main(int argc, char **argv) try {
         filename << name << '_' << std::setw(3) << std::setfill('0') << nchunks++ << ".c";
         save(outdir / filename.str(), text);
     }
+#ifndef S9_OUTPUT_SINK
     std::regex old(name + "_([0-9]{3})\\.c");
     for (auto &ent : fs::directory_iterator(outdir)) {
         std::smatch m;
@@ -354,6 +352,7 @@ int main(int argc, char **argv) try {
         if (std::regex_match(s, m, old) && std::stoul(m[1]) >= nchunks)
             fs::remove(ent.path());
     }
+#endif
     std::string table = "#include \"cpu.h\"\n";
     for (U a : order)
         table += "void " + fn(a) + "(Cpu *c);\n";
@@ -376,6 +375,140 @@ int main(int argc, char **argv) try {
     table += "};\nconst uint64_t " + name + "_fn_count = " + std::to_string(order.size()) + ";\n";
     save(outdir / (name + "_table.c"), table);
     std::cerr << name << ": " << order.size() << " functions, " << nchunks << " chunks\n";
+}
+
+static std::string hex_plain(U value)
+{
+    auto text = hx(value);
+    return text.substr(0, text.size() - 3);
+}
+
+static void write_layout(const std::vector<Layout> &modules, const fs::path &outdir,
+                         const std::string &version, const std::map<std::string, U> &sites)
+{
+#ifndef S9_OUTPUT_SINK
+    fs::create_directories(outdir);
+#endif
+    std::string text = "# module layout (tools/layout.py), load order: name, guest base, image size, NSO build id\n";
+    std::string source = "// Module layout of this game code (tools/layout.py). Generated.\n"
+                         "#include \"gamelib.h\"\n\n";
+    for (const auto &module : modules) {
+        text += module.name + " " + hex_plain(module.base) + " " + hex_plain(module.size) + " " + module.id + "\n";
+        source += "extern const uint64_t " + module.name + "_fn_addrs[], " + module.name + "_fn_count;\n"
+                  "extern const GuestFn " + module.name + "_fn_ptrs[];\n";
+    }
+    source += "\nconst GameLibModule game_modules[] = {\n";
+    for (const auto &module : modules) {
+        source += "    {\"" + module.name + "\", " + hx(module.base) + ", " + hx(module.size) + ", \"" +
+                  module.id + "\", " + module.name + "_fn_addrs, " + module.name + "_fn_ptrs, &" +
+                  module.name + "_fn_count},\n";
+    }
+    source += "};\nconst uint32_t game_module_count = " + std::to_string(modules.size()) + ";\n";
+    source += "\nconst char game_version[] = \"" + version + "\";\nconst GameLibSite game_sites[] = {\n";
+    if (sites.empty())
+        source += "    {0, 0},\n";
+    for (const auto &[name, address] : sites)
+        source += "    {\"" + name + "\", " + hx(address) + "},\n";
+    source += "};\nconst uint32_t game_site_count = " + std::to_string(sites.size()) + ";\n";
+    save(outdir / "layout.txt", text);
+    save(outdir / "layout.c", source);
+}
+
+int main(int argc, char **argv) try {
+    require(argc >= 4, "usage: gen NAME INPUT [LAYOUT] OUTDIR [options]");
+    std::string name = argv[1];
+    fs::path input = argv[2];
+    std::vector<std::string> paths;
+    Options opts;
+    for (int i = 3; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--no-sites") {
+            opts.no_sites = true;
+        } else if (arg == "--any-version") {
+            opts.any_version = true;
+        } else if (arg.rfind("--", 0) == 0) {
+            require(i + 1 < argc, "missing option value");
+            std::string val = argv[++i];
+            if (arg == "--hle")
+                opts.hlepath = val;
+            else if (arg == "--simd")
+                require(val == "c", "only portable C SIMD is supported");
+            else if (arg == "--chunk")
+                opts.chunk = std::stoull(val);
+            else if (arg == "--chunk-bytes")
+                opts.bytes = std::stoull(val);
+            else if (arg == "--big-fn")
+                opts.big = std::stoull(val);
+            else if (arg == "--limit")
+                opts.limit = std::stoull(val);
+            else
+                throw std::runtime_error("unknown option: " + arg);
+        } else {
+            paths.push_back(arg);
+        }
+    }
+    require(opts.chunk && opts.bytes, "chunk limits must be positive");
+    bool all = name == "all";
+    bool layout_only = name == "layout";
+    require(paths.size() == (all || layout_only ? 1u : 2u), "wrong number of arguments");
+    if (all || layout_only) {
+        auto modules = layout(input);
+        auto main_module = std::find_if(modules.begin(), modules.end(),
+                                        [](const Layout &m) { return m.name == "main"; });
+        require(main_module != modules.end(), "main module absent");
+        std::string version;
+        std::map<std::string, U> sites;
+        if (!opts.no_sites) {
+            Nso main_nso(file(input / "main"));
+            auto result = game_sites::for_module(main_nso, main_module->base, opts.any_version);
+            version = std::move(result.version);
+            sites = std::move(result.sites);
+        }
+        fs::path outdir = paths[0];
+        write_layout(modules, outdir, version, sites);
+        if (all) {
+#ifndef S9_OUTPUT_SINK
+            std::set<std::string> present;
+            for (const auto &module : modules)
+                present.insert(module.name);
+            std::vector<std::string> names{"main"};
+            for (int i = 0; i < 10; ++i)
+                names.push_back("subsdk" + std::to_string(i));
+            names.push_back("sdk");
+            for (const auto &module : names)
+                if (!present.count(module) && fs::is_directory(outdir / module))
+                    fs::remove_all(outdir / module);
+#endif
+            for (const auto &module : modules) {
+                Options module_opts = opts;
+                if (module.name == "main")
+                    module_opts.hlepath.clear();
+                generate(module.name, input / module.name, module.base, outdir / module.name, module_opts, &sites);
+            }
+        }
+        return 0;
+    }
+    std::ifstream layoutfile(paths[0]);
+    require(bool(layoutfile), "layout unavailable");
+    std::string line;
+    U base = 0;
+    bool found = false;
+    Header header(file(input));
+    while (std::getline(layoutfile, line)) {
+        if (line.empty() || line[0] == '#')
+            continue;
+        std::istringstream s(line);
+        std::string nm, b, sz, id;
+        require(bool(s >> nm >> b >> sz >> id), "bad layout");
+        if (nm == name) {
+            require(id == header.id, "module build ID mismatch");
+            base = std::stoull(b, nullptr, 16);
+            found = true;
+        }
+    }
+    require(found, "module absent from layout");
+    generate(name, input, base, paths[1], opts);
+    return 0;
 } catch (const std::exception &e) {
     std::cerr << "gen: " << e.what() << '\n';
     return 1;

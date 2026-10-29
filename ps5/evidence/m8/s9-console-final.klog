@@ -1,0 +1,390 @@
+# launch PPSA90212: ok launched PPSA90212 result=0x00004016 via lncUtilApp/foreground as user 486509363 (the console reports the title running)
+<118>[SceLncService] launchApp(PPSA90212)
+<118>[SceLncService] category={gd} appCategoryType={0x00000000} VRMode={0,0}
+<118>[SceLncService] hnm,psnf,pc,tk,ns,pf,pn={1,0,0,0,0,1,0} appBootMode={2}
+<118>[SceLncService] appType={SCE_LNC_APP_TYPE_BIG_APP} [] appVer={} contentVersion={00.001.000} appCategoryType={0x00000000}
+<118>[SceLncService] Waiting for LoginMgr
+<118>[SceLncService] Num. of logged-in users is 1
+<118>[SceLncService] BigApp Launch Ready: Waiting
+<118>[SceLncService] BigApp Launch Ready: OK
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck()
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck() returned
+<118>[SceLncService] EnsureBigAppBudget()
+<118>[ResArbitrator][api      ]sceResourceArbitratorEnsureBigAppBudget[187ec](238)  : categoryType[0x0], titleId[PPSA90212], isConfirmed[false]
+<118>[ResArbitrator][TestId   ]EnsureBudget            [187ec]( 41)  : EnsureBudget()
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [187ec]( 38)  : Enqueue(id[0], t[1], user[0] state[RUNNING]) queue.size[1]
+<118>[ResArbitrator][App      ]GetExecutable           [18930](136)  : Target id[0] budgets{vcn[  0] acp[ 0] mem[  0]} prio[2(2)]
+<118>[ResArbitrator][App      ]SetVCNBudget            [18930](610)  : pid/appId is INVALID_ID.vcn budget not set.
+<118>[ResArbitrator][RA_main  ]cbResult                [18930](350)  : Callback id[0] type[RESULT] result[true] state[RUNNING]
+<118>[ResArbitrator][TestId   ]raCallback              [18930](128)  : BigApp[0xffffffff] Changed state"RUNNING"
+<118>[ResArbitrator][QUEUE    ]Remove                  [18930]( 69)  : Remove:(id[0] state[RUNNING] type[1]) queue.size[0]
+<118>[SceLncService] EnsureBigAppBudget() returned
+<118>[ResArbitrator][App      ]Dump                    [18930](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18930](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0xffffffff]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x207e3c760)] userData[0x0] pid[0x42]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -3: Id[180] state[RUNNING] vcn[ 20] acp[270] mem[  0] prio[5(5)] from[IPMI(0x207e3c680)] userData[0x2000099c8] pid[0xb3]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -4: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x38]
+<118>[ResArbitrator][App      ]Dump                    [18930](819)  : -- No kicking Apps *************************
+<118>[SceSystemStateMgr] Power Mode Change: BIG_APP
+<118>[AvControl] Waiting for the pstate event 
+<118>[Syscore Umd] Set memory pstate (hasRunningGame=0, hasRunningMiniApp=0, isSplashDisplayed=0
+<118>[AvControl] Waiting for the pstate event : done
+<118>[SceSystemStateMgr] CPU                                     HLT GC   GFX  F    U   ID       FAN BAPM
+<118>[SceSystemStateMgr]  800  800  800  800 3200 3200 3200 3200   0 gen2 1211 1200 875 00840f60   1 off
+<118>[SceLncService] sceApplicationSave() categoryType={0x00000000}, debuggerRequestId={0xffffffff}
+<118>[Syscore App] No App needs to save. BigApp does not exist on the memory.
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2687) getAppType: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] BeginAppMount()
+[KERNEL] INFO: begin_app_mount 00000000
+appmgr_create_app(), appid=4016 category=0
+[KERNEL] INFO: launch bigapp: category 0x00000000, container 1
+[Amm config] Page table memory : 64 MiB, VA range size 512 GiB, MultiMap VA range size 0 GiB
+wt_application_launch_callback:new target appid=0x4016
+<118>[SceLncService] is_pkgstep={0}
+<118>[SceLncService] PrepareProcessLaunchDebugger()
+<118>[sceProcessStarter] MountDownloadData() title_id = [PPSA90212] data_path = [**************/PPSA90212/download0.dat] mount_path = [************/download/PPSA90212] budget = [game]
+<118>[PS]Error: W:\Build\J02159366\vsh\shell\shell_core\process_starter\process_starter_util.cpp at 1027
+<118>num is 2
+<118>[SceLncService] PrepareProcessLaunchDebugger() returned
+<118>[SceLncService] sandboxType={0x00000002}
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2687) getAppType: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] spawnApp
+<118>[Syscore App] createApp PPSA90212
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[AvControl] onAppLaunch(appid=0x4016)
+<118>[AvControl] Entry appId(0x4016) supplementaryInfo: 0x0 
+<118>[AvControl] -- app[0](appid=0x4016 attr=0xaa0017)(GAME RUNNING)(HDR:o HFR:o VR:x VRR:TypeA) SpecialModeInBg(none) HDCP23(none) supInfo(0x0)
+<118>[AvControl] layout:HDMI
+<118>[AvControl] notify stop-scanin (idx:-1) dwb0(unusable) dwb1(usable) dwb2(usable) cause(hdmi)
+<118>[AvControl] ** stop scanin(pid=0x3a scaninId = 1)
+[si] stop  pipe[0] 45807s: 1us, p:0:1, 43480:0633, 2432:0316, m:982c0ef935fd0000, d:0x1, 0x1110
+<118>[AvControl] ** v:130203021000000002/a:00 **
+<118>[AvControl] ** set_default_metadata ** -1 
+<118>[AvControl] ** mute(0) ** 
+[dce-proc:3923 Info]<49>p:0:1, m:1, d:0x1, b:0x1110, ft:0x1, fl:0x1a1a1703
+<118>[AvControl] ** set_mode(0) ** -1/-1 
+<118>[AvControl]  video: port:HDMI 3840_2160P_5994 RGB444 full RGB2100_PQ 36bpp 16:9 allm-game o--tv-sf2 
+<118>[AvControl]       : VRR(peg:60 range:48 - 60) capable(allm 1 mdelata 0 range 40 - 120) (-)
+<118>[AvControl]  audio: port:HDMI src:I2S 48k 7.1 24bit fmt:LPCM LPCM once sp:TV -
+[dce-proc:3729 Info]<49>peg count: 3 (=1  +1(178) +1(179))
+<118>[SceShellCore] Main thread has frozen in sceApplicationSignalShellCoreHeartBeat() for 2 seconds
+<118>[AvControl] ** unmute(0) ** 
+<118>[AvControl] notify ready-scanin(idx:-1) port0(res: 0xc ref:0x8003(48-60) col:0xd sup:0xa0) port1(res:0xb ref:0x3 col:0x14 sup:0x0) vrType(0)
+<118>[AvControl] App Event[POST_BEGIN]: elapse 1916[ms] 
+<118>[Syscore App] processSpawn(pid, 0x4016, 0x14016be0, appParam, processParam, 1, 1, 1, param, debug, 0)
+<118>[Syscore App] appParam: appType = 0, titleId = PPSA90212
+<118>[Syscore App] new pid=0x10b[Syscore App] attributeExe= 0
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+<118>[AvControl] VideoOut: shared (pid=0x10b appId=0x4016)
+<118>[AvControl] video owner is switched to registered app(appId=0x4016) 
+<118>[AvControl] AudioOut: shared (pid=0x10b)
+[KERNEL] INFO: Disable workaround PPRREQ55470_NO_ADDITIONAL_DMEM_192MB
+<118>[AvControl] ** set scanin(pid=0x3a scaninId = 1 tapPoint = 0x3)
+[si] start pipe[0] 45809s:82us, p:0:1, 96:0201, 2546:0100, m:5f0a7b8937aa0000, d:0x1, 0x1110
+<118>[Syscore App] Add event : pid=0x10b
+<118>[AppMgr Trace]: New Process, pid=0x10b, created.
+<118>[AppMgr Trace]: New App, appId=0x4016, created
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_common.cpp(889) getCurrentTick: LNC_RTRACE::0x80b50001
+<118>[SceLncService] update: appId={0x00004016} appSessionId={63928888723000000}
+<118>[SceLncUtil] blockAppSuspend: name={SceNpUds}, appId={0x00000006}, refCount={1}
+<118>[SceLncUtil] blockAppSuspend: name={SceSaveData}, appId={0x00000006}, refCount={2}
+<118>[SceLncUtil] unblockAppSuspend: name={SceSaveData}, appId={0x00000006}, refCount={1}
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [187e2]( 38)  : Enqueue(id[0], t[1], user[0] state[RUNNING]) queue.size[1]
+<118>[ResArbitrator][TestId   ]lncEventCallback        [187e2]( 64)  : Set Target BigAppId[0x4016] pid[0x10b]
+<118>[ResArbitrator][App      ]GetExecutable           [18930](136)  : Target id[0] budgets{vcn[  0] acp[ 0] mem[  0]} prio[2(2)]
+<118>[ResArbitrator][App      ]ChangeState             [18930]( 43)  : replace id[0] state:['RUNNING'->'RUNNING']
+<118>[ResArbitrator][App      ]SetVCNBudget            [18930](614)  : vcnType is TYPE_UNKNOWN.vcn budget not set.
+<118>[ResArbitrator][RA_main  ]cbResult                [18930](350)  : Callback id[0] type[RESULT] result[true] state[RUNNING]
+<118>[ResArbitrator][TestId   ]raCallback              [18930](128)  : BigApp[0x4016] Changed state"RUNNING"
+<118>[ResArbitrator][QUEUE    ]Remove                  [18930]( 69)  : Remove:(id[0] state[RUNNING] type[1]) queue.size[0]
+<118>[ResArbitrator][App      ]Dump                    [18930](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18930](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0x4016]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x207e3c760)] userData[0x0] pid[0x42]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -3: Id[180] state[RUNNING] vcn[ 20] acp[270] mem[  0] prio[5(5)] from[IPMI(0x207e3c680)] userData[0x2000099c8] pid[0xb3]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -4: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x38]
+<118>[ResArbitrator][App      ]Dump                    [18930](819)  : -- No kicking Apps *************************
+<118>[ResArbitrator][VA_main  ]GetMediaAppInfo         [187e2](122)  : sceKernelGetAppCategoryType(0x10b) ret:SCE_OK categoryType[0x0]
+<118>[SceLncUtil] unblockAppSuspend: name={SceNpUds}, appId={0x00000006}, refCount={0}
+[KERNEL] INFO: pid 267
+[KERNEL] INFO: Application Category Type: 00000000
+[KERNEL] INFO: SDK vesion: PS4:08050001 PPR:02000009
+[KERNEL] INFO: Total Memory Size: 0x32d600000
+[KERNEL] INFO: DMEM size: 0x300000000
+[KERNEL] INFO: FMEM size: 0x1c000000
+[KERNEL] INFO: NDA Text size: 0
+[KERNEL] INFO: CPU/GPU page table count: 0x4000 0x4000
+[BAPM] CPU/GPU Frequency: Default
+[BAPM] Param Set: 2 (Ver:02000009)
+<267> EXEC /app0/eboot.bin [user], vm#1, dmem#1 abi=native category=native_game <45736266 msec>
+### GFX(pipe0) Game. proc gen:2 vmid:1 pid:267
+ +++ num clients 2
+<118>[SceShellCore] Libc Heap Status: free 37%, in-use 3835.3 KB, trend +15.2 KB/min, peak 4961.6 KB, when 44537 [sec]
+### gc_gfx_queue_status : in_frame=0 rptr=0x00000000 wptr=0x00000000 IBlist(rptr=0x0000 wptr=0x0000 i_wptr=0x0000)
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [1892f]( 38)  : Enqueue(id[110], t[1], user[0] state[RUNNING]) queue.size[1]
+<118>[ResArbitrator][App      ]GetExecutable           [18930](136)  : Target id[110] budgets{vcn[ 20] acp[368] mem[  0]} prio[10(10)]
+<118>[ResArbitrator][IpcServer]Callback                [18930]( 78)  : S->C Callback Set(id[110] type[RESULT] result[true] state[RUNNING])
+<118>[ResArbitrator][QUEUE    ]Remove                  [18930]( 69)  : Remove:(id[110] state[RUNNING] type[1]) queue.size[0]
+<118>[ResArbitrator][App      ]Dump                    [18930](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18930](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0x4016]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x207e3c760)] userData[0x0] pid[0x42]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -3: Id[110] state[RUNNING] vcn[ 20] acp[368] mem[  0] prio[10(10)] from[IPMI(0x207e3c6a0)] userData[0x0] pid[0xb2]*HB*
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -4: Id[180] state[RUNNING] vcn[ 20] acp[270] mem[  0] prio[5(5)] from[IPMI(0x207e3c680)] userData[0x2000099c8] pid[0xb3]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -5: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x38]
+<118>[ResArbitrator][App      ]Dump                    [18930](819)  : -- No kicking Apps *************************
+<118>[ResArbitrator][IpcServer]GetCallbackDataInt      [1892f](334)  : C->S Callback Get(id[110] type[RESULT] result[true] state[RUNNING] cb[966460])
+<118>[TTS Arbitrator][INF]  FG App was changed. 2007 -> 4016
+<118>[SceLncService] SetControllerFocus(0x00004016)
+<118>[NoticeScreenSkip] NoticeScreenSkipGetFlag(notice_screen_skip_flag= 1, appId= 0x00004016)
+<118>[SceLncService] SetAppFocus(): SetControllerFocus(-1)
+<118>* updateVibrationTriggerEffectWeak:L7804 getVibrationTriggerEffectWeakWhileEmbeddedMicInUse return MBUS_ERROR_NO_PROCESS_INFO. pid = 0xffffffff
+<118>[AvControl] Hdmi Event:hdcp done (prev:hdcp done dur:725685)
+<118>[SceLncService] SetControllerFocus(0x00004016)
+<118>@ mbusGetAudioOutDeviceInfoByBusType:L5950
+<118>[AvControl] ** set scanin(pid=0x3a scaninId = 2 tapPoint = 0x2)
+[si] start pipe[1] 45810s:68us, p:0:1, 179:0041, 2629:0021, m:0, d:0x0, 0x1110
+[s9] module subsdk0 files 180 bytes 70251623 ms 2193.773 peak_heap 67108864
+[s9] file subsdk0_000.c bytes 699493 sha256 1e4b7d9ff6163a09e4c5205b8888126c8c38197d7162c954a11507146c780412
+[s9] file subsdk0_001.c bytes 107373 sha256 b744dbae74c6e403453c8d89a19b195ae0bf45f1c2ce8499e839c06e85722337
+[s9] file subsdk0_002.c bytes 1423281 sha256 62f0f944a4dcdb0eaaeffa9b3bfd8a934317d792dd23f4ad02e0be43a25d34e5
+[s9] file subsdk0_003.c bytes 108695 sha256 f9001f404b3abd60bb2a85ac46c974a66b6d749d237a842434fb1fa93bef5671
+[s9] file subsdk0_004.c bytes 1128290 sha256 19bc791890737e46d2af64ad3708fff141bedd10e21e219de24697493c7ae22f
+[s9] file subsdk0_005.c bytes 228152 sha256 3bc8ee2c513650e229bbc56da17058d278ea1fcd27ff85fc9102023c8acbb5e0
+[s9] file subsdk0_006.c bytes 133709 sha256 c8115a060f8870dfefcfbcb45f3a6bfbe66e95f76c0eefbce8427971a1f21729
+[s9] file subsdk0_007.c bytes 145375 sha256 eba9e5364a51867b0371f7a303a4ea972ef9847c579c7085601fa3631f04ca11
+[s9] file subsdk0_008.c bytes 545878 sha256 ee08b4ca01069369c3bc83b4c77c1f0a59e23309c62d384596c8046d96d4031a
+[s9] file subsdk0_009.c bytes 131849 sha256 06958d58935c4e8e1c0f2b9c87df8ed5ef1093b871f31252c399d257532987b1
+[s9] file subsdk0_010.c bytes 113035 sha256 c6b6bae172db8bb7dd40b969c8edb0d2459c1f059b4a229e9c6617019f90fcc3
+[s9] file subsdk0_011.c bytes 1310747 sha256 55d19580af418c3448e9d5204c4bf595286f0f24e7cfbf7caa2277049472d229
+[s9] file subsdk0_012.c bytes 108869 sha256 482028896fb21968fe413058ac805ab198192622be03716d4f4b739ff685a411
+[s9] file subsdk0_013.c bytes 111604 sha256 34c0b2348f4fa39b42670ef500386af3c1c8eb9e5d750d1b8fa626661a1b8764
+[s9] file subsdk0_014.c bytes 127134 sha256 a1138866a0d7380504624cc12d6d59cb0271d53aa2bd53f983162e48caaa03eb
+[s9] file subsdk0_015.c bytes 122451 sha256 30611cb8311aec9fd5eebc49f3fe3a96353214468144b28499bb87a45f2bcba3
+[s9] file subsdk0_016.c bytes 241151 sha256 1b28204cfdff106158bea90418aa5e249c1d44bca42c82541784c2bd3b1b8439
+[s9] file subsdk0_017.c bytes 143780 sha256 9de7fe6121ada1799795249238e075d94251cde7249beb156fcc6d5a5ab46a80
+[s9] file subsdk0_018.c bytes 197305 sha256 2a2d1abd16deedfeebd4972b5c0fe4091b814dd66c2c201f7ca2e503020ba82a
+[s9] file subsdk0_019.c bytes 113283 sha256 5e71716d687fce4296dc7b3e1919b85801327ffda16693f9bb0d8e770de3ac82
+[s9] file subsdk0_020.c bytes 296235 sha256 7cab18ae2353a9971d740806e32c36f14c643ca36925ff83a8e17212cb0474df
+[s9] file subsdk0_021.c bytes 103984 sha256 4261e09fe368a8894f760528e6c5fd58920d648d97f54fa47ae16c90301ac8b1
+[s9] file subsdk0_022.c bytes 837102 sha256 363d4390784371ed80dd0ef823ee0b47c0fcdb96df226c7714db633b6981e58a
+[s9] file subsdk0_023.c bytes 135081 sha256 35c80f5ef91d2fd586e34309b12850629eb283bbacbd2f0848aa76a66a532b53
+[s9] file subsdk0_024.c bytes 116336 sha256 79aea62f113d44872fc86e5350c631bae36b25b675dd3577355eddd6697d5763
+[s9] file subsdk0_025.c bytes 273187 sha256 50d2df787613f541e2be29e7555c69b3243ced35ba894b5db393666318a63aac
+[s9] file subsdk0_026.c bytes 370510 sha256 0fb69e2a695b0ee271004942c002943f99ae79b9bed860f19d3142fe9d5d5e34
+[s9] file subsdk0_027.c bytes 146345 sha256 9bf202f9b096a81fcb9b361de318a5b27deb02b3fb935d88409442f5f640ecb0
+[s9] file subsdk0_028.c bytes 276746 sha256 88c05f4975048599eeb8d40a2447b87ec1fb873d47e376751fedd75dbdcb3ccd
+[s9] file subsdk0_029.c bytes 357457 sha256 6b2862618282026a3b43243cb4448afc31e1cd1a9849d8fdfbc3fb6886a10c13
+[s9] file subsdk0_030.c bytes 108490 sha256 a6bb3914feadf393a24cf6f61160cc8d8d639b6ceb7f790ea2c89476a6a9d135
+[s9] file subsdk0_031.c bytes 148341 sha256 c11ebafe2798c38a1b27ce0b577b7337c4a0e27796b170f7cbedf21465c2da60
+[s9] file subsdk0_032.c bytes 316041 sha256 14b5305771a8c687ab273a7f4492528c00a2bfc4a29b68f103d7c71cfeb7b786
+[s9] file subsdk0_033.c bytes 481018 sha256 87641596a352e73bb53b17b11f6847ae26cc2539fcdb54ea67b215608f4b4309
+[s9] file subsdk0_034.c bytes 108991 sha256 1e2c2b9d7c1cca08834131e1fe255e5e172769d67c03543db455b0c0b4baf9ff
+[s9] file subsdk0_035.c bytes 169638 sha256 cdffc653e2cfb95e18ae59e11d946a8059f454d37c35bcd19254567ff711cbd1
+[s9] file subsdk0_036.c bytes 511140 sha256 9b210da65f93967f1b6a6faddff0bf31e590294f7b93c5a9451a373e39cd19be
+[s9] file subsdk0_037.c bytes 148496 sha256 42a62f067f553fbb7f9c53c1ea0e54ec3f19adb633e2ac3150d915422f9b2e55
+[s9] file subsdk0_038.c bytes 508278 sha256 f4f98c7bd975b5b87949f06ade39b4948c7f8f1b23b3b6af15c302281af701f7
+[s9] file subsdk0_039.c bytes 102237 sha256 bddee6df08b92d53c9130825663b1ba59013f6c10a0a1daee6bd27d2514af1a6
+[s9] file subsdk0_040.c bytes 238305 sha256 796a34cdd29fa593157e013241ac516b4e198cce946ce25d0dcc93ec6192d1ce
+[s9] file subsdk0_041.c bytes 112406 sha256 d234d8de07d8099047654cba45968169d970ada4869d12c28594665df76027db
+[s9] file subsdk0_042.c bytes 125465 sha256 c6b0fc2570ea3b59704b369dacf87216a16b049338c5ae5af5433a25bdf1da76
+[s9] file subsdk0_043.c bytes 274563 sha256 34d154cdbaecc7c6e86dbdb446920a0d430d625a9ca17f497347ce5ccf496c25
+[s9] file subsdk0_044.c bytes 488326 sha256 524d4b6387a43be067aa598ee39ea466ea26fc91489f42f0a24816e9670b5cd4
+[s9] file subsdk0_045.c bytes 145686 sha256 20a14df4649388d0998efa2cd08eb41658f42bbc1e6ce4d9d73717f0a29d6878
+[s9] file subsdk0_046.c bytes 41552 sha256 dafb9eac2b098f14ebc35515a9afc516672815b30fe6012b167cf8a925dec0c3
+[s9] file subsdk0_047.c bytes 159017 sha256 ff8e45203b1f1b287f515ca30be3e2b7dd12ecab2883faad612d5cdde56fd039
+[s9] file subsdk0_048.c bytes 159279 sha256 651512d8101537759e5f9132190b110a13ed71d29bc9856752447095fc3c182e
+[s9] file subsdk0_049.c bytes 219246 sha256 39985d605a5c3aec094d00045c80c1c9a01c7ec397c2afd3c6a9cefbe7e343b2
+[s9] file subsdk0_050.c bytes 699965 sha256 f0e921bc5d981b77f0454e138560082fecaec6e88272834fe373bd2808bee379
+[s9] file subsdk0_051.c bytes 540550 sha256 7a69fae0a7505615fd1b9affb7da7a0e7968c720e9cdc556c9f384ad8d2e6aa5
+[s9] file subsdk0_052.c bytes 335860 sha256 3ffd21c1616282df74a03e666c03685538b8464677300040f5de86ff08836bbf
+[s9] file subsdk0_053.c bytes 203094 sha256 c8e4d22f498becda95cef380188874ee6ee431f41977a104997786b5b56817d5
+[s9] file subsdk0_054.c bytes 585074 sha256 0cead90dd00ef2538ad6d74737b1b5f25f52ccdd42b91e22db372c1f8deee036
+[s9] file subsdk0_055.c bytes 180191 sha256 97c2e9692286ebfffba1882452df48b04f84fd67c3b61e17885268f25b9ef97c
+[s9] file subsdk0_056.c bytes 289122 sha256 69bff1b62428015f78fa7b2d220bf02f51db95ec269a97907a26416c85a4ee08
+[s9] file subsdk0_057.c bytes 15315 sha256 a9c46de7b865c476257f143234a8ab32ca88ba347096b3d972bfba27595f5f0f
+[s9] file subsdk0_058.c bytes 306271 sha256 2dccfb31ee7dd81b82fe37d898f939593e3e5ed2e069b806760b19f19eb414e4
+[s9] file subsdk0_059.c bytes 361592 sha256 0320165833ac1ef87b1cfd80bc6fcdcfe1625231f56b8d8cc0846375fafb890b
+[s9] file subsdk0_060.c bytes 255522 sha256 29da102e07fe4ade36e1c6ccfbfa431bb720812806891c1242a61f921ec049b4
+[s9] file subsdk0_061.c bytes 184833 sha256 ebd9fd66e904b751a172a96577f1cc4199626d24fed2aa318ada18e936c43480
+[s9] file subsdk0_062.c bytes 521198 sha256 1ddbd25cb073598db0e9af6ab8ab7e5f91f1a0b1fad0e6006c4febc0b66c2c28
+[s9] file subsdk0_063.c bytes 249534 sha256 8d941df2f485d1333955bfe899e88f1e02e89cb4ec1100149bd1997bd8cf4c96
+[s9] file subsdk0_064.c bytes 404543 sha256 80ad1e24384067a70c02bfbbf24ca0ed8e1064c3221e99e23c9d2abcee368494
+[s9] file subsdk0_065.c bytes 313050 sha256 b237c70dc5d2abe6866576c1cd64413c9126674a7c04be87bd73a2446c1fd783
+[s9] file subsdk0_066.c bytes 256454 sha256 99c77087a6ddad15910269ad9000500c721629b3e8a3736df30165f08bec8823
+[s9] file subsdk0_067.c bytes 19403 sha256 727809c96c2c81f28b562f1bf77d22518c472d4b6dcb03ee81d816a1c5cd3171
+[s9] file subsdk0_068.c bytes 183456 sha256 be179c51d4f0fab7ebf50283575ef18ddaa90f6dccebc0b368ca0c0e1bbe2406
+[s9] file subsdk0_069.c bytes 156136 sha256 1af95837b2207d3300108f81eb5822fa4b93ff9666a046cfa9ad99ae7393d4ac
+[s9] file subsdk0_070.c bytes 111617 sha256 9187513bbf2f7adb6ef899b215529d5bb6b2039e237b2892c7b00ec5647623b8
+[s9] file subsdk0_071.c bytes 819373 sha256 5a4c9810cde3623654cc47ace573416f67d5bf000f94dc430ec096f541c8270f
+[s9] file subsdk0_072.c bytes 137385 sha256 dbceac75390f4bee51627e6b451bc83f6cb3b3704ba9f1094299e85b00b2c79f
+[s9] file subsdk0_073.c bytes 45586 sha256 6a207f414b71f9231cf5ec7f5f4a68e17247a6aa83b4f0b451c4cfcacb40e31f
+[s9] file subsdk0_074.c bytes 229155 sha256 096e34c3019383c86f2e8083548b46b50de11b37484183f1663d8239c9b28e02
+[s9] file subsdk0_075.c bytes 281277 sha256 ea250c589b31d5055ce1286dfeafe5542b008fcb4880936d40aec1a77c339b0f
+[s9] file subsdk0_076.c bytes 262989 sha256 21733988923b93c7006daa84e8503f0559818757a5b6198becfe933ee93700a2
+[s9] file subsdk0_077.c bytes 1517920 sha256 471a12b98e0710f4633bfb99d905ac9549a08c7cfa1acd6eef0e438fbf682df4
+[s9] file subsdk0_078.c bytes 1512900 sha256 8908248eddba901907bb947595c7bac26f453c78547d40a29e28e4ed6fb2df07
+[s9] file subsdk0_079.c bytes 666657 sha256 a009e1886087d94d816ad4a247f19fe9f0a21f660682f42e00cf6d57255e54b1
+[s9] file subsdk0_080.c bytes 107494 sha256 1079bd993349e99f09d77deb15cea97491787dfa8a5eb17df148a96f99e82ad1
+[s9] file subsdk0_081.c bytes 447916 sha256 4f715f589694a5ea8967c040efeca3bffc7460091b115265f6ee7785207bd4b3
+[s9] file subsdk0_082.c bytes 244250 sha256 34eb6c7cfac3bb83fb4d8d6a976353465083684ae4cf1d603abea4552570de90
+[s9] file subsdk0_083.c bytes 447850 sha256 effd3ca86f6a3e6f9bd55379a3487b3c681037e212938641c05f3a91f23fd362
+[s9] file subsdk0_084.c bytes 308624 sha256 8b5e87c7f32b7ac4491eede0b480d5de273ee59f6a703d1bff70599048e44db2
+[s9] file subsdk0_085.c bytes 652346 sha256 31611b0d279f66ca2e2a910f93e05ca8b4b5cf383771fd03b30c6960f06f851d
+[s9] file subsdk0_086.c bytes 285622 sha256 f449df981cd9841875d89e1c8a2d56d3cdda0a7e4e2a09e6a08194d5ac0d6250
+[s9] file subsdk0_087.c bytes 709280 sha256 e240bf423afba864fcab8507ca1830cc610230d40494dcb373cc7c9fff88fdea
+[s9] file subsdk0_088.c bytes 154309 sha256 0d9db70a9ba2a032189f384ea68f033fb18e4c2c28fc5da64e3592d9099f6bf4
+[s9] file subsdk0_089.c bytes 10244 sha256 a9c037f82ef71cf890c1de3c545ecea3f0f9483b8a3ca0ad098f3272e6b3dfa1
+[s9] file subsdk0_090.c bytes 203726 sha256 e66ee9b91208b9e34a91b27a985402a8046f7d3f51da5ed7b3cb84b0ab06061f
+[s9] file subsdk0_091.c bytes 366329 sha256 4b26ec8c1c2a00b3aff5f8da2201aaeafa5af7fcf391e1a94821e73dc0cc53d1
+[s9] file subsdk0_092.c bytes 344402 sha256 ba66e748eaed4f5165022cd1aa5a8f8bd48772e40fd386014db3ca2d4914e462
+[s9] file subsdk0_093.c bytes 11663 sha256 199d6ecc63da1653c8cd9fdf17d4c8ecb2ace39a6d7d9c2efaae961fb85d8d25
+[s9] file subsdk0_094.c bytes 261548 sha256 420c2eb61a289a9ed5f8e5f788453a90c4fae0dbab21359cf52ab796aac1e337
+[s9] file subsdk0_095.c bytes 60916 sha256 35b00a989cee56d7bad636946e78ad34a01e3b6307f33ce23350936bb9b75671
+[s9] file subsdk0_096.c bytes 138114 sha256 5b79f7204954662aabcf675ccf1a175831ec6c607889f84a0eb589c8f40cc342
+[s9] file subsdk0_097.c bytes 478274 sha256 8b72aa73c0b275547c03771f7ccc56d204e12d4d86d01e12f030480e572b2c2d
+[s9] file subsdk0_098.c bytes 127293 sha256 8d4a0d45fb03ad1f13984b8a269a0357872d086b276b7c665a10df802806302f
+[s9] file subsdk0_099.c bytes 157193 sha256 83fa6ca3732e8bf83d79d3e8806cbd8b18a64c5c21f48525895ba8dda52af495
+[s9] file subsdk0_100.c bytes 271777 sha256 884a432023f4e1852a7c33fea31cec59b946a68b038b0575d2522d081a437dda
+[s9] file subsdk0_101.c bytes 39583 sha256 d1582e2878c3704e259710525876d278514564d0065c04d683919140b67887c7
+[s9] file subsdk0_102.c bytes 170978 sha256 6edb18e5d008ce78dfa46f49bc3f9fbf225a40125d78179e7dffb7d3478c4f52
+[s9] file subsdk0_103.c bytes 240464 sha256 5eb47e7ac7729f7b2e3c738a63f45e54f69e37df0018a0b10aa7b70e0b919c53
+[s9] file subsdk0_104.c bytes 118488 sha256 37ace768e076cfdcf4519a4f213ecef418caac74eccc1abe8fc85004375367af
+[s9] file subsdk0_105.c bytes 416246 sha256 8da15881a3c773865cf32ea9192612f7a24eadeb2906af28aa4a050a9d77f1c8
+[s9] file subsdk0_106.c bytes 155272 sha256 06a856b41a043d3dc051f0c63000684df265891a2f136d86125eaa053a456407
+[s9] file subsdk0_107.c bytes 8876 sha256 0f617eac798660b9707cc67077990bac0e6c3439c2945cbb8ca4fd1551846454
+[s9] file subsdk0_108.c bytes 117033 sha256 044b7542a615bd57257b98265ce4d32faf07606c3265aee38e0aa92104345612
+[s9] file subsdk0_109.c bytes 544413 sha256 ae0ba1a54aff0e35b545446ea240c6fb4688cedc5b02c77b471fac9d952a2c5d
+[s9] file subsdk0_110.c bytes 100916 sha256 44cd7c0123d9ed8508bd899c0e38d593ec089af6bc5cf00562421323a63095a3
+[s9] file subsdk0_111.c bytes 144126 sha256 27297a0e2ead711339d9bfec5064f73f057297b454efa7c3415a6dd4380ed5ca
+[s9] file subsdk0_112.c bytes 142916 sha256 b051b7128a970fda8442a404b2f9eece026a008f828441eccaa3e112a2c63607
+[s9] file subsdk0_113.c bytes 896649 sha256 8fb85e2c985833f878266d2d0f5d5bd20a362e9924fb8e915b9bf55a012ebc40
+[s9] file subsdk0_114.c bytes 118673 sha256 cd8b8280b5555d5e4979d6214ef3636334f2f97ff2cebaf632a2b0667e330cea
+[s9] file subsdk0_115.c bytes 896697 sha256 1978a11b3b1351166413cacac23e01b31744ee2c866b07de40267a020f9c9c36
+[s9] file subsdk0_116.c bytes 101652 sha256 47005bb66d04866ad93dd1f0722cf6f0f1f69531473ec07e939b86cd09ac990b
+[s9] file subsdk0_117.c bytes 74308 sha256 2f7a04d0aadc52fe57e83c1829fc07b347b9231e5c30314a2ca6de1e055f3a2b
+[s9] file subsdk0_118.c bytes 204367 sha256 daed734f295f3b45ddef9fc30fa022256758d5dbadbc2e2e8b85c03fa11cc04d
+[s9] file subsdk0_119.c bytes 358144 sha256 123359ef7cae3fe0fc10947c6903444de5c35638e8573acae1280f87be991d80
+[s9] file subsdk0_120.c bytes 245027 sha256 ccfb601a713ac884bd7873a33e30bb11905b19613167fa8b4e34d7987ee54079
+[s9] file subsdk0_121.c bytes 59803 sha256 08739d07566205dc99f7ceec8161cea3422e0161981af0c6eacc3f0cc7986019
+[s9] file subsdk0_122.c bytes 111315 sha256 4f3b7509b800449c4c9e29a1834bd1b17f083a7e6e111d5e28dc3b11561c23db
+[s9] file subsdk0_123.c bytes 1509808 sha256 f7c69d9f6578c8abada0a073634bda23504fdfdbeb55f7bc0c29c92961cbe41d
+[s9] file subsdk0_124.c bytes 724555 sha256 3e29650132d799f3cb07aa657fbdf54aa99bcb04792f8b1a0d9bbbe9a9d9839d
+[s9] file subsdk0_125.c bytes 133461 sha256 9f26e8aa72fa1ed6fc70c52e06885d59d031decafe59835c9318a95959585dbd
+[s9] file subsdk0_126.c bytes 553661 sha256 7a1e7565b730d3d5992d1b1803ee9536213d8408cdeadd412f4fb540bbc3a948
+[s9] file subsdk0_127.c bytes 129392 sha256 d818e9f8f3daff67b0cb49e9f95d672d69507c4eb66d4924c82e5a2656fda207
+[s9] file subsdk0_128.c bytes 133283 sha256 cdbfc43e017b3f21ea1573aead28b2e26052e69d2b48178804c32b11a053af5e
+[s9] file subsdk0_129.c bytes 229584 sha256 04fdd13f80ed5f494511d9ea0bdcb8d26c8d40f760dc781ed0a733cbe4404993
+[s9] file subsdk0_130.c bytes 246809 sha256 cbf55ed7c2b33df46ea9915c67f8fd6067789cdfcdfae5197ab6cdb11dace16c
+[s9] file subsdk0_131.c bytes 108840 sha256 9c8150a415c90d82aaf6a61fa3611092f652347b565c2c1c8b04da91e6d145cb
+[s9] file subsdk0_132.c bytes 765056 sha256 5e63497714d88e94445652379bec5d6aa0da39cf0b47505a98745cb9ae08f155
+[s9] file subsdk0_133.c bytes 124906 sha256 0573a704ca06045ce637849b7a9bddc7b81534fe0bba4769aa2032f6704b6461
+[s9] file subsdk0_134.c bytes 448813 sha256 dd3c7be7f4c8b87f54de93d3f2bfe94bef80d10b3bc5ce58fc16edab0c3dff81
+[s9] file subsdk0_135.c bytes 175851 sha256 aa5d5df017144e9f4f33816e301cb45306dcc1cf541eb79d7ed7096b20526e86
+[s9] file subsdk0_136.c bytes 71306 sha256 1600728263399fbc810291cf3a889b05b40fe1998084ab0897372f89b149303a
+[s9] file subsdk0_137.c bytes 199015 sha256 f4bea91f0f3de44fbd61d0dba46351ea5ef4600ad08233e81a8602902e3e28b5
+[s9] file subsdk0_138.c bytes 111543 sha256 1af3e9145bae75799b15822edd0a8b26d207f813635e431494e2d2199d42bb98
+[s9] file subsdk0_139.c bytes 298807 sha256 5b180f1a22c629537ae8b42db07c476bec5762aa8d82d672551f45538bbd7b60
+[s9] file subsdk0_140.c bytes 1506413 sha256 590038ec7595f4b0655838e42f6c32c047bac9bc003b192bf2872dcdbd84c97f
+[s9] file subsdk0_141.c bytes 754334 sha256 31c5e2cea1c9b438a83829938a3d82595f7f1c3c9bc97108247bf39bc8307972
+[s9] file subsdk0_142.c bytes 220572 sha256 11ddaa4941c064f082b60139e7848ba476793f80e2d0c6a0835e829725b3ae10
+[s9] file subsdk0_143.c bytes 1508517 sha256 775a848543642c68391ec6264c22fc01c6b6505338933c612339470912929e6f
+[s9] file subsdk0_144.c bytes 1073712 sha256 e7182191d5ab92248e893df18b1976017f6b18d47c8e3dcb1cf26dc9bc1d0449
+[s9] file subsdk0_145.c bytes 286767 sha256 3c76aef0ff28a23993978e96337d50bf94f9d0227bc748acf6c7e6f2773fd6c3
+[s9] file subsdk0_146.c bytes 1604791 sha256 5184ff31d3f1cbc36a113c865ddd2ffc693fedacf501d179f1b81d50575f9df3
+[s9] file subsdk0_147.c bytes 1515402 sha256 04d15ea9ee37de6f155a35c329f5c12dcf01fd133112c854c6b917ebbe2fd9b4
+[s9] file subsdk0_148.c bytes 1511499 sha256 15b12fa7040c9644df1beb43ca6a78c4c1ae33bcd02405fe8164e258e49803f8
+[s9] file subsdk0_149.c bytes 506739 sha256 b812114677fc8bc91d8b7c8c57d407cb344d4db3bb05240c6cd949f5eba8a7bd
+[s9] file subsdk0_150.c bytes 126771 sha256 c89514e7a99f34b5415e1ad1f5d776f888dbb429c70acd38fbbcdae87f22a27f
+[s9] file subsdk0_151.c bytes 129618 sha256 b158d2683640a217ad88c34d8536f134d49337ddc87a57fe4ed66990a0b2dd41
+[s9] file subsdk0_152.c bytes 165157 sha256 09ad1b9b0e0f91975cec35d73abc9c8e44741bd342154882695aef92df04d5c4
+[s9] file subsdk0_153.c bytes 1198459 sha256 f91d559e854293f3a84518a9bba99d1956c684be90e6e835fd0bf518f829148b
+[s9] file subsdk0_154.c bytes 101525 sha256 16a17baecc46ca07396c1d4690ccdb4e8ca4bbefaa72413abeaa3dc6040be6f3
+[s9] file subsdk0_155.c bytes 652925 sha256 df55411498bffa8f6e680a42219b796db0888181dc2c6597cce4cfd14d564885
+[s9] file subsdk0_156.c bytes 124359 sha256 58bd844dcfb341a615630fd5822f7b68473098ffce63f01fb677de4e735c2dae
+[s9] file subsdk0_157.c bytes 848572 sha256 2df3e087cf8627581c2d7cabe7e464a4d405009b6623dc5a74070d978118cb0d
+[s9] file subsdk0_158.c bytes 206051 sha256 a3b3bd51bcc1b5d14cd57762777062da8b587ab996fe0c509c5acadb73ba677a
+[s9] file subsdk0_159.c bytes 1514102 sha256 43e6cfaaeeb61ec14949f1331f4eadf8766af02dfe218c61679cc361fcdc94ac
+[s9] file subsdk0_160.c bytes 618775 sha256 36743061fd004d6f4c3c4d7e8fc02e8bffe5b5502052af5b639210920bda1d15
+[s9] file subsdk0_161.c bytes 311721 sha256 bf8f03359febd4553d9b4bd1a301f45811ba4297663b2e68d660188d9ee2ed2b
+[s9] file subsdk0_162.c bytes 1014388 sha256 239bd34d9d46d1906c30980944f50467537e6c53883f08ce0a0f24bad9d40368
+[s9] file subsdk0_163.c bytes 429883 sha256 c52d2691d519114772589834551f3148a26d052792b577b1ba7e1ca101df5a48
+[s9] file subsdk0_164.c bytes 267659 sha256 a99f2ec5177d440bae9c914fbffbbc4a7471929537e0120b6e7ed4df6a7e27ec
+[s9] file subsdk0_165.c bytes 108460 sha256 45ad68c4b030c1d377da91fb9a374e60c71b73fa70393686f50a76cf240ed08a
+[s9] file subsdk0_166.c bytes 2309 sha256 54c6240f9ecb16d5e155d8419ddcdc4dbd1c64aa70c2680120652fd07df51e06
+[s9] file subsdk0_167.c bytes 127518 sha256 7ceec4935617f08e2c5243092595274961f6a1e45e2ef540578eb1c334f3eb2e
+[s9] file subsdk0_168.c bytes 884948 sha256 6f46b09e93b2d965d2aae5b9468c9946c4fab41837a90f3e6d5e483cc3cbb05d
+[s9] file subsdk0_169.c bytes 100716 sha256 2c8cca32be4af384446c22fe59fa6a6de58d3f08aae190be1ab180f0596cd7fa
+[s9] file subsdk0_170.c bytes 1508826 sha256 6ee94db718b71da218acfa7239cc659a5ec44df1ec86df211c57231cab23b97f
+[s9] file subsdk0_171.c bytes 430451 sha256 d7648d9fa02d067ba9ec5777e8c8a27e35e6a3a1af5180d1aaa8c8ca014ce455
+[s9] file subsdk0_172.c bytes 207990 sha256 37e486854a3406424b6282a3b1c71a483a725243b912a604459b9dec328c8280
+[s9] file subsdk0_173.c bytes 1542925 sha256 f744e64dbca4e7dd4cf68e0d4cb900b417e4aa27512fe80ccba17d426ef6d63a
+[s9] file subsdk0_174.c bytes 278208 sha256 a4dd12cfb843bfb17269d3a1a76d36f9d262ba00bd79628381db0f9ca534d5e6
+[s9] file subsdk0_175.c bytes 1506899 sha256 36ecebc1f0f394d64dcc373f9ca27c981bc45b8cd848b30b33db1ea2466725c4
+[s9] file subsdk0_176.c bytes 496331 sha256 55f31c94b2e62c7f097f92ec5cbf6e0bc54e10c6ed7e77bdf5b58078c064b878
+[s9] file subsdk0_177.c bytes 496331 sha256 8f2dc1bb3265f1d303f58640b2e9025cbee2aa6e6c82675e4374ee5ac6052cf2
+[s9] file subsdk0_178.c bytes 165798 sha256 f4412fe04bc22256851ddb83057e8996b18f1d83337002f6ec73cfc035d1e4b1
+[s9] file subsdk0_table.c bytes 808422 sha256 07b187851d8e880cdde33413feebd5fc98540da1edd85424652431b4377ed84b
+[s9] done
+<118>[SceLncService] tryLockSuspendBlock: appId={0x00004016}
+<118>[SceLncService] sceApplicationExitSpawn3(0x00004016)
+<118>[Syscore App] Kill for LoadExec(0x10b)
+Terminating pid=267
+[BAPM] universal mode exit
+### gc_gfx_queue_status : in_frame=0 rptr=0x00000000 wptr=0x00000000 IBlist(rptr=0x0000 wptr=0x0000 i_wptr=0x0000)
+### HP3D(pipe1) GnmCompositor. proc gen:2 vmid:4
+ +++ num clients 1
+<118>[Syscore App] EVFILT_PROC NOTE_EXIT received : pid=0x10b
+<118>[Syscore App] Kill for LoadExec(0x10b) => 0
+<118>[AvControl] AudioOut: shared (pid=0xffffffff)
+<118>[AvControl] VideoOut: shared (pid=0xffffffff appId=0xffffffff)
+<118>[AvControl] -- app[0](appid=0x4016 attr=0xaa0017)(GAME RUNNING)(HDR:o HFR:o VR:x VRR:TypeA) SpecialModeInBg(none) HDCP23(none) supInfo(0x0)
+<118>[AppMgr Trace]: pid=0x10b, deleted.
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[Syscore App] Syscore Event Queue Push : unkown event
+<118>[AppMgr] All processes exited, ready for next spawn
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[Syscore App] Syscore Event Queue Pop : unkown event
+<118>[Syscore App] process delete event : pid=0x10b
+<118>[SceLncService] onAppExitSpawn() appId={0x00004016}
+<118>[AppMgr] Executing next spawn
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[Syscore App] processSpawn(pid, 0x4016, 0x14016bf0, appParam, processParam, 1, 1, 1, param, debug, 1)
+<118>[Syscore App] appParam: appType = 0, titleId = PPSA90212
+<118>[Syscore App] new pid=0x10c[Syscore App] attributeExe= 0
+<118>[AvControl] AudioOut: shared (pid=0x10c)
+<118>[AvControl] VideoOut: shared (pid=0x10c appId=0x4016)
+<118>[AvControl] video owner is switched to registered app(appId=0x4016) 
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+# process pid=268, SceSysCore.elf calls exit() exit_value=ffffffff.
+<6>pid 268 (SceSysCore.elf), uid 0: exited on signal 12
+<118>[Syscore App] An error occured while creating new process. error=0x80aa001a errno=22
+<118>mDBG: unexpected errno with spawn 0x00000016
+<118>[AvControl] AudioOut: shared (pid=0xffffffff)
+<118>[AvControl] VideoOut: shared (pid=0xffffffff appId=0xffffffff)
+<118>[AvControl] -- app[0](appid=0x4016 attr=0xaa0017)(GAME RUNNING)(HDR:o HFR:o VR:x VRR:TypeA) SpecialModeInBg(none) HDCP23(none) supInfo(0x0)
+<118>[Syscore App] processSpawn() error: 0x80aa001a
+<118>[AppMgr] Exit spawn failed : 0x80aa001a ELF path=exit
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[AvControl] onAppKill(appid=0x4016)
+<118>[AvControl] current video owner app is removed (appid=0x4016)
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[AvControl] layout:HDMI
+<118>[AvControl] notify stop-scanin (idx:-1) dwb0(unusable) dwb1(unusable) dwb2(usable) cause(hdmi)
+<118>[AvControl] ** stop scanin(pid=0x3a scaninId = 1)
+[si] stop  pipe[0] 45813s: 2us, p:0:1, 318:1948, 2768:0974, m:0, d:0x0, 0x1110
+<118>[AvControl] ** stop scanin(pid=0x3a scaninId = 2)
+[si] stop  pipe[1] 45813s: 2us, p:0:1, 319:1146, 2769:0573, m:0, d:0x0, 0x1110
+<118>[AvControl] ** v:130203021000000002/a:00 **
+<118>[AvControl] ** set_default_metadata ** -1 
+<118>[AvControl] ** mute(0) ** 
+[dce-proc:3923 Info]<49>p:0:1, m:0, d:0x0, b:0x1110, ft:0x1, fl:0x1a1a170c
+<118>[AvControl] ** set_mode(0) ** -1/-1 
+<118>[AvControl]  video: port:HDMI 3840_2160P_5994 RGB444 full RGB2100_PQ 36bpp 16:9 allm-game o--tm-sf2 
+<118>[AvControl]  audio: port:HDMI src:I2S 48k 7.1 24bit fmt:LPCM LPCM once sp:TV -
+<118>[SceLncService] onAppExit() appId={0x00004016}
+<118>[SceLncService] start unmountAllForShellCoreInternal()
+<118>[SceLncService] end unmountAllForShellCoreInternal()
+<118>[SceSystemStateMgr] Power Mode Change: NAVIGATION_ACTIVE_1
+<118>[kstuff.elf] src/shellui_patch.c:746:sceKernelGetAppInfo: Broken pipe

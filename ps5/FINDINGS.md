@@ -1409,3 +1409,17 @@ bytes from one module]. The first console object differed from the PC's in 38 by
 `clang version 18.1.8 (…SavageWindRecomp <commit>)` named the git commit each LLVM build was configured at.
 With `LLVM_APPEND_VC_REV=OFF` in `build-llvm-ps5.sh` both give `clang version 18.1.8` and the console and PC
 objects are **byte-identical** (897,016 bytes, SHA-256 `267ea1a1…`, 0 differing 4 KiB blocks).
+
+## 2026-10-29 — M12 spike S9: the generator in C++, identical to Python, and running on the console (host; .41, ps5/evidence/m8/s9-console*.klog)
+
+`tools/gen_cpp` (C++17, slices 1–5) replaces `tools/gen.py` for generation: NSO/layout/unwind parsing, the AArch64
+lifter (incl. portable SIMD), discovery with our own bounded jump-table interpreter (no Unicorn: QEMU's
+GPL-2.0-only code can't ship in the GPL-3.0 title; Python+Unicorn stays the host oracle), C emission, patch sites
+and patches (tables generated from the Python definitions with a divergence check), `layout.c`. `check_slice1-5.sh`
+on 1.9.0: every check identical — lifter 1,452,089 distinct words + 99,999 synthetic, discovery for all three
+modules, and the complete output: subsdk0 180, sdk 255, main 560 files, `all` 997 files byte-identical. `all`: C++
+20.1 s / 292 MiB vs Python 82.2 s / 2.26 GiB.
+**On the console** (`build-capstone-ps5.sh`: Capstone 5.0.9 for Prospero; probe `ps5/probe/s9_gen.cpp`, eboot
+`680260b3…`, output kept in memory through the `S9_OUTPUT_SINK` hook): subsdk0 from `/data/savagewind/s9/` →
+180 files, 70,251,623 bytes in **2.19 s**, peak heap 64 MiB; all 180 files' SHA-256 match the PC run (twice, the
+second after the final sources). main and sdk on the console: not yet run.
