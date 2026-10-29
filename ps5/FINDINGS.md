@@ -1312,3 +1312,7 @@ time (steps to 1715×965 and back to 2138×1202), fixed 86.2 % (`fgq3-fixed-a` l
 the still-camera pair at route 3 s (`fgload-lean-a` vs `fgload-off-a`, same view) shows the same green arc and
 blue disc in both: the game's lens flare, not a DRS artifact. `drs_fsr3` and `drs_lean` are now on by default;
 `dynamic_resolution` itself stays off by default.
+
+**Bounded motion-match scan, FG on at 120 Hz** (`0513106` applied on `34dc32a`, eboot `e31d460b…`, alternating,
+`ab-fgwin0/1-a/b/c.klog`): `mvec_window = 1` 96.5 / 97.0 / 96.8 % on time, render 11.15 / 11.14 / 11.09 ms;
+`mvec_window = 0` 97.5 / 95.8 / 96.7 %, 11.15 / 11.19 / 11.18 ms. No measurable gain: dropped, not merged.
