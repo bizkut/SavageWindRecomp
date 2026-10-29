@@ -261,6 +261,12 @@ void rt_vfr_update(uint64_t vfr) {
     int ui = framepace_loading_ui() ? 2 : framepace_title_ui() ? 1 : 0;
 #ifdef __PROSPERO__
     if (ui != ui_state) hd_ui_generate_set_loading(ui == 2);
+    static bool startup_title_seen;
+    if (!startup_title_seen && framepace_title_ui()) {
+        extern void ps5_startup_mark(const char *step);
+        startup_title_seen = true;
+        ps5_startup_mark("title screen first seen");
+    }
 #endif
     if (ui != ui_state) {
         static const char *const names[] = {"play", "title", "loading"};

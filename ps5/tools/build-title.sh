@@ -107,7 +107,8 @@ python3 "$root/ps5/tools/check-title-imports.py" "$build/llvm-pie.elf" \
 rm -rf -- "$app"
 mkdir -p "$app/sce_sys" "$app/sce_module"
 "$tool" self --sign --in "$build/eboot.elf" --out "$app/eboot.bin" --magic 0x1D3D154F
-cp "$param" "$root/ps5/sce_sys/icon0.png" "$app/sce_sys/"
+cp "$param" "$root/ps5/sce_sys/icon0.png" "$root/ps5/sce_sys/pic0.dds" "$root/ps5/sce_sys/pic1.dds" \
+    "$root/ps5/sce_sys/background-source.png" "$app/sce_sys/"
 cp "$libc" "$app/sce_module/libc.prx"
 "$tool" self --inspect --file "$app/eboot.bin" >/dev/null
 printf '%s\n' "$app"

@@ -6,6 +6,10 @@ On PS5, loading screens hitch far less: the title reads the game's packages with
 reads of 256 KiB or more go through the root storage broker (loading-screen package-read hitches 55 → 2, loading
 2.9 s shorter in the benchmark). `package_read_coalesce = 0` / `package_read_broker = 0` turn them off for comparisons.
 
+On PS5, the title includes original Savage Wind menu and launch backgrounds and shows an animated startup picture
+until the first game present. A player's `splash.jpg`, `splash.jpeg` or `splash.png` in the data root overrides the
+runtime picture; `startup_splash = 0` disables the runtime screen for startup comparisons.
+
 Unreleased: Vulkan reconstructs identified game font sheets at 4K from the player's own game files. The per-glyph
 distance-field path retains the original soft coverage curve for the game's text shader; thin or dense glyphs use a
 coverage-preserving interpolation instead. **Sharp game text** defaults on for PS5 and off on desktop; unknown sheets

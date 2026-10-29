@@ -103,6 +103,7 @@ typedef struct {
     bool hd_ui_generate; // PS5: generate the user-owned UI pack during first-start precompilation
     bool async_shaders;  // draw on while new shaders compile (no stutter; what needs them is skipped meanwhile)
     bool precompile_shaders;  // setting the game files up also precompiles every shader (runtime/nvn/precompile.h)
+    bool startup_splash;  // PS5: show the startup image until the game's first present
     int shadow_res;      // SHADOW_*: shadow maps at the console's size or bigger
     bool wide_view;      // a window that isn't 16:9 shows more of the world instead of bars (runtime/nvn/output_scale.c)
     int hdr;             // HDR_* (runtime/nvn/vulkan/device.c hdr_*)

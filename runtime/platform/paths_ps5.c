@@ -54,3 +54,13 @@ bool rt_resource(const char *name, const char *dev_rel, char *out, size_t n) {
     struct stat st;
     return stat(out, &st) == 0;
 }
+
+// The player's own start-up picture (runtime/ui/splash.mm on desktop; the start-up splash in
+// runtime/nvn/vulkan/device.c here): splash.jpg / splash.jpeg / splash.png in the data root. Never shipped.
+bool rt_user_splash(char *out, size_t n) {
+    static const char *const names[] = {"splash.jpg", "splash.jpeg", "splash.png"};
+    struct stat st;
+    for (size_t i = 0; i < sizeof names / sizeof *names; i++)
+        if (rt_data_path(names[i], out, n) && stat(out, &st) == 0 && S_ISREG(st.st_mode)) return true;
+    return false;
+}

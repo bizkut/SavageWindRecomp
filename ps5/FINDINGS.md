@@ -1223,3 +1223,12 @@ on by default: 96% fewer package-read loading hitches, loading 2.9 s shorter; in
 14.9–15.0 s. The three `io00` klog streams stopped early while the game kept running (benchmark history shows each
 run done); their loading phases are complete and used; `io00-b` is not. A broker built against `/opt`'s SDK instead
 of the pinned one failed at start (`cannot open /data/savagewind: errno=3`): the Makefile now pins the SDK.
+
+## 2026-10-29 — Start-up timeline and splash (.41, ps5/evidence/m8/ab-splash*.klog)
+
+`[startup]` marks, four runs (DLC installed, shaders precompiled): paths 0.1 s, packages opened 6.7 s, settings
+9.3–9.4 s, display open 10.1–10.3 s, the game's first present 19.5–19.7 s, title screen 20.7–20.9 s. Until the
+display opens the system shows the launch background (`sce_sys/pic1.dds`, now Savage Wind's own art); then the
+title draws that picture with a loading indicator until the game's first present. `startup_splash = 1` vs `0`:
+title at 20.69 / 20.91 s vs 20.88 / 20.90 s, first present 19.49 / 19.70 vs 19.67 / 19.69 s: no start-up cost.
+The system-phase picture is not yet visually confirmed on the TV.

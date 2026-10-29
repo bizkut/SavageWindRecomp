@@ -6,6 +6,15 @@ M5 audio (movie playback untested); M6 benchmark 98–100 % on time (10-minute p
 M7 MihawkGen 2× at 119.3 Hz; M8 FSR 3.1/TAA integrated (FSR 4 measured too slow at 4K); M9 broker; M10 package reads;
 sharp text/UI and the user-generated UI HD pack. Open: M11 release. Other numbers in this file are explicit targets.
 
+The PS5 package carries `pic0.dds` and `pic1.dds`, both 3840×2160 single-mip BC7_UNORM, composed from the original
+`docs/icon/icon.svg` on a dark background. `background-source.png` is the same composition used by the runtime
+startup screen; `/data/savagewind/splash.jpg`, `.jpeg`, or `.png` overrides it there. `startup_splash = 0` disables
+that runtime screen, not system artwork. One-shot `[startup]` timestamps measure each startup milestone. The runtime
+screen joins its presentation worker before the first game presenter takes the GPU lock. System display of `pic1.dds`
+and the runtime screen require console visual qualification; asset validation alone does not establish that behavior.
+The source PNG SHA-256 is `d835977bb4d6a2c1e0371e4ec3218008a8a0230cbb008330a2cd204160f4c6bc`;
+both DDS files hash to `94f5d2464cfbdd0e11b88f7263dcad0115ed2eb98d522b4bda08dfa9313cf86e`.
+
 ## Goal
 
 Savage Wind as a native PS5 homebrew title, built from the user's own game files, with:

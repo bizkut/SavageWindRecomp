@@ -20,6 +20,10 @@ int sceSystemServiceLoadExec(const char *path, const char *const *argv);
 bool ps5_exefs_init(const char *directory, char *why, size_t why_size);
 const char *g_romfs_dir = "/data/savagewind/game/romfs";
 uint64_t g_program_id;
+static uint64_t startup_ns;
+void ps5_startup_mark(const char *step) {
+    LOG("[startup] %llu ms: %s\n", (unsigned long long)((plat_now_ns() - startup_ns) / 1000000), step);
+}
 
 static void exit_title(void) {
     fflush(stderr);
@@ -188,11 +192,13 @@ static void first_start_precompile(void) {
 }
 
 int main(void) {
+    startup_ns = plat_now_ns();
     sceKernelDebugOutText(0, "savagewind: PPSA90212 M3 1.9.0 startup\n");
     if (ps5_klog_capture_stderr("savagewind: ") != 0) {
         sceKernelDebugOutText(0, "savagewind: cannot capture stderr\n");
         exit_title();
     }
+    ps5_startup_mark("main start");
     if (!plat_reserve_guest(GUEST_LO, GUEST_HI)) {
         fprintf(stderr, "cannot reserve guest address space\n");
         exit_title();
@@ -205,17 +211,20 @@ int main(void) {
     setenv("MESA_SHADER_CACHE_DISABLE", "true", 1);
     plat_init();
     rt_paths_init();
+    ps5_startup_mark("paths and permission repair done");
     char why[512] = "";
     if (!gamelib_load(NULL, why, sizeof why) || !ps5_exefs_init("/data/savagewind/import", why, sizeof why)) {
         fprintf(stderr, "startup failed: %s\n", why);
         exit_title();
     }
+    ps5_startup_mark("packages opened");
     loader_load("exefs");
     extern void fs_title_version_patch(void);
     extern void settings_load(void);
     extern void language_booted(void);
     fs_title_version_patch();
     settings_load();
+    ps5_startup_mark("settings loaded");
     ps5_log_init(g_settings.log_sync);
     language_booted();
     kernel_init();
@@ -243,8 +252,13 @@ int main(void) {
     KThread *thread = kernel_create_main_thread(start, stack_size, prio);
     extern void ui_window_init(void);  // runtime/nvn/vulkan/device.c: the display plane and device
     ui_window_init();
+    ps5_startup_mark("window up");
     first_start_precompile();
+    ps5_startup_mark("precompile done or skipped");
+    extern void ps5_startup_splash_start(void);
+    if (g_settings.startup_splash) ps5_startup_splash_start();
     fprintf(stderr, "[ps5] entering linked game code at %llx\n", (unsigned long long)start);
+    ps5_startup_mark("entering game code");
     kernel_run_main(thread, thread->handle, 0, sdk, game, fini);
     extern int ui_run(void);  // (its window loop; the window is up)
     ui_run();

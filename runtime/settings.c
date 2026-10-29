@@ -38,6 +38,7 @@ Settings g_settings = {
     .stick_deadzone = {STICK_DEADZONE_DEFAULT, STICK_DEADZONE_DEFAULT},
     .fps_limit = FPS_DEFAULT,
     .precompile_shaders = true,
+    .startup_splash = true,
     .package_read_coalesce = true,
     .package_read_broker = true,
     .sharp_text_sharpen = SHARP_TEXT_SHARPEN_DEFAULT,
@@ -160,6 +161,7 @@ void settings_load(void) {
         else if (!strcmp(key, "hd_ui_generate")) g_settings.hd_ui_generate = atoi(val) != 0;
         else if (!strcmp(key, "async_shaders")) g_settings.async_shaders = atoi(val) != 0;
         else if (!strcmp(key, "precompile_shaders")) g_settings.precompile_shaders = atoi(val) != 0;
+        else if (!strcmp(key, "startup_splash")) g_settings.startup_splash = atoi(val) != 0;
         else if (!strcmp(key, "wide_view")) g_settings.wide_view = atoi(val) != 0;
         else if (!strcmp(key, "hdr")) {
             for (int i = 0; i < HDR_COUNT; i++)
@@ -301,6 +303,7 @@ void settings_save(void) {
 #endif
     fprintf(f, "async_shaders = %d\n", g_settings.async_shaders);
     fprintf(f, "precompile_shaders = %d\n", g_settings.precompile_shaders);
+    fprintf(f, "startup_splash = %d\n", g_settings.startup_splash);
     static const char *const shadow[SHADOW_COUNT] = {"console", "high", "ultra", "extreme"};
     int sr = g_settings.shadow_res;
     fprintf(f, "shadow_resolution = %s\n", shadow[sr >= 0 && sr < SHADOW_COUNT ? sr : SHADOW_CONSOLE]);

@@ -30,6 +30,9 @@
 #include "../../ps5/dynamic_resolution.h"
 #include "../../storage_ps5.h"
 #endif
+#ifdef __PROSPERO__
+#include <sched.h>
+#endif
 
 #ifdef _WIN32  // (kernel32; windows.h itself clashes with names used here)
 __declspec(dllimport) int __stdcall MoveFileExA(const char *from, const char *to, unsigned long flags);
@@ -1828,6 +1831,118 @@ void vk_present_progress(float done, const char *const *lines) {
     vk_frame_end(save ? "build/pso_wait.png" : NULL);
 }
 
+#ifdef __PROSPERO__
+// The first game presenter joins this worker before taking gpu_lock. It cannot
+// join while holding that lock: the worker may already be waiting for it.
+static pthread_t startup_thread;
+static pthread_mutex_t startup_join_lock = PTHREAD_MUTEX_INITIALIZER;
+static atomic_bool startup_stop;
+static atomic_bool startup_active;
+static bool startup_started;
+
+static uint32_t startup_pixel(const unsigned char *p, VkFormat format) {
+    unsigned r = p[0], g = p[1], b = p[2];
+    if (format == VK_FORMAT_A2B10G10R10_UNORM_PACK32)
+        return (r * 1023 / 255) | (g * 1023 / 255) << 10 | (b * 1023 / 255) << 20 | 3u << 30;
+    if (format == VK_FORMAT_A2R10G10B10_UNORM_PACK32)
+        return (b * 1023 / 255) | (g * 1023 / 255) << 10 | (r * 1023 / 255) << 20 | 3u << 30;
+    if (format == VK_FORMAT_B8G8R8A8_UNORM || format == VK_FORMAT_B8G8R8A8_SRGB) {
+        unsigned t = r; r = b; b = t;
+    }
+    return r | g << 8 | b << 16 | 0xffu << 24;
+}
+
+static void *startup_splash_main(void *unused) {
+    (void)unused;
+    struct sched_param priority = {.sched_priority = sched_get_priority_min(SCHED_OTHER)};
+    if (priority.sched_priority >= 0) pthread_setschedparam(pthread_self(), SCHED_OTHER, &priority);
+    char path[1100];
+    if (!rt_user_splash(path, sizeof path)) snprintf(path, sizeof path, "/app0/sce_sys/background-source.png");
+    int iw = 0, ih = 0, w = 0, h = 0;
+    unsigned char *image = NULL;
+    if (rt_image_info(path, &iw, &ih) && iw > 0 && ih > 0 && iw <= 8192 && ih <= 8192)
+        image = rt_image_rgba(path, &iw, &ih);
+    SDL_GetWindowSizeInPixels(window, &w, &h);
+    uint32_t *pixels = NULL;
+    VkFormat format = g_vk.sc_format;
+    if (image && w > 0 && h > 0 && w <= 8192 && h <= 8192 &&
+        (format == VK_FORMAT_R8G8B8A8_UNORM || format == VK_FORMAT_R8G8B8A8_SRGB ||
+         format == VK_FORMAT_B8G8R8A8_UNORM || format == VK_FORMAT_B8G8R8A8_SRGB ||
+         format == VK_FORMAT_A8B8G8R8_UNORM_PACK32 || format == VK_FORMAT_A8B8G8R8_SRGB_PACK32 ||
+         format == VK_FORMAT_A2B10G10R10_UNORM_PACK32 || format == VK_FORMAT_A2R10G10B10_UNORM_PACK32)) {
+        pixels = malloc((size_t)w * h * sizeof *pixels);
+        if (pixels) {
+            double scale = fmax((double)w / iw, (double)h / ih);
+            double x0 = (iw - w / scale) * 0.5, y0 = (ih - h / scale) * 0.5;
+            for (int y = 0; y < h && !atomic_load(&startup_stop); y++)
+                for (int x = 0; x < w; x++) {
+                    int sx = (int)(x0 + (x + 0.5) / scale), sy = (int)(y0 + (y + 0.5) / scale);
+                    if (sx >= iw) sx = iw - 1;
+                    if (sy >= ih) sy = ih - 1;
+                    pixels[(size_t)y * w + x] = startup_pixel(image + ((size_t)sy * iw + sx) * 4, format);
+                }
+        }
+    }
+    rt_image_free(image);
+    unsigned frame = 0;
+    while (!atomic_load(&startup_stop)) {
+        uint64_t until = plat_now_ns() + 33333333ull;
+        gpu_lock();
+        if (!atomic_load(&startup_stop)) {
+            static const float dark[4] = {0.02f, 0.05f, 0.09f, 1};
+            if (vk_frame_begin(dark)) {
+                VkCommandBuffer cb = vk_cmd();
+                int W = (int)g_vk.sc_extent.width, H = (int)g_vk.sc_extent.height;
+                if (pixels && W == w && H == h && format == g_vk.sc_format) {
+                    VkSpan sp = vk_transient_copy(pixels, (uint64_t)w * h * 4, 4);
+                    VkBufferImageCopy rg = {.bufferOffset = sp.off, .imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
+                                            .imageExtent = {(uint32_t)w, (uint32_t)h, 1}};
+                    VkImage img = g_vk.sc_images[cur_frame.image];
+                    vk_frame_suspend();
+                    image_barrier(cb, img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+                    rec_CmdCopyBufferToImage(cb, sp.buf, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &rg);
+                    image_barrier(cb, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                    vk_frame_resume();
+                }
+                int size = H / 100 > 3 ? H / 100 : 3;
+                for (int i = 0; i < 3; i++) {
+                    float c = (frame / 8) % 3 == (unsigned)i ? 0.9f : 0.3f;
+                    VkClearAttachment a = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .colorAttachment = 0,
+                                           .clearValue.color.float32 = {c, c, c, 1}};
+                    VkClearRect r = {{{W - size * (7 - i * 2), H - size * 5}, {(uint32_t)size, (uint32_t)size}}, 0, 1};
+                    if (r.rect.offset.x >= 0 && r.rect.offset.y >= 0) rec_CmdClearAttachments(cb, 1, &a, 1, &r);
+                }
+                vk_frame_end(NULL);
+                frame++;
+            }
+        }
+        gpu_unlock();
+        while (!atomic_load(&startup_stop) && plat_now_ns() < until) usleep(2000);
+    }
+    free(pixels);
+    return NULL;
+}
+
+void ps5_startup_splash_start(void) {
+    atomic_store(&startup_stop, false);
+    int rc = pthread_create(&startup_thread, NULL, startup_splash_main, NULL);
+    if (!rc) { startup_started = true; atomic_store(&startup_active, true); }
+    else LOG("[splash] cannot start worker (%d)\n", rc);
+}
+
+static void startup_splash_join(void) {
+    if (!atomic_load(&startup_active)) return;
+    pthread_mutex_lock(&startup_join_lock);
+    if (startup_started) {
+        atomic_store(&startup_stop, true);
+        pthread_join(startup_thread, NULL);
+        startup_started = false;
+        atomic_store(&startup_active, false);
+    }
+    pthread_mutex_unlock(&startup_join_lock);
+}
+#endif
+
 static uint64_t pso_wait(void) {  // ns waited
     if (!vk_pso_wait_needed()) return 0;
     uint64_t t0 = SDL_GetTicksNS();
@@ -2096,6 +2211,14 @@ static void present_locked(NvnTexture *t) {
         }
         const char *path = shot ? "build/window.png" : wpath[0] ? wpath : fg_real_shot[0] ? fg_real_shot : NULL;
         vk_frame_end(path);
+#ifdef __PROSPERO__
+        static bool startup_presented;
+        if (!startup_presented) {
+            extern void ps5_startup_mark(const char *step);
+            startup_presented = true;
+            ps5_startup_mark("game first present");
+        }
+#endif
         frame_capture[0] = 0;
         fg_real_shot[0] = 0;
         if (shot && getenv("SAVAGEWIND_EXIT_AFTER_SHOT")) { fflush(stderr); _exit(0); }
@@ -2418,6 +2541,9 @@ int ui_run(void) {
 
 // (game threads present while others submit; the window loop re-presents)
 void backend_present(NvnTexture *t) {
+#ifdef __PROSPERO__
+    startup_splash_join();
+#endif
     gpu_lock();
     present_locked(t);
     gpu_unlock();
