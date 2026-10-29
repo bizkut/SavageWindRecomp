@@ -1135,7 +1135,7 @@ Soak, eboot `f233cc80…`, 1440p internal (set during the run), partly played by
 allocation 1.33–1.46 GB. Stopped by the user ("it works good"); the 60-minute gate is waived by that decision.
 FSR 3.1 default (`2a6aaf6`), first launch with no upscaler keys: `upscaler 3, quality 3` → 1920×1080 → 3840×2160
 with FG. Benchmark: 95.1 % on time, 59.5 / 119.0 fps, render thread 11.7 ms (FSR 1: 8.9 ms, 99.9 %), GPU 12.4 ms.
-FSR 3.1's dispatch recording on the render thread is the cost.
+Later profiling below identified motion-vector processing, not FSR dispatch recording, as the main CPU cost.
 
 ## 2026-10-29 — Text weight fixed: 4× sheets keep the original edge curve (.41, ps5/evidence/m8/)
 
@@ -1157,3 +1157,42 @@ indices, no zero-init of motion inputs. Tried and dropped (no gain): match-range
 as the draw's uniform upload. The profiler itself costs ~1 ms, so on-time is judged with it off.
 Plain benchmark, default settings, eboot `add37208…`: **97.6 % and 98.0 %** on time (before: 95.1 %), render
 11.1 ms, GPU 12.4 ms, 59.6 / 119.3 fps. FSR 1: 99.9 %. Remaining: motion ~2.2 ms in busy scenes.
+
+## 2026-10-29 — Compact motion-history sorting qualified (.41)
+
+Candidate build `75eea538…`: in-process reference/candidate comparison on 5,509 frame reports found zero record,
+history-match, push-constant or sort mismatches. This establishes compared CPU-path equivalence on the route, not
+independent GPU-output equivalence. Two identical-build vector-readback runs had 46 common frame IDs and zero equal
+XY hashes: the scene is not bit-deterministic across launches, so cross-run hashes cannot establish correctness.
+
+Initial candidate timing runs accidentally retained `mvec_verify = 1`; verification forces both candidates and
+those timings are invalid. Accepted timing runs explicitly disabled verification and readback; logs show neither
+diagnostic and confirm FSR 3.1 at 1920×1080 → 3840×2160 with MihawkGen FG.
+
+| Same-binary candidate | On time, two runs | Render ms, two runs | Frame p95 ms, two runs |
+|---|---|---|---|
+| Reference (`ab-plain00`, `ab-plain00final`) | 96.7%, 96.7% | 11.12, 11.13 | 17.060, 17.057 |
+| Record setup only (`ab-plain10`, `ab-plain10b`) | 96.7%, 97.0% | 11.10, 11.13 | 17.002, 16.991 |
+| Compact radix only (`ab-plain01`, `ab-plain01b`) | 98.1%, 97.6% | 11.11, 11.07 | 16.898, 16.905 |
+
+Retained compact key/index radix sorting with all eight histograms collected in one scan; unsigned-key and
+original-index ordering is preserved. Dropped record-setup candidate (no meaningful gain), per-draw replay,
+vector readback and experimental ini switches. Optional reference-sort checking is enabled only by the presence
+of `SAVAGEWIND_MVEC_VERIFY_SORT` (even a value of `0` enables it); leave the environment variable absent for timing.
+
+Cleaned build `fa045ab6…`, `build/ps5/variants/mvec-final/PPSA90212`, two console runs
+(`ab-radix-final-a/b.klog`): 98.7% / 98.3% on time, render 11.02 / 11.06 ms, GPU 12.46 / 12.51 ms,
+59.6 real / 119.3 presented fps, no fatal markers. Desktop runtime-object and PS5 builds passed.
+The improvement is modest; the ≥99% target is still unmet. No work was moved to another thread.
+
+## 2026-10-29 — Bounded motion-match scan: equivalent, timing deferred (.41, ps5/evidence/m8/ab-window-*.klog)
+
+Candidate (eboot `8874c5ee…`, `mvec_window = 1`): the alternating 49-position match scan stops after the last
+position that can fall inside the key's candidate range, keeping visit order, distances, ties and the fallback.
+`mvec_window = 2` on .41 ran the reference and candidate scans on the same inputs: 5,490 frame reports, all
+`mismatches 0`. Timing is not qualified: after a console restart the TV link offered only 3840×2160 at 59.94 Hz,
+so frame generation stayed off (58.9 presented fps); at 60 Hz the candidate showed no clear change (96.3 / 96.7 %
+vs 96.6 %, one reference run cut short). The FG-on A/B waits for a 120 Hz display (deferred by the user); the code
+is parked on the local branch `ps5-mvec-window`, not in `ps5`. The first five captures of this session also failed
+before the benchmark because the root storage broker had stopped with the console restart (`storage broker
+unavailable: 61`); reload it via elfldr after every console restart.

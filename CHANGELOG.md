@@ -16,9 +16,11 @@ Storage-capable textures may use the pack for sampling; an actual storage, copy,
 guest image and prevents that texture body from switching back to an HD replacement.
 On PS5, experimental first-start generation uses the player's imported packages and the bundled Real-ESRGAN model;
 `hd_ui_generate` defaults on for 4K output. Generation continues in the background after shader precompilation;
-the nonblocking build and its startup time have not yet been qualified on console.
+the game starts without waiting for it (PS5 first start measured unchanged at 119 s).
 The built-in benchmark supports an unattended repeated-route soak with periodic frame, hitch and memory counts.
 The optional save check reports unavailable until game-level save and reload triggers are identified.
+Vulkan reduces motion-vector index setup work by sorting compact keys with batched radix histograms; PS5 benchmark
+measurements showed a modest improvement, but did not reach the 99% on-time target.
 
 ## Alpha 3 hotfix (0.3.1-alpha.3, Windows) - 2026-10-25
 

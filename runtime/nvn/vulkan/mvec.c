@@ -80,6 +80,14 @@ static struct {  // since the last log line
 #define CAMC 32
 static struct { uint64_t addr; uint32_t off, size, n; } camc[CAMC];
 static int ncamc;
+// Optional in-frame comparison against the original stable index sort.
+static uint64_t sort_checks, sort_mismatches, sort_unavailable;
+static bool verify_sorts(void) {
+    static int enabled = -1;
+    if (enabled < 0) enabled = getenv("SAVAGEWIND_MVEC_VERIFY_SORT") != NULL;
+    return enabled;
+}
+
 
 static void mat4_mul(const float *a, const float *b, float *o) {  // row-major: o = a * b
     for (int r = 0; r < 4; r++)
@@ -279,8 +287,37 @@ static int cmp_by_key2(const void *a, const void *b) {
     return *(const int32_t *)a < *(const int32_t *)b ? -1 : *(const int32_t *)a > *(const int32_t *)b;
 }
 
-// Stable LSD sort: input indices are in draw order, so equal keys retain the same ordering as the qsort comparator.
-static void sort_indices(int32_t *idx, int n, bool loose) {
+// Sorting compact pairs avoids repeatedly fetching keys from the large motion records.
+// A radix histogram depends only on the input keys, so gather all eight in one scan.
+static bool sort_indices_batch(int32_t *idx, int n, bool loose) {
+    typedef struct { uint64_t key; int32_t idx; } Pair;
+    static Pair *a, *b;
+    static int cap;
+    if (n > cap) {
+        Pair *na = malloc((size_t)n * sizeof *na), *nb = malloc((size_t)n * sizeof *nb);
+        if (!na || !nb) { free(na); free(nb); return false; }
+        free(a); free(b); a = na; b = nb; cap = n;
+    }
+    uint32_t counts[8][256] = {{0}};
+    for (int i = 0; i < n; i++) {
+        const MvecRec *r = &sort_prev->rec[idx[i]];
+        uint64_t key = loose ? r->key2 : r->key;
+        a[i] = (Pair){key, idx[i]};
+        for (int j = 0; j < 8; j++) counts[j][(key >> (j * 8)) & 255]++;
+    }
+    Pair *src = a, *dst = b;
+    for (int j = 0; j < 8; j++) {
+        uint32_t pos[256], sum = 0;
+        for (int k = 0; k < 256; k++) { pos[k] = sum; sum += counts[j][k]; }
+        for (int i = 0; i < n; i++) dst[pos[(src[i].key >> (j * 8)) & 255]++] = src[i];
+        Pair *tmp = src; src = dst; dst = tmp;
+    }
+    for (int i = 0; i < n; i++) idx[i] = src[i].idx;
+    return true;
+}
+
+// Original stable sort, also used when allocating the compact sort buffers fails.
+static void sort_indices_reference(int32_t *idx, int n, bool loose) {
     static int32_t *tmp;
     static int cap;
     if (n > cap) {
@@ -307,10 +344,36 @@ static void sort_indices(int32_t *idx, int n, bool loose) {
     }
 }
 
+static void verify_sort(const int32_t *actual, int n, bool loose) {
+    static int32_t *ref;
+    static int cap;
+    if (!verify_sorts()) return;
+    if (n > cap) {
+        int32_t *p = realloc(ref, (size_t)n * sizeof *ref);
+        if (!p) { sort_unavailable++; return; }
+        ref = p; cap = n;
+    }
+    for (int i = 0; i < n; i++) ref[i] = i;
+    sort_indices_reference(ref, n, loose);
+    sort_checks++;
+    if (n && memcmp(ref, actual, (size_t)n * sizeof *ref)) sort_mismatches++;
+}
+
+static void sort_indices(int32_t *idx, int n, bool loose) {
+    if (!sort_indices_batch(idx, n, loose)) sort_indices_reference(idx, n, loose);
+    verify_sort(idx, n, loose);
+}
+
+
 static int32_t prev_match(MvecRec *r);
 
 // A new presented frame: the slot it records into, the previous frame's index
 static void frame_begin(uint64_t frame) {
+    if (verify_sorts() && cur_frame != ~0ull)
+        LOG("[mvec-sort-verify] frame %llu checks %llu mismatches %llu unavailable %llu\n",
+            (unsigned long long)cur_frame, (unsigned long long)sort_checks,
+            (unsigned long long)sort_mismatches, (unsigned long long)sort_unavailable);
+    sort_checks = sort_mismatches = sort_unavailable = 0;
     if (cur >= 0) camera_finish(&slots[cur]);
     if (cur >= 0) {
         if (slots[cur].used > stat.max_used) stat.max_used = slots[cur].used;
@@ -577,7 +640,7 @@ int mvec_record(const MvecDrawIn *d) {
     if (g_rprof) g_rp[RP_MVEC_MATCH] += rp_now() - match_t;
     if (log_every() > 0) {  // (statistics) the object's world position (slot 4's translation) against each matching's previous draw
         int32_t po = prev_lookup(key, r->ord), pf = by_order ? -1 : r->prev;
-        if (r->nfeat >= 12 && r->cb_slot[0] == 3 && r->cb_slot[1] == 4 && po >= 0 && pf >= 0) {
+        if (r->nfeat >= 12 && r->ncb >= 2 && r->cb_slot[0] == 3 && r->cb_slot[1] == 4 && po >= 0 && pf >= 0) {
             stat.moved_checked++;
             const float *t = &r->feat[0];
             for (int m = 0; m < 2; m++) {
@@ -599,6 +662,7 @@ full:
     stat.dropped++;
     return -1;
 }
+
 
 void mvec_drawn(void) { stat.motion++; }
 void mvec_masked(void) { stat.masked++; }
