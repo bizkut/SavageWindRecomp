@@ -1325,3 +1325,7 @@ never stepped; old (Performance 1080p, DRS off) 96.0 / 95.5 %, p95 17.20 / 17.54
 GPU time plus FG (≈ 16.3 ms) sits just under the controller's budget, so DRS stays at 1440p while frames miss.
 Selecting 1440p with the benchmark's `internal = 1440` line measured higher (94.3–95.3 %, `ab-qsel-*`, `ab-fgq*`)
 than through the ini (89.9–93.9 %); cause not found (same GPU, render and hitch causes).
+**DRS headroom tried, dropped** (eboot `56d8474b…`, `drs_headroom_ms` A/B, `ab-head*.klog`): 1 ms (current) 94.3 %
+(second run lost its result), size 1440p throughout; 2.5 ms 94.6 / 95.7 %, 965p for 55 of 60 s; 4 ms 93.3 / 95.2 %,
+965p throughout. Below full size the remapping variants raise render-thread time to 12.0–12.1 ms, so the late frames
+stay; a bigger margin only lowers the size below the old 1080p default. Not kept.
