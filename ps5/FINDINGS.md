@@ -1291,3 +1291,24 @@ one showed a green arc and blue disc near the sun that the fixed-size run at a s
 not: lens flare or artifact is unresolved (the still-camera pair at route 3 s was taken but the console went
 offline before it could be fetched; `noload0-a/b` and `noload1-b` were cut short with it). FG with DRS waits for
 the 120 Hz TV.
+
+## 2026-10-29 — DRS with FSR 3.1 at 120 Hz with frame generation; lean path (.41, ps5/evidence/m8/ab-fg-*, ab-fgload-*, ab-fgq*.klog)
+
+TV at 3840×2160 119.88 Hz, MihawkGen on (119.0–119.3 presented fps), FSR 3.1, eboot of `ad721ce`, alternating runs.
+**`drs_lean` removes the DRS-mode cost** (no load, Performance 1080p, size never stepped):
+
+| Mode | Runs | On time | Render ms | GPU ms |
+|---|---|---|---|---|
+| DRS off | `fg-off-a/b` | 95.5, 96.5 % | 11.19, 11.20 | 12.45, 12.40 |
+| DRS | `fg-drs-a/b` | 94.3, 95.9 % | 12.05, 12.01 | 12.82, 12.78 |
+| DRS lean | `fg-lean-a/b` | 97.3, 96.3 % | 11.18, 11.21 | 12.40, 12.45 |
+
+Below full size lean switches to the remapping variants (render ~12.0 ms while reduced); every `[drs] step` line in
+these runs shows 0 compiles and 0 pipelines. **Load:** with `gpu_load = 8` at Performance 1080p (steps to 1286×724)
+DRS gains nothing (69.4 / 69.5 % vs 69.9 / 70.2 % fixed): 8 ms more GPU exceeds the 16.7 ms budget whatever the
+scene size. Quality 1440p with FG fits the route without load (fixed 94.9 %, lean DRS 94.9 / 95.3 %, GPU 14.4 ms,
+the size held at 1440p). **With `gpu_load = 3` at Quality 1440p** (just over budget): lean DRS 95.3 / 95.2 % on
+time (steps to 1715×965 and back to 2138×1202), fixed 86.2 % (`fgq3-fixed-a` lost its result line). **Lens flare:**
+the still-camera pair at route 3 s (`fgload-lean-a` vs `fgload-off-a`, same view) shows the same green arc and
+blue disc in both: the game's lens flare, not a DRS artifact. `drs_fsr3` and `drs_lean` are now on by default;
+`dynamic_resolution` itself stays off by default.

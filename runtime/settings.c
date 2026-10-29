@@ -49,6 +49,8 @@ Settings g_settings = {
 #ifdef __PROSPERO__
     .hdr = HDR_OFF,
     .sharp_text = true,
+    .drs_fsr3 = true,
+    .drs_lean = true,
 #endif
     .wide_view = true,
     .fov = 100,
@@ -298,8 +300,8 @@ void settings_save(void) {
     fprintf(f, "frame_generation = %d\n", g_settings.frame_gen ? 1 : 0);
 #ifdef __PROSPERO__
     fprintf(f, "dynamic_resolution = %d\n", g_settings.dynamic_resolution ? 1 : 0);
-    fprintf(f, "drs_fsr3 = %d\n", g_settings.drs_fsr3 ? 1 : 0);
-    fprintf(f, "drs_lean = %d\n", g_settings.drs_lean ? 1 : 0);
+    if (!g_settings.drs_fsr3) fprintf(f, "drs_fsr3 = 0\n");  // (A/B only: written while off)
+    if (!g_settings.drs_lean) fprintf(f, "drs_lean = 0\n");
 #endif
     fprintf(f, "fg_upscale = %s\n", g_settings.fg_upscale == FG_UP_BILINEAR ? "bilinear" : "fsr1");
     if (g_settings.fg_separate) fprintf(f, "fg_passes = separate\n");  // (A/B only: written while set)

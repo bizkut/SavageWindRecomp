@@ -111,7 +111,7 @@ void video_page(std::vector<Item> &v) {
     };
     v.push_back(mode);
     v.push_back(video_antialiasing());
-    v.push_back(toggle(P_VIDEO, "Dynamic resolution", "Off with TAA; FSR 3 requires drs_fsr3 = 1 in the ini.",
+    v.push_back(toggle(P_VIDEO, "Dynamic resolution", "Lowers the render size in GPU-heavy scenes. Off with TAA.",
                        [](const Item &) { return (int)g_settings.dynamic_resolution; },
                        [](const Item &, int x) { g_settings.dynamic_resolution = x != 0; settings_save(); }, 0));
     v.push_back(video_anisotropy());

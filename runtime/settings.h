@@ -66,8 +66,8 @@ typedef struct {
                          // desktop, PS5_MihawkGen on the PS5, there at 119.88 Hz only)
 #ifdef __PROSPERO__
     bool dynamic_resolution; // DRS is disabled by default and while TAA is active
-    bool drs_fsr3;           // opt in to experimental DRS with FSR 3.1
-    bool drs_lean;           // use non-remapping shaders at full DRS size (A/B)
+    bool drs_fsr3;           // DRS also with FSR 3.1 (A/B: ini 0)
+    bool drs_lean;           // ordinary shaders while DRS is at full size (A/B: ini 0)
 #endif
     int fg_upscale;      // FG_UP_* (savagewind.ini only: fg_upscale = fsr1 | bilinear)
     bool fg_separate;    // (A/B, savagewind.ini only: fg_passes = separate) MihawkGen's passes after it unfused, as before
