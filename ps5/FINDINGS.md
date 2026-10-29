@@ -1316,3 +1316,12 @@ blue disc in both: the game's lens flare, not a DRS artifact. `drs_fsr3` and `dr
 **Bounded motion-match scan, FG on at 120 Hz** (`0513106` applied on `34dc32a`, eboot `e31d460b…`, alternating,
 `ab-fgwin0/1-a/b/c.klog`): `mvec_window = 1` 96.5 / 97.0 / 96.8 % on time, render 11.15 / 11.14 / 11.09 ms;
 `mvec_window = 0` 97.5 / 95.8 / 96.7 %, 11.15 / 11.19 / 11.18 ms. No measurable gain: dropped, not merged.
+
+**New 4K defaults: Quality 1440p + DRS (user decision 2026-10-29).** First launch now picks
+`upscaler_quality = quality` and `dynamic_resolution = 1` with FSR 3.1 (files holding the keys keep them;
+`ab-newdefaults*.klog` shows `quality 1` and DRS written). Measured cost on the route, both selected through the ini,
+alternating (`ab-dflt-*.klog`): new 93.2 / 91.8 % on time, frame p95 18.13 / 18.22 ms, GPU 14.44 / 14.41 ms, DRS
+never stepped; old (Performance 1080p, DRS off) 96.0 / 95.5 %, p95 17.20 / 17.54 ms, GPU 12.41 / 12.39 ms. The game
+GPU time plus FG (≈ 16.3 ms) sits just under the controller's budget, so DRS stays at 1440p while frames miss.
+Selecting 1440p with the benchmark's `internal = 1440` line measured higher (94.3–95.3 %, `ab-qsel-*`, `ab-fgq*`)
+than through the ini (89.9–93.9 %); cause not found (same GPU, render and hitch causes).

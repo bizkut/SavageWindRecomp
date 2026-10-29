@@ -4,8 +4,8 @@ What changed in each Savage Wind release. The `test` branch holds what the next 
 
 On PS5, **Dynamic resolution** works with FSR 3.1 (and with frame generation): FSR 3.1 gets the current render size
 each frame, so a size step needs no shader, pipeline or FSR rebuild, and DRS costs nothing while at full size. With
-FG at Quality 1440p and a GPU-heavy load in the benchmark: 95.3 % on time with DRS, 86.2 % without. DRS stays off by
-default (Video > Dynamic resolution).
+FG at Quality 1440p and a GPU-heavy load in the benchmark: 95.3 % on time with DRS, 86.2 % without. At 4K, first
+launch now picks FSR 3.1 Quality (1440p) with dynamic resolution on; existing settings are kept.
 
 On PS5, loading screens hitch far less: the title reads the game's packages with one aligned read per request, and
 reads of 256 KiB or more go through the root storage broker (loading-screen package-read hitches 55 → 2, loading
