@@ -1422,4 +1422,7 @@ modules, and the complete output: subsdk0 180, sdk 255, main 560 files, `all` 99
 **On the console** (`build-capstone-ps5.sh`: Capstone 5.0.9 for Prospero; probe `ps5/probe/s9_gen.cpp`, eboot
 `680260b3…`, output kept in memory through the `S9_OUTPUT_SINK` hook): subsdk0 from `/data/savagewind/s9/` →
 180 files, 70,251,623 bytes in **2.19 s**, peak heap 64 MiB; all 180 files' SHA-256 match the PC run (twice, the
-second after the final sources). main and sdk on the console: not yet run.
+second after the final sources). **All modules on the console** (eboot `4c375c52…`, `s9-console-all.klog`): main
+560 files / 432,658,261 bytes in 14.4 s, subsdk0 180 / 70,251,623 in 2.5 s, sdk 255 / 129,478,358 in 4.4 s, plus
+`layout.c`; sampled heap peak 311 MiB; all **997** files' SHA-256 equal to the PC run of the same probe (itself
+identical to `tools/gen.py`). Generation on the console is ~21 s; compiling the 996 C files (S8) dominates.

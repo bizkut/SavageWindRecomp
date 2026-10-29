@@ -32,14 +32,26 @@ static void say(const char *fmt, ...) {
 #endif
 }
 
-struct FileResult { std::string name; size_t bytes; std::array<uint8_t, 32> sha; };
-static std::vector<FileResult> results;
-static size_t total_bytes;
+static std::string current_module;
+static size_t module_files, module_bytes;
+static unsigned long long sampled_peak;
+
+static void sample_heap() {
+#ifdef __PROSPERO__
+    struct ps5_heap_stats heap{};
+    ps5_heap_stats(&heap);
+    sampled_peak = std::max(sampled_peak, static_cast<unsigned long long>(heap.peak_bytes));
+#endif
+}
+
 void s9_output_sink(const std::string &filename, const std::string &text) {
+    sample_heap();
     auto sha = ps5::crypto::sha256(std::span<const uint8_t>(
         reinterpret_cast<const uint8_t *>(text.data()), text.size()));
-    results.push_back({filename.substr(filename.find_last_of("/\\") + 1), text.size(), sha});
-    total_bytes += text.size();
+    std::string digest = hexbytes(sha.data(), sha.size());
+    say("[s9] file %s bytes %zu sha256 %s\n", filename.c_str(), text.size(), digest.c_str());
+    ++module_files;
+    module_bytes += text.size();
 }
 
 static uint64_t now_ns() {
@@ -56,43 +68,61 @@ static int finish(int code) {
 }
 int main(int argc, char **argv) {
 #ifdef __PROSPERO__
-    (void)argc; (void)argv;
+    (void)argc;
+    (void)argv;
     const std::string root = "/data/savagewind/s9";
 #else
     const std::string root = argc > 1 ? argv[1] : "build/ps5/s9-input";
 #endif
-    std::string nso = root + "/subsdk0", layout = root + "/layout.txt", hle = root + "/hle_symbols.txt";
-    for (const auto &p : {nso, layout, hle}) {
-        struct stat st{};
-        if (stat(p.c_str(), &st) || !S_ISREG(st.st_mode)) {
-            say("[s9] failed input %s\n", p.c_str());
-            return finish(1);
+    try {
+        for (const auto &name : {"main", "subsdk0", "sdk", "layout.txt", "hle_symbols.txt"}) {
+            std::string path = root + "/" + name;
+            struct stat st{};
+            if (stat(path.c_str(), &st) || !S_ISREG(st.st_mode)) {
+                say("[s9] failed input %s\n", path.c_str());
+                return finish(1);
+            }
         }
-    }
-    std::vector<std::string> args = {"gen", "subsdk0", nso, layout, ".", "--hle", hle, "--simd", "c"};
-    std::vector<char *> raw;
-    for (auto &arg : args) raw.push_back(arg.data());
-    uint64_t start = now_ns();
-    int rc = s9_generator_main(int(raw.size()), raw.data());
-    uint64_t elapsed = now_ns() - start;
-    if (rc || results.empty()) {
-        say("[s9] failed generator rc=%d files=%zu\n", rc, results.size());
+        auto modules = layout(root);
+        require(modules.size() == 3 && modules[0].name == "main" && modules[1].name == "subsdk0" &&
+                modules[2].name == "sdk", "unexpected module layout");
+        std::ifstream expected(root + "/layout.txt");
+        require(bool(expected), "layout unavailable");
+        std::ostringstream layout_text;
+        layout_text << expected.rdbuf();
+        std::string actual = "# module layout (tools/layout.py), load order: name, guest base, image size, NSO build id\n";
+        for (const auto &module : modules)
+            actual += module.name + " " + hex_plain(module.base) + " " + hex_plain(module.size) + " " + module.id + "\n";
+        require(actual == layout_text.str(), "layout mismatch");
+        auto sites = [&]() {
+            Nso main_nso(file(root + "/main"));
+            return game_sites::for_module(main_nso, modules[0].base, false);
+        }();
+        write_layout(modules, ".", sites.version, sites.sites);
+        Options opts;
+        opts.hlepath = root + "/hle_symbols.txt";
+        for (const auto &module : modules) {
+            current_module = module.name;
+            module_files = 0;
+            module_bytes = 0;
+            sampled_peak = 0;
+            sample_heap();
+            uint64_t start = now_ns();
+            Options module_opts = opts;
+            if (module.name == "main")
+                module_opts.hlepath.clear();
+            generate(module.name, fs::path(root) / module.name, module.base, fs::path(".") / module.name,
+                     module_opts, &sites.sites);
+            uint64_t elapsed = now_ns() - start;
+            sample_heap();
+            require(module_files != 0, "generator produced no files");
+            say("[s9] module %s files %zu bytes %zu ms %.3f sampled_peak_heap %llu\n",
+                current_module.c_str(), module_files, module_bytes, elapsed / 1e6, sampled_peak);
+        }
+        say("[s9] done\n");
+        return finish(0);
+    } catch (const std::exception &e) {
+        say("[s9] failed: %s\n", e.what());
         return finish(1);
     }
-#ifdef __PROSPERO__
-    struct ps5_heap_stats heap{};
-    ps5_heap_stats(&heap);
-    unsigned long long peak = heap.peak_bytes;
-#else
-    // PS5 heap allocator statistics are not available on the host.
-    unsigned long long peak = 0;
-#endif
-    say("[s9] module subsdk0 files %zu bytes %zu ms %.3f peak_heap %llu\n",
-        results.size(), total_bytes, elapsed / 1e6, peak);
-    for (const auto &f : results) {
-        std::string digest = hexbytes(f.sha.data(), f.sha.size());
-        say("[s9] file %s bytes %zu sha256 %s\n", f.name.c_str(), f.bytes, digest.c_str());
-    }
-    say("[s9] done\n");
-    return finish(0);
 }
