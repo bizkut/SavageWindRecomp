@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "package_core.h"
 #include "package_exefs.h"
+#include "read_profile.h"
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
+static std::atomic<bool> use_package_coalesce{false};
+extern "C" void savagewind_package_set_coalesce(int enabled) {
+    use_package_coalesce.store(enabled != 0, std::memory_order_relaxed);
+}
 
 static void (*diagnostic_callback)(const char *);
 extern "C" void savagewind_package_set_diagnostic(void (*callback)(const char *)) {
@@ -35,6 +40,9 @@ struct PackageStream {
     size_t readers = 0, reader_limit = kMaxReaders;
     std::atomic<uint64_t> read_count{0}, read_bytes{0}, sequential{0}, pool_waits{0};
     std::atomic<uint64_t> small{0}, medium{0}, large{0};
+    std::atomic<uint64_t> io_ns{0}, aes_ns{0}, sha_ns{0}, patch_ns{0}, total_ns{0};
+    std::atomic<uint64_t> file_reads{0}, file_bytes{0};
+    std::atomic<uint64_t> broker_reads{0}, broker_bytes{0}, broker_ns{0};
     PackageStream() : importer(".") { importer.st.session = "package-runtime"; }
 
     Stream make_reader() {
@@ -197,16 +205,61 @@ extern "C" ssize_t savagewind_package_pread(void *handle, void *dst, size_t size
             .fetch_add(1, std::memory_order_relaxed);
         uint64_t reads = package->read_count.fetch_add(1, std::memory_order_relaxed) + 1;
         if ((reads & 1023) == 0) {
-            char detail[256];
+            char detail[512];
             std::snprintf(detail, sizeof detail,
-                          "reads=%llu bytes=%llu sequential=%llu pool_waits=%llu sizes_lt64k=%llu lt512k=%llu ge512k=%llu",
+                          "reads=%llu bytes=%llu sequential=%llu pool_waits=%llu sizes_lt64k=%llu lt512k=%llu ge512k=%llu io_ns=%llu aes_stream_ns=%llu sha_ns=%llu patch_ns=%llu total_ns=%llu file_reads=%llu file_bytes=%llu broker_reads=%llu broker_bytes=%llu broker_ns=%llu",
                           (unsigned long long)reads, (unsigned long long)package->read_bytes.load(),
                           (unsigned long long)package->sequential.load(), (unsigned long long)package->pool_waits.load(),
                           (unsigned long long)package->small.load(), (unsigned long long)package->medium.load(),
-                          (unsigned long long)package->large.load());
+                          (unsigned long long)package->large.load(), (unsigned long long)package->io_ns.load(),
+                          (unsigned long long)package->aes_ns.load(), (unsigned long long)package->sha_ns.load(),
+                          (unsigned long long)package->patch_ns.load(), (unsigned long long)package->total_ns.load(),
+                          (unsigned long long)package->file_reads.load(), (unsigned long long)package->file_bytes.load(),
+                          (unsigned long long)package->broker_reads.load(), (unsigned long long)package->broker_bytes.load(),
+                          (unsigned long long)package->broker_ns.load());
             diagnostic("package-runtime", "read-profile", 0, "info", detail);
         }
         lease.reader = package->acquire();
+        struct ProfileRead {
+            PackageStream *package;
+            uint64_t start;
+            explicit ProfileRead(PackageStream *p) : package(p), start(read_profile_now()) {
+                savage_read_profile = {};
+                savage_read_profile.active = true;
+            }
+            ~ProfileRead() {
+                auto &p = savage_read_profile;
+                p.active = false;
+                package->total_ns.fetch_add(read_profile_now() - start, std::memory_order_relaxed);
+                package->io_ns.fetch_add(p.io_ns, std::memory_order_relaxed);
+                package->aes_ns.fetch_add(p.aes_ns, std::memory_order_relaxed);
+                package->sha_ns.fetch_add(p.sha_ns, std::memory_order_relaxed);
+                package->patch_ns.fetch_add(p.patch_ns, std::memory_order_relaxed);
+                package->file_reads.fetch_add(p.file_reads, std::memory_order_relaxed);
+                package->file_bytes.fetch_add(p.file_bytes, std::memory_order_relaxed);
+                package->broker_reads.fetch_add(p.broker_reads, std::memory_order_relaxed);
+                package->broker_bytes.fetch_add(p.broker_bytes, std::memory_order_relaxed);
+                package->broker_ns.fetch_add(p.broker_ns, std::memory_order_relaxed);
+            }
+        } profile(package);
+        if (use_package_coalesce.load(std::memory_order_relaxed) && offset < package->size && size) {
+            constexpr uint64_t block = 16384, limit = 8 * 1024 * 1024;
+            const uint64_t count = std::min<uint64_t>(size, package->size - offset);
+            const uint64_t start = offset & ~(block - 1);
+            const uint64_t end = std::min<uint64_t>(package->size, (offset + count + block - 1) & ~(block - 1));
+            const uint64_t span = end - start;
+            if ((start != offset || end != offset + count) && span <= limit) {
+                static thread_local std::vector<byte_t> buffer;
+                buffer.resize(size_t(span));
+                lease.reader->seek(int64_t(start), tc::io::SeekOrigin::Begin);
+                size_t got = lease.reader->read(buffer.data(), size_t(span));
+                size_t skip = size_t(offset - start);
+                size_t available = got > skip ? got - skip : 0;
+                size_t copied = std::min<size_t>(size_t(count), available);
+                if (copied) std::memcpy(dst, buffer.data() + skip, copied);
+                return ssize_t(copied);
+            }
+        }
         lease.reader->seek(int64_t(offset), tc::io::SeekOrigin::Begin);
         return ssize_t(lease.reader->read(static_cast<byte_t *>(dst), size));
     } catch (const std::exception &e) {

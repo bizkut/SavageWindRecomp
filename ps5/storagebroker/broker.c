@@ -399,10 +399,13 @@ static int do_request(struct sb_request *r, char *path, unsigned char *data, uin
 }
 static int valid_request(const struct sb_request *r)
 {
-    if (r->magic != SB_MAGIC || r->operation < SB_CREATE || r->operation > SB_CREATE_EXCLUSIVE ||
+    if (r->magic != SB_MAGIC || r->operation < SB_CREATE || r->operation > SB_PACKAGE_READ ||
         r->path_length > SB_MAX_PATH || r->length > SB_MAX_TRANSFER) return 0;
     if (r->operation == SB_QUIT || r->operation == SB_REPAIR)
         return !r->path_length && !r->length && !r->offset;
+    if (r->operation == SB_PACKAGE_READ)
+        return !r->path_length && r->offset <= INT64_MAX &&
+               r->length <= (uint64_t)INT64_MAX - r->offset;
     if (!r->path_length) return 0;
     if (r->operation != SB_WRITE && r->operation != SB_READ &&
         r->operation != SB_TRUNCATE && r->offset) return 0;
@@ -417,6 +420,7 @@ static int valid_request(const struct sb_request *r)
 }
 static void *serve(void *arg)
 {
+    int package_fd = -1;
     int client = (int)(intptr_t)arg;
     struct sb_hello hello;
     struct sb_request r;
@@ -445,15 +449,15 @@ static void *serve(void *arg)
                 io_all(client, &repair_stats, sizeof(repair_stats), 1)) break;
             continue;
         }
-        if (io_all(client, path, r.path_length, 0)) break;
+        if (r.path_length && io_all(client, path, r.path_length, 0)) break;
         path[r.path_length] = 0;
-        if (r.length && (r.operation == SB_READ || r.operation == SB_WRITE ||
+        if (r.length && (r.operation == SB_READ || r.operation == SB_PACKAGE_READ || r.operation == SB_WRITE ||
                          r.operation == SB_REPLACE || r.operation == SB_APPEND ||
                          r.operation == SB_RENAME || r.operation == SB_LIST)) {
             data = malloc((size_t)r.length + (r.operation == SB_RENAME));
             if (!data) {
                 unsigned char discard[4096];
-                uint32_t remaining = (r.operation == SB_READ || r.operation == SB_LIST) ? 0 : r.length;
+                uint32_t remaining = (r.operation == SB_READ || r.operation == SB_PACKAGE_READ || r.operation == SB_LIST) ? 0 : r.length;
                 while (remaining) {
                     size_t n = remaining < sizeof(discard) ? remaining : sizeof(discard);
                     if (io_all(client, discard, n, 0)) goto done;
@@ -467,17 +471,46 @@ static void *serve(void *arg)
              r.operation == SB_APPEND || r.operation == SB_RENAME) && r.length &&
             io_all(client, data, r.length, 0)) { free(data); break; }
         if (r.operation == SB_RENAME) data[r.length] = 0;
-        pthread_mutex_lock(&request_lock);
-        rc = do_request(&r, path, data, &value);
-        pthread_mutex_unlock(&request_lock);
+        if (r.operation == SB_PACKAGE_OPEN) {
+            char *leaf = NULL;
+            int dir;
+            if (package_fd >= 0) { close(package_fd); package_fd = -1; }
+            if (r.path_length <= 7 || memcmp(path, "import/", 7) || !path_valid(path, r.path_length))
+                rc = -EINVAL;
+            else {
+                pthread_mutex_lock(&request_lock);
+                dir = parent_for(path, &leaf);
+                if (dir < 0) rc = dir;
+                else {
+                    package_fd = open_regular(dir, leaf, O_RDONLY);
+                    close(dir);
+                    rc = package_fd < 0 ? package_fd : 0;
+                    if (rc) package_fd = -1;
+                }
+                pthread_mutex_unlock(&request_lock);
+            }
+        } else if (r.operation == SB_PACKAGE_READ) {
+            ssize_t count;
+            if (package_fd < 0) rc = -EBADF;
+            else {
+                do { count = pread(package_fd, data, r.length, (off_t)r.offset); }
+                while (count < 0 && errno == EINTR);
+                rc = count < 0 ? -errno : (int)count;
+            }
+        } else {
+            pthread_mutex_lock(&request_lock);
+            rc = do_request(&r, path, data, &value);
+            pthread_mutex_unlock(&request_lock);
+        }
         if (reply_to(client, rc, value) ||
-            ((r.operation == SB_READ || r.operation == SB_LIST) && rc > 0 &&
+            ((r.operation == SB_READ || r.operation == SB_PACKAGE_READ || r.operation == SB_LIST) && rc > 0 &&
              io_all(client, data, (size_t)rc, 1))) {
             free(data); break;
         }
         free(data);
     }
 done:
+    if (package_fd >= 0) close(package_fd);
     close(client);
     return NULL;
 }
@@ -488,9 +521,18 @@ static int open_root(void)
     return open(SB_ROOT, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
 #else
     int data = open("/data", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC), root;
-    if (data < 0) return -1;
-    if (mkdirat(data, "savagewind", 0777) && errno != EEXIST) { close(data); return -1; }
+    if (data < 0) { say("open /data failed: errno=%d", errno); return -1; }
+    if (mkdirat(data, "savagewind", 0777) && errno != EEXIST) {
+        int error = errno;
+        say("mkdirat savagewind failed: errno=%d", error);
+        close(data); errno = error; return -1;
+    }
     root = openat(data, "savagewind", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+    if (root < 0) {
+        int error = errno;
+        say("openat savagewind failed: errno=%d", error);
+        close(data); errno = error; return -1;
+    }
     close(data);
     return root;
 #endif

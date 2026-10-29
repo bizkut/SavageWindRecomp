@@ -21,6 +21,11 @@
 extern void *savagewind_package_open(const char *, const char *const *, size_t, unsigned, char *, size_t);
 extern uint64_t savagewind_package_size(void *);
 extern ssize_t savagewind_package_pread(void *, void *, size_t, uint64_t);
+#ifdef __PROSPERO__
+extern void savagewind_package_set_coalesce(int);
+extern void savagewind_package_set_broker(int);
+#include "settings.h"
+#endif
 extern void savagewind_package_close(void *);
 #endif
 
@@ -70,6 +75,10 @@ RomfsImage *romfs_image_open(const char *dir, char *why, size_t why_size) {
 #ifdef ROMFS_PACKAGE
 RomfsImage *romfs_image_open_package(const char *keys, const char *const *packages, size_t count,
                                      unsigned addon, char *why, size_t why_size) {
+#ifdef __PROSPERO__
+    savagewind_package_set_coalesce(g_settings.package_read_coalesce);
+    savagewind_package_set_broker(g_settings.package_read_broker);
+#endif
     void *package = savagewind_package_open(keys, packages, count, addon, why, why_size);
     if (!package) return NULL;
     uint64_t size = savagewind_package_size(package);

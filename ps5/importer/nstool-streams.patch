@@ -772,3 +772,49 @@ index ac2466e..b990529 100644
  
          // fmt::print("test hash: {:s}\n", tc::cli::FormatUtil::formatBytesAsString(blk_hash_ptr, 32, true, ":"));
          // fmt::print("calc hash: {:s}\n", tc::cli::FormatUtil::formatBytesAsString(mHash.data(), 32, true, ":"));
+diff --git a/deps/libtoolchain/src/io/FileStream.cpp b/deps/libtoolchain/src/io/FileStream.cpp
+--- a/deps/libtoolchain/src/io/FileStream.cpp
++++ b/deps/libtoolchain/src/io/FileStream.cpp
+@@ -110,5 +110,11 @@ size_t tc::io::FileStream::read(byte_t *ptr, size_t count)
+     }
+ 
++    ReadProfileScope profile(ReadProfileScope::IO);
+-    return read_impl(ptr, count);
++    size_t result = read_impl(ptr, count);
++    if (savage_read_profile.active) {
++        ++savage_read_profile.file_reads;
++        savage_read_profile.file_bytes += result;
++    }
++    return result;
+ }
+ 
+diff --git a/deps/libtoolchain/src/crypto/Aes128CtrEncryptedStream.cpp b/deps/libtoolchain/src/crypto/Aes128CtrEncryptedStream.cpp
+--- a/deps/libtoolchain/src/crypto/Aes128CtrEncryptedStream.cpp
++++ b/deps/libtoolchain/src/crypto/Aes128CtrEncryptedStream.cpp
+@@ -95,5 +95,6 @@ int64_t tc::crypto::Aes128CtrEncryptedStream::position()
+ size_t tc::crypto::Aes128CtrEncryptedStream::read(byte_t *ptr, size_t count)
+ {
++    ReadProfileScope profile(ReadProfileScope::AES);
+     if (mBaseStream == nullptr)
+     {
+         throw tc::ObjectDisposedException(kClassName + "::read()", "Failed to read from stream (stream is disposed)");
+diff --git a/deps/libpietendo/src/hac/BKTREncryptedStream.cpp b/deps/libpietendo/src/hac/BKTREncryptedStream.cpp
+--- a/deps/libpietendo/src/hac/BKTREncryptedStream.cpp
++++ b/deps/libpietendo/src/hac/BKTREncryptedStream.cpp
+@@ -181,5 +181,6 @@ int64_t pie::hac::BKTREncryptedStream::position()
+ size_t pie::hac::BKTREncryptedStream::read(byte_t *ptr, size_t count)
+ {
++    ReadProfileScope profile(ReadProfileScope::PATCH);
+     // track read_count
+     size_t data_read_count = 0;
+ 
+diff --git a/deps/libpietendo/src/hac/HierarchicalIntegrityStream.cpp b/deps/libpietendo/src/hac/HierarchicalIntegrityStream.cpp
+--- a/deps/libpietendo/src/hac/HierarchicalIntegrityStream.cpp
++++ b/deps/libpietendo/src/hac/HierarchicalIntegrityStream.cpp
+@@ -418,5 +418,6 @@ bool pie::hac::HierarchicalIntegrityStream::validateLayerBlocksWithHashLayer(
+     const byte_t *layer, size_t block_size, size_t block_num, const byte_t *hash_layer)
+ {
++    ReadProfileScope profile(ReadProfileScope::SHA);
+     size_t bad_block = block_num;
+     for (size_t i = 0; i < block_num; i++)
+     {

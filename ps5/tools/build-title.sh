@@ -16,6 +16,7 @@ name=$1; shift
 [[ $name =~ ^[a-z0-9_-]+$ ]] || { echo "invalid name: $name" >&2; exit 2; }
 
 sdk=$(bash "$root/ps5/tools/setup-deps.sh")
+export PS5_PAYLOAD_SDK="$sdk"
 tooling="$root/ps5/tooling"
 native="$tooling/native"
 cc() { PS5_PAYLOAD_SDK="$sdk" sh "$tooling/prospero-clang18" "$@"; }

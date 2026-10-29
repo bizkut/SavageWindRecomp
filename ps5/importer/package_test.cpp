@@ -16,6 +16,23 @@
 #include <vector>
 
 using Clock = std::chrono::steady_clock;
+extern "C" void savagewind_package_set_coalesce(int);
+static void test_coalesced_reads(RomfsImage *image) {
+    uint64_t size = romfs_image_size(image);
+    for (uint64_t offset : {uint64_t(0), uint64_t(1), uint64_t(16383), uint64_t(16384),
+                            size > 32768 ? size - 32768 : uint64_t(0), size ? size - 1 : uint64_t(0), size}) {
+        for (size_t count : {size_t(1), size_t(16384), size_t(65537), size_t(524288)}) {
+            std::vector<unsigned char> direct(count), merged(count);
+            savagewind_package_set_coalesce(0);
+            ssize_t expected = romfs_image_pread(image, direct.data(), count, offset);
+            savagewind_package_set_coalesce(1);
+            ssize_t actual = romfs_image_pread(image, merged.data(), count, offset);
+            if (actual != expected || (actual > 0 && std::memcmp(direct.data(), merged.data(), size_t(actual))))
+                throw std::runtime_error("coalesced package read differs");
+        }
+    }
+    savagewind_package_set_coalesce(0);
+}
 extern "C" int savage_sha256_ni(unsigned char *, const unsigned char *, size_t);
 static void test_sha256_ni() {
     std::vector<unsigned char> input(16400);
@@ -220,6 +237,7 @@ int main(int argc, char **argv) {
         RomfsImage *image = romfs_image_open_package(argv[1], const_cast<const char *const *>(argv + 4), size_t(argc - 4), 0, why, sizeof why);
         double open_time = seconds(start);
         if (!image) throw std::runtime_error(why);
+        test_coalesced_reads(image);
         Tables tables;
         if (!tables.load(image)) throw std::runtime_error("invalid RomFS tables");
         std::ifstream manifest(argv[2]);

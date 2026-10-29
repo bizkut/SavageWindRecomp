@@ -1196,3 +1196,30 @@ vs 96.6 %, one reference run cut short). The FG-on A/B waits for a 120 Hz displa
 is parked on the local branch `ps5-mvec-window`, not in `ps5`. The first five captures of this session also failed
 before the benchmark because the root storage broker had stopped with the console restart (`storage broker
 unavailable: 61`); reload it via elfldr after every console restart.
+
+## 2026-10-29 — Loading-screen package reads: coalesced, large reads through the root broker (.41, ps5/evidence/m8/ab-io*.klog)
+
+Diagnosis (`ab-readsplit-b`, `ab-readcount-a`, DLC packs installed): the loading hitches were the game's own reads
+of the NSP/XCI through the title's verified package stream (1.5–3.6 MB per hitch on one guest thread). At 2,048
+guest reads (599 MB): file I/O 6.80 s (77.5%), AES 0.80 s, IVFC SHA 1.13 s, patch 0.02 s; 5,306 file reads for
+2,048 requests (IVFC/AES/BKTR split unaligned heads and tails), 633 MB read. Title file reads are throttled
+(storage probe: 133 MiB/s sequential, 1.5 ms per random 64 KiB read) where the root broker reads 517–552 MiB/s.
+
+Candidates, same binary (eboot `9afe7e75…`, broker v5 `a95a4d11…` built with the pinned SDK), alternating runs:
+`package_read_coalesce` (one aligned stream read per request up to 8 MiB) and `package_read_broker` (reads of
+256 KiB or more served by the broker's read-only package op on `/data/savagewind/import` files; decryption and
+hash verification stay in the title; direct reads if the broker is absent or older).
+
+| Coalesce / broker | Runs | Loading package-read hitches | All loading hitches | Loading s | File I/O s | File reads | File MB | Broker reads (MB) |
+|---|---|---|---|---|---|---|---|---|
+| 0 / 0 | `io00-t`, `io00-a`, `io00-c` | 55, 55, 53 | 69, 71, 71 | 17.8 | 6.85 | 5,304 | 632 | 0 |
+| 1 / 0 | `io10-a/b` | 47, 50 | 64, 67 | 17.2, 17.3 | 6.42, 6.39 | 2,352 | 633 | 0 |
+| 0 / 1 | `io01-a/b` | 2, 3 | 11, 10 | 15.5, 15.5 | 4.07, 4.06 | 4,644 | 215 | 663 (417) |
+| 1 / 1 | `io11-a/b` | 2, 2 | 10, 11 | 14.9, 14.9 | 3.38, 3.36 | 1,665 | 188 | 688 (444) |
+
+(Loading s: benchmark `loading` → `settling`; I/O and read counts at the 2,048-read profile line.) Both are now
+on by default: 96% fewer package-read loading hitches, loading 2.9 s shorter; in-game on time unchanged
+(95.3–97.0% in every run, 60 Hz without FG). Default-on runs (`splash0/1-a/b`): 1–3 package-read hitches, loading
+14.9–15.0 s. The three `io00` klog streams stopped early while the game kept running (benchmark history shows each
+run done); their loading phases are complete and used; `io00-b` is not. A broker built against `/opt`'s SDK instead
+of the pinned one failed at start (`cannot open /data/savagewind: errno=3`): the Makefile now pins the SDK.

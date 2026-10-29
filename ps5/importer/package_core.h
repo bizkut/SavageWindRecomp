@@ -39,7 +39,7 @@ static constexpr size_t chunk_size = 8 * 1024 * 1024;
 // long enough to be key material before sending diagnostics to klog.
 static void diagnostic(const char *session, const char *step, int error, const char *kind,
                        const char *detail) noexcept {
-    char safe[256];
+    char safe[512];
     size_t out = 0;
     const char *p = detail ? detail : "";
     while (*p && out + 1 < sizeof(safe)) {
@@ -59,7 +59,7 @@ static void diagnostic(const char *session, const char *step, int error, const c
         safe[out++] = c >= 32 && c < 127 ? static_cast<char>(c) : ' ';
     }
     safe[out] = '\0';
-    char line[512];
+    char line[768];
     std::snprintf(
         line, sizeof(line), "savagewind-import: session=%s step=%s errno=%d type=%s what=%s\n",
         session && *session ? session : "-", step ? step : "-", error, kind ? kind : "-", safe);

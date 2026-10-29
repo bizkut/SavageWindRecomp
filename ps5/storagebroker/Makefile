@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-PS5_PAYLOAD_SDK ?= $(HOME)/ps5-payload-sdk
+# Use the same pinned SDK as the title, regardless of the caller's environment.
+override PS5_PAYLOAD_SDK := $(abspath $(dir $(firstword $(MAKEFILE_LIST)))/../../.deps/ps5/ps5-payload-sdk)
+export PS5_PAYLOAD_SDK
 include $(PS5_PAYLOAD_SDK)/toolchain/prospero.mk
 
 CFLAGS += -Wall -Wextra -O2 -pthread

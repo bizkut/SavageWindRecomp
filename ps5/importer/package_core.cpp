@@ -1,9 +1,71 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "package_core.h"
+#include "read_profile.h"
+#include "../storagebroker/client.h"
+#include <atomic>
+
+static std::atomic<bool> use_package_broker{false};
+extern "C" void savagewind_package_set_broker(int enabled) {
+    use_package_broker.store(enabled != 0, std::memory_order_relaxed);
+}
+
+// Each package stream owns its connection and broker-side file descriptor.
+class PackageFileStream : public tc::io::IStream {
+    std::shared_ptr<tc::io::FileStream> direct;
+    std::string relative;
+    sb_client broker{-1, 0};
+    bool attempted = false;
+public:
+    explicit PackageFileStream(const fs::path &path)
+        : direct(std::make_shared<tc::io::FileStream>(
+              tc::io::Path(path.string()), tc::io::FileMode::Open, tc::io::FileAccess::Read)) {
+        const std::string full = path.string(), root = SB_ROOT "/";
+        if (full.compare(0, root.size(), root) == 0)
+            relative = full.substr(root.size());
+    }
+    ~PackageFileStream() override { sb_close(&broker); }
+    bool canRead() const override { return direct->canRead(); }
+    bool canWrite() const override { return direct->canWrite(); }
+    bool canSeek() const override { return direct->canSeek(); }
+    int64_t length() override { return direct->length(); }
+    int64_t position() override { return direct->position(); }
+    size_t read(byte_t *ptr, size_t count) override {
+        if (savage_read_profile.active && use_package_broker.load(std::memory_order_relaxed) &&
+            count >= 256 * 1024 && count <= SB_MAX_TRANSFER && relative.compare(0, 7, "import/") == 0) {
+            if (!attempted) {
+                attempted = true;
+                if (sb_connect(&broker) || broker.server_version != SB_VERSION ||
+                    sb_package_open(&broker, relative.c_str())) sb_close(&broker);
+            }
+            if (broker.fd >= 0) {
+                int64_t pos = direct->position();
+                uint64_t start = read_profile_now();
+                int result = pos < 0 ? -1 : sb_package_read(&broker, ptr, uint32_t(count), uint64_t(pos));
+                uint64_t elapsed = read_profile_now() - start;
+                auto &profile = savage_read_profile;
+                profile.io_ns += elapsed;
+                profile.broker_ns += elapsed;
+                if (result >= 0) {
+                    ++profile.broker_reads;
+                    profile.broker_bytes += uint64_t(result);
+                    direct->seek(pos + result, tc::io::SeekOrigin::Begin);
+                    return size_t(result);
+                }
+                sb_close(&broker);
+            }
+        }
+        return direct->read(ptr, count);
+    }
+    size_t write(const byte_t *p, size_t n) override { return direct->write(p, n); }
+    int64_t seek(int64_t o, tc::io::SeekOrigin s) override { return direct->seek(o, s); }
+    void setLength(int64_t n) override { direct->setLength(n); }
+    void flush() override { direct->flush(); }
+    void dispose() override { sb_close(&broker); direct->dispose(); }
+};
+
 Vfs package_filesystem(const fs::path &path) {
     std::string name = path.filename().string();
-    auto stream = std::make_shared<tc::io::FileStream>(
-        tc::io::Path(path.string()), tc::io::FileMode::Open, tc::io::FileAccess::Read);
+    auto stream = std::make_shared<PackageFileStream>(path);
     if (ends(name, ".nsp")) {
         nstool::PfsProcess proc;
         proc.setInputFile(stream);

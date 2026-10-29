@@ -77,29 +77,29 @@ static int request(struct sb_client *c, uint32_t op, const char *path,
     struct sb_reply reply;
     int rc;
     if (!c || c->fd < 0 || length > SB_MAX_TRANSFER || (length && !data &&
-        (op == SB_READ || op == SB_WRITE || op == SB_REPLACE ||
+        (op == SB_READ || op == SB_PACKAGE_READ || op == SB_WRITE || op == SB_REPLACE ||
          op == SB_APPEND || op == SB_RENAME || op == SB_LIST))) return -EINVAL;
-    if ((op == SB_READ || op == SB_WRITE) &&
+    if ((op == SB_READ || op == SB_PACKAGE_READ || op == SB_WRITE) &&
         (offset > INT64_MAX || length > (uint64_t)INT64_MAX - offset)) return -EINVAL;
     if (op == SB_TRUNCATE && offset > INT64_MAX) return -EINVAL;
     if (path) {
         size_t n = strnlen(path, SB_MAX_PATH + 1u);
         if (!n || n > SB_MAX_PATH) return -EINVAL;
         req.path_length = (uint32_t)n;
-    } else if (op != SB_QUIT && op != SB_REPAIR) return -EINVAL;
+    } else if (op != SB_QUIT && op != SB_REPAIR && op != SB_PACKAGE_READ) return -EINVAL;
     if ((rc = io_all(c->fd, &req, sizeof(req), 1)) ||
         (req.path_length && (rc = io_all(c->fd, (void *)path, req.path_length, 1))) ||
         ((op == SB_WRITE || op == SB_REPLACE || op == SB_APPEND || op == SB_RENAME) && length &&
          (rc = io_all(c->fd, data, length, 1))) ||
         (rc = io_all(c->fd, &reply, sizeof(reply), 0))) goto fail;
     if (reply.magic != SB_MAGIC || reply.reserved || reply.version != c->server_version ||
-        (reply.result > 0 && op != SB_READ && op != SB_WRITE &&
+        (reply.result > 0 && op != SB_READ && op != SB_PACKAGE_READ && op != SB_WRITE &&
          op != SB_APPEND && op != SB_LIST) ||
-        ((op == SB_READ || op == SB_WRITE || op == SB_APPEND || op == SB_LIST) &&
+        ((op == SB_READ || op == SB_PACKAGE_READ || op == SB_WRITE || op == SB_APPEND || op == SB_LIST) &&
          reply.result > (int32_t)length)) {
         rc = -EPROTO; goto fail;
     }
-    if ((op == SB_READ || op == SB_LIST) && reply.result > 0 &&
+    if ((op == SB_READ || op == SB_PACKAGE_READ || op == SB_LIST) && reply.result > 0 &&
         (rc = io_all(c->fd, data, (size_t)reply.result, 0))) goto fail;
     if (op == SB_REPAIR && (rc = io_all(c->fd, data, sizeof(struct sb_repair_stats), 0)))
         goto fail;
@@ -116,6 +116,10 @@ int sb_pwrite(struct sb_client *c, const char *p, const void *d, uint32_t n, uin
 { return request(c, SB_WRITE, p, (void *)d, n, o, NULL); }
 int sb_pread(struct sb_client *c, const char *p, void *d, uint32_t n, uint64_t o)
 { return request(c, SB_READ, p, d, n, o, NULL); }
+int sb_package_open(struct sb_client *c, const char *p)
+{ return request(c, SB_PACKAGE_OPEN, p, NULL, 0, 0, NULL); }
+int sb_package_read(struct sb_client *c, void *d, uint32_t n, uint64_t o)
+{ return request(c, SB_PACKAGE_READ, NULL, d, n, o, NULL); }
 int sb_stat(struct sb_client *c, const char *p, uint64_t *size)
 { return size ? request(c, SB_STAT, p, NULL, 0, 0, size) : -EINVAL; }
 int sb_replace(struct sb_client *c, const char *p, const void *d, uint32_t n)

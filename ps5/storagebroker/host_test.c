@@ -65,11 +65,43 @@ int main(void) {
     {
         struct sb_client old = {-1, 0};
         check(sb_connect_version(&old, 2) == -EPROTONOSUPPORT && old.fd == -1,
-              "v4 rejects v2 requests");
+              "v5 rejects v2 requests");
         check(sb_connect_version(&old, 3) == -EPROTONOSUPPORT && old.fd == -1,
-              "v4 rejects v3 requests");
+              "v5 rejects v3 requests");
+        check(sb_connect_version(&old, 4) == -EPROTONOSUPPORT && old.fd == -1,
+              "v5 rejects v4 requests");
     }
     if (client.fd < 0) return 1;
+    {
+        int fd;
+        check(sb_mkdir(&client, "import") == 0, "create import directory");
+        fd = open(SB_ROOT "/import/game.nsp", O_CREAT | O_EXCL | O_WRONLY, 0600);
+        check(fd >= 0 && write(fd, in, sizeof(in)) == (ssize_t)sizeof(in), "create package fixture");
+        if (fd >= 0) close(fd);
+        check(sb_package_read(&client, out, 8, 0) == -EBADF, "package read requires open");
+        check(sb_package_open(&client, "save/file") == -EINVAL &&
+              sb_package_open(&client, "import/../save/file") == -EINVAL,
+              "package open confines path");
+        check(symlink("/etc/passwd", SB_ROOT "/import/link") == 0 &&
+              sb_package_open(&client, "import/link") < 0, "package open rejects symlink");
+        unlink(SB_ROOT "/import/link");
+        check(symlink("/etc", SB_ROOT "/import/parent") == 0 &&
+              sb_package_open(&client, "import/parent/passwd") < 0,
+              "package open rejects symlink parent");
+        unlink(SB_ROOT "/import/parent");
+        check(link(SB_ROOT "/import/game.nsp", SB_ROOT "/import/hard") == 0 &&
+              sb_package_open(&client, "import/hard") < 0, "package open rejects hardlink");
+        unlink(SB_ROOT "/import/hard");
+        check(sb_package_open(&client, "import/game.nsp") == 0, "package open");
+        check(sb_package_read(&client, out, sizeof(out), 0) == (int)sizeof(out) &&
+              !memcmp(out, in, sizeof(in)), "package read returns file bytes");
+        check(sb_package_read(&client, out, sizeof(out), sizeof(in) - 3) == 3 &&
+              !memcmp(out, in + sizeof(in) - 3, 3), "package read short at EOF");
+        check(sb_package_read(&client, out, 1, UINT64_MAX) == -EINVAL,
+              "package read rejects overflowing offset");
+        unlink(SB_ROOT "/import/game.nsp");
+        rmdir(SB_ROOT "/import");
+    }
     {
         struct sb_repair_stats stats;
         struct stat before = {0}, root_before = {0}, after, st;

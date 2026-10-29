@@ -8,6 +8,9 @@
 #define SAVAGE_STORAGE_CLIENT_H
 #include <stdint.h>
 #include "protocol.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct sb_client { int fd; uint32_t server_version; };
 
@@ -53,6 +56,8 @@ int sb_pwrite(struct sb_client *client, const char *path, const void *data,
               uint32_t length, uint64_t offset);
 int sb_pread(struct sb_client *client, const char *path, void *data,
              uint32_t length, uint64_t offset);
+int sb_package_open(struct sb_client *client, const char *relative_import_path);
+int sb_package_read(struct sb_client *client, void *data, uint32_t length, uint64_t offset);
 int sb_stat(struct sb_client *client, const char *path, uint64_t *size);
 /* Replace atomically; the complete content is durable before rename. */
 int sb_replace(struct sb_client *client, const char *path, const void *data,
@@ -68,4 +73,7 @@ int sb_rmdir(struct sb_client *client, const char *path);
 int sb_list(struct sb_client *client, const char *path, void *buffer, uint32_t capacity);
 int sb_repair(struct sb_client *client, struct sb_repair_stats *stats);
 int sb_quit(struct sb_client *client);
+#ifdef __cplusplus
+}
+#endif
 #endif

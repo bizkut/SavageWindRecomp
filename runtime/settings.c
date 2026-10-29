@@ -38,6 +38,8 @@ Settings g_settings = {
     .stick_deadzone = {STICK_DEADZONE_DEFAULT, STICK_DEADZONE_DEFAULT},
     .fps_limit = FPS_DEFAULT,
     .precompile_shaders = true,
+    .package_read_coalesce = true,
+    .package_read_broker = true,
     .sharp_text_sharpen = SHARP_TEXT_SHARPEN_DEFAULT,
     .hd_ui = true,
     .vsync = VSYNC_DEFAULT,
@@ -185,6 +187,8 @@ void settings_load(void) {
         else if (!strcmp(key, "render_profile")) g_settings.render_profile = atoi(val) != 0;
         else if (!strcmp(key, "vk_recorder")) g_settings.vk_recorder = atoi(val) != 0;
         else if (!strcmp(key, "log_sync")) g_settings.log_sync = atoi(val) != 0;
+        else if (!strcmp(key, "package_read_coalesce")) g_settings.package_read_coalesce = atoi(val) != 0;
+        else if (!strcmp(key, "package_read_broker")) g_settings.package_read_broker = atoi(val) != 0;
         else bind_settings_load(key, val);  // bind_pad_* / bind_key_*: runtime/hle/bindings.c
     }
     fclose(f);
@@ -272,6 +276,8 @@ void settings_save(void) {
     fprintf(f, "fg_upscale = %s\n", g_settings.fg_upscale == FG_UP_BILINEAR ? "bilinear" : "fsr1");
     if (g_settings.fg_separate) fprintf(f, "fg_passes = separate\n");  // (A/B only: written while set)
     if (g_settings.fg_split_submits) fprintf(f, "fg_split_submits = 1\n");
+    if (!g_settings.package_read_coalesce) fprintf(f, "package_read_coalesce = 0\n");  // (A/B only: written while off)
+    if (!g_settings.package_read_broker) fprintf(f, "package_read_broker = 0\n");
     fprintf(f, "dpad_move = %d\n", g_settings.dpad_move);
     fprintf(f, "left_stick_deadzone = %.0f\n", g_settings.stick_deadzone[0] * 100);
     fprintf(f, "right_stick_deadzone = %.0f\n", g_settings.stick_deadzone[1] * 100);

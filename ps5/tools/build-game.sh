@@ -8,6 +8,7 @@ set -euo pipefail
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$root"
 sdk=$(bash ps5/tools/setup-deps.sh)
+export PS5_PAYLOAD_SDK="$sdk"
 # PS5_GAMECODE_OPT=-O2 (A/B; default -O1): the game code build-gamecode.sh made with that flag
 gamecode_opt=${PS5_GAMECODE_OPT:--O1}
 game="$root/build/ps5/gamecode$([[ $gamecode_opt == -O1 ]] || printf '%s' "$gamecode_opt")/libgamecode.a"

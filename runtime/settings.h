@@ -114,6 +114,8 @@ typedef struct {
     bool render_profile; // (diagnostics) the render thread's time by command kind (vulkan/rprof.h); ini only
     bool vk_recorder;    // (A/B) Vulkan calls on a recorder thread of their own (vulkan/record.h, upstream PR #189); ini only
     bool log_sync;       // PS5 klog A/B: write on the calling thread instead of the logger
+    bool package_read_coalesce; // PS5: one aligned file read per verified package request (A/B: ini 0)
+    bool package_read_broker;   // PS5: package reads >= 256 KiB through the root storage broker (A/B: ini 0)
 } Settings;
 
 #define STICK_DEADZONE_DEFAULT 0.10f  // (the Switch's own input service has one: the game expects 0 at rest)

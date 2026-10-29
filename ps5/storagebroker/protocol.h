@@ -3,7 +3,7 @@
  * PS5 payload write broker and its ps5_writebroker.h; this is a separate,
  * incompatible protocol and does not share its port, token or authority.
  *
- * Local little-endian ABI, version 4. All integers are fixed-width. A hello
+ * Local little-endian ABI, version 5. All integers are fixed-width. A hello
  * precedes requests; requests and replies are synchronous on each connection.
  * Paths are nonempty relative byte strings without NUL, '.' or '..' components,
  * except LIST accepts "." to list the root. WRITE, REPLACE and APPEND carry
@@ -14,6 +14,8 @@
  * REPAIR reply, including errors, is followed by struct sb_repair_stats.
  * Invalid framing closes the connection. Results are byte counts, zero, or
  * negative errno. STAT returns size in value.
+ * PACKAGE_OPEN selects one read-only regular file below import/ for this
+ * connection; PACKAGE_READ has no path and uses that file until disconnect.
  */
 #ifndef SAVAGE_STORAGE_PROTOCOL_H
 #define SAVAGE_STORAGE_PROTOCOL_H
@@ -23,7 +25,7 @@
 #define SB_PORT 9142
 #endif
 #define SB_MAGIC UINT32_C(0x31574253) /* SBW1 */
-#define SB_VERSION 4u
+#define SB_VERSION 5u
 #define SB_TOKEN_BYTES 32u
 #ifndef SB_ROOT
 #define SB_ROOT "/data/savagewind"
@@ -37,7 +39,7 @@
 enum sb_operation {
     SB_CREATE = 1, SB_WRITE, SB_READ, SB_STAT, SB_REPLACE, SB_UNLINK,
     SB_MKDIR, SB_QUIT, SB_APPEND, SB_TRUNCATE, SB_FSYNC, SB_RENAME,
-    SB_RMDIR, SB_LIST, SB_REPAIR, SB_CREATE_EXCLUSIVE
+    SB_RMDIR, SB_LIST, SB_REPAIR, SB_CREATE_EXCLUSIVE, SB_PACKAGE_OPEN, SB_PACKAGE_READ
 };
 enum sb_entry_type { SB_ENTRY_REGULAR = 1, SB_ENTRY_DIRECTORY = 2 };
 struct sb_list_entry {
@@ -69,9 +71,17 @@ struct sb_reply {
     uint32_t reserved;
     uint64_t value;
 };
+#ifdef __cplusplus
+static_assert(sizeof(struct sb_hello) == 40, "hello wire size");
+static_assert(sizeof(struct sb_request) == 24, "request wire size");
+static_assert(sizeof(struct sb_reply) == 24, "reply wire size");
+static_assert(sizeof(struct sb_list_entry) == 8, "list entry wire size");
+static_assert(sizeof(struct sb_repair_stats) == 16, "repair stats wire size");
+#else
 _Static_assert(sizeof(struct sb_hello) == 40, "hello wire size");
 _Static_assert(sizeof(struct sb_request) == 24, "request wire size");
 _Static_assert(sizeof(struct sb_reply) == 24, "reply wire size");
 _Static_assert(sizeof(struct sb_list_entry) == 8, "list entry wire size");
 _Static_assert(sizeof(struct sb_repair_stats) == 16, "repair stats wire size");
+#endif
 #endif
