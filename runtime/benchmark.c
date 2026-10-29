@@ -1,7 +1,9 @@
 // The built-in benchmark (runtime/benchmark.h). The route, in the time since the game was reached (the presents'
 // clock, so the same at any frame rate):
 //   title screen: A pressed once a second (the title's "press a button", then Continue: the first entry) until it
-//   loads; in the game: 20 s for the world to settle (streaming, the first pipelines), then 60 s measured with the
+//   loads, and B instead of A every 4 s after the first 4 (the "Downloaded DLC" page the game opens over the title
+//   menu while DLC is installed closes on B, not A; B on the menu itself only goes back a step); in the game: 20 s
+//   for the world to settle (streaming, the first pipelines), then 60 s measured with the
 //   camera turning: 5 s still, 20 s right, 3 s up, 3 s down, 20 s left, 9 s still. Link stays where the warp puts
 //   him (runtime/services/test_warp.c "plateau"), so nothing the player has done changes the route.
 // What is measured is each presented frame of those 60 s (runtime/frametime.c): its length, the render thread's and
@@ -249,8 +251,9 @@ bool benchmark_input(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, i
         else if (title) set_state(B_TITLE, now);
         else if (now - g_t0 > TITLE_TIMEOUT_S * S) finish("the title screen never came");
         break;
-    case B_TITLE:  // A for 150 ms once a second: the title's prompt, then Continue
-        if ((now - g_state_t) % S < S * 15 / 100) *buttons = 1;  // (bit 0: A, runtime/hle/input.c)
+    case B_TITLE: {  // A for 150 ms once a second: the title's prompt, then Continue; from 4 s on, B every 4 s
+        uint64_t t = now - g_state_t;
+        if (t % S < S * 15 / 100) *buttons = t >= 4 * S && t % (4 * S) < S ? 2 : 1;  // (bits 0: A, 1: B, hle/input.c)
         if (loading) { set_state(B_LOADING, now); break; }
         if (!title) {
             if (!away) away = now;
@@ -258,6 +261,7 @@ bool benchmark_input(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, i
         } else away = 0;
         if (now - g_state_t > TITLE_TIMEOUT_S * S) finish("Continue did not load the game");
         break;
+    }
     case B_LOADING:
         if (!loading && !title) {
             if (!away) away = now;
