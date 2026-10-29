@@ -677,9 +677,12 @@ generates and compiles the game code from the user's own ExeFS inside the packag
 `/data/savagewind/cache/gamecode/` (keyed by `main` build id + generator version), and loads the cache on later
 starts. Nothing generated leaves the console; the legal position is the PC builder's, done on the user's console.
 
-What already supports it: the title reads ExeFS from the packages (M2/M10); executable memory works in a title
-(`ps5platform/exec.h`: direct memory made RX/RWX with `sceKernelMprotect`, placed `PS5_EXEC_NEAR` the runtime for
-rel32 calls; measured in `PS5_Vulkan` docs/PROBE.md); ProsperoEden runs a dynarmic ARM64→x86-64 JIT on PS5. What
+What already supports it: the title reads ExeFS from the packages (M2/M10); a title can run code it writes into
+direct memory (`ps5platform/exec.h`, measured in `PS5_Vulkan` docs/PROBE.md), placed `PS5_EXEC_NEAR` the runtime
+for rel32 calls. Changing protection to RX is firmware- and jailbreak-dependent (ProsperoEden `docs/FW740.md`:
+`mprotect(RX)` fails for a non-jailbroken app on 7.40, while separate RW and RX views of the same memory work), so
+the code cache uses `PS5_EXEC_DUAL_VIEW` (write through the RW view, run from the RX view, no protection changes).
+ProsperoEden runs a dynarmic ARM64→x86-64 JIT on PS5 this way. What
 doesn't: the title cannot load modules (`sceKernelLoadStartModule`/`dlopen` fail, S3), there is no compiler on the
 console, and the generator is ~4,200 lines of Python (`tools/gen.py`, `lifter.py`, `simd_c.py`, `patches.py`,
 `game_sites.py`, `layout.py`, `nso.py`, `analyze.py`; capstone, unicorn, lz4).
@@ -687,15 +690,16 @@ console, and the generator is ~4,200 lines of Python (`tools/gen.py`, `lifter.py
 Paths, decided by the spikes below:
 - **A. Same pipeline in the title (preferred):** a C++ port of the generator (byte-identical C to the Python on the
   host), compiled in-process by an embedded clang/LLVM (Apache-2.0 with LLVM exception) built with the Prospero
-  toolchain, and an in-title loader that places the objects in executable direct memory near the runtime, applies
-  relocations against the runtime's exports, and persists the linked image. Keeps desktop parity, the HLE patch
-  sites and current performance; costs LLVM's size and a long first build.
+  toolchain, and an in-title loader that writes the objects into that dual-view code cache, applies relocations
+  against the runtime's exports, and persists the linked image (not an eboot relink: the title can't load modules).
+  Keeps desktop parity, the HLE patch sites and current performance; costs LLVM's size and a long first build.
 - **B. Lifter to LLVM IR directly:** skips C parsing (faster compile); a second generator back end to keep in step.
 - **C. Runtime translation (dynarmic, ProsperoEden precedent):** no compile step, but loses static recompilation's
   optimisations and the generated-function patch sites; a runtime redesign. Fallback only.
 
-Spikes (console .41): **S7** a 256+ MiB executable image near the runtime: load, relocate against runtime symbols,
-call through, reload from the cache file; measure load time. **S8** clang/LLVM static libraries for Prospero in a
+Spikes (console .41): **S7** a 256+ MiB dual-view executable image near the runtime, alongside the guest window,
+GPU and FG memory budgets: load, relocate against runtime symbols, call through, reload from the cache file; measure
+load time; check the console's firmware and jailbreak state, since both affect executable memory. **S8** clang/LLVM static libraries for Prospero in a
 probe title: compile one real generated module (from the user's ExeFS on the console) to an object in memory;
 time and peak memory per module, extrapolated to all 996 objects (PC: 324 s on 24 threads at `-O1`). **S9** the
 generator port on the host: identical C output for `main`, `sdk`, `subsdk0` versus `tools/gen.py`; then its
