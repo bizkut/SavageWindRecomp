@@ -29,8 +29,10 @@ mouse, and its text and voices in any of its languages.
 > **No game files are included.** Savage Wind Recomp needs your own legally obtained copy of the game, updated to
 > **version 1.9.0**, dumped from **your own** Nintendo Switch. This project does not include, and will not
 > provide, game files, keys, firmware, dumping or decryption tools, or instructions on how to obtain any of them.
-> Savage Wind never decrypts anything: it only reads files you have already extracted yourself. The recompilation of
-> the game code happens locally, on your machine, from your files.
+> On a PC, Savage Wind reads files you have already extracted yourself. The PS5 port reads your own NSP/XCI packages
+> with your own keys, on your own console: it decrypts them in memory as the game reads them, and nothing decrypted is
+> written out, uploaded or shipped. The recompilation of the game code happens locally, on your machine or console,
+> from your files.
 
 ## Before you report a bug
 

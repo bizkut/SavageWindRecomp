@@ -151,7 +151,7 @@ Wind update with the same supported game version only relinks the eboot instead 
    packages' CNMT title/version and the RomFS version/file count.
 
 Consequence: the title, not a one-shot payload, now decrypts at every launch with the user's keys, and
-`prod.keys` stays on the console. This widens the D11 policy decision below.
+`prod.keys` stays on the console. The policy was rewritten accordingly (D11, decided 2026-10-29).
 
 **Data outside the title folder.** Everything that is the user's, or costly to rebuild, lives under `/data/savagewind/`
 (decided 2026-10-27), so installing a new title build — which replaces `/data/homebrew/<TITLE_ID>/` — never erases it:
@@ -274,9 +274,10 @@ package-selection code moves into the shared package library.
 before starting, and keeps a specific error on screen until acknowledged: wrong game; base missing; update
 missing/wrong version; missing key or ticket; decryption failure (not automatically blamed on keys); missing/corrupt
 NCA; unsupported format. Never show key values.
-- **Policy change to decide:** `docs/SAVAGE-WIND.md` says Savage Wind never decrypts anything. Reading packages
-  decrypts with the user's keys in the title at every launch, changing that rule and the project's legal position.
-  It remains behind a build option until the maintainers approve and rewrite that policy.
+- **Policy (decided by the fork's maintainer, 2026-10-29):** the "never decrypts" rule is rewritten (README): on a PC
+  Savage Wind reads extracted files; the PS5 port reads the player's own NSP/XCI with the player's own keys on the
+  player's console, decrypting in memory per read; nothing decrypted is written out, uploaded or shipped, and the
+  project still provides no game files, keys, tools or instructions. Package reading is no longer gated on approval.
 
 **D12. `/data/savagewind` access: direct reads, root payload for writes.** No Lapy dependency and no title credential
 mutation. ShadowMountPlus is a prerequisite: on .41 it lets the title read `/data/savagewind`, and direct `pread`
@@ -666,10 +667,10 @@ v196608, available since 2026-10-29: test PC ExeFS/AOC selection, console AOC re
 Actions on the self-hosted runner, catalog entry PPSA90212 (reserved, catalog PR #894), GPL source distribution, and
 deleting the local `ps5-backup-before-rewrite` branch (old history with game captures) before any push.
 
-Pending user decisions (asked 2026-10-29): (1) the fork rewrites the "never decrypts" rule for the PS5 port (player's
-own NSP/XCI and keys, nothing shipped) or supports only pre-extracted files. Until (1) is decided, D11 keeps public
-release blocked; private builds are not evidence of approval. (2) Release form, answered 2026-10-29: the public
-release is the PS5 title alone, building the game code on the console (M12); the PC builder is an interim/fallback.
+User decisions (2026-10-29): (1) answered: the fork rewrites the "never decrypts" rule for the PS5 port (player's own
+NSP/XCI and keys, decrypted in memory on the player's console, nothing shipped; README and D11), so D11 no longer
+blocks a public release. (2) Release form, answered: the public release is the PS5 title alone, building the game
+code on the console (M12); the PC builder is an interim/fallback.
 
 For an unattended soak, put `soak = 60` in `/data/savagewind/benchmark.txt`. The benchmark continues a copied save,
 settles for 20 seconds, and repeats the 60-second camera route for the requested measured minutes. Cumulative frame
@@ -797,7 +798,7 @@ current linked game archive contributes 235,425,008 bytes of text, rodata and da
 **Done when:** a console with only the release title, the user's packages and keys builds the game code on first
 start with a progress screen, plays, and on later starts loads the cached code in seconds; generated C equals the PC
 generator's; the benchmark is within 2 % of the PC-built eboot; first-start time and memory are recorded; the
-release ZIP's no-game-content check still passes. The D11 decryption decision still applies.
+release ZIP's no-game-content check still passes.
 
 ### After M11 (optional) — Community texture packs
 High-resolution texture packs dropped into the existing overlay folder (`runtime/services/fs.c`); never shipped by
