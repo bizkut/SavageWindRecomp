@@ -1863,14 +1863,25 @@ static void *startup_splash_main(void *unused) {
     if (rt_image_info(path, &iw, &ih) && iw > 0 && ih > 0 && iw <= 8192 && ih <= 8192)
         image = rt_image_rgba(path, &iw, &ih);
     SDL_GetWindowSizeInPixels(window, &w, &h);
+    // The picture is converted once into a mapped buffer the frames copy from (not re-uploaded every frame: 33 MB
+    // at 4K).
+    VkBuffer buf = VK_NULL_HANDLE;
+    VmaAllocation mem = NULL;
     uint32_t *pixels = NULL;
+    uint64_t last_seq = 0;  // (the last frame that copied from buf)
     VkFormat format = g_vk.sc_format;
     if (image && w > 0 && h > 0 && w <= 8192 && h <= 8192 &&
         (format == VK_FORMAT_R8G8B8A8_UNORM || format == VK_FORMAT_R8G8B8A8_SRGB ||
          format == VK_FORMAT_B8G8R8A8_UNORM || format == VK_FORMAT_B8G8R8A8_SRGB ||
          format == VK_FORMAT_A8B8G8R8_UNORM_PACK32 || format == VK_FORMAT_A8B8G8R8_SRGB_PACK32 ||
          format == VK_FORMAT_A2B10G10R10_UNORM_PACK32 || format == VK_FORMAT_A2R10G10B10_UNORM_PACK32)) {
-        pixels = malloc((size_t)w * h * sizeof *pixels);
+        VkBufferCreateInfo bi = {.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, .size = (uint64_t)w * h * 4,
+                                 .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
+        VmaAllocationCreateInfo ai = {.usage = VMA_MEMORY_USAGE_AUTO,
+                                      .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT};
+        VmaAllocationInfo info;
+        if (vmaCreateBuffer(g_vk.vma, &bi, &ai, &buf, &mem, &info) == VK_SUCCESS) pixels = info.pMappedData;
+        else buf = VK_NULL_HANDLE, mem = NULL;
         if (pixels) {
             double scale = fmax((double)w / iw, (double)h / ih);
             double x0 = (iw - w / scale) * 0.5, y0 = (ih - h / scale) * 0.5;
@@ -1894,13 +1905,13 @@ static void *startup_splash_main(void *unused) {
                 VkCommandBuffer cb = vk_cmd();
                 int W = (int)g_vk.sc_extent.width, H = (int)g_vk.sc_extent.height;
                 if (pixels && W == w && H == h && format == g_vk.sc_format) {
-                    VkSpan sp = vk_transient_copy(pixels, (uint64_t)w * h * 4, 4);
-                    VkBufferImageCopy rg = {.bufferOffset = sp.off, .imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
+                    VkBufferImageCopy rg = {.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
                                             .imageExtent = {(uint32_t)w, (uint32_t)h, 1}};
                     VkImage img = g_vk.sc_images[cur_frame.image];
                     vk_frame_suspend();
                     image_barrier(cb, img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-                    rec_CmdCopyBufferToImage(cb, sp.buf, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &rg);
+                    rec_CmdCopyBufferToImage(cb, buf, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &rg);
+                    last_seq = vk_pending_seq();
                     image_barrier(cb, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
                     vk_frame_resume();
                 }
@@ -1919,7 +1930,12 @@ static void *startup_splash_main(void *unused) {
         gpu_unlock();
         while (!atomic_load(&startup_stop) && plat_now_ns() < until) usleep(2000);
     }
-    free(pixels);
+    if (buf) {  // (the frames that copied from it finished first; under the lock: the wait applies readbacks)
+        gpu_lock();
+        vk_wait_seq(last_seq);
+        vmaDestroyBuffer(g_vk.vma, buf, mem);
+        gpu_unlock();
+    }
     return NULL;
 }
 
