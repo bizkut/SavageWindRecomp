@@ -607,7 +607,9 @@ thread (default on PS5; FG on 88 % → 99 % on time), asynchronous klog (the "co
 synchronous logging), fused FG passes. Measured and not kept: game code at `-O2` (within noise). PRs #128/#155
 remain unported (no profile evidence that descriptor sets or barriers dominate). With FSR 3.1 the per-draw motion
 vectors add ~2.2 ms in busy scenes after SIMD matching, radix sort and lighter bookkeeping (`7afd98a`); that is the
-remaining CPU item (target: FSR 3.1 + FG ≥ 99 % on time, as FSR 1).
+remaining CPU item (target: FSR 3.1 + FG ≥ 99 % on time, as FSR 1). Compact radix sorting (`b120ca3`) brought it to
+98.3–98.7 %. Next, waiting only for a 120 Hz display (user, 2026-10-29): the FG-on A/B of the bounded match scan
+parked on branch `ps5-mvec-window` (equivalence already verified on .41, 0 mismatches).
 
 ### M8 — Temporal upgrades (after PR #194/#195)
 PR #194 (`35efe256e4`) and PR #195 (`5039b30407`) are integrated from their pinned heads, including per-object
