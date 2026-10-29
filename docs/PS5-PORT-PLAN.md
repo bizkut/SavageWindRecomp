@@ -592,6 +592,15 @@ When DRS is enabled at startup, shader precompilation uses a separate completion
 of observed shader keys and their pipeline libraries. Enabling DRS during play does not rerun that precompilation;
 restart with DRS enabled to run it. Pipeline-state and hitch coverage still require a console measurement.
 
+**DRS with FSR 3.1 (optional, after the render-thread work; requested 2026-10-29).** Today TAA and FSR 3.1 force DRS
+off (`runtime/ps5/dynamic_resolution.c`): the DRS remap renders into the used part of max-size targets, while the
+temporal paths assume a fixed scene size. FSR 3.1 supports per-frame render sizes: create its context for the
+maximum size with its dynamic-resolution flag, pass the current size on each dispatch, scale motion vectors and
+jitter to it, and read colour/depth only from the used part. Same GPU-timestamp controller and hysteresis. Value:
+lets a higher target (e.g. Quality 1440p) run by default and drop toward 1080p only in GPU-heavy scenes; it does not
+help render-thread-bound frames. **Done when:** with `gpu_load` the size steps down and back on the benchmark, no
+smearing/flicker at the steps in same-frame captures, on-time not worse than fixed size, and DRS off is unchanged.
+
 ### After M7 — Render-thread CPU (done 2026-10-28/29)
 The render thread (NVN → Vulkan translation) was the frame-time limit. Kept, each measured on .41: PR #189's recorder
 thread (default on PS5; FG on 88 % → 99 % on time), asynchronous klog (the "command translation" hitches were our own
