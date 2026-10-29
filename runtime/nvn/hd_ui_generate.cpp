@@ -203,6 +203,16 @@ static int layout_generate(void *context, const char *pack, const char *name, si
     Layout l{(Work *)context,std::string(pack)+":"+std::string(name,name_len),true};
     return hd_ui_extract_layout(data,size,texture,&l);
 }
+static int icon(void *context, const char *pack, const char *name, size_t name_len, const uint8_t *data, size_t size) {
+    if (!wait_for_game_load((Work *)context)) return -1;
+    Layout l{(Work *)context,std::string(pack)+":"+std::string(name,name_len),false};
+    return hd_ui_extract_fres(data,size,texture,&l);
+}
+static int icon_generate(void *context, const char *pack, const char *name, size_t name_len, const uint8_t *data, size_t size) {
+    if (!wait_for_game_load((Work *)context)) return -1;
+    Layout l{(Work *)context,std::string(pack)+":"+std::string(name,name_len),true};
+    return hd_ui_extract_fres(data,size,texture,&l);
+}
 static void *encode_main(void *arg) {
     Work *w=(Work *)arg;
     background_thread("encoder");
@@ -251,6 +261,7 @@ static void *producer_main(void *arg) {
             }
         }
         if (fs_hd_ui_layouts(layout,w)) throw std::runtime_error("layout enumeration failed");
+        if (fs_hd_ui_icons(icon,w)) throw std::runtime_error("icon enumeration failed");
         w->total=(int)w->unique.size();
         for (const auto& pair:w->unique) {
             auto p=w->previous.find(pair.first); Completed c;
@@ -269,6 +280,7 @@ static void *producer_main(void *arg) {
             if (pthread_create(&w->encoder,nullptr,encode_main,w)) throw std::runtime_error("encoder thread failed");
             w->encoder_started=true;
             if (fs_hd_ui_layouts(layout_generate,w)) throw std::runtime_error("upscaling failed");
+            if (fs_hd_ui_icons(icon_generate,w)) throw std::runtime_error("icon upscaling failed");
         }
         { std::lock_guard<std::mutex> lock(w->lock); w->producer_done=true; w->cv.notify_all(); }
         if (w->encoder_started) { pthread_join(w->encoder,nullptr); w->encoder_started=false; }

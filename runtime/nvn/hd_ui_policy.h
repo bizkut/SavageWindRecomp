@@ -2,7 +2,7 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
-#define HD_UI_GENERATOR_VERSION 2
+#define HD_UI_GENERATOR_VERSION 3  // (3: item icons, UI/StockItem/*.sbitemico, join the layouts)
 #ifdef __cplusplus
 extern "C" {
 #endif

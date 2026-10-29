@@ -48,6 +48,7 @@ static int g_on = -1;
 static int g_internal_h;  // benchmark.txt "internal = <height>p": the 3D scene's height for this run (0: the settings')
 static unsigned g_soak_minutes;
 static bool g_save_check;
+static int g_menu_at;  // (route seconds; 0: never)
 static uint64_t g_soak_frames, g_soak_on_time, g_soak_hitches, g_soak_next;
 #ifdef __PROSPERO__
 static int g_gpu_load_ms;
@@ -131,6 +132,11 @@ static void internal_apply(void) {
     int save_check = 0;
     line = t ? strstr(t, "save_check") : NULL;
     if (line && sscanf(line, "save_check = %d", &save_check) == 1) g_save_check = save_check == 1;
+    // menu_at = N: + pressed N s into the measured route (the inventory: its item icons load, for the HD pack's checks)
+    line = t ? strstr(t, "menu_at") : NULL;
+    if (line && sscanf(line, "menu_at = %d", &g_menu_at) == 1 && g_menu_at > 0)
+        LOG("[bench] menu_at = %d s: + opens the menu then\n", g_menu_at);
+    else g_menu_at = 0;
 #ifdef __PROSPERO__
     int load = 0;
     line = t ? strstr(t, "gpu_load") : NULL;
@@ -279,6 +285,9 @@ bool benchmark_input(uint64_t *buttons, int32_t *lx, int32_t *ly, int32_t *rx, i
         else if (t >= 25 && t < 28) *ry = 32767;
         else if (t >= 28 && t < 31) *ry = -32767;
         else if (t >= 31 && t < 51) *rx = -32767;
+        // + opens the menu on its last tab; L 1.5 s later moves one tab left (from System, the inventory)
+        if (g_menu_at && t >= g_menu_at && t < g_menu_at + 0.15) *buttons = 1u << 10;  // (bit 10: +, runtime/hle/input.c)
+        if (g_menu_at && t >= g_menu_at + 1.5 && t < g_menu_at + 1.65) *buttons = 1u << 6;  // (bit 6: L)
         break;
     }
     case B_PAN: {  // Link runs forward while the camera turns at full speed

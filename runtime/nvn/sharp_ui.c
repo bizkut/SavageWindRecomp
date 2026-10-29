@@ -4,6 +4,7 @@
 #include "../rt.h"
 #include "../framepace.h"
 #include "../paths.h"
+#include "../window_size.h"
 #include <dirent.h>
 #include <stdio.h>
 #include <SDL3/SDL.h>
@@ -28,9 +29,18 @@ static int compare_hash(const void *a, const void *b) {
     uint64_t x = *(const uint64_t *)a, y = *(const uint64_t *)b;
     return (x > y) - (x < y);
 }
+// The pack is made for 4K output (its textures are 2-4x the originals): below that the scaled-down art costs memory
+// and bandwidth for nothing, so a PS5 moved from a 4K TV to a 1080p one stops using it (desktop: unchanged).
 bool hd_ui_available(void) {
     if (!hd_scanned) {
         hd_scanned = true;
+#ifdef __PROSPERO__
+        int out_h = winsize_effective(true).h;
+        if (out_h < 2160) {
+            LOG("[hd-ui] output %d lines: the HD interface pack is used at 4K output only\n", out_h);
+            return false;
+        }
+#endif
         char path[1024];
         DIR *dir = rt_data_path("hd-ui", path, sizeof path) ? opendir(path) : NULL;
         if (dir) {
@@ -153,12 +163,14 @@ void hd_ui_diag_upload(uint32_t width,uint32_t height,uint32_t format,uint32_t l
     LOG("[hd-ui-diag] upload %ux%u format=%#x levels=%u layers=%u layer=%u target=%u pitch=%d gpu_owned=%d eligible=%d bytes=%zu hash=%016llx%s\n",
         width,height,format,levels,layers,layer,target,pitch,gpu_owned,eligible,bytes,
         (unsigned long long)h,linear?"":" unavailable");
+    size_t same=0; const HdDiagEntry *match=NULL;  // (one line per upload: icons share one size, ~1,500 of them)
     for (size_t i=0;i<hd_diag_count;i++) {
         const HdDiagEntry *e=&hd_diag_entries[i];
-        if (e->width==width && e->height==height)
-            LOG("[hd-ui-diag] candidate %s bntx=%#x hash=%016llx hash_match=%d\n",
-                e->name,e->source_format,(unsigned long long)e->hash,linear && e->hash==h);
+        if (e->width!=width || e->height!=height) continue;
+        same++;
+        if (linear && e->hash==h) match=e;
     }
+    LOG("[hd-ui-diag] same-size entries=%zu hash_match=%s\n",same,match?match->name:"none");
 }
 typedef struct { uint64_t hash; uint32_t w, h, format; char name[64]; } Entry;
 static Entry entries[128];

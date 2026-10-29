@@ -117,3 +117,16 @@ int hd_ui_extract_layout(const uint8_t *archive, size_t size, HdUiTextureCallbac
             bntx(payload,payload_size,callback,context)) return -1;
     }
 }
+
+// Item icons (UI/StockItem/*.sbitemico, decompressed): an FRES whose embedded file is a BNTX. The BNTX is found by
+// its magic at an 8-byte boundary (the FRES embedded-file data alignment) and bounded by its own file size.
+int hd_ui_extract_fres(const uint8_t *fres, size_t size, HdUiTextureCallback callback, void *context) {
+    if (!fres || !callback || size < 0x20 || memcmp(fres, "FRES", 4)) return -1;
+    for (size_t at = 8; at + 0x30 <= size; at += 8) {
+        if (memcmp(fres + at, "BNTX", 4)) continue;
+        size_t len = u32(fres + at + 0x1c);
+        if (len < 0x30 || len > size - at) len = size - at;
+        return bntx(fres + at, len, callback, context);
+    }
+    return 0;  // (no textures)
+}

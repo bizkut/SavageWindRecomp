@@ -14,6 +14,8 @@ int fs_hd_ui_packs(HdUiPackCallback callback, void *context);
 typedef int (*HdUiLayoutCallback)(void *context, const char *pack, const char *layout, size_t layout_length,
                                   const uint8_t *archive, size_t size);
 int fs_hd_ui_layouts(HdUiLayoutCallback callback, void *context);
+// Enumerate each UI/StockItem/*.sbitemico (item icons), Yaz0-decoded: an FRES with an embedded BNTX.
+int fs_hd_ui_icons(HdUiLayoutCallback callback, void *context);
 #ifdef __cplusplus
 }
 #endif

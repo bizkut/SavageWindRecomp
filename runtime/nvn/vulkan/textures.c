@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <math.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -1062,6 +1063,14 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
             free(pixels);
             if (loaded) {
                 bool uploaded=hd_ui_upload(t,b,cb,&hd);
+                if (uploaded) {  // (counted, so a run shows which source sizes the pack serves: layouts, item icons)
+                    static _Atomic unsigned replaced, icons;
+                    unsigned n=atomic_fetch_add(&replaced,1)+1;
+                    unsigned k=l.w==144 && l.h==144 ? atomic_fetch_add(&icons,1)+1 : 0;  // (item icons' size)
+                    if (n<=16 || !(n%100) || (k && (k<=16 || !(k%50))))
+                        LOG("[hd-ui] replaced %ux%u format=%#x (%u so far, %u at 144x144)\n",l.w,l.h,t->format,n,
+                            atomic_load(&icons));
+                }
                 free(hd.data);
                 if (uploaded) return;
             }

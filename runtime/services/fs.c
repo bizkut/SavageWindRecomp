@@ -1131,6 +1131,37 @@ int fs_hd_ui_layouts(HdUiLayoutCallback callback, void *context) {
     return fs_hd_ui_packs(hd_ui_pack_layouts, &job);
 }
 
+// Item icons: UI/StockItem/*.sbitemico (Yaz0 FRES) of the merged base/update RomFS, decompressed for the callback
+// (pack: "UI/StockItem", layout: the file's path).
+int fs_hd_ui_icons(HdUiLayoutCallback callback, void *context) {
+    const RomImage *m = &images[0];
+    if (!callback || !m->img || !m->rom_files) return -1;
+    static const char prefix[] = "UI/StockItem/", suffix[] = ".sbitemico";
+    for (int i = 0; i < m->rom_nfiles; i++) {
+        const RomFile *f = &m->rom_files[i];
+        size_t n = strlen(f->path);
+        if (n <= sizeof prefix + sizeof suffix - 2 || strncmp(f->path, prefix, sizeof prefix - 1) ||
+            strcmp(f->path + n - (sizeof suffix - 1), suffix))
+            continue;
+        if (f->size > (64u << 20)) return -1;
+        size_t size = (size_t)f->size, fres_len = size;
+        uint8_t *bytes = malloc(size ? size : 1), *unpacked = NULL;
+        if (!bytes) return -1;
+        bool ok = romfs_image_pread(m->img, bytes, size, f->off) == (ssize_t)size;
+        const uint8_t *fres = bytes;
+        if (ok && size >= 4 && !memcmp(bytes, "Yaz0", 4)) {
+            unpacked = yaz0_unpack(bytes, size, &fres_len);
+            ok = unpacked != NULL;
+            fres = unpacked;
+        }
+        if (ok) ok = callback(context, "UI/StockItem", f->path, n, fres, fres_len) == 0;
+        free(unpacked);
+        free(bytes);
+        if (!ok) return -1;
+    }
+    return 0;
+}
+
 static Service *open_image(int k, const char *dir, const char *name) {
     if (!load_image(k, dir, name)) return NULL;
     RomImage *m = &images[k];
