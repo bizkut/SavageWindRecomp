@@ -1396,3 +1396,13 @@ logged nothing: the probe printed to stdout, which a PS5 title doesn't log; it n
 Scaled by source bytes over all 996 modules (632,391,656 bytes, ×1,115.5): ~6,865 CPU-seconds, ~19 min on 6 threads
 or ~14 min on 8 if compiling scales linearly — not yet measured (multi-thread scaling, peak memory with several
 compiles, and byte-identity of the object with the PC build remain).
+
+**Scaling and byte identity** (`s8-scale.klog`, `s8-blocks.klog`, `s8-repro.klog`): N in-process compiles of the
+same module on N threads, wall ms on .41 (PC in brackets): 1: 6,174 (6,092); 2: 6,916 (6,543); 4: 7,512 (7,146);
+6: 8,201 (7,498); 8: 9,270–9,327 (8,257), every concurrent object identical to the single-thread one; peak title heap
+0.47 GiB at 1 compile, 1.59 GiB at 4–6, 1.80 GiB at 8 (direct memory largest free stays above 11 GiB). 8 at once give
+~5.3× one compile's throughput: ~6,865 CPU-s for all 996 modules → **~22 min** on 8 threads [scaled by source
+bytes from one module]. The first console object differed from the PC's in 38 bytes only: `.comment`'s
+`clang version 18.1.8 (…SavageWindRecomp <commit>)` named the git commit each LLVM build was configured at.
+With `LLVM_APPEND_VC_REV=OFF` in `build-llvm-ps5.sh` both give `clang version 18.1.8` and the console and PC
+objects are **byte-identical** (897,016 bytes, SHA-256 `267ea1a1…`, 0 differing 4 KiB blocks).

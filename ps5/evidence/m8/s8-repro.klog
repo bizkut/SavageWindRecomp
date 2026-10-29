@@ -1,0 +1,477 @@
+# launch PPSA90212: ok launched PPSA90212 result=0x00000016 via lncUtilApp/foreground as user 486509363 (the console reports the title running)
+<118>[SceShellCore] Libc Heap Status: free 37%, in-use 3820.5 KB, trend +1.0 KB/min, peak 4961.6 KB, when 42643 [sec]
+<118>[SceLncService] launchApp(PPSA90212)
+<118>[SceLncService] category={gd} appCategoryType={0x00000000} VRMode={0,0}
+<118>[SceLncService] hnm,psnf,pc,tk,ns,pf,pn={1,0,0,0,0,1,0} appBootMode={2}
+<118>[SceLncService] appType={SCE_LNC_APP_TYPE_BIG_APP} [] appVer={} contentVersion={00.001.000} appCategoryType={0x00000000}
+<118>[SceLncService] Waiting for LoginMgr
+<118>[SceLncService] Num. of logged-in users is 1
+<118>[SceLncService] BigApp Launch Ready: Waiting
+<118>[SceLncService] BigApp Launch Ready: OK
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck()
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck() returned
+<118>[SceLncService] EnsureBigAppBudget()
+<118>[ResArbitrator][api      ]sceResourceArbitratorEnsureBigAppBudget[187ec](238)  : categoryType[0x0], titleId[PPSA90212], isConfirmed[false]
+<118>[ResArbitrator][TestId   ]EnsureBudget            [187ec]( 41)  : EnsureBudget()
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [187ec]( 38)  : Enqueue(id[0], t[1], user[0] state[RUNNING]) queue.size[1]
+<118>[ResArbitrator][App      ]GetExecutable           [18930](136)  : Target id[0] budgets{vcn[  0] acp[ 0] mem[  0]} prio[2(2)]
+<118>[ResArbitrator][App      ]SetVCNBudget            [18930](610)  : pid/appId is INVALID_ID.vcn budget not set.
+<118>[ResArbitrator][RA_main  ]cbResult                [18930](350)  : Callback id[0] type[RESULT] result[true] state[RUNNING]
+<118>[ResArbitrator][TestId   ]raCallback              [18930](128)  : BigApp[0xffffffff] Changed state"RUNNING"
+<118>[ResArbitrator][QUEUE    ]Remove                  [18930]( 69)  : Remove:(id[0] state[RUNNING] type[1]) queue.size[0]
+<118>[ResArbitrator][App      ]Dump                    [18930](501)  : -- Exec Apps *************************
+<118>[SceLncService] EnsureBigAppBudget() returned
+<118>[ResArbitrator][App      ]Dump                    [18930](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0xffffffff]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x207e3c760)] userData[0x0] pid[0x42]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -3: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x38]
+<118>[ResArbitrator][App      ]Dump                    [18930](819)  : -- No kicking Apps *************************
+<118>[SceSystemStateMgr] Power Mode Change: BIG_APP
+<118>[AvControl] Waiting for the pstate event 
+<118>[Syscore Umd] Set memory pstate (hasRunningGame=0, hasRunningMiniApp=0, isSplashDisplayed=0
+<118>[AvControl] Waiting for the pstate event : done
+<118>[SceSystemStateMgr] CPU                                     HLT GC   GFX  F    U   ID       FAN BAPM
+<118>[SceSystemStateMgr]  800  800  800  800 3200 3200 3200 3200   0 gen2  768 1200 875 00840f60   1 off
+<118>[SceLncService] sceApplicationSave() categoryType={0x00000000}, debuggerRequestId={0xffffffff}
+<118>[Syscore App] No App needs to save. BigApp does not exist on the memory.
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2687) getAppType: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] BeginAppMount()
+[KERNEL] INFO: begin_app_mount 00000000
+appmgr_create_app(), appid=16 category=0
+[KERNEL] INFO: launch bigapp: category 0x00000000, container 1
+[Amm config] Page table memory : 64 MiB, VA range size 512 GiB, MultiMap VA range size 0 GiB
+wt_application_launch_callback:new target appid=0x16
+<118>[SceLncService] is_pkgstep={0}
+<118>[SceLncService] PrepareProcessLaunchDebugger()
+<118>[sceProcessStarter] MountDownloadData() title_id = [PPSA90212] data_path = [**************/PPSA90212/download0.dat] mount_path = [************/download/PPSA90212] budget = [game]
+<118>[PS]Error: W:\Build\J02159366\vsh\shell\shell_core\process_starter\process_starter_util.cpp at 1027
+<118>num is 2
+<118>[SceLncService] PrepareProcessLaunchDebugger() returned
+<118>[SceLncService] sandboxType={0x00000002}
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2687) getAppType: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] spawnApp
+<118>[Syscore App] createApp PPSA90212
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[AvControl] onAppLaunch(appid=0x16)
+<118>[AvControl] Entry appId(0x16) supplementaryInfo: 0x0 
+<118>[AvControl] -- app[0](appid=0x16 attr=0xaa0017)(GAME RUNNING)(HDR:o HFR:o VR:x VRR:TypeA) SpecialModeInBg(none) HDCP23(none) supInfo(0x0)
+<118>[AvControl] layout:HDMI
+<118>[AvControl] notify stop-scanin (idx:-1) dwb0(usable) dwb1(usable) dwb2(usable) cause(hdmi)
+<118>[AvControl] ** v:130203021000000002/a:00 **
+<118>[AvControl] ** set_default_metadata ** -1 
+<118>[AvControl] ** mute(0) ** 
+[dce-proc:3923 Info]<49>p:0:1, m:1, d:0x1, b:0x1110, ft:0x1, fl:0x1a1a1703
+<118>[AvControl] ** set_mode(0) ** -1/-1 
+<118>[AvControl]  video: port:HDMI 3840_2160P_5994 RGB444 full RGB2100_PQ 36bpp 16:9 allm-game o--tv-sf2 
+<118>[AvControl]       : VRR(peg:60 range:48 - 60) capable(allm 1 mdelata 0 range 40 - 120) (-)
+<118>[AvControl]  audio: port:HDMI src:I2S 48k 7.1 24bit fmt:LPCM LPCM once sp:TV -
+[dce-proc:3729 Info]<49>peg count: 2 (=1  +1(178))
+<118>[AvControl] ** unmute(0) ** 
+<118>[AvControl] notify ready-scanin(idx:-1) port0(res: 0xc ref:0x8003(48-60) col:0xd sup:0xa0) port1(res:0xb ref:0x3 col:0x14 sup:0x0) vrType(0)
+<118>[AvControl] App Event[POST_BEGIN]: elapse 1830[ms] 
+<118>[Syscore App] processSpawn(pid, 0x16, 0x10016ba0, appParam, processParam, 1, 1, 1, param, debug, 0)
+<118>[Syscore App] appParam: appType = 0, titleId = PPSA90212
+<118>[Syscore App] new pid=0x107[Syscore App] attributeExe= 0
+<118>[AvControl] AudioOut: shared (pid=0x107)
+<118>[AvControl] VideoOut: shared (pid=0x107 appId=0x16)
+<118>[AvControl] video owner is switched to registered app(appId=0x16) 
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+[KERNEL] INFO: Disable workaround PPRREQ55470_NO_ADDITIONAL_DMEM_192MB
+<118>[SceShellCore] Main thread has frozen in sceApplicationSignalShellCoreHeartBeat() for 2 seconds
+<118>[Syscore App] Add event : pid=0x107
+<118>[AppMgr Trace]: New Process, pid=0x107, created.
+<118>[AppMgr Trace]: New App, appId=0x16, created
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_common.cpp(889) getCurrentTick: LNC_RTRACE::0x80b50001
+<118>[SceLncService] update: appId={0x00000016} appSessionId={63928886831000000}
+<118>[SceLncUtil] blockAppSuspend: name={SceNpUds}, appId={0x00000006}, refCount={1}
+<118>[SceLncUtil] unblockAppSuspend: name={SceNpUds}, appId={0x00000006}, refCount={0}
+<118>[SceLncUtil] blockAppSuspend: name={SceSaveData}, appId={0x00000006}, refCount={1}
+<118>[SceLncUtil] unblockAppSuspend: name={SceSaveData}, appId={0x00000006}, refCount={0}
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [187e2]( 38)  : Enqueue(id[0], t[1], user[0] state[RUNNING]) queue.size[1]
+<118>[ResArbitrator][TestId   ]lncEventCallback        [187e2]( 64)  : Set Target BigAppId[0x16] pid[0x107]
+<118>[ResArbitrator][App      ]GetExecutable           [18930](136)  : Target id[0] budgets{vcn[  0] acp[ 0] mem[  0]} prio[2(2)]
+<118>[ResArbitrator][App      ]ChangeState             [18930]( 43)  : replace id[0] state:['RUNNING'->'RUNNING']
+<118>[ResArbitrator][App      ]SetVCNBudget            [18930](614)  : vcnType is TYPE_UNKNOWN.vcn budget not set.
+<118>[ResArbitrator][RA_main  ]cbResult                [18930](350)  : Callback id[0] type[RESULT] result[true] state[RUNNING]
+<118>[ResArbitrator][TestId   ]raCallback              [18930](128)  : BigApp[0x16] Changed state"RUNNING"
+<118>[ResArbitrator][QUEUE    ]Remove                  [18930]( 69)  : Remove:(id[0] state[RUNNING] type[1]) queue.size[0]
+<118>[ResArbitrator][App      ]Dump                    [18930](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18930](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0x16]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x207e3c760)] userData[0x0] pid[0x42]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -3: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x38]
+<118>[ResArbitrator][App      ]Dump                    [18930](819)  : -- No kicking Apps *************************
+<118>[ResArbitrator][VA_main  ]GetMediaAppInfo         [187e2](122)  : sceKernelGetAppCategoryType(0x107) ret:SCE_OK categoryType[0x0]
+[KERNEL] INFO: pid 263
+[KERNEL] INFO: Application Category Type: 00000000
+[KERNEL] INFO: SDK vesion: PS4:08050001 PPR:02000009
+[KERNEL] INFO: Total Memory Size: 0x32d600000
+[KERNEL] INFO: DMEM size: 0x300000000
+[KERNEL] INFO: FMEM size: 0x1c000000
+[KERNEL] INFO: NDA Text size: 0
+[KERNEL] INFO: CPU/GPU page table count: 0x4000 0x4000
+[BAPM] CPU/GPU Frequency: Default
+[BAPM] Param Set: 2 (Ver:02000009)
+<263> EXEC /app0/eboot.bin [user], vm#1, dmem#1 abi=native category=native_game <43844059 msec>
+<118>[SceShellCore] Stop Screen Saver
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [1892f]( 38)  : Enqueue(id[110], t[1], user[0] state[RUNNING]) queue.size[1]
+<118>[ResArbitrator][App      ]GetExecutable           [18930](136)  : Target id[110] budgets{vcn[ 20] acp[368] mem[  0]} prio[10(10)]
+<118>[TTS Arbitrator][INF]  FG App was changed. 2007 -> 16
+<118>[ResArbitrator][IpcServer]Callback                [18930]( 78)  : S->C Callback Set(id[110] type[RESULT] result[true] state[RUNNING])
+<118>[ResArbitrator][QUEUE    ]Remove                  [18930]( 69)  : Remove:(id[110] state[RUNNING] type[1]) queue.size[0]
+<118>[ResArbitrator][App      ]Dump                    [18930](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18930](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0x16]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x207e3c760)] userData[0x0] pid[0x42]
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -3: Id[110] state[RUNNING] vcn[ 20] acp[368] mem[  0] prio[10(10)] from[IPMI(0x207e3c6a0)] userData[0x0] pid[0xb2]*HB*
+<118>[ResArbitrator][App      ]Dump                    [18930](518)  : -4: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x38]
+<118>[ResArbitrator][App      ]Dump                    [18930](819)  : -- No kicking Apps *************************
+<118>[ResArbitrator][IpcServer]GetCallbackDataInt      [1892f](334)  : C->S Callback Get(id[110] type[RESULT] result[true] state[RUNNING] cb[966460])
+### GFX(pipe0) Game. proc gen:2 vmid:1 pid:263
+ +++ num clients 2
+<118>[SceLncService] SetControllerFocus(0x00000016)
+### gc_gfx_queue_status : in_frame=0 rptr=0x00000000 wptr=0x00000000 IBlist(rptr=0x0000 wptr=0x0000 i_wptr=0x0000)
+<118>[NoticeScreenSkip] NoticeScreenSkipGetFlag(notice_screen_skip_flag= 1, appId= 0x00000016)
+<118>[AvControl] Hdmi Event:hdcp done (prev:hdcp done dur:1151684)
+<118>[SceLncService] SetAppFocus(): SetControllerFocus(-1)
+<118>* updateVibrationTriggerEffectWeak:L7804 getVibrationTriggerEffectWeakWhileEmbeddedMicInUse return MBUS_ERROR_NO_PROCESS_INFO. pid = 0xffffffff
+<118>[SceLncService] SetControllerFocus(0x00000016)
+[s8] start: /data/savagewind/s8/main_040.c llvm=18.1.8 threads_enabled=1
+<118>@ mbusGetAudioOutDeviceInfoByBusType:L5950
+<118>[AvControl] ** set scanin(pid=0x3a scaninId = 1 tapPoint = 0x2)
+[si] start pipe[0] 43915s:61us, p:0:1, 175:0096, 20272:0048, m:0, d:0x0, 0x1110
+[s8] warmup status=ok compile_ms=6165.752
+[s8] scaling n=1 wall_ms=6206.749 sum_compile_ms=6143.763 objects_ok=1/1 identical=1/1 samples=63
+[s8] memory n=1 stage=before flex_free=392167424 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12647923712 direct_total=12884901888 direct_rc=0 heap_mapped=234881024 heap_peak_lifetime=234881024 heap_segments=14 heap_arenas=1 heap_libc_fallbacks=0
+[s8] memory n=1 stage=peak_extrema_100ms flex_free=383778816 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12410945536 direct_total=12884901888 direct_rc=0 heap_mapped=469762048 heap_peak_lifetime=469762048 heap_segments=28 heap_arenas=2 heap_libc_fallbacks=0
+[s8] memory n=1 stage=after flex_free=383778816 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12410945536 direct_total=12884901888 direct_rc=0 heap_mapped=469762048 heap_peak_lifetime=469762048 heap_segments=28 heap_arenas=2 heap_libc_fallbacks=0
+[s8] object module=main_040.c input_bytes=566896 bytes=897016 sha256=267ea1a1a2947aba05a97db318e936e2d603fd6e35da5fcf1f45e2225192d4ca status=ok
+[s8] block offset=0 length=4096 sha256=0890c75216191e39 host=0890c75216191e39 match=1
+[s8] block offset=1000 length=4096 sha256=cd990331f5f995cb host=cd990331f5f995cb match=1
+[s8] block offset=2000 length=4096 sha256=bd9093cb75f59132 host=bd9093cb75f59132 match=1
+[s8] block offset=3000 length=4096 sha256=9124a9790fb71d43 host=9124a9790fb71d43 match=1
+[s8] block offset=4000 length=4096 sha256=3c7b65825478899c host=3c7b65825478899c match=1
+[s8] block offset=5000 length=4096 sha256=1ba68806437b0647 host=1ba68806437b0647 match=1
+[s8] block offset=6000 length=4096 sha256=1397874b8a24833c host=1397874b8a24833c match=1
+[s8] block offset=7000 length=4096 sha256=3920b040faa8902c host=3920b040faa8902c match=1
+[s8] block offset=8000 length=4096 sha256=7e921f3af9dbbf87 host=7e921f3af9dbbf87 match=1
+[s8] block offset=9000 length=4096 sha256=c79d72348a667b0f host=c79d72348a667b0f match=1
+[s8] block offset=a000 length=4096 sha256=d1c283905d068787 host=d1c283905d068787 match=1
+[s8] block offset=b000 length=4096 sha256=42567b3eeac7b182 host=42567b3eeac7b182 match=1
+[s8] block offset=c000 length=4096 sha256=a49932a69f093af9 host=a49932a69f093af9 match=1
+[s8] block offset=d000 length=4096 sha256=a900150f400e5282 host=a900150f400e5282 match=1
+[s8] block offset=e000 length=4096 sha256=0fcb73ed49a7f7a0 host=0fcb73ed49a7f7a0 match=1
+[s8] block offset=f000 length=4096 sha256=64dbced23b0b1580 host=64dbced23b0b1580 match=1
+[s8] block offset=10000 length=4096 sha256=ed753d373d67ef1f host=ed753d373d67ef1f match=1
+[s8] block offset=11000 length=4096 sha256=b5cbd46da946adc9 host=b5cbd46da946adc9 match=1
+[s8] block offset=12000 length=4096 sha256=1b2a28ea16894735 host=1b2a28ea16894735 match=1
+[s8] block offset=13000 length=4096 sha256=70e8e5a67bf91cd2 host=70e8e5a67bf91cd2 match=1
+[s8] block offset=14000 length=4096 sha256=c89960019556f750 host=c89960019556f750 match=1
+[s8] block offset=15000 length=4096 sha256=c3df422418d50bf7 host=c3df422418d50bf7 match=1
+[s8] block offset=16000 length=4096 sha256=c91038f8bdb2d13b host=c91038f8bdb2d13b match=1
+[s8] block offset=17000 length=4096 sha256=7e6e1ae7b628d23d host=7e6e1ae7b628d23d match=1
+[s8] block offset=18000 length=4096 sha256=d08bdb0d41e8002b host=d08bdb0d41e8002b match=1
+[s8] block offset=19000 length=4096 sha256=ebfcf1d484ba12a4 host=ebfcf1d484ba12a4 match=1
+[s8] block offset=1a000 length=4096 sha256=44058abcbc928804 host=44058abcbc928804 match=1
+[s8] block offset=1b000 length=4096 sha256=711eb7ebe6d3a304 host=711eb7ebe6d3a304 match=1
+[s8] block offset=1c000 length=4096 sha256=bcb95a91ef93cab8 host=bcb95a91ef93cab8 match=1
+[s8] block offset=1d000 length=4096 sha256=ad2c9ad3e3245464 host=ad2c9ad3e3245464 match=1
+[s8] block offset=1e000 length=4096 sha256=4d0164c4c619b2eb host=4d0164c4c619b2eb match=1
+[s8] block offset=1f000 length=4096 sha256=a997ca60c2e1371d host=a997ca60c2e1371d match=1
+[s8] block offset=20000 length=4096 sha256=45b44daadb68648a host=45b44daadb68648a match=1
+[s8] block offset=21000 length=4096 sha256=3f3625328073c4cb host=3f3625328073c4cb match=1
+[s8] block offset=22000 length=4096 sha256=527d13ef6ccaa906 host=527d13ef6ccaa906 match=1
+[s8] block offset=23000 length=4096 sha256=9c1c730f4db140a1 host=9c1c730f4db140a1 match=1
+[s8] block offset=24000 length=4096 sha256=d0e85bf67fd81bd7 host=d0e85bf67fd81bd7 match=1
+[s8] block offset=25000 length=4096 sha256=572fcc1b23f72619 host=572fcc1b23f72619 match=1
+[s8] block offset=26000 length=4096 sha256=637b42dcccdd7518 host=637b42dcccdd7518 match=1
+[s8] block offset=27000 length=4096 sha256=cb76ab6238eb433f host=cb76ab6238eb433f match=1
+[s8] block offset=28000 length=4096 sha256=ca815b25e5b54cd2 host=ca815b25e5b54cd2 match=1
+[s8] block offset=29000 length=4096 sha256=a0ea030710d9a7dd host=a0ea030710d9a7dd match=1
+[s8] block offset=2a000 length=4096 sha256=257fbf62999fcc1c host=257fbf62999fcc1c match=1
+[s8] block offset=2b000 length=4096 sha256=e17ce0756dd849e9 host=e17ce0756dd849e9 match=1
+[s8] block offset=2c000 length=4096 sha256=077052f14feb3449 host=077052f14feb3449 match=1
+[s8] block offset=2d000 length=4096 sha256=fd912c66dec4345b host=fd912c66dec4345b match=1
+[s8] block offset=2e000 length=4096 sha256=4604b9a562903ad2 host=4604b9a562903ad2 match=1
+[s8] block offset=2f000 length=4096 sha256=09e5322c6f3caaf7 host=09e5322c6f3caaf7 match=1
+[s8] block offset=30000 length=4096 sha256=9da98e8896c4fc00 host=9da98e8896c4fc00 match=1
+[s8] block offset=31000 length=4096 sha256=5be74b6d1d829a7b host=5be74b6d1d829a7b match=1
+[s8] block offset=32000 length=4096 sha256=93dea4f710c8ebd6 host=93dea4f710c8ebd6 match=1
+[s8] block offset=33000 length=4096 sha256=ba4dd1663b61ea34 host=ba4dd1663b61ea34 match=1
+[s8] block offset=34000 length=4096 sha256=827d39543bd81127 host=827d39543bd81127 match=1
+[s8] block offset=35000 length=4096 sha256=55b543f559cb16e6 host=55b543f559cb16e6 match=1
+[s8] block offset=36000 length=4096 sha256=28af55b1b0487821 host=28af55b1b0487821 match=1
+[s8] block offset=37000 length=4096 sha256=28924a360fd45811 host=28924a360fd45811 match=1
+[s8] block offset=38000 length=4096 sha256=19ec0e3cac473ef0 host=19ec0e3cac473ef0 match=1
+[s8] block offset=39000 length=4096 sha256=c4e1c79a7c119483 host=c4e1c79a7c119483 match=1
+[s8] block offset=3a000 length=4096 sha256=6fc1ce70fe5ca407 host=6fc1ce70fe5ca407 match=1
+[s8] block offset=3b000 length=4096 sha256=59b04f0456a4429d host=59b04f0456a4429d match=1
+[s8] block offset=3c000 length=4096 sha256=d04d4fbe80b8d563 host=d04d4fbe80b8d563 match=1
+[s8] block offset=3d000 length=4096 sha256=0e839f09be1bf64b host=0e839f09be1bf64b match=1
+[s8] block offset=3e000 length=4096 sha256=9c59f57a0c53e453 host=9c59f57a0c53e453 match=1
+[s8] block offset=3f000 length=4096 sha256=6d621a1587c70042 host=6d621a1587c70042 match=1
+[s8] block offset=40000 length=4096 sha256=8d2a5f2295c69c8d host=8d2a5f2295c69c8d match=1
+[s8] block offset=41000 length=4096 sha256=7897f028f54f4a70 host=7897f028f54f4a70 match=1
+[s8] block offset=42000 length=4096 sha256=32de736ebc8f76d0 host=32de736ebc8f76d0 match=1
+[s8] block offset=43000 length=4096 sha256=13338b94a4bc5da7 host=13338b94a4bc5da7 match=1
+[s8] block offset=44000 length=4096 sha256=c598380308552190 host=c598380308552190 match=1
+[s8] block offset=45000 length=4096 sha256=2a93bb6902846c0a host=2a93bb6902846c0a match=1
+[s8] block offset=46000 length=4096 sha256=0162a533cf8cefab host=0162a533cf8cefab match=1
+[s8] block offset=47000 length=4096 sha256=80098f0a88efdd0f host=80098f0a88efdd0f match=1
+[s8] block offset=48000 length=4096 sha256=a9da488f50667aab host=a9da488f50667aab match=1
+[s8] block offset=49000 length=4096 sha256=de1c24889ec61019 host=de1c24889ec61019 match=1
+[s8] block offset=4a000 length=4096 sha256=c14f2fd78bb9752a host=c14f2fd78bb9752a match=1
+[s8] block offset=4b000 length=4096 sha256=9ebda8b10a2bf99a host=9ebda8b10a2bf99a match=1
+[s8] block offset=4c000 length=4096 sha256=ed3259e86f34d087 host=ed3259e86f34d087 match=1
+[s8] block offset=4d000 length=4096 sha256=1fb7fb0ada2817d7 host=1fb7fb0ada2817d7 match=1
+[s8] block offset=4e000 length=4096 sha256=7e568fbb5d155145 host=7e568fbb5d155145 match=1
+[s8] block offset=4f000 length=4096 sha256=9ccf3afd77624a09 host=9ccf3afd77624a09 match=1
+[s8] block offset=50000 length=4096 sha256=98a8098fd9fcbbfd host=98a8098fd9fcbbfd match=1
+[s8] block offset=51000 length=4096 sha256=1008e5ed2e8399fc host=1008e5ed2e8399fc match=1
+[s8] block offset=52000 length=4096 sha256=d077304436d5be7c host=d077304436d5be7c match=1
+[s8] block offset=53000 length=4096 sha256=78f6b4a0e2d0c5b0 host=78f6b4a0e2d0c5b0 match=1
+[s8] block offset=54000 length=4096 sha256=d9e4740316b193b7 host=d9e4740316b193b7 match=1
+[s8] block offset=55000 length=4096 sha256=b341948b123d8d70 host=b341948b123d8d70 match=1
+[s8] block offset=56000 length=4096 sha256=17924a3320cd9fe4 host=17924a3320cd9fe4 match=1
+[s8] block offset=57000 length=4096 sha256=054c543a23f6c4e7 host=054c543a23f6c4e7 match=1
+[s8] block offset=58000 length=4096 sha256=81e52135b8e14b83 host=81e52135b8e14b83 match=1
+[s8] block offset=59000 length=4096 sha256=9c4efc6b8d52c342 host=9c4efc6b8d52c342 match=1
+[s8] block offset=5a000 length=4096 sha256=cdaf4071c77c92b1 host=cdaf4071c77c92b1 match=1
+[s8] block offset=5b000 length=4096 sha256=cac112db87f6cb4c host=cac112db87f6cb4c match=1
+[s8] block offset=5c000 length=4096 sha256=cdbbea8b1fe59144 host=cdbbea8b1fe59144 match=1
+[s8] block offset=5d000 length=4096 sha256=393c4177fc1a033d host=393c4177fc1a033d match=1
+[s8] block offset=5e000 length=4096 sha256=74277dee5a6d0431 host=74277dee5a6d0431 match=1
+[s8] block offset=5f000 length=4096 sha256=e47c2fa902cd1318 host=e47c2fa902cd1318 match=1
+[s8] block offset=60000 length=4096 sha256=ee3bced79aa447ee host=ee3bced79aa447ee match=1
+[s8] block offset=61000 length=4096 sha256=ee6bbd166bf2546e host=ee6bbd166bf2546e match=1
+[s8] block offset=62000 length=4096 sha256=9719a2016defca89 host=9719a2016defca89 match=1
+[s8] block offset=63000 length=4096 sha256=c03c9fbd51d9ad9a host=c03c9fbd51d9ad9a match=1
+[s8] block offset=64000 length=4096 sha256=40cff9adf3b70285 host=40cff9adf3b70285 match=1
+[s8] block offset=65000 length=4096 sha256=72b7f614f1a41f8d host=72b7f614f1a41f8d match=1
+[s8] block offset=66000 length=4096 sha256=46ad2cccb5ac7995 host=46ad2cccb5ac7995 match=1
+[s8] block offset=67000 length=4096 sha256=7234335e4741b587 host=7234335e4741b587 match=1
+[s8] block offset=68000 length=4096 sha256=d3bb3a17595b6792 host=d3bb3a17595b6792 match=1
+[s8] block offset=69000 length=4096 sha256=80f9c940e54d10aa host=80f9c940e54d10aa match=1
+[s8] block offset=6a000 length=4096 sha256=165d506f661e53bc host=165d506f661e53bc match=1
+[s8] block offset=6b000 length=4096 sha256=744eef94c64042d4 host=744eef94c64042d4 match=1
+[s8] block offset=6c000 length=4096 sha256=6a36ad6271853f78 host=6a36ad6271853f78 match=1
+[s8] block offset=6d000 length=4096 sha256=ad7facb2586fc6e9 host=ad7facb2586fc6e9 match=1
+[s8] block offset=6e000 length=4096 sha256=ad7facb2586fc6e9 host=ad7facb2586fc6e9 match=1
+[s8] block offset=6f000 length=4096 sha256=ad7facb2586fc6e9 host=ad7facb2586fc6e9 match=1
+[s8] block offset=70000 length=4096 sha256=ad7facb2586fc6e9 host=ad7facb2586fc6e9 match=1
+[s8] block offset=71000 length=4096 sha256=ad7facb2586fc6e9 host=ad7facb2586fc6e9 match=1
+[s8] block offset=72000 length=4096 sha256=ad7facb2586fc6e9 host=ad7facb2586fc6e9 match=1
+[s8] block offset=73000 length=4096 sha256=ad7facb2586fc6e9 host=ad7facb2586fc6e9 match=1
+[s8] block offset=74000 length=4096 sha256=ad7facb2586fc6e9 host=ad7facb2586fc6e9 match=1
+[s8] block offset=75000 length=4096 sha256=ad7facb2586fc6e9 host=ad7facb2586fc6e9 match=1
+[s8] block offset=76000 length=4096 sha256=ad7facb2586fc6e9 host=ad7facb2586fc6e9 match=1
+[s8] block offset=77000 length=4096 sha256=ad7facb2586fc6e9 host=ad7facb2586fc6e9 match=1
+[s8] block offset=78000 length=4096 sha256=043b493e9cc3e5e4 host=043b493e9cc3e5e4 match=1
+[s8] block offset=79000 length=4096 sha256=831c45764292a150 host=831c45764292a150 match=1
+[s8] block offset=7a000 length=4096 sha256=6286b3f1390b9e50 host=6286b3f1390b9e50 match=1
+[s8] block offset=7b000 length=4096 sha256=8e3ab02ceebf7e50 host=8e3ab02ceebf7e50 match=1
+[s8] block offset=7c000 length=4096 sha256=619d49847f911c6e host=619d49847f911c6e match=1
+[s8] block offset=7d000 length=4096 sha256=6e6230c17c01c78f host=6e6230c17c01c78f match=1
+[s8] block offset=7e000 length=4096 sha256=425e98770f2a2690 host=425e98770f2a2690 match=1
+[s8] block offset=7f000 length=4096 sha256=250755489a63012b host=250755489a63012b match=1
+[s8] block offset=80000 length=4096 sha256=37595f12ab1dfc0b host=37595f12ab1dfc0b match=1
+[s8] block offset=81000 length=4096 sha256=6650285974c2c997 host=6650285974c2c997 match=1
+[s8] block offset=82000 length=4096 sha256=62cbe29ba3e86a76 host=62cbe29ba3e86a76 match=1
+[s8] block offset=83000 length=4096 sha256=e328992f64129b06 host=e328992f64129b06 match=1
+[s8] block offset=84000 length=4096 sha256=6561e6760de8db5a host=6561e6760de8db5a match=1
+[s8] block offset=85000 length=4096 sha256=3487467b695ec566 host=3487467b695ec566 match=1
+[s8] block offset=86000 length=4096 sha256=ff60f45e6001f1bb host=ff60f45e6001f1bb match=1
+[s8] block offset=87000 length=4096 sha256=65c69feba896dab1 host=65c69feba896dab1 match=1
+[s8] block offset=88000 length=4096 sha256=2c72923c4bf2bb6c host=2c72923c4bf2bb6c match=1
+[s8] block offset=89000 length=4096 sha256=88a079385af7bc98 host=88a079385af7bc98 match=1
+[s8] block offset=8a000 length=4096 sha256=a5974cd5e5515405 host=a5974cd5e5515405 match=1
+[s8] block offset=8b000 length=4096 sha256=4659e84cd4f561a2 host=4659e84cd4f561a2 match=1
+[s8] block offset=8c000 length=4096 sha256=445e98e63dcbec5e host=445e98e63dcbec5e match=1
+[s8] block offset=8d000 length=4096 sha256=52fd1825dd8716e0 host=52fd1825dd8716e0 match=1
+[s8] block offset=8e000 length=4096 sha256=f1b6cb3dbe0d7d47 host=f1b6cb3dbe0d7d47 match=1
+[s8] block offset=8f000 length=4096 sha256=d87baee2a45e46e1 host=d87baee2a45e46e1 match=1
+[s8] block offset=90000 length=4096 sha256=6217d167dd9458a4 host=6217d167dd9458a4 match=1
+[s8] block offset=91000 length=4096 sha256=c79e4d390ff0a130 host=c79e4d390ff0a130 match=1
+[s8] block offset=92000 length=4096 sha256=7a79acbacc915ab6 host=7a79acbacc915ab6 match=1
+[s8] block offset=93000 length=4096 sha256=7e397709ce56d517 host=7e397709ce56d517 match=1
+[s8] block offset=94000 length=4096 sha256=cf5967a4c58ea0ac host=cf5967a4c58ea0ac match=1
+[s8] block offset=95000 length=4096 sha256=670141f0728ba8aa host=670141f0728ba8aa match=1
+[s8] block offset=96000 length=4096 sha256=2090b0d1523539a5 host=2090b0d1523539a5 match=1
+[s8] block offset=97000 length=4096 sha256=5a945e538fb620b5 host=5a945e538fb620b5 match=1
+[s8] block offset=98000 length=4096 sha256=661488582a4d6a72 host=661488582a4d6a72 match=1
+[s8] block offset=99000 length=4096 sha256=badf6537b42ca79e host=badf6537b42ca79e match=1
+[s8] block offset=9a000 length=4096 sha256=3819718feb4ffa31 host=3819718feb4ffa31 match=1
+[s8] block offset=9b000 length=4096 sha256=6677d616b9a6d224 host=6677d616b9a6d224 match=1
+[s8] block offset=9c000 length=4096 sha256=e485dc12aaa86f71 host=e485dc12aaa86f71 match=1
+[s8] block offset=9d000 length=4096 sha256=c9228f7b84cd1e47 host=c9228f7b84cd1e47 match=1
+[s8] block offset=9e000 length=4096 sha256=0cc7751947f0b8f6 host=0cc7751947f0b8f6 match=1
+[s8] block offset=9f000 length=4096 sha256=e798f84115b74ebd host=e798f84115b74ebd match=1
+[s8] block offset=a0000 length=4096 sha256=93ef86bcb4bc60d8 host=93ef86bcb4bc60d8 match=1
+[s8] block offset=a1000 length=4096 sha256=33bbf61fc27547d3 host=33bbf61fc27547d3 match=1
+[s8] block offset=a2000 length=4096 sha256=b4a1213e02347c91 host=b4a1213e02347c91 match=1
+[s8] block offset=a3000 length=4096 sha256=87be461c1603127e host=87be461c1603127e match=1
+[s8] block offset=a4000 length=4096 sha256=a67b13a734778d8a host=a67b13a734778d8a match=1
+[s8] block offset=a5000 length=4096 sha256=1a4932433b206970 host=1a4932433b206970 match=1
+[s8] block offset=a6000 length=4096 sha256=0b218d92be8c0647 host=0b218d92be8c0647 match=1
+[s8] block offset=a7000 length=4096 sha256=e4385236bcd7f45b host=e4385236bcd7f45b match=1
+[s8] block offset=a8000 length=4096 sha256=6a92933f67922b21 host=6a92933f67922b21 match=1
+[s8] block offset=a9000 length=4096 sha256=c9acde480e7b1352 host=c9acde480e7b1352 match=1
+[s8] block offset=aa000 length=4096 sha256=e642e3bd06dac151 host=e642e3bd06dac151 match=1
+[s8] block offset=ab000 length=4096 sha256=a3cc98081ee1765b host=a3cc98081ee1765b match=1
+[s8] block offset=ac000 length=4096 sha256=ab1eb870706a881a host=ab1eb870706a881a match=1
+[s8] block offset=ad000 length=4096 sha256=a0a0f75e89ad2ef9 host=a0a0f75e89ad2ef9 match=1
+[s8] block offset=ae000 length=4096 sha256=720aec3781e3a325 host=720aec3781e3a325 match=1
+[s8] block offset=af000 length=4096 sha256=5bdaef29bbe921d4 host=5bdaef29bbe921d4 match=1
+[s8] block offset=b0000 length=4096 sha256=01fdc4a95351f4e4 host=01fdc4a95351f4e4 match=1
+[s8] block offset=b1000 length=4096 sha256=d3e65a2f4af512ac host=d3e65a2f4af512ac match=1
+[s8] block offset=b2000 length=4096 sha256=22f42c9ae6b2f105 host=22f42c9ae6b2f105 match=1
+[s8] block offset=b3000 length=4096 sha256=3b4ea2155ebb9ac9 host=3b4ea2155ebb9ac9 match=1
+[s8] block offset=b4000 length=4096 sha256=fabeb2c7d7b5d7b1 host=fabeb2c7d7b5d7b1 match=1
+[s8] block offset=b5000 length=4096 sha256=9b2dc68436d5251d host=9b2dc68436d5251d match=1
+[s8] block offset=b6000 length=4096 sha256=f627b4e8b22f424d host=f627b4e8b22f424d match=1
+[s8] block offset=b7000 length=4096 sha256=1bc50efffae1cbf6 host=1bc50efffae1cbf6 match=1
+[s8] block offset=b8000 length=4096 sha256=4c1630a37d61aef1 host=4c1630a37d61aef1 match=1
+[s8] block offset=b9000 length=4096 sha256=d5c63a7367c61245 host=d5c63a7367c61245 match=1
+[s8] block offset=ba000 length=4096 sha256=28c5a3926ed3530b host=28c5a3926ed3530b match=1
+[s8] block offset=bb000 length=4096 sha256=adf66a1e65d34716 host=adf66a1e65d34716 match=1
+[s8] block offset=bc000 length=4096 sha256=72a3e9838aeb4f62 host=72a3e9838aeb4f62 match=1
+[s8] block offset=bd000 length=4096 sha256=647a343cf8d1ae39 host=647a343cf8d1ae39 match=1
+[s8] block offset=be000 length=4096 sha256=f0497611985c23ce host=f0497611985c23ce match=1
+[s8] block offset=bf000 length=4096 sha256=1b14bc155a7d2ae3 host=1b14bc155a7d2ae3 match=1
+[s8] block offset=c0000 length=4096 sha256=1bc1adca57b95c5c host=1bc1adca57b95c5c match=1
+[s8] block offset=c1000 length=4096 sha256=6606ad6e959086b8 host=6606ad6e959086b8 match=1
+[s8] block offset=c2000 length=4096 sha256=e1370445efd4cb05 host=e1370445efd4cb05 match=1
+[s8] block offset=c3000 length=4096 sha256=06e69ed8e7925ebc host=06e69ed8e7925ebc match=1
+[s8] block offset=c4000 length=4096 sha256=c5c9f74f64a2c57c host=c5c9f74f64a2c57c match=1
+[s8] block offset=c5000 length=4096 sha256=44222fe26baad6e7 host=44222fe26baad6e7 match=1
+[s8] block offset=c6000 length=4096 sha256=4f45866d8f7ff7a0 host=4f45866d8f7ff7a0 match=1
+[s8] block offset=c7000 length=4096 sha256=e7d55927145ec55a host=e7d55927145ec55a match=1
+[s8] block offset=c8000 length=4096 sha256=aecf650f06ac5cc7 host=aecf650f06ac5cc7 match=1
+[s8] block offset=c9000 length=4096 sha256=73830cc7d2a4bb4c host=73830cc7d2a4bb4c match=1
+[s8] block offset=ca000 length=4096 sha256=9f7f0650e93bb267 host=9f7f0650e93bb267 match=1
+[s8] block offset=cb000 length=4096 sha256=a6919b5013f127f8 host=a6919b5013f127f8 match=1
+[s8] block offset=cc000 length=4096 sha256=a95e1ec3e3283a17 host=a95e1ec3e3283a17 match=1
+[s8] block offset=cd000 length=4096 sha256=d0d358992edfa0ed host=d0d358992edfa0ed match=1
+[s8] block offset=ce000 length=4096 sha256=f8c3a3c548b1203a host=f8c3a3c548b1203a match=1
+[s8] block offset=cf000 length=4096 sha256=930c6d7efb0a77e4 host=930c6d7efb0a77e4 match=1
+[s8] block offset=d0000 length=4096 sha256=68c6dcd8d1a1bd0b host=68c6dcd8d1a1bd0b match=1
+[s8] block offset=d1000 length=4096 sha256=40aaa87547964d3f host=40aaa87547964d3f match=1
+[s8] block offset=d2000 length=4096 sha256=797cbcbe33ccb215 host=797cbcbe33ccb215 match=1
+[s8] block offset=d3000 length=4096 sha256=7970fde0c698ba4d host=7970fde0c698ba4d match=1
+[s8] block offset=d4000 length=4096 sha256=5497a4ea2854639c host=5497a4ea2854639c match=1
+[s8] block offset=d5000 length=4096 sha256=845c37bb0a554338 host=845c37bb0a554338 match=1
+[s8] block offset=d6000 length=4096 sha256=87b1c642b546ff67 host=87b1c642b546ff67 match=1
+[s8] block offset=d7000 length=4096 sha256=3e056037188d53e6 host=3e056037188d53e6 match=1
+[s8] block offset=d8000 length=4096 sha256=95e1736510d0e202 host=95e1736510d0e202 match=1
+[s8] block offset=d9000 length=4096 sha256=af4c453444c2e091 host=af4c453444c2e091 match=1
+[s8] block offset=da000 length=4088 sha256=ac4ea62d6f5ab651 host=ac4ea62d6f5ab651 match=1
+[s8] blocks done valid=1 differing=0
+[s8] scaling n=2 wall_ms=6937.247 sum_compile_ms=13647.018 objects_ok=2/2 identical=2/2 samples=71
+[s8] memory n=2 stage=before flex_free=383778816 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12410945536 direct_total=12884901888 direct_rc=0 heap_mapped=469762048 heap_peak_lifetime=469762048 heap_segments=28 heap_arenas=2 heap_libc_fallbacks=0
+[s8] memory n=2 stage=peak_extrema_100ms flex_free=367001600 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11941183488 direct_total=12884901888 direct_rc=0 heap_mapped=905969664 heap_peak_lifetime=939524096 heap_segments=54 heap_arenas=4 heap_libc_fallbacks=0
+[s8] memory n=2 stage=after flex_free=367001600 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11974737920 direct_total=12884901888 direct_rc=0 heap_mapped=654311424 heap_peak_lifetime=939524096 heap_segments=39 heap_arenas=4 heap_libc_fallbacks=0
+<118>[SceShellCore] VM Stats: RSS 890.8, kernel 461.0, wire count 594.7, swap out 288.0, page table CPU 2643/8192 GPU 179/8192
+<118>[SceShellCore] FMEM   1.1/   4.1 NPXS40095 SceSysAvControl.elf
+<118>[SceShellCore] FMEM  10.9/  96.7 NPXS45091 SceSysCore.elf
+<118>[SceShellCore] FMEM  23.5/  53.8 NPXS40096 orbis_audiod.elf
+<118>[SceShellCore] FMEM   4.1/  27.2 NPXS40135 AgcCompositor.elf
+<118>[SceShellCore] FMEM  40.7/ 611.0 NPXS40082 SceShellCore
+<118>[SceShellCore] FMEM  10.2/  28.4 NPXS40100 SceAvCapture
+<118>[SceShellCore] FMEM   6.7/  46.5 NPXS40142 SceGameLiveStreaming
+<118>[SceShellCore] FMEM  16.1/ 105.6 NPXS40109 ScePartyDaemon
+<118>[SceShellCore] FMEM   3.8/  37.9 NPXS40039 SceMediaCoreServer
+<118>[SceShellCore] FMEM   5.9/  34.1 NPXS40153 ScePsNowClientDaemon
+<118>[SceShellCore] FMEM   3.1/  20.2 NPXS40112 SceSpZeroConf
+<118>[SceShellCore] FMEM   8.8/  82.1 NPXS40094 SceVoiceAndAgent
+<118>[SceShellCore] FMEM   3.5/  30.4 NPXS40028 SceRedisServer
+<118>[SceShellCore] FMEM  87.5/ 240.4 NPXS40000 SceJSCd
+<118>[SceShellCore] FMEM   9.8/  45.0 NPXS40085 SceSystemLogger2
+<118>[SceShellCore] FMEM   2.7/  24.7 NPXS40173 SceVrTrackerDaemon
+<118>[SceShellCore] FMEM   1.6/  13.2 NPXS45093 fs_cleaner.elf
+<118>[SceShellCore] FMEM  10.4/ 170.1 NPXS40109 webrtc_daemon.self
+<118>[SceShellCore] FMEM   1.8/  31.9 elfldr.elf
+<118>[SceShellCore] FMEM   4.9/  32.1 pldmgr.elf
+<118>[SceShellCore] FMEM   3.5/  20.2 kstuff.elf
+<118>[SceShellCore] FMEM   2.0/  16.1 klogsrv.elf
+<118>[SceShellCore] FMEM   2.0/  16.3 nanodns.elf
+<118>[SceShellCore] FMEM   3.4/  19.7 ps5upload.elf
+<118>[SceShellCore] FMEM  15.6/  36.5 shadowmountplus.elf
+<118>[SceShellCore] FMEM   3.2/  17.7 ftpsrv.elf
+<118>[SceShellCore] FMEM  18.6/  32.9 payload.elf
+<118>[SceShellCore] FMEM 571.2/1432.9 NPXS40087 SceShellUI
+<118>[SceShellCore] FMEM   8.6/  71.0 NPXS40102 SceRemotePlay
+<118>[SceShellCore] FMEM   2.9/  19.9 NPXS40101 SceSocialScreenMgr
+<118>[SceShellCore] FMEM   2.8/  16.9 payload.elf
+[s8] scaling n=4 wall_ms=7582.749 sum_compile_ms=29482.745 objects_ok=4/4 identical=4/4 samples=77
+[s8] memory n=4 stage=before flex_free=367001600 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11974737920 direct_total=12884901888 direct_rc=0 heap_mapped=654311424 heap_peak_lifetime=939524096 heap_segments=39 heap_arenas=4 heap_libc_fallbacks=0
+[s8] memory n=4 stage=peak_extrema_100ms flex_free=358612992 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11303649280 direct_total=12884901888 direct_rc=0 heap_mapped=1577058304 heap_peak_lifetime=1577058304 heap_segments=94 heap_arenas=8 heap_libc_fallbacks=0
+[s8] memory n=4 stage=after flex_free=358612992 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11320426496 direct_total=12884901888 direct_rc=0 heap_mapped=1073741824 heap_peak_lifetime=1577058304 heap_segments=64 heap_arenas=8 heap_libc_fallbacks=0
+<118>[SceShellCore] Libc Heap Status: free 37%, in-use 3836.2 KB, trend +16.7 KB/min, peak 4961.6 KB, when 42674 [sec]
+[s8] scaling n=6 wall_ms=8286.944 sum_compile_ms=48412.194 objects_ok=6/6 identical=6/6 samples=84
+[s8] memory n=6 stage=before flex_free=358612992 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11320426496 direct_total=12884901888 direct_rc=0 heap_mapped=1073741824 heap_peak_lifetime=1577058304 heap_segments=64 heap_arenas=8 heap_libc_fallbacks=0
+[s8] memory n=6 stage=peak_extrema_100ms flex_free=341835776 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11303649280 direct_total=12884901888 direct_rc=0 heap_mapped=1577058304 heap_peak_lifetime=1577058304 heap_segments=94 heap_arenas=8 heap_libc_fallbacks=0
+[s8] memory n=6 stage=after flex_free=341835776 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11303649280 direct_total=12884901888 direct_rc=0 heap_mapped=1073741824 heap_peak_lifetime=1577058304 heap_segments=64 heap_arenas=8 heap_libc_fallbacks=0
+[s8] scaling n=8 wall_ms=9269.958 sum_compile_ms=72605.818 objects_ok=8/8 identical=8/8 samples=94
+[s8] memory n=8 stage=before flex_free=341835776 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11303649280 direct_total=12884901888 direct_rc=0 heap_mapped=1073741824 heap_peak_lifetime=1577058304 heap_segments=64 heap_arenas=8 heap_libc_fallbacks=0
+[s8] memory n=8 stage=peak_extrema_100ms flex_free=325058560 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11051991040 direct_total=12884901888 direct_rc=0 heap_mapped=1811939328 heap_peak_lifetime=1828716544 heap_segments=108 heap_arenas=8 heap_libc_fallbacks=0
+[s8] memory n=8 stage=after flex_free=325058560 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11051991040 direct_total=12884901888 direct_rc=0 heap_mapped=989855744 heap_peak_lifetime=1828716544 heap_segments=59 heap_arenas=8 heap_libc_fallbacks=0
+[s8] done status=ok peak_rss_kib=1988400
+<118>[SceLncService] tryLockSuspendBlock: appId={0x00000016}
+<118>[SceLncService] sceApplicationExitSpawn3(0x00000016)
+<118>[Syscore App] Kill for LoadExec(0x107)
+Terminating pid=263
+[BAPM] universal mode exit
+### gc_gfx_queue_status : in_frame=0 rptr=0x00000000 wptr=0x00000000 IBlist(rptr=0x0000 wptr=0x0000 i_wptr=0x0000)
+### HP3D(pipe1) GnmCompositor. proc gen:2 vmid:4
+ +++ num clients 1
+<118>[Syscore App] EVFILT_PROC NOTE_EXIT received : pid=0x107
+<118>[Syscore App] Kill for LoadExec(0x107) => 0
+<118>[AppMgr Trace]: pid=0x107, deleted.
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[Syscore App] Syscore Event Queue Push : unkown event
+<118>[AppMgr] All processes exited, ready for next spawn
+<118>[AvControl] AudioOut: shared (pid=0xffffffff)
+<118>[AvControl] VideoOut: shared (pid=0xffffffff appId=0xffffffff)
+<118>[AvControl] -- app[0](appid=0x16 attr=0xaa0017)(GAME RUNNING)(HDR:o HFR:o VR:x VRR:TypeA) SpecialModeInBg(none) HDCP23(none) supInfo(0x0)
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_PROCESS_UNLOADED
+<118>[Syscore App] Syscore Event Queue Pop : unkown event
+<118>[Syscore App] process delete event : pid=0x107
+<118>[SceLncService] onAppExitSpawn() appId={0x00000016}
+<118>[AppMgr] Executing next spawn
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[Syscore App] processSpawn(pid, 0x16, 0x10016bb0, appParam, processParam, 1, 1, 1, param, debug, 1)
+<118>[Syscore App] appParam: appType = 0, titleId = PPSA90212
+<118>[Syscore App] new pid=0x108[Syscore App] attributeExe= 0
+<118>[AvControl] AudioOut: shared (pid=0x108)
+<118>[AvControl] VideoOut: shared (pid=0x108 appId=0x16)
+<118>[AvControl] video owner is switched to registered app(appId=0x16) 
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+# process pid=264, SceSysCore.elf calls exit() exit_value=ffffffff.
+<6>pid 264 (SceSysCore.elf), uid 0: exited on signal 12
+<118>[Syscore App] An error occured while creating new process. error=0x80aa001a errno=22
+<118>mDBG: unexpected errno with spawn 0x00000016
+<118>[AvControl] AudioOut: shared (pid=0xffffffff)
+<118>[AvControl] VideoOut: shared (pid=0xffffffff appId=0xffffffff)
+<118>[AvControl] -- app[0](appid=0x16 attr=0xaa0017)(GAME RUNNING)(HDR:o HFR:o VR:x VRR:TypeA) SpecialModeInBg(none) HDCP23(none) supInfo(0x0)
+<118>[Syscore App] processSpawn() error: 0x80aa001a
+<118>[AppMgr] Exit spawn failed : 0x80aa001a ELF path=exit
+<118>[Syscore App] Syscore Event Queue Push : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[Syscore App] Syscore Event Queue Pop : SCE_SYSCORE_EVENT_ON_APP_UNLOADED
+<118>[AvControl] onAppKill(appid=0x16)
+<118>[AvControl] current video owner app is removed (appid=0x16)
+<118>[AvControl] layout:HDMI
+<118>[AvControl] notify stop-scanin (idx:-1) dwb0(unusable) dwb1(usable) dwb2(usable) cause(hdmi)
+<118>[AvControl] ** stop scanin(pid=0x3a scaninId = 1)
+[si] stop  pipe[0] 43960s: 2us, p:0:1, 2882:0014, 22979:0007, m:0, d:0x0, 0x1110
+<118>[AvControl] ** v:130203021000000002/a:00 **
+<118>[AvControl] ** set_default_metadata ** -1 
+<118>[AvControl] ** mute(0) ** 
+[dce-proc:3923 Info]<49>p:0:1, m:0, d:0x0, b:0x1110, ft:0x1, fl:0x1a1a1710
+<118>[AvControl] ** set_mode(0) ** -1/-1 
+<118>[AvControl]  video: port:HDMI 3840_2160P_5994 RGB444 full RGB2100_PQ 36bpp 16:9 allm-game o--tm-sf2 
+<118>[AvControl]  audio: port:HDMI src:I2S 48k 7.1 24bit fmt:LPCM LPCM once sp:TV -
+<118>[SceLncService] onAppExit() appId={0x00000016}
+<118>[SceLncService] start unmountAllForShellCoreInternal()
+<118>[SceLncService] end unmountAllForShellCoreInternal()
+<118>[SceSystemStateMgr] Power Mode Change: NAVIGATION_INACTIVE
+<118>[kstuff.elf] src/shellui_patch.c:746:sceKernelGetAppInfo: Broken pipe

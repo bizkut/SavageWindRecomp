@@ -24,8 +24,10 @@ elif ! patch --dry-run --reverse -s -p1 -d "$source" < "$root/ps5/patches/llvm-1
     echo 'LLVM alignment patch does not match source' >&2; exit 1
 fi
 host=${LLVM_HOST_BUILD:-"$out/host"}
+# LLVM_APPEND_VC_REV=OFF: the compiler's identification string (.comment in every object) would otherwise carry
+# this repository's git commit, so the same LLVM source built at two commits made objects that differed in 38 bytes.
 cmake -S "$source/llvm" -B "$host" -G Ninja -DCMAKE_BUILD_TYPE=Release \
-    -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_ENABLE_PROJECTS=clang \
+    -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_ENABLE_PROJECTS=clang -DLLVM_APPEND_VC_REV=OFF \
     -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF \
     -DLLVM_INCLUDE_DOCS=OFF
 cmake --build "$host" --parallel "${LLVM_JOBS:-$(nproc)}" --target llvm-tblgen clang-tblgen
@@ -36,7 +38,7 @@ cmake -S "$source/llvm" -B "$out/target" -G Ninja \
     -DLLVM_TABLEGEN="$host/bin/llvm-tblgen" -DCLANG_TABLEGEN="$host/bin/clang-tblgen" \
     -DCMAKE_C_FLAGS="$flags" -DCMAKE_CXX_FLAGS="$flags" \
     -DCMAKE_AR="$sdk/bin/llvm-ar" -DCMAKE_RANLIB="$sdk/bin/llvm-ranlib" \
-    -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_ENABLE_PROJECTS=clang \
+    -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_ENABLE_PROJECTS=clang -DLLVM_APPEND_VC_REV=OFF \
     -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF \
     -DLLVM_INCLUDE_DOCS=OFF -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF \
     -DLLVM_ENABLE_TERMINFO=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_ENABLE_LIBEDIT=OFF \
