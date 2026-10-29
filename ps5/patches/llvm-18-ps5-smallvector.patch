@@ -1,0 +1,11 @@
+--- a/llvm/include/llvm/ADT/SmallVector.h
++++ b/llvm/include/llvm/ADT/SmallVector.h
+@@ -1205,7 +1205,7 @@
+ /// \see https://llvm.org/docs/ProgrammersManual.html#llvm-adt-smallvector-h
+ template <typename T,
+           unsigned N = CalculateSmallVectorDefaultInlinedElements<T>::value>
+-class LLVM_GSL_OWNER SmallVector : public SmallVectorImpl<T>,
++class LLVM_GSL_OWNER alignas(alignof(T) > alignof(SmallVectorImpl<T>) ? alignof(T) : alignof(SmallVectorImpl<T>)) SmallVector : public SmallVectorImpl<T>,
+                                    SmallVectorStorage<T, N> {
+ public:
+   SmallVector() : SmallVectorImpl<T>(N) {}

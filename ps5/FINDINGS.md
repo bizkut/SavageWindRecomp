@@ -1383,3 +1383,16 @@ time, render 11.12 vs 11.02–11.05 ms, GPU 12.42–12.50 vs 12.39–12.44 ms: n
 user's new 100 %-completion save** (uploaded 2026-10-29): the benchmark continues the latest save, so its route
 starts elsewhere (13–18 command-translation hitches in play) and on-time is ~80 % instead of ~96 %; compare only
 runs from that save onward. Dual view is the mode M12 needs (it also works where `mprotect` to RX is refused).
+
+## 2026-10-29 — M12 spike S8: clang/LLVM compiles game code inside a PS5 title (.41, ps5/evidence/m8/s8-b.klog)
+
+LLVM/clang 18.1.8 cross-built for Prospero (`ps5/tools/build-llvm-ps5.sh`: X86 only, static, 225 MiB of archives,
+one `SmallVector` alignment patch for the PS5 ABI; `mallctl`, `strsignal`, `getpwnam_r`, `posix_madvise` stubbed and
+logged if called). Probe `ps5/probe/s8_clang.cpp` (eboot `54e43d8d…`) compiled one generated module (566,896 bytes of
+C, the game-code build's flags, `-O1`, x86-64-v3) in process from `/data/savagewind/s8/` (private input, not in
+the repo): **6,154 ms, 897,104-byte object, status ok**, `getrusage` peak 356,448 KiB (its meaning on the PS5 is
+unconfirmed). The same probe on the PC (clang 18.1.3): 6,308 ms, 897,032 bytes, 1.6 GiB peak RSS. The first run
+logged nothing: the probe printed to stdout, which a PS5 title doesn't log; it now writes to the kernel log.
+Scaled by source bytes over all 996 modules (632,391,656 bytes, ×1,115.5): ~6,865 CPU-seconds, ~19 min on 6 threads
+or ~14 min on 8 if compiling scales linearly — not yet measured (multi-thread scaling, peak memory with several
+compiles, and byte-identity of the object with the PC build remain).
