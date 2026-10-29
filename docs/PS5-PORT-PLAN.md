@@ -701,12 +701,81 @@ console, and the generator is ~4,200 lines of Python (`tools/gen.py`, `lifter.py
 Paths, decided by the spikes below:
 - **A. Same pipeline in the title (preferred):** a C++ port of the generator (byte-identical C to the Python on the
   host), compiled in-process by an embedded clang/LLVM (Apache-2.0 with LLVM exception) built with the Prospero
-  toolchain, and an in-title loader that writes the objects into that dual-view code cache, applies relocations
-  against the runtime's exports, and persists the linked image (not an eboot relink: the title can't load modules).
+  toolchain, and an in-title static linker/cache (design below), not an eboot relink: the title can't load modules.
   Keeps desktop parity, the HLE patch sites and current performance; costs LLVM's size and a long first build.
 - **B. Lifter to LLVM IR directly:** skips C parsing (faster compile); a second generator back end to keep in step.
 - **C. Runtime translation (dynarmic, ProsperoEden precedent):** no compile step, but loses static recompilation's
   optimisations and the generated-function patch sites; a runtime redesign. Fallback only.
+
+**Loader design (recommended A; not yet implemented).** The current `build-game.sh` puts `libgamecode.a` in a
+`--start-group` link with `--gc-sections`; `gamelib_ps5.c` directly imports `layout.c`'s `game_modules`,
+`game_module_count`, `game_version`, `game_sites` and `game_site_count`. Each module points to generated
+`*_fn_addrs`, `*_fn_ptrs` and `*_fn_count`. In the other direction the generated objects call game functions and
+runtime/HLE functions and access runtime data. An `nm` census of the current `-O1` archive finds 40 external
+names after subtracting archive definitions, including `rt_dispatch`, `rt_svc`, `rt_setjmp_slot`, `hle_longjmp`,
+`setjmp`, `memset`, `g_fnprof` and the `rt_*` patch hooks; derive the actual set from every build, not this list.
+The title map confirms the layout and function tables and `rt_setjmp_slot` in the linked image.
+
+- **Format/link:** clang 18 emits ELF64 x86-64 relocatable objects in memory for the 997 generated C files
+  (including layout and tables). A small deterministic in-title static linker consumes them in stable input order,
+  resolves local/global/weak definitions and lays out aligned allocatable text, rodata, data and zero-filled bss.
+  Use S7's near dual-view allocation: write via RW, execute via RX; code pointers and PC-relative calculations
+  use RX addresses, mutable data uses its RW address. Account for both view addresses, alignment, GOT, thunks,
+  metadata and memory budget rather than assuming 256 MiB suffices. Keep the image alive until all guest threads
+  stop. Compared with embedding LLVM ORC/JITLink, this adds a bounded ELF linker to maintain but avoids another
+  large dependency and its integration/target-memory-manager complexity; ORC shares LLVM's Apache-2.0 with LLVM
+  exception, but its footprint, determinism and PS5 support are unmeasured. Keep ORC as a fallback, not a claim
+  that the custom linker is already smaller or correct.
+- **Symbols and relocations:** maintain a checked-in, game-content-free manifest of runtime/HLE and libc/SDK ABI
+  names available to generated code, seeded by the archive census and the generator's possible emitted calls.
+  Generate a retained name-to-address table from that manifest at title build time, without player objects; use
+  real address references so `--gc-sections` cannot discard exports. At console link time subtract object
+  definitions from undefined symbols and reject required names absent from the table. Version the table by a
+  digest of sorted names, ABI declarations, runtime build identity and compilation ABI; a changed runtime
+  invalidates the linked cache. Reject duplicate strong definitions and
+  unresolved non-weak symbols. The current archive's `readelf -rW` census has `R_X86_64_PC32`, `PLT32`,
+  `GOTPCRELX`, `REX_GOTPCRELX` and `64`; implement their ELF RELA addends, signed-range checks and the
+  PC-relative `S + A - P` / absolute `S + A` rules. Provide deterministic local GOT slots for GOT relocations
+  without instruction relaxation, and direct PLT32 calls or nearby absolute-jump thunks for out-of-range calls;
+  do not depend on a dynamic GOT/PLT. Check every PC32 data reference and fail clearly if placement cannot reach;
+  never truncate. Census every newly compiled object and reject unsupported relocations or allocatable sections.
+  The wrapper uses `-femulated-tls`; the current archive census has no TLS relocations, COMDAT groups, common
+  symbols or `.init_array`. Reject these until their semantics are explicitly implemented and tested, including
+  emulated TLS descriptors/`__emutls_get_address` if generated inputs ever require them.
+- **Unwinding:** 992 current archive objects contain `.eh_frame`. Generated code is C; guest setjmp uses a host
+  `setjmp` and `rt_setjmp_slot`, and reboot/guest longjmp crosses generated frames without C++ unwinding.
+  PS5 `plat_print_backtrace` currently reports unavailable, but runtime C++ exceptions exist: audit all HLE
+  boundaries for exceptions crossing generated C. Preserve and relocate `.eh_frame`, and register/deregister it
+  with the actual PS5 unwinder if such crossings are supported; prove that registration works on console before
+  relying on it. Otherwise contain exceptions at the C boundary and explicitly test that contract. Longjmp,
+  reboot, and any supported stack walking must be tested independently.
+- **Cache:** under `/data/savagewind/cache/gamecode/`, persist a versioned, checksummed manifest and linked image:
+  ELF/architecture and target flags, generator and LLVM identities, runtime/export ABI digest, all ExeFS module
+  build IDs and content digests, ordered generated-source/object digests, section sizes/alignment, symbol offsets
+  and a bounded fixup stream. Store a canonical unrelocated image plus fixups referencing image offsets or export
+  names, not process addresses; on every load allocate fresh views, resolve exports and reapply fixups at the new
+  bases. Validate lengths, bounds, digests, relocation types and identity before publishing the image; atomically
+  replace completed files through the storage broker. A corrupt, incomplete or mismatched cache is rebuilt, never
+  executed. Cache individual compiled objects by source digest plus compiler, flags, headers and ABI identity,
+  with atomic completion, so an interrupted build resumes without trusting partial files.
+- **Cutover and startup:** build a release variant without `libgamecode.a` or static references to its symbols.
+  Resolve the five layout symbols from the finished image and construct `GameLibTables` in the runtime; keep
+  `gamelib_load`'s version/site checks, `gamelib_tables`' lifetime and all existing dispatch consumers unchanged.
+  Validate every module's build ID against the user's ExeFS, not only `main`. On first start enumerate/validate
+  inputs, generate C, reuse or compile each object, link/fix up, validate tables, then start the guest. Show
+  stage and completed/total progress beside shader precompile; only overlap where measured memory and CPU budgets
+  permit. Subsequent starts validate and relocate the cache before guest execution.
+- **Qualification and order:** (1) census/ABI and linker contract, including unwind and memory budget (2–4
+  engineer-days); (2) deterministic ELF linker, exports and relocation/negative tests (8–15 days); (3) cache,
+  restart and runtime cutover (4–7 days); (4) generator/compiler orchestration and progress UI (4–7 days);
+  (5) host and console qualification (5–10 days). Estimates are engineering ranges, not measured schedules.
+  On Linux link the same PS5-target objects with the same linker logic and compare tables, selected generated
+  functions, HLE calls, setjmp/longjmp and results with a conventionally linked reference; exercise relocation
+  types, rebasing, weak/duplicate/missing symbols, corrupt cache and interrupted compile. On PS5 compare the
+  loaded build to the eboot-linked build using identical input, settings and benchmark route: cold build and warm
+  reload, per-stage time, peak memory, repeated reboot, relocation/range and cache invalidation/error paths,
+  exception/unwind contract and gameplay. Record benchmark equivalence within 2% and preserve receipts before
+  claiming qualification.
 
 Spikes (console .41): **S7** a 256+ MiB dual-view executable image near the runtime, alongside the guest window,
 GPU and FG memory budgets: load, relocate against runtime symbols, call through, reload from the cache file; measure
