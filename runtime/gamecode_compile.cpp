@@ -19,6 +19,9 @@ void s9_output_sink(const std::string &, const std::string &);
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
 #include <pthread.h>
+#ifdef __PROSPERO__
+extern "C" int sceKernelDebugOutText(int, const char *);
+#endif
 #include <algorithm>
 #include <condition_variable>
 #include <deque>
@@ -138,6 +141,11 @@ static std::vector<char> compile_object(const Job &job, const std::string &root)
     llvm::SmallVector<char, 0> data;
     compiler.setOutputStream(std::make_unique<llvm::raw_svector_ostream>(data));
     clang::EmitObjAction action;
+#ifdef __PROSPERO__
+    // Written straight to the kernel log (not the asynchronous logger), so a crash inside the compiler names its file.
+    std::string line = "savagewind: [gamecode] compile start " + job.name + "\n";
+    sceKernelDebugOutText(0, line.c_str());
+#endif
     bool ok = compiler.ExecuteAction(action);
     diag_stream.flush();
     if (!ok || data.empty())
