@@ -649,7 +649,8 @@ specific errors on the TV. No key material appears in logs; unsupported compress
 Settings persistence, save/load, DLC, 1-hour soak, README for the setup/import flow, notices (D10), release ZIP.
 Done: settings persist through the broker; soak mode (25 min run clean, memory flat; stopped by the user, who waived
 the hour); private release ZIP builder with a no-game-content check (`ps5/tools/package-release.sh`). Open: save/load
-trigger (below), DLC untested (no DLC packages available), public repos, README with NSP/XCI install steps, GitHub
+trigger (below), DLC untested (user's DLC Pack 1 `01007EF00011F001` and Pack 2 `01007EF00011F002` NSPs, both
+v196608, available since 2026-10-29: test PC ExeFS/AOC selection, console AOC reads and both packs in game), public repos, README with NSP/XCI install steps, GitHub
 Actions on the self-hosted runner, catalog entry PPSA90212 (reserved, catalog PR #894), GPL source distribution, and
 deleting the local `ps5-backup-before-rewrite` branch (old history with game captures) before any push.
 
