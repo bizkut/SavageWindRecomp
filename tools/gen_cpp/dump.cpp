@@ -140,6 +140,7 @@ struct Nso {
         }} catch(const std::runtime_error &) { return {}; } return out;
     }
 };
+#ifndef S9_PARSER_ONLY
 static U fnv(const uint8_t *p, U n) { U h=14695981039346656037ULL; for(U i=0;i<n;i++) h=(h^p[i])*1099511628211ULL; return h; }
 int main(int argc,char **argv) try {
     require(argc==4,"usage: dump EXEFS LAYOUT MODULE"); fs::path dir=argv[1]; auto lay=layout(dir);
@@ -165,3 +166,4 @@ int main(int argc,char **argv) try {
     for(U a:starts) std::cout<<"boundary "<<a<<'\n';
     return 0;
 } catch(const std::exception &e) { std::cerr<<"dump: "<<e.what()<<'\n'; return 1; }
+#endif
