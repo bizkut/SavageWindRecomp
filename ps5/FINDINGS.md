@@ -1333,3 +1333,33 @@ stay; a bigger margin only lowers the size below the old 1080p default. Not kept
 `gpu_load = 3`, DRS on 96.3 / 95.8 % vs off 96.4 / 95.8 %; DRS stepped to 902p/724p for 16–20 s without gain (its
 trigger fires before the 120 Hz budget is exceeded). No load: lean DRS 97.3 / 96.3 % vs off 95.5 / 96.5 %. The user
 chose the old default back (Performance 1080p with FG, DRS off) for the smoothest frame pacing.
+
+## 2026-10-29 — Sharp-text opacity correction (.41 and host investigation)
+
+The previous per-cell raw-coverage correction treated all values above 0.6 as interchangeable because they
+were saturated in its two model threshold curves. It could therefore lower opaque glyph interiors. On the
+user's NormalS sheet, the comma's source peak was 255 but its reconstructed peak was 153; its modeled 0.4–0.6
+threshold weight was 27.22 source-pixel equivalents versus 26.52 reconstructed. This demonstrates an opacity
+defect but does not by itself identify the font or shader used by every loading-screen counter.
+
+The correction now preserves each cell's peak and limits downward adjustment of its high values. On the same
+host-side sheet-cell reconstruction, the comma's peak is 255, raw coverage is 30.77 versus 33.52 source-pixel
+equivalents, and modeled threshold weight remains 27.22 versus 26.52. Digits 0, 1, 2, 3, 4, 5, 7 and 9 have
+raw coverage within 0.5% of the source in that measurement. These are atlas-cell measurements, not rendered
+screen ink fractions; real-PS5 visual and per-glyph screen-weight qualification remains outstanding.
+
+Console comparison of build `47af8de5…` (`ab-loadfont-fix.klog`) showed the comma dark again, but 120 remained
+pale. `FadeStatus_00` instantiates the same `PaFadeIconNum_00` part for all four counters; its single text pane
+uses `NormalS_00.bffnt` (sheet `40ad310dc3727b45`). On that sheet the prior fit selected slope 0.75 and the
+coverage fallback for digits 1 and 2: at 4×, pixels at or above 220 totaled 2.6 and 8.1 source-pixel equivalents
+versus 30.7 and 54.2 for bilinearly sampled originals. The shared zero has identical black-pixel statistics across
+the compared counter rows. The fit now prefers slopes at least one when their modeled ink error is at most 5%;
+if the selected SDF still loses more than 20% of the original's high-opacity samples, that cell retains the
+bilinearly filtered source. This sacrifices extra sharpening on those cells rather than producing pale text.
+The host reconstruction uses that fallback for 1 and the SDF for 2; raw weights are 87.43 vs 87.44 and 155.45
+vs 155.41, respectively. This second change has not yet been compared on the PS5.
+
+Console check (.41, loading screen at 4 s, 4K crops, `ab-loadfont-0/1/fix/fix2.klog`): before, "120" was pale and the
+comma in "347,549" grey with sharp text (dark without). After the peak-preserving fix (`47af8de5…`) the comma
+matched; after the non-compressing fit with the filtered-source fallback (`5400f100…`) "120" matched too; the tip
+text keeps its weight. Captures are private (not in the repo).

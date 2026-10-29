@@ -188,10 +188,13 @@ static void *text_sdf_correct(void *arg) {
             target2+=original[k]*text_shader(k/255.0f,0.2f,0.5f)*scale*scale;
             target3+=original[k]*(k/255.0)*scale*scale;
         }
+        // Prefer non-compressing curves, but allow a softer fit if preserving
+        // contrast would miss the modeled ink weight by more than five percent.
         float best_slope=1,best_offset=0; int best_fallback=0; double best_error=1e30;
-        for(int fallback=0;fallback<=can_fallback;fallback++) {
-            for(int si=0;si<=31;si++) {
-                float slope=0.25f+si*0.25f,lo=-0.75f,hi=0.75f;
+        for(int pass=0;pass<2;pass++) {
+          for(int fallback=0;fallback<=can_fallback;fallback++) {
+            for(int si=0;si<(pass?3:29);si++) {
+                float slope=(pass?0.25f:1.0f)+si*0.25f,lo=-0.75f,hi=0.75f;
                 for(int it=0;it<13;it++) {
                     float mid=(lo+hi)*0.5f;double v=0;
                     for(int k=0;k<256;k++)if(base[fallback][k])
@@ -212,26 +215,60 @@ static void *text_sdf_correct(void *arg) {
             }
             if(best_error<=0.015)break;
         }
-        if(best_fallback){j->sdf_count--;j->sharpen_count++;}
+          if(best_error<=0.05)break;
+        }
         uint8_t lut[256];
         for(int k=0;k<256;k++)lut[k]=(uint8_t)(text_tone(k,best_slope,best_offset)*255+0.5f);
-        // Correct residual raw weight only in the shader-saturated high range.
-        // This cannot move either modeled threshold edge or turn background on.
-        double raw=0,capacity_down=0,capacity_up=0;
-        for(int k=0;k<256;k++) {
-            float v=lut[k]/255.0f; unsigned count=base[best_fallback][k];
-            raw+=count*v;
-            if(v>0.6f){capacity_down+=count*(v-0.6f);capacity_up+=count*(1-v);}
-        }
-        double delta=target3-raw,capacity=delta<0?capacity_down:capacity_up;
-        if(capacity>0) {
-            float fraction=(float)(fabs(delta)/capacity);if(fraction>1)fraction=1;
+        // Preserve the source's peak opacity as well as the thresholded area.
+        // Values above the modeled thresholds still carry intensity; lowering
+        // them to match integrated coverage can make small glyphs grey.
+        int source_peak=255, output_peak=0, peak_base=255;
+        while(source_peak>0 && !original[source_peak])source_peak--;
+        while(peak_base>0 && !base[best_fallback][peak_base])peak_base--;
+        for(int k=0;k<256;k++)if(base[best_fallback][k] && lut[k]>output_peak)output_peak=lut[k];
+        if(output_peak>153 && source_peak>153 && output_peak!=source_peak) {
             for(int k=0;k<256;k++)if(lut[k]>153) {
-                float v=lut[k]/255.0f;
-                v=delta<0?v-fraction*(v-0.6f):v+fraction*(1-v);
-                lut[k]=(uint8_t)(v*255+0.5f);
+                int value=153+(lut[k]-153)*(source_peak-153)/(output_peak-153);
+                lut[k]=(uint8_t)(value>255?255:value);
             }
         }
+        // Match raw coverage where possible without dimming the peak or
+        // moving either modeled shader threshold.
+        int floor=source_peak*85/100;if(floor<153)floor=153;
+        double raw=0,down=0,up=0;
+        for(int k=0;k<256;k++) {
+            int value=lut[k]; unsigned count=base[best_fallback][k];
+            raw+=count*(value/255.0);
+            if(value>153 && k!=peak_base) {
+                if(value>floor)down+=count*((value-floor)/255.0);
+                if(value<source_peak)up+=count*((source_peak-value)/255.0);
+            }
+        }
+        double delta=target3-raw,capacity=delta<0?down:up;
+        if(capacity>0 && source_peak>153 && output_peak>153) {
+            double fraction=fabs(delta)/capacity;if(fraction>1)fraction=1;
+            for(int k=0;k<256;k++)if(lut[k]>153 && k!=peak_base) {
+                double value=lut[k];
+                value=delta<0?(value>floor?value-fraction*(value-floor):value):
+                              (value<source_peak?value+fraction*(source_peak-value):value);
+                lut[k]=(uint8_t)(value+0.5);
+            }
+        }
+        // A plausible thresholded area can still have pale interiors. If the
+        // SDF loses most high-opacity samples, retain the filtered source for
+        // this glyph rather than altering the neighboring glyphs or panes.
+        if(can_fallback && !best_fallback) {
+            unsigned original_high=0, output_high=0;
+            for(int k=0;k<256;k++) {
+                if(k>=220)original_high+=base[1][k];
+                if(lut[k]>=220)output_high+=base[0][k];
+            }
+            if(original_high && (uint64_t)output_high*5<(uint64_t)original_high*4) {
+                best_fallback=1;
+                for(int k=0;k<256;k++)lut[k]=(uint8_t)k;
+            }
+        }
+        if(best_fallback){j->sdf_count--;j->sharpen_count++;}
         for(int y=0;y<ch*scale;y++)for(int x=0;x<cw*scale;x++) {
             size_t p=(size_t)(y0*scale+y)*ow+x0*scale+x;unsigned code=j->field[p];
             if(code!=65535)c->dst[p]=lut[text_base(code,profile,scale,best_fallback)];
