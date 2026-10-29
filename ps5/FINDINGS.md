@@ -1329,3 +1329,7 @@ than through the ini (89.9–93.9 %); cause not found (same GPU, render and hitc
 (second run lost its result), size 1440p throughout; 2.5 ms 94.6 / 95.7 %, 965p for 55 of 60 s; 4 ms 93.3 / 95.2 %,
 965p throughout. Below full size the remapping variants raise render-thread time to 12.0–12.1 ms, so the late frames
 stay; a bigger margin only lowers the size below the old 1080p default. Not kept.
+**1080p with DRS, and the default reverted** (`ab-p1080load3-*.klog`): at Performance 1080p with FG and
+`gpu_load = 3`, DRS on 96.3 / 95.8 % vs off 96.4 / 95.8 %; DRS stepped to 902p/724p for 16–20 s without gain (its
+trigger fires before the 120 Hz budget is exceeded). No load: lean DRS 97.3 / 96.3 % vs off 95.5 / 96.5 %. The user
+chose the old default back (Performance 1080p with FG, DRS off) for the smoothest frame pacing.
