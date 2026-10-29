@@ -1363,3 +1363,23 @@ Console check (.41, loading screen at 4 s, 4K crops, `ab-loadfont-0/1/fix/fix2.k
 comma in "347,549" grey with sharp text (dark without). After the peak-preserving fix (`47af8de5…`) the comma
 matched; after the non-compressing fit with the filtered-source fallback (`5400f100…`) "120" matched too; the tip
 text keeps its weight. Captures are private (not in the repo).
+
+## 2026-10-29 — M12 spike S7: a 256 MiB executable game-code image fits and runs (.41, ps5/evidence/m8/ab-s7*.klog)
+
+Eboot `12dcbc37…`, armed by `/data/savagewind/s7.txt`. The linked game code is 224.52 MiB (text 219.6, rodata 14.4,
+data 1.4 MiB), so 256 MiB were tested, mapped near the title's own code. Firmware reports `99.999.999` (spoofed:
+jailbreak state can't be read from it); uid/euid 1. Every mode worked, each with 256 stubs called and a 64-bit
+relocation into a runtime function patched and called, 0 errors:
+
+| Mode | Map | Write | Cache file write (broker) | Reload from file |
+|---|---|---|---|---|
+| Dual view (RW at 0x402100000, RX at 0x154c0000) | 8.6 / 7.7 ms | 11.7–12.5 GB/s | 9.40 / 9.31 s | 0.29 / 0.30 s (874 / 843 MB/s) |
+| RW, then `mprotect` RX | 7.2 ms | 12.4 GB/s | 9.30 s | 0.31 s, protect rc 0 |
+| RWX | 7.7 ms | 12.3 GB/s | 9.30 s | 0.29 s |
+
+Largest free direct block 11.80 → 11.37 GiB with the region held; flexible memory unchanged (96 MiB free).
+**Coexistence**, dual view held for the whole run vs not (`s7ab-*`, alternating): 80.9 / 81.2 % vs 80.7 / 78.1 % on
+time, render 11.12 vs 11.02–11.05 ms, GPU 12.42–12.50 vs 12.39–12.44 ms: no measurable cost. **These runs use the
+user's new 100 %-completion save** (uploaded 2026-10-29): the benchmark continues the latest save, so its route
+starts elsewhere (13–18 command-translation hitches in play) and on-time is ~80 % instead of ~96 %; compare only
+runs from that save onward. Dual view is the mode M12 needs (it also works where `mprotect` to RX is refused).

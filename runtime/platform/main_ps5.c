@@ -260,6 +260,8 @@ int main(void) {
         fprintf(stderr, "startup failed: %s\n", why);
         exit_title();
     }
+    extern void ps5_s7_run(void);
+    ps5_s7_run();
     first_start_precompile();
     ps5_startup_mark("precompile done or skipped");
     extern void ps5_startup_splash_start(void);

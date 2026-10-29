@@ -716,6 +716,15 @@ time and peak memory per module, extrapolated to all 996 objects (PC: 324 s on 2
 generator port on the host: identical C output for `main`, `sdk`, `subsdk0` versus `tools/gen.py`; then its
 runtime on the console. UI: the first-start screen shows game-code build progress next to the shader precompile
 (both can overlap; the compile is CPU-bound, so measure).
+
+S7 diagnostic: create `/data/savagewind/s7.txt` (empty for the default 256 MiB, or `mib = N`) before launching.
+After the window and startup RomFS are ready it tries the SDK's near dual-view, toggled RX and RWX executable
+regions independently, writes and reloads `cache/s7-image.bin` through the storage broker, then retains the first
+successful mode while the game runs. `[s7]` lines include firmware, uid/euid, allocation, call/relocation results,
+throughput, memory snapshots and summaries; `direct_free_after` is the largest free direct-memory block, not the
+sum of all free blocks. UID is not proof of jailbreak state. Remove `s7.txt` to disable the diagnostic. The
+current linked game archive contributes 235,425,008 bytes of text, rodata and data (224.52 MiB), so the minimum
+256 MiB is the default. This is a synthetic image, not a game-code loader or a console qualification.
 **Done when:** a console with only the release title, the user's packages and keys builds the game code on first
 start with a progress screen, plays, and on later starts loads the cached code in seconds; generated C equals the PC
 generator's; the benchmark is within 2 % of the PC-built eboot; first-start time and memory are recorded; the

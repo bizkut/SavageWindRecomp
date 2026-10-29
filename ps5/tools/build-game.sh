@@ -81,7 +81,7 @@ export PS5_CFLAGS="-fexceptions -Iruntime -Iruntime/nvn -Iruntime/ps5/include -I
 # (--wrap=ps5_heap_*: the SDK's malloc wrappers go through runtime/ps5/heap_arenas.c, arenas of their own per thread)
 export PS5_LINK_INPUTS="--gc-sections --wrap=exit --wrap=_exit --wrap=_Exit --wrap=quick_exit --wrap=abort --wrap=sceSystemServiceLoadExec --wrap=ps5_heap_malloc --wrap=ps5_heap_calloc --wrap=ps5_heap_memalign --wrap=ps5_heap_free --start-group $game $package/libsavagewind-package.a $ncnn/build/src/libncnn.a $ns/libpietendo/bin/linux/libpietendo.a $ns/libtoolchain/bin/linux/libtoolchain.a $ns/libfmt/bin/linux/libfmt.a $ns/liblz4/bin/linux/liblz4.a $ns/libmbedtls/bin/linux/libmbedtls.a $shaderc/lib/libshaderc_combined.a ${ffmpeg[*]:1} --end-group"
 app=$(bash ps5/tools/build-title.sh game \
-    runtime/platform/main_ps5.c runtime/platform/ps5.c runtime/platform/gamelib_ps5.c \
+    runtime/platform/main_ps5.c runtime/platform/s7_ps5.c runtime/platform/ps5.c runtime/platform/gamelib_ps5.c \
     runtime/platform/exefs_ps5.c runtime/ps5/sdl_shim.c runtime/ps5/log.c runtime/ps5/unavailable.c runtime/ps5/diagnostics.cpp \
     runtime/ps5/window.c runtime/ps5/input.c runtime/ps5/audio.c runtime/ps5/heap_arenas.c runtime/ps5/dynamic_resolution.c runtime/ps5/libc_aliases.S \
     build/ps5/game-gen/vk_globals.c \
