@@ -19,6 +19,7 @@ extern "C" {
 #include "../settings.h"
 #include "../window_size.h"
 #include "../nvn/output_scale.h"
+#include "../nvn/hd_ui_generate.h"
 }
 extern "C" bool ps5_video_hdr_available(void);
 
@@ -118,6 +119,24 @@ void video_page(std::vector<Item> &v) {
     v.push_back(video_sharpening());
     v.push_back(video_sharp_text());
     v.push_back(video_sharp_ui());
+    // The HD interface pack (4K layouts and item icons, generated on this console from the player's own files): On
+    // uses it and generates what is missing at the next start, in the background; it applies at 4K output only.
+    Item hd = toggle(P_VIDEO, "HD interface textures", "",
+                     [](const Item &) { return (int)(g_settings.hd_ui && g_settings.hd_ui_generate); },
+                     [](const Item &, int x) { g_settings.hd_ui = g_settings.hd_ui_generate = x != 0; settings_save(); }, 0);
+    hd.desc_fn = [](const Item &) -> const char * {
+        static char buf[160];
+        int done = 0, total = 0;
+        if (winsize_effective(true).h < 2160) return tr("4K interface art from your own game files. Used at 4K output only.");
+        if (hd_ui_generate_progress(&done, &total) && total > 0) {
+            snprintf(buf, sizeof buf, tr("Generating in the background: %d of %d."), done, total);
+            return buf;
+        }
+        if (!g_settings.hd_ui) return tr("4K interface art and item icons, made on this console from your own game files.");
+        return hd_ui_generate_needed() ? tr("Generated at the next start (about 10 minutes, in the background).")
+                                       : tr("Ready. New textures apply as screens load.");
+    };
+    v.push_back(hd);
     v.push_back(video_async_shaders());
     v.push_back(video_shadows());
 }
