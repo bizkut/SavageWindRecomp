@@ -8,7 +8,7 @@
 set -euo pipefail
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 gen=$(realpath -- "${1:-$root/generated-ps5}")
-sdk=$(bash "$root/ps5/tools/setup-deps.sh")
+sdk=${PS5_PAYLOAD_SDK:-$(bash "$root/ps5/tools/setup-deps.sh")}
 opt=${PS5_GAMECODE_OPT:--O1}
 [[ $opt =~ ^-O[0-3s]$ ]] || { echo "PS5_GAMECODE_OPT must be -O0..-O3 or -Os, not '$opt'" >&2; exit 2; }
 out="$root/build/ps5/gamecode"

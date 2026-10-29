@@ -1,9 +1,10 @@
 # Savage Wind on PS5: port plan
 
-Status 2026-10-28: M0 spikes S1–S5 go on the console (S6 pending a timed run of generated code); M9 storage broker
-measured on .41; **M2 reached on .41**: the title runs the PC-generated 1.9.0 game code from the user's packages to
-its first NVN call (`ps5/FINDINGS.md`). Rendering (M3) onward not started. Console measurements are cited in
-`ps5/FINDINGS.md`; other numbers are explicit targets.
+Status 2026-10-29, all on console .41 (`ps5/FINDINGS.md`): M0 S1–S5 go; M2 boot from the user's packages; M3 4K
+rendering on VideoOut with VRR; M4 DualSense/USB keyboard+mouse code (hands-on pad/USB checks deferred by the user);
+M5 audio (movie playback untested); M6 benchmark 98–100 % on time (10-minute played route deferred by the user);
+M7 MihawkGen 2× at 119.3 Hz; M8 FSR 3.1/TAA integrated (FSR 4 measured too slow at 4K); M9 broker; M10 package reads;
+sharp text/UI and the user-generated UI HD pack. Open: M11 release. Other numbers in this file are explicit targets.
 
 ## Goal
 
@@ -309,8 +310,10 @@ Consequences:
 ## Milestones
 
 Each milestone closes with vkQuake's four gates: host checks pass; the target build is from the Prospero toolchain;
-it runs on the console with klog captured for the whole run; the capture is committed under `ps5/evidence/<step>/`
-and replayable. No claim without an artifact.
+it runs on the console with klog captured for the whole run; the klog and text results are committed under
+`ps5/evidence/<step>/`. No claim without an artifact. Console captures that show the game (screenshots, PNG crops,
+frame dumps) are never committed: they stay in `~/savagewind-private-evidence/` (`.gitignore` blocks
+`ps5/evidence/**/*.png`); FINDINGS cites their measurements.
 
 ### M0 — Feasibility spikes (blocking; no gameplay code)
 
@@ -448,22 +451,18 @@ display runs at 119.88 Hz; with it on, the TV shows twice the frame-rate limit (
 it, so an explicit choice in the Video page always wins, also across updates:
 - Resolution: Auto (the display's largest mode).
 - Frame rate: 60 real frames (no 120 real-frame choice; 120 comes from frame generation).
-- Frame generation: On when the display runs at 119.88 Hz (any resolution), off at 60 Hz. This default turns on only
-  once M7's done-when passes; until then it stays Off.
-- Upscaler, by output resolution and measured with the benchmark with FG on: at 1080p, native 1080p without FSR;
-  at 4K, FSR 1 from the highest internal resolution whose GPU time (game + MihawkGen) keeps the frame target. The
-  measured configuration is **2560×1440 internal → 3840×2160** (`[post] scene 2560x1440 fsr1 -> 3840x2160` in the
-  M6/M7 benchmarks; the `1920x1080` `[post]` line is the title screen): GPU 7.7 ms per frame without FG, 11.6 ms with
-  MihawkGen at 1440p (1.9 ms).
-  Measured 1080p vs 1440p internal with FG on (2026-10-28, `ps5/evidence/m7/res-*.klog`): 1080p 88.4 % on time, GPU
-  10.35 ms, 117.0 presented fps; 1440p 79.4 %, GPU 11.62 ms, 115.6 fps. The captures are halved to 1920×1080, so they
-  cannot show the 1080p/1440p difference at 4K; BOTW's textures are Switch-resolution, so 1440p mainly adds edge and
-  distant detail. **4K default: 1080p internal with FG on, 1440p internal with FG off** (FG off holds 59.9 fps at 1440p).
-  Revisit when the render-thread work frees time, or if the user prefers 1440p's sharpness on the TV.
+- Frame generation: On when the display runs at 119.88 Hz (any resolution), off at 60 Hz (M7 met on the benchmark;
+  the user confirmed the HUD and VRR on the TV).
+- Upscaler at 4K: **FSR 3.1** (user decision 2026-10-29, `2a6aaf6`): Performance (1920×1080 → 3840×2160) with FG,
+  Quality (2560×1440) without; at 1080p, native without upscaler. FSR 1 stays selectable. Measured with FG on
+  (default settings, after the motion-vector optimizations `7afd98a`): 97.6–98.0 % on time, 59.6 / 119.3 fps,
+  render thread 11.1 ms, GPU 12.4 ms; FSR 1 at 1080p internal: 99.9 %, 9.0 / 10.0 ms. Earlier internal-resolution
+  measurements (FSR 1, `ps5/evidence/m7/res-*.klog`): 1080p 88.4 %, 1440p 79.4 % (before the recorder thread and
+  async klog). The remaining FSR 3.1 cost is per-draw motion-vector work (~2.2 ms in busy scenes).
 
 The PS5 applies missing video keys after choosing the actual VideoOut mode, then saves them; explicit keys are kept.
-The default-selection and key-presence cases have a host test in `tools/test_ps5_video_defaults.c`. Console first-launch
-and persistence checks remain to be run.
+The default-selection and key-presence cases have a host test in `tools/test_ps5_video_defaults.c`; first launch on
+.41 picked FG on, FSR 3.1 Performance, HDR from the system output, sharp UI and HD-UI generation at 4K.
 
 Status 2026-10-28 (eboot `22a6cf72…`, host-built; console runs of earlier builds in FINDINGS): the backend choice is
 the build's (`runtime/nvn/vulkan/framegen.h` `g_fg_backend`: desktop links `framegen.cpp`, FSR 3; the PS5 links
@@ -526,7 +525,7 @@ The `0x0901` source format is treated as two RG8 channels and encoded as BC5, ma
 version 2 invalidates packs made with the earlier RGBA4/BC7 interpretation.
 
 
-**On-console generation (requested 2026-10-28; console qualification pending).** The PS5 title can generate the
+**On-console generation (requested 2026-10-28; qualified on .41 2026-10-29).** The PS5 title can generate the
 same DDS/manifest format from the player's merged packages. `hd_ui_generate` defaults on at 4K output and off at
 lower output resolutions; `hd_ui` independently controls whether the resulting textures are loaded. The generator
 waits for shader archive reads before scanning layouts, then overlaps inference with shader compilation using the
@@ -544,8 +543,9 @@ and Title packs. On lavapipe, two real texture inputs at both scales matched the
 infinite, 65.03 and 65.49 dB PSNR; BC4/BC5/BC7 top-level blocks matched the PC encoders on the test inputs.
 On .41, the earlier `e4845749…` build completed 866 textures in 204.6 s; shader state reached done at about 127 s,
 but the game waited 208.6 s for the pack, versus 119.8 s without generation (ps5/evidence/hdgen/fresh-start.klog).
-The nonblocking, low-priority version has not yet been run on PS5. Its startup overhead, in-game impact and full
-manifest coverage versus the PC tool remain unqualified.
+The nonblocking version (`30e899d5…`) on .41 from a fresh install: precompile done in 119.0 s (119.8 s without
+generation), the game starts, and the pack completes in the background (866 textures, 199.1 s after its start; one
+267 ms title-screen hitch). Coverage equals the PC pack (866 / 866, 51–67 dB on a 12-texture sample).
 
 ### After M7 (optional) — HDR10 output
 Requested 2026-10-28. Desktop has HDR10 presentation on `test` and lists colour grading/HDR as roadmap. On PS5 the
@@ -592,20 +592,19 @@ When DRS is enabled at startup, shader precompilation uses a separate completion
 of observed shader keys and their pipeline libraries. Enabling DRS during play does not rerun that precompilation;
 restart with DRS enabled to run it. Pipeline-state and hitch coverage still require a console measurement.
 
-### After M7 — Render-thread CPU (queued 2026-10-28)
-The render thread (NVN → Vulkan translation) is the frame-time limit: 10.4–10.7 ms per frame without FG and
-13.6 ms with FG in the benchmark, against a GPU at 7.7 ms. In order, each measured with two benchmark runs before
-and after (agreeing within 2 %): (1) profile its time by command kind with the existing counters; (2) upstream
-PR #189 (driver calls on a recorder thread); (3) PRs #128 and #155 (descriptor sets kept across submissions,
-narrower barriers); (4) the generated game code at `-O2` instead of `-O1` (`ps5/tools/build-gamecode.sh`). A change
-stays only if the benchmark shows it helps on the PS5. **Done when:** render-thread CPU p95 is under 12 ms with FG on
-and the "command translation" hitches are gone from the benchmark.
+### After M7 — Render-thread CPU (done 2026-10-28/29)
+The render thread (NVN → Vulkan translation) was the frame-time limit. Kept, each measured on .41: PR #189's recorder
+thread (default on PS5; FG on 88 % → 99 % on time), asynchronous klog (the "command translation" hitches were our own
+synchronous logging), fused FG passes. Measured and not kept: game code at `-O2` (within noise). PRs #128/#155
+remain unported (no profile evidence that descriptor sets or barriers dominate). With FSR 3.1 the per-draw motion
+vectors add ~2.2 ms in busy scenes after SIMD matching, radix sort and lighter bookkeeping (`7afd98a`); that is the
+remaining CPU item (target: FSR 3.1 + FG ≥ 99 % on time, as FSR 1).
 
 ### M8 — Temporal upgrades (after PR #194/#195)
 PR #194 (`35efe256e4`) and PR #195 (`5039b30407`) are integrated from their pinned heads, including per-object
-motion vectors, jitter, depth copy, reactive mask, TAA and the FidelityFX FSR 3.1 upscaler. On PS5 they remain opt-in:
-`antialias = taa` enables TAA, and `upscaler = fsr3` selects FSR 3.1 (with `upscaler_quality`); either enables
-motion vectors and jitter. Existing FSR 1 and anti-aliasing defaults are unchanged. The title links the upscaler
+motion vectors, jitter, depth copy, reactive mask, TAA and the FidelityFX FSR 3.1 upscaler. FSR 3.1 works on PS5
+after a FidelityFX wide-string fix (`80f8327`) and is the 4K default since 2026-10-29 (`upscaler = fsr3`, quality by
+FG state); `antialias = taa` stays opt-in. Either enables motion vectors and jitter. The title links the upscaler
 and its Vulkan backend against RADV, separately from MihawkGen's frame-generation backend.
 
 Re-qualify on PS5 at 1.9.0: upstream evidence is 1.8.2, Linux, RTX 3080 Ti only, so CPU cost, GPU cost, VRR/120 Hz
@@ -614,13 +613,10 @@ scene-sized image, not MihawkGen's RG16F backward UV vectors; a conversion, matc
 barriers are needed before `mvwarp`/`mvsplat` can use them. Then A/B those methods against neural, and choose defaults
 by measured image quality and GPU time.
 
-**FSR 4 candidate (`../ps5-fsr4`, FSR 4.1.1 INT8; requested 2026-10-28).** Gated, in order: (1) M8's motion vectors,
-depth and jitter exist (FSR 4 is temporal; it needs all three); (2) feasibility on RADV: the SDK is built for ps5vk
-with a diagnostic driver profile, while this port uses RADV (D3); (3) GPU time on the benchmark. Its own PS5 numbers
-(on ps5vk): 1920×1080→3840×2160 10.86 ms and 1280×720→3840×2160 10.94 ms, which with game (7.7 ms) and MihawkGen
-exceeds a 16.7 ms frame; 1280×720→1920×1080 2.95 ms and 1706×960→2560×1440 4.95 ms fit. So the candidates are 1080p
-and 1440p outputs, not 4K. GPL-3.0: PS5 build only (D10). Experimental upstream; one 4K static frame misses its own
-acceptance rule.
+**FSR 4 candidate (`../ps5-fsr4`, FSR 4.1.1 INT8; measured 2026-10-28).** Upscaler only (its plan lists frame
+generation out of scope). Runs on RADV (probe `ps5/probe/fsr4_radv.c`): GPU 3.8 ms for 720p→1080p, 14.3 ms for
+1080p→4K, 14.8 ms for 1440p→4K, so it can't hold 60 fps at 4K next to the game's ~10 ms (RADV has no accelerated
+INT8 dot product on this GPU). Not integrated; stays a candidate for 1080p output only. GPL-3.0: PS5 build only (D10).
 
 ### M9 — Root storage broker (D12)
 Path-restricted payload, versioned client, direct RomFS reads and brokered atomic writes. **Done when:** broker A/B on
@@ -640,6 +636,27 @@ specific errors on the TV. No key material appears in logs; unsupported compress
 
 ### M11 — Release
 Settings persistence, save/load, DLC, 1-hour soak, README for the setup/import flow, notices (D10), release ZIP.
+Done: settings persist through the broker; soak mode (25 min run clean, memory flat; stopped by the user, who waived
+the hour); private release ZIP builder with a no-game-content check (`ps5/tools/package-release.sh`). Open: save/load
+trigger (below), DLC untested (no DLC packages available), public repos, README with NSP/XCI install steps, GitHub
+Actions on the self-hosted runner, catalog entry PPSA90212 (reserved, catalog PR #894), GPL source distribution, and
+deleting the local `ps5-backup-before-rewrite` branch (old history with game captures) before any push.
+
+Pending user decisions (asked 2026-10-29): (1) the fork rewrites the "never decrypts" rule for the PS5 port (player's
+own NSP/XCI and keys, nothing shipped) or supports only pre-extracted files; (2) release form: PS5 title plus a
+one-command PC builder for the game-code eboot, or a PC tool that outputs the whole title folder. Until (1) is
+decided, D11 keeps public release blocked; private builds are not evidence of approval.
+
+For an unattended soak, put `soak = 60` in `/data/savagewind/benchmark.txt`. The benchmark continues a copied save,
+settles for 20 seconds, and repeats the 60-second camera route for the requested measured minutes. Cumulative frame
+and hitch counts and PS5 memory observations are appended every five minutes and at completion to
+`benchmark/soak.txt`; the usual detailed `benchmark/last.txt` describes only the first route minute. The heap is
+mapped title heap bytes, direct memory is the largest available block (not total free), and GPU bytes cover VMA
+allocations, not every GPU allocation.
+
+`save_check = 1` reports unavailable after the route: the runtime exposes save filesystem operations and the
+benchmark's copied save directory, but no game-level save initiation, save completion, or reload trigger. It does
+not claim that filesystem I/O alone proves a save/load round trip.
 
 ### After M11 (optional) — Community texture packs
 High-resolution texture packs dropped into the existing overlay folder (`runtime/services/fs.c`); never shipped by

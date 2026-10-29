@@ -72,6 +72,7 @@ for source in "$@"; do
         ${PS5_CFLAGS:-} -c "$root/$source" -o "$object"
     objects+=("$object")
 done
+printf '%s\n' "${objects[@]##*/}" > "$build/runtime-objects.list"
 for crt in app_crt app_cpp_runtime; do
     exception_flag=-fno-exceptions
     [[ $crt != app_cpp_runtime ]] || exception_flag=-fexceptions
