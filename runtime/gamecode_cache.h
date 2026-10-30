@@ -9,6 +9,10 @@ extern "C" {
 
 #define GAMECODE_CACHE_MODULES 3
 #define GAMECODE_CACHE_LLVM_VERSION_SIZE 128
+/* Increment the linker version whenever image layout or fixup semantics change. */
+#define GAMECODE_LINKER_VERSION 1u
+#define GAMECODE_CACHE_FORMAT_VERSION 2u
+#define GAMECODE_CACHE_MANIFEST_SIZE 752u
 
 typedef struct GameCodeIdentity {
     unsigned char module_build_ids[GAMECODE_CACHE_MODULES][32];
@@ -17,6 +21,9 @@ typedef struct GameCodeIdentity {
     char llvm_version[GAMECODE_CACHE_LLVM_VERSION_SIZE];
     unsigned char compile_flags_sha256[32];
     unsigned char export_abi_sha256[32];
+    unsigned char llvm_build_sha256[32];
+    uint64_t linker_version;
+    uint64_t cache_format_version;
 } GameCodeIdentity;
 
 /* Callbacks return nonzero only after transferring the entire requested range.

@@ -8,8 +8,9 @@
 #include <string.h>
 
 /* The wire format uses little-endian integers, never native structures or addresses. */
-enum { MANIFEST_SIZE = 704, FIXUP_SIZE = 48, IDENTITY_OFFSET = 168,
-       IMAGE_HASH = 608, FIXUP_HASH = 640, MANIFEST_HASH = 672 };
+enum { MANIFEST_SIZE = GAMECODE_CACHE_MANIFEST_SIZE, FIXUP_SIZE = 48, IDENTITY_OFFSET = 168,
+       IDENTITY_SIZE = 464, GOT_OFFSET = 632, THUNK_OFFSET = 640, THUNK_CAPACITY = 648,
+       IMAGE_HASH = 656, FIXUP_HASH = 688, MANIFEST_HASH = 720 };
 static const unsigned char magic[8] = {'S', 'W', 'G', 'C', 'A', 'C', 'H', '1'};
 
 static void put64(unsigned char *p, uint64_t v)
@@ -50,6 +51,9 @@ static void encode_identity(unsigned char *p, const GameCodeIdentity *id)
     memcpy(p + 224, id->llvm_version, 128);
     memcpy(p + 352, id->compile_flags_sha256, 32);
     memcpy(p + 384, id->export_abi_sha256, 32);
+    memcpy(p + 416, id->llvm_build_sha256, 32);
+    put64(p + 448, id->linker_version);
+    put64(p + 456, id->cache_format_version);
 }
 
 static void encode_fixup(unsigned char *p, const GameLinkFixup *f)
@@ -139,7 +143,7 @@ int gamecode_cache_save(const GameLinkImage *image, const GameCodeIdentity *iden
     for (size_t i = 0; i < image->fixup_count; i++)
         encode_fixup(stream + i * FIXUP_SIZE, &image->fixups[i]);
     memcpy(manifest, magic, sizeof magic);
-    put64(manifest + 8, 1);
+    put64(manifest + 8, GAMECODE_CACHE_FORMAT_VERSION);
     put64(manifest + 16, image->size);
     put64(manifest + 24, image->alignment);
     put64(manifest + 32, image->text_size);
@@ -154,9 +158,9 @@ int gamecode_cache_save(const GameLinkImage *image, const GameCodeIdentity *iden
         put64(manifest + 96 + i * 16, image->layout[i].kind);
     }
     encode_identity(manifest + IDENTITY_OFFSET, identity);
-    put64(manifest + 584, image->got_offset);
-    put64(manifest + 592, image->thunk_offset);
-    put64(manifest + 600, image->thunk_capacity);
+    put64(manifest + GOT_OFFSET, image->got_offset);
+    put64(manifest + THUNK_OFFSET, image->thunk_offset);
+    put64(manifest + THUNK_CAPACITY, image->thunk_capacity);
     if (!digest(image->canonical, image->size, manifest + IMAGE_HASH) ||
         !digest(stream, stream_size, manifest + FIXUP_HASH) ||
         !digest(manifest, MANIFEST_HASH, manifest + MANIFEST_HASH)) {
@@ -180,7 +184,7 @@ int gamecode_cache_load(const GameCodeIdentity *identity, const GameCodeCacheRea
                         const GameLinkAllocator *allocator, const GameExport *exports, size_t export_count,
                         GameLinkImage *image, char *error, size_t error_size)
 {
-    unsigned char manifest[MANIFEST_SIZE], expected_id[416], hash[32];
+    unsigned char manifest[MANIFEST_SIZE], expected_id[IDENTITY_SIZE], hash[32];
     unsigned char *stream = NULL;
     size_t stream_size;
     int ok = 0;
@@ -191,7 +195,7 @@ int gamecode_cache_load(const GameCodeIdentity *identity, const GameCodeCacheRea
         return fail(error, error_size, "invalid cache load arguments");
     memset(image, 0, sizeof(*image));
     if (reader->size < MANIFEST_SIZE || !reader->read(reader->context, 0, manifest, sizeof manifest) ||
-        memcmp(manifest, magic, sizeof magic) || get64(manifest + 8) != 1 ||
+        memcmp(manifest, magic, sizeof magic) || get64(manifest + 8) != GAMECODE_CACHE_FORMAT_VERSION ||
         !digest(manifest, MANIFEST_HASH, hash) || memcmp(hash, manifest + MANIFEST_HASH, 32))
         return fail(error, error_size, "invalid cache manifest");
     encode_identity(expected_id, identity);
@@ -220,7 +224,8 @@ int gamecode_cache_load(const GameCodeIdentity *identity, const GameCodeCacheRea
         goto invalid;
     image->got_count = (size_t)get64(manifest + 64);
     image->thunk_count = (size_t)get64(manifest + 72);
-    uint64_t got = get64(manifest + 584), thunk = get64(manifest + 592), capacity = get64(manifest + 600);
+    uint64_t got = get64(manifest + GOT_OFFSET), thunk = get64(manifest + THUNK_OFFSET),
+             capacity = get64(manifest + THUNK_CAPACITY);
     if (got < sum || got > image->size || image->got_count > (image->size - got) / 8 ||
         thunk > image->size || capacity > (image->size - thunk) / 16 ||
         got + image->got_count * 8 > thunk || image->thunk_count > capacity)

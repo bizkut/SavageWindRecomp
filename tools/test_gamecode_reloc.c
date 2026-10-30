@@ -139,6 +139,91 @@ static void init_object(ObjInfo *o, const GameLinkObject *input)
     }
 }
 
+typedef struct CodeSample {
+    const char *name;
+    size_t offset, size;
+    const unsigned char *reference;
+    unsigned char *mask;
+} CodeSample;
+
+static void compare_code_samples(const GameLinkObject *objects, const ObjInfo *info, size_t count,
+                                 const GameLinkObject *reference, NameEntry *ref_names,
+                                 const GameLinkImage *image)
+{
+    CodeSample samples[12] = {{0}};
+    size_t n = 0;
+    for (size_t i = 0; i < count && n < 12; i++) {
+        const char *base = strrchr(objects[i].name, '/');
+        base = base ? base + 1 : objects[i].name;
+        if (strcmp(base, "main_000.o")) continue;
+        const ObjInfo *o = &info[i];
+        for (size_t j = 1; j < o->symbol_count && n < 12; j++) {
+            const Elf64_Sym *s = &o->symbols[j];
+            if (ELF64_ST_TYPE(s->st_info) != STT_FUNC || !s->st_name || !s->st_size ||
+                s->st_size > 512 * 1024 || s->st_shndx >= o->section_count ||
+                o->offsets[s->st_shndx] == SIZE_MAX)
+                continue;
+            const char *name = o->strings + s->st_name;
+            NameEntry *ref = name_slot(ref_names, 1u << 21, name);
+            const unsigned char *expected = ref->name && !ref->ambiguous ?
+                reference_bytes(reference, ref->value, s->st_size) : NULL;
+            if (!expected) continue;
+            samples[n].name = name;
+            samples[n].offset = o->offsets[s->st_shndx] + s->st_value;
+            samples[n].size = s->st_size;
+            samples[n].reference = expected;
+            samples[n].mask = calloc(s->st_size, 1);
+            CHECK(samples[n].mask);
+            n++;
+        }
+    }
+    CHECK(n);
+    size_t got_uses = 0, got_relaxed = 0;
+    for (size_t i = 0; i < image->fixup_count; i++) {
+        const GameLinkFixup *f = &image->fixups[i];
+        size_t width = f->type == R_X86_64_64 ? 8 : 4;
+        for (size_t j = 0; j < n; j++) {
+            CodeSample *s = &samples[j];
+            if (f->offset < s->offset || f->offset - s->offset >= s->size) continue;
+            size_t at = f->offset - s->offset;
+            if (f->type == 41 || f->type == 42) {
+                got_uses++;
+                if (f->offset >= 2 && image->canonical[f->offset - 2] !=
+                    ((const unsigned char *)image->rw)[f->offset - 2])
+                    got_relaxed++;
+            }
+            for (size_t k = 0; k < width && at + k < s->size; k++) s->mask[at + k] = 1;
+            if ((f->type == 41 || f->type == 42) && at && f->offset >= 2 &&
+                image->canonical[f->offset - 2] == 0xff && image->canonical[f->offset - 1] == 0x25 &&
+                ((const unsigned char *)image->rw)[f->offset - 2] == 0xe9)
+                s->mask[at - 1] = 1;
+        }
+    }
+    size_t differing = 0, examined = 0;
+    for (size_t j = 0; j < n; j++) {
+        CodeSample *s = &samples[j];
+        const unsigned char *actual = (const unsigned char *)image->rw + s->offset;
+        size_t changes = 0, first = 0;
+        for (size_t k = 0; k < s->size; k++) {
+            if (s->mask[k]) continue;
+            examined++;
+            if (actual[k] != s->reference[k]) {
+                if (!changes) first = k;
+                changes++;
+            }
+        }
+        if (changes) {
+            differing++;
+            printf("code_difference %s bytes=%zu first=+0x%zx ours=%02x pc=%02x\n",
+                   s->name, changes, first, actual[first], s->reference[first]);
+        }
+        free(s->mask);
+    }
+    printf("code_sample main_000 functions=%zu differing_functions=%zu unmasked_bytes=%zu got=%zu relaxed=%zu\n",
+           n, differing, examined, got_uses, got_relaxed);
+}
+
+
 static void compare_relocations(GameLinkObject *objects, size_t count, const GameLinkObject *reference,
                                 const GameLinkImage *image, NameEntry *map_names, uintptr_t rw_base,
                                 uintptr_t rx_base, const char *label)
@@ -297,6 +382,8 @@ static void compare_relocations(GameLinkObject *objects, size_t count, const Gam
            "no_reference=%zu no_target=%zu unsupported=%zu map_missing=%zu\n", label, total, writable, readonly,
            checked, strings_checked, mismatch, missing_source, missing_reference, missing_target, unsupported,
            map_missing);
+    if (!strcmp(label, "fresh"))
+        compare_code_samples(objects, info, count, reference, ref_names, image);
     for (size_t i = 0; i < count; i++) { free(info[i].offsets); free(info[i].owners); }
     free(info); free(input_names); free(ref_names); free(rel_index);
     CHECK(total && checked == total && !mismatch && !map_missing);
@@ -330,6 +417,12 @@ int main(int argc, char **argv)
         return 1;
     }
     printf("view A rw=%llx rx=%llx size=%zu\n", (unsigned long long)rw_a, (unsigned long long)rx_a, image.size);
+    GotStats got = got_stats(&image);
+    printf("console_got uses=%zu relaxed=%zu mov=%zu call=%zu jump=%zu active_slots=%zu reserved_slots=%zu\n",
+           got.uses, got.mov + got.call + got.jump, got.mov, got.call, got.jump, got.slots_used, image.got_count);
+    printf("console_got targets_rx=%zu targets_rw=%zu targets_export=%zu targets_absolute=%zu "
+           "(exports are near-address dummies)\n",
+           got.target_rx, got.target_rw, got.target_export, got.target_absolute);
     compare_relocations(objects, count, &reference, &image, map_names, rw_a, rx_a, "fresh");
     if (!gamecode_link_apply_fixups(&image, b, rx_b, exports, export_count, error, sizeof error)) {
         fprintf(stderr, "console-like replay failed: %s\n", error);

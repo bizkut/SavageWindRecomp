@@ -352,15 +352,15 @@ bool ps5_gamecode_prepare(GameCodeProgress progress, void *context, char *why, s
     }
     if (!decode_sha(GAMECODE_GENERATOR_SHA256, identity.generator_version) ||
         !decode_sha(GAMECODE_COMPILE_SHA256, identity.compile_flags_sha256) ||
+        !decode_sha(GAMECODE_LLVM_SHA256, identity.llvm_build_sha256) ||
         !decode_sha(game_export_abi_digest, identity.export_abi_sha256)) {
         snprintf(why, why_size, "invalid game code build identity");
         goto done;
     }
     snprintf(identity.llvm_version, sizeof identity.llvm_version, "18.1.8");
-    if (!hash_bytes(&identity, sizeof identity, inputs.cache_identity)) {
-        snprintf(why, why_size, "cannot hash game code build identity");
-        goto done;
-    }
+    identity.linker_version = GAMECODE_LINKER_VERSION;
+    identity.cache_format_version = GAMECODE_CACHE_FORMAT_VERSION;
+    memcpy(inputs.llvm_build_identity, identity.llvm_build_sha256, sizeof inputs.llvm_build_identity);
     fprintf(stderr, "[gamecode] identity %.3f s\n", (plat_now_ns() - stage) / 1e9);
     stage = plat_now_ns();
     if (load_cache(&identity, &allocator, &loaded_image, why, why_size)) {

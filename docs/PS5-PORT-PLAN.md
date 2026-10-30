@@ -770,8 +770,9 @@ The linker still rejects any generated object's unresolved runtime symbol absent
   names, not process addresses; on every load allocate fresh views, resolve exports and reapply fixups at the new
   bases. Validate lengths, bounds, digests, relocation types and identity before publishing the image; atomically
   replace completed files through the storage broker. A corrupt, incomplete or mismatched cache is rebuilt, never
-  executed. Cache individual compiled objects by source digest plus compiler, flags, headers and ABI identity,
-  with atomic completion, so an interrupted build resumes without trusting partial files.
+  executed. Cache individual compiled objects by generated source, compiler build identity, compiler flags and
+  header tree, with atomic completion. Runtime/export ABI and linker/cache-format versions invalidate only the
+  linked image, so a runtime-only update can reuse the objects.
   The console variant stores the versioned cache record in `image.bin` and publishes a size/SHA-256 `manifest`
   last; the record contains the unrelocated image, section and layout metadata, identity and checked fixups.
   Both files and each object plus its checksum sidecar are replaced through the broker. Cache reads validate the

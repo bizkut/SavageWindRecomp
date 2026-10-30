@@ -1507,3 +1507,35 @@ Benchmark (100 % save's route, FG 120 Hz, alternating, `ab-gc-*`), PC-linked vs 
 12.42–12.45 ms, game fps 58.0–58.1 vs 57.8–58.0; no fatal errors. **Not yet within the 2 % target** (−2.1 points
 on time, ~0.4 % render time). Candidate [inference]: the in-title linker keeps 133,144 GOT loads where the PC linker
 relaxes GOTPCRELX to direct addresses; also unmeasured: page size and placement of the code region.
+
+## 2026-10-30 — M12 GOT relaxation and executable page audit (host)
+
+The linker now relaxes eligible GOTPCRELX/REX_GOTPCRELX instructions to direct `lea`, `addr32 call`, or
+`jmp; nop`, with a signed-reach check; otherwise it retains the GOT load. The fixup's original type, target and
+canonical instruction bytes preserve eligibility, and replay re-evaluates reach at the new views. GOT slots are
+still **reserved**, so this does not reduce image size. In the host's 996-object test with S7-like RW/RX addresses
+and **near dummy exports**, all **926,953 relocation uses** relaxed: 227,870 moves, 620,306 calls and 78,777 jumps.
+There were **0 active slots** out of **133,144 reserved object-local slots**. Of those uses, 460,339 target the RX
+image and 466,614 target exports; none target the RW image or an absolute symbol. Actual export placement can change
+the count; this is not a console measurement.
+
+Twelve `main_000.o` functions were compared with the default PC-linked ELF, masking relocation-address bytes:
+**16,691 unmasked bytes, zero differences**; all **77 GOT uses** in the sample were relaxed. This sample is not
+a whole-program or performance comparison. Synthetic execution checked all three transformations, non-relaxable
+opcodes/REX/addends, weak undefined targets, signed-range boundaries, far-target fallback and replay; the
+996-object replay/cache and 179,671 data-pointer checks also passed.
+
+Read-only mapping audit: `ps5platform/kernel.h` declares **16 KiB kernel pages** and **64 KiB direct-memory
+allocation units**; `ps5_exec_alloc` rounds and requests 64 KiB alignment, maps the allocation RW, changes the
+execution view to RX and maps a separate RW alias of the same direct allocation. Those parameters do not measure
+the CPU page-table granularity. The exposed SDK path does not establish support for **2 MiB RX pages**; generic
+FreeBSD superpage definitions and 2 MiB GPU alignment are not PS5 RX evidence. Larger RX pages remain unverified.
+
+**Console result with relaxation** (variant `5861dfce…`, also with the object-cache key no longer tied to the
+runtime: objects keyed by source, `-cc1` arguments, header tree and LLVM build; the export digest, linker version and
+cache format v2 only in the image identity). Benchmark, same session, alternating (`ab-gck-*.klog`): console-built
+80.7 / 80.9 % on time, render 11.21 / 11.21 ms, GPU 12.49 / 12.49 ms, 58.2 / 58.1 fps; PC-linked 79.5 / 77.3 %,
+11.21 / 11.22 ms, 12.49 / 12.52 ms, 57.9 / 57.8 fps: **equivalent** (within the 2 % target; the earlier −2.1 points
+came from the unrelaxed GOT loads). An earlier session (`ab-gcr-*`) gave 77.8 vs 77.5 / 77.7 %. Warm start
+(`gamecode-keyfix-warm`): cache load 6.6 s, ready 7.1 s, title 20.6 s. The first start's own timing wasn't captured
+(the console log stream dropped); its cache was rewritten (manifest timestamp) and loaded on the next start.

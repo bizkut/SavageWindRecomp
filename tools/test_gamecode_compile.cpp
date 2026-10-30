@@ -146,8 +146,8 @@ static bool equal_except_comment(const void *left, size_t left_size, const void 
     return true;
 }
 int main(int argc, char **argv) try {
-    if (argc != 6)
-        throw std::runtime_error("usage: test INPUT INCLUDE_ROOT CACHE REFERENCE_DIR ARCHIVE_LIST");
+    if (argc != 7)
+        throw std::runtime_error("usage: test INPUT INCLUDE_ROOT CACHE REFERENCE_DIR ARCHIVE_LIST LLVM_BUILD_SHA256");
     fs::path input = argv[1];
     auto main_nso = read_file(input / "main");
     auto sub = read_file(input / "subsdk0");
@@ -160,6 +160,12 @@ int main(int argc, char **argv) try {
     inputs.modules[2] = {sdk.data(), sdk.size()};
     inputs.hle = {hle.data(), hle.size()};
     inputs.layout = {layout.data(), layout.size()};
+    if (std::strlen(argv[6]) != 64) throw std::runtime_error("invalid LLVM build digest");
+    for (size_t i = 0; i < 32; i++) {
+        unsigned value;
+        if (std::sscanf(argv[6] + 2 * i, "%2x", &value) != 1) throw std::runtime_error("invalid LLVM build digest");
+        inputs.llvm_build_identity[i] = static_cast<uint8_t>(value);
+    }
     Cache cache;
     cache.directory = argv[3];
     fs::create_directories(cache.directory);

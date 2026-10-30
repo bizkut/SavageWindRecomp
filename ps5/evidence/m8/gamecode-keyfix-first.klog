@@ -1,0 +1,796 @@
+# launch PPSA90212: ok launched PPSA90212 result=0x00000016 via lncUtilApp/foreground as user 486509363 (the console reports the title running)
+<118>[SceLncService] launchApp(PPSA90212)
+<118>[SceLncService] category={gd} appCategoryType={0x00000000} VRMode={0,0}
+<118>[SceLncService] hnm,psnf,pc,tk,ns,pf,pn={1,0,0,0,0,1,0} appBootMode={2}
+<118>[SceLncService] appType={SCE_LNC_APP_TYPE_BIG_APP} [] appVer={} contentVersion={00.001.000} appCategoryType={0x00000000}
+<118>[SceLncService] Waiting for LoginMgr
+<118>[SceLncService] Num. of logged-in users is 1
+<118>[SceLncService] BigApp Launch Ready: Waiting
+<118>[SceLncService] BigApp Launch Ready: OK
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck()
+<118>[SceLncService] PrepareProcessLaunchDebuggerCheck() returned
+<118>[SceLncService] EnsureBigAppBudget()
+<118>[ResArbitrator][api      ]sceResourceArbitratorEnsureBigAppBudget[187ec](238)  : categoryType[0x0], titleId[PPSA90212], isConfirmed[false]
+<118>[ResArbitrator][TestId   ]EnsureBudget            [187ec]( 41)  : EnsureBudget()
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [187ec]( 38)  : Enqueue(id[0], t[1], user[0] state[RUNNING]) queue.size[1]
+<118>[ResArbitrator][App      ]GetExecutable           [18934](136)  : Target id[0] budgets{vcn[  0] acp[ 0] mem[  0]} prio[2(2)]
+<118>[ResArbitrator][App      ]SetVCNBudget            [18934](610)  : pid/appId is INVALID_ID.vcn budget not set.
+<118>[ResArbitrator][RA_main  ]cbResult                [18934](350)  : Callback id[0] type[RESULT] result[true] state[RUNNING]
+<118>[ResArbitrator][TestId   ]raCallback              [18934](128)  : BigApp[0xffffffff] Changed state"RUNNING"
+<118>[ResArbitrator][QUEUE    ]Remove                  [18934]( 69)  : Remove:(id[0] state[RUNNING] type[1]) queue.size[0]
+<118>[SceLncService] EnsureBigAppBudget() returned
+<118>[ResArbitrator][App      ]Dump                    [18934](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18934](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0xffffffff]
+<118>[ResArbitrator][App      ]Dump                    [18934](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x208ae8780)] userData[0x0] pid[0x43]
+<118>[ResArbitrator][App      ]Dump                    [18934](518)  : -3: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x39]
+<118>[ResArbitrator][App      ]Dump                    [18934](819)  : -- No kicking Apps *************************
+<118>[SceSystemStateMgr] Power Mode Change: BIG_APP
+<118>[AvControl] Waiting for the pstate event 
+<118>[Syscore Umd] Set memory pstate (hasRunningGame=0, hasRunningMiniApp=0, isSplashDisplayed=0
+<118>[CRSUI][Info][OnAppLaunchStart::Other applications have been launched. (attribute is None, type is None.]
+<118>[CRSUI][Info][proceedRequest::command=[CommandCancel], comment=[gotoHome:]]
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [Render.NPXS40002 : AppScene] -> [SplashScreen.PPSA90212 : SplashScreen]
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[AvControl] Waiting for the pstate event : done
+<118>[SceShellUI] I/PSM.UI : SceneQ : Loaded[0.00msec] : SplashScreen.PPSA90212 : SplashScreen
+<118>[SceShellUI] I/PSM.UI : SceneQ : Loaded[0.00msec] : LaunchFlow.PPSA90212 : LaunchFlow
+<118>[SceSystemStateMgr] CPU                                     HLT GC   GFX  F    U   ID       FAN BAPM
+<118>[SceSystemStateMgr]  800  800  800  800 3200 3200 3200 3200   0 gen2  764 1200 875 00840f60   1 off
+<118>[SceLncService] sceApplicationSave() categoryType={0x00000000}, debuggerRequestId={0xffffffff}
+<118>[Syscore App] No App needs to save. BigApp does not exist on the memory.
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2687) getAppType: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] BeginAppMount()
+[KERNEL] INFO: begin_app_mount 00000000
+appmgr_create_app(), appid=16 category=0
+[KERNEL] INFO: launch bigapp: category 0x00000000, container 1
+[Amm config] Page table memory : 64 MiB, VA range size 512 GiB, MultiMap VA range size 0 GiB
+<118>[SceShellUI] I/BGLayer : SetBackgroundTransition (Ellapsed 276953msec since last call) ID=84 TransitionType=CustomImageFade Degree=CrossFade NextImageUri= NextBlurImageUri= NextFallbackImageUri= OverlayImageUri=  BasematType=None Retry=False UseImageViewerSequence=False Resize2K=False
+<118>[SceShellUI] I/BGLayer : Fallback Transition ID=84
+wt_application_launch_callback:new target appid=0x16
+<118>[SceLncService] is_pkgstep={0}
+<118>[SceLncService] PrepareProcessLaunchDebugger()
+<118>[sceProcessStarter] MountDownloadData() title_id = [PPSA90212] data_path = [**************/PPSA90212/download0.dat] mount_path = [************/download/PPSA90212] budget = [game]
+<118>[PS]Error: W:\Build\J02159366\vsh\shell\shell_core\process_starter\process_starter_util.cpp at 1027
+<118>num is 2
+<118>[SceLncService] PrepareProcessLaunchDebugger() returned
+<118>[SceLncService] sandboxType={0x00000002}
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_manager.cpp(2687) getAppType: LNC_ISOK::0x80940004->0xffffffff
+<118>[SceLncService] spawnApp
+<118>[Syscore App] createApp PPSA90212
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[AvControl] onAppLaunch(appid=0x16)
+<118>[AvControl] Entry appId(0x16) supplementaryInfo: 0x0 
+<118>[AvControl] -- app[0](appid=0x16 attr=0xaa0017)(GAME RUNNING)(HDR:o HFR:o VR:x VRR:TypeA) SpecialModeInBg(none) HDCP23(none) supInfo(0x0)
+<118>[AvControl] layout:HDMI
+<118>[AvControl] notify stop-scanin (idx:-1) dwb0(usable) dwb1(usable) dwb2(usable) cause(hdmi)
+<118>[AvControl] ** v:130203020000000002/a:00 **
+<118>[AvControl] ** set_default_metadata ** -1 
+<118>[AvControl] ** mute(0) ** 
+[dce-proc:3923 Info]<49>p:0:1, m:1, d:0x1, b:0x1110, ft:0x1, fl:0x17171302
+<118>[AvControl] ** set_mode(0) ** -1/-1 
+<118>[AvControl]  video: port:HDMI 3840_2160P_5994 RGB444 full RGB2100_PQ 36bpp 16:9 allm-game o--tv-sf2 
+<118>[AvControl]       : VRR(peg:60 range:48 - 60) capable(allm 1 mdelata 0 range 40 - 120) (-)
+<118>[AvControl]  audio: port:HDMI src:I2S 48k 7.1 24bit fmt:LPCM LPCM once sp:TV -
+[dce-proc:3729 Info]<49>peg count: 2 (=1  +1(58))
+<118>[SceShellUI] I/PSM.UI : VideoOutStatus : res=(3840,2160) freq=59.94006, vrfreq=119.8801, default=True, gen1vr=False, gen2vr=False, gen2nonvr=False
+<118>[SceShellUI] I/BGLayer : SetBackgroundTransition (Ellapsed 288msec since last call) ID=85 TransitionType=CustomImageFade Degree=CrossFade NextImageUri= NextBlurImageUri= NextFallbackImageUri= OverlayImageUri=  BasematType=None Retry=True UseImageViewerSequence=False Resize2K=False
+<118>[SceShellUI] I/BGLayer : cancelBackgroundTransition ID=84
+<118>[SceShellUI] I/BGLayer : Fallback Transition ID=85
+<118>[SceShellCore] Main thread has frozen in sceApplicationSignalShellCoreHeartBeat() for 1 seconds
+<118>[AvControl] ** unmute(0) ** 
+<118>[AvControl] notify ready-scanin(idx:-1) port0(res: 0xc ref:0x8003(48-60) col:0xd sup:0xa0) port1(res:0xb ref:0x3 col:0x14 sup:0x0) vrType(0)
+<118>[AvControl] App Event[POST_BEGIN]: elapse 1435[ms] 
+<118>[Syscore App] processSpawn(pid, 0x16, 0x10016250, appParam, processParam, 1, 1, 1, param, debug, 0)
+<118>[Syscore App] appParam: appType = 0, titleId = PPSA90212
+<118>[Syscore App] new pid=0x6a[Syscore App] attributeExe= 0
+<118>[AvControl] AudioOut: shared (pid=0x6a)
+<118>[AvControl] VideoOut: shared (pid=0x6a appId=0x16)
+<118>[AvControl] video owner is switched to registered app(appId=0x16) 
+<118>[Syscore App] Ready to exec
+<118>[Syscore App] wait for NOTE_EXIT|NOTE_EXEC
+[KERNEL] INFO: Disable workaround PPRREQ55470_NO_ADDITIONAL_DMEM_192MB
+<118>[Syscore App] Add event : pid=0x6a
+<118>[AppMgr Trace]: New Process, pid=0x6a, created.
+<118>[AppMgr Trace]: New App, appId=0x16, created
+<118>[Syscore App]  ExpandCpuSetMode : disable
+<118>[SceLncService] W:\Build\J02159366\vsh\shell\shell_core\lnc_service\lnc_common.cpp(889) getCurrentTick: LNC_RTRACE::0x80b50001
+<118>[SceLncService] update: appId={0x00000016} appSessionId={63928922439000000}
+<118>[SceLncUtil] blockAppSuspend: name={SceNpUds}, appId={0x00000006}, refCount={1}
+<118>[SceLncUtil] unblockAppSuspend: name={SceNpUds}, appId={0x00000006}, refCount={0}
+<118>[SceLncUtil] blockAppSuspend: name={SceSaveData}, appId={0x00000006}, refCount={1}
+<118>[SceLncUtil] unblockAppSuspend: name={SceSaveData}, appId={0x00000006}, refCount={0}
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [187e2]( 38)  : Enqueue(id[0], t[1], user[0] state[RUNNING]) queue.size[1]
+<118>[ResArbitrator][TestId   ]lncEventCallback        [187e2]( 64)  : Set Target BigAppId[0x16] pid[0x6a]
+<118>[ResArbitrator][App      ]GetExecutable           [18934](136)  : Target id[0] budgets{vcn[  0] acp[ 0] mem[  0]} prio[2(2)]
+<118>[ResArbitrator][App      ]ChangeState             [18934]( 43)  : replace id[0] state:['RUNNING'->'RUNNING']
+<118>[ResArbitrator][App      ]SetVCNBudget            [18934](614)  : vcnType is TYPE_UNKNOWN.vcn budget not set.
+<118>[ResArbitrator][RA_main  ]cbResult                [18934](350)  : Callback id[0] type[RESULT] result[true] state[RUNNING]
+<118>[ResArbitrator][TestId   ]raCallback              [18934](128)  : BigApp[0x16] Changed state"RUNNING"
+<118>[ResArbitrator][QUEUE    ]Remove                  [18934]( 69)  : Remove:(id[0] state[RUNNING] type[1]) queue.size[0]
+<118>[ResArbitrator][App      ]Dump                    [18934](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18934](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0x16]
+<118>[ResArbitrator][App      ]Dump                    [18934](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x208ae8780)] userData[0x0] pid[0x43]
+<118>[ResArbitrator][App      ]Dump                    [18934](518)  : -3: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x39]
+<118>[ResArbitrator][App      ]Dump                    [18934](819)  : -- No kicking Apps *************************
+<118>[ResArbitrator][VA_main  ]GetMediaAppInfo         [187e2](122)  : sceKernelGetAppCategoryType(0x6a) ret:SCE_OK categoryType[0x0]
+[KERNEL] INFO: pid 106
+[KERNEL] INFO: Application Category Type: 00000000
+[KERNEL] INFO: SDK vesion: PS4:08050001 PPR:02000009
+[KERNEL] INFO: Total Memory Size: 0x32d600000
+[KERNEL] INFO: DMEM size: 0x300000000
+[KERNEL] INFO: FMEM size: 0x1c000000
+[KERNEL] INFO: NDA Text size: 0
+[KERNEL] INFO: CPU/GPU page table count: 0x4000 0x4000
+[BAPM] CPU/GPU Frequency: Default
+[BAPM] Param Set: 2 (Ver:02000009)
+<118>sync call performance warning tid:0x00018906 kid:0x00000278 name:SceAppInfoIpc method id:0x00030000 time:0000000000019149 micro sec
+<106> EXEC /app0/eboot.bin [user], vm#1, dmem#1 abi=native category=native_game <6851968 msec>
+<118>@ mbusGetAudioOutDeviceInfoByBusType:L5950
+<118>sync call performance warning tid:0x00018906 kid:0x00000278 name:SceAppInfoIpc method id:0x00030000 time:0000000000014898 micro sec
+### GFX(pipe0) Game. proc gen:2 vmid:1 pid:106
+ +++ num clients 2
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [18933]( 38)  : Enqueue(id[110], t[1], user[0] state[RUNNING]) queue.size[1]
+<118>[ResArbitrator][App      ]GetExecutable           [18934](136)  : Target id[110] budgets{vcn[ 20] acp[368] mem[  0]} prio[10(10)]
+gc: warning: gs1.gui_active not idle upon setting ddid (en=1), wait for idle succeeded (ct=2).
+<118>[SceShellUI] I/BGLayer : SetBackgroundTransition (Ellapsed 1536msec since last call) ID=86 TransitionType=HideGameSplash Degree=Strong NextImageUri= NextBlurImageUri= NextFallbackImageUri= OverlayImageUri=  BasematType=None Retry=False UseImageViewerSequence=False Resize2K=False
+### gc_gfx_queue_status : in_frame=0 rptr=0x00000000 wptr=0x00000000 IBlist(rptr=0x0000 wptr=0x0000 i_wptr=0x0000)
+<118>[SceShellUI] I/PSM.UI : OnFocusActiveSceneChanged [SplashScreen.PPSA90212 : SplashScreen] -> [AppScreen : ApplicationScreenScene]
+<118>[ResArbitrator][IpcServer]Callback                [18934]( 78)  : S->C Callback Set(id[110] type[RESULT] result[true] state[RUNNING])
+<118>[ResArbitrator][QUEUE    ]Remove                  [18934]( 69)  : Remove:(id[110] state[RUNNING] type[1]) queue.size[0]
+<118>[ResArbitrator][App      ]Dump                    [18934](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18934](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0x16]
+<118>[ResArbitrator][App      ]Dump                    [18934](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x208ae8780)] userData[0x0] pid[0x43]
+<118>[ResArbitrator][App      ]Dump                    [18934](518)  : -3: Id[110] state[RUNNING] vcn[ 20] acp[368] mem[  0] prio[10(10)] from[IPMI(0x208ae86a0)] userData[0x0] pid[0x3a]*HB*
+<118>[ResArbitrator][App      ]Dump                    [18934](518)  : -4: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x39]
+<118>[ResArbitrator][App      ]Dump                    [18934](819)  : -- No kicking Apps *************************
+<118>[TTS Arbitrator][INF]  FG App was changed. 7 -> 16
+<118>SetDeviceIndexBehavior: mode=MergeAllConnectedDevice, param=null
+<118>[ResArbitrator][IpcServer]GetCallbackDataInt      [18933](334)  : C->S Callback Get(id[110] type[RESULT] result[true] state[RUNNING] cb[5efc2460])
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: SplashScreen.PPSA90212 : SplashScreen
+<118>[SceShellUI] I/PSM.UI : ** Unload enqueue: LaunchFlow.PPSA90212 : LaunchFlow
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.00msec] : SplashScreen.PPSA90212 : SplashScreen
+<118>[SceShellUI] I/PSM.UI : SceneQ : Unloaded[0.00msec] : LaunchFlow.PPSA90212 : LaunchFlow
+<118>[NoticeScreenSkip] NoticeScreenSkipGetFlag(notice_screen_skip_flag= 1, appId= 0x00000016)
+<118>MSG AsyncStorageInternal(getItem, 1208): key(@@.rnps-home-ui:query-cache:cached:experiences:486509363:20495) is not found.
+<118>MSG AsyncStorageInternal(getItem, 1208): key(@@.rnps-home-ui:query-cache:cached:experiences:486509363:20495) is not found.
+<118>[SceLncService] SetAppFocus(): SetControllerFocus(-1)
+<118>* updateVibrationTriggerEffectWeak:L7804 getVibrationTriggerEffectWeakWhileEmbeddedMicInUse return MBUS_ERROR_NO_PROCESS_INFO. pid = 0xffffffff
+<118>[SceLncService] SetControllerFocus(0x00000016)
+<118>[SceSystemStateMgr] Power Mode Change: BIG_APP
+<118>[SceSystemStateMgr] CPU                                     HLT GC   GFX  F    U   ID       FAN BAPM
+<118>[SceSystemStateMgr] 3200 3200 3200 3200 3200 3200 3200 2560   0 gen2 2230 1200 875 00840f60   1 default
+<118>[SceSystemStateMgr] Power Mode Change: BIG_APP
+<118>[SceSystemStateMgr] CPU                                     HLT GC   GFX  F    U   ID       FAN BAPM
+<118>[SceSystemStateMgr] 3200 3200 3200 3200 3200 3200 3200 3200   0 gen2 2230 1200 875 00840f60   1 default
+<118>[SceLncService] SetControllerFocus(0x00000016)
+savagewind: termination and allocation diagnostics installed
+savagewind: memory stage=startup heap_base=0 mapped=0 peak=0 segments=0 arenas=0 libc_fallbacks=0 flex_free=291504128 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=12882804736 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=startup rc=0 base=7eedfc000 size=2097152 used=744
+savagewind: PPSA90212 M3 1.9.0 startup
+savagewind: [startup] 0 ms: main start
+savagewind: guest reserved 0x7000000000-0x7320000000
+<118>[SceShellUI] I/PSM.UI : [NoDraw] : ClearFrameBuffer=False
+<118>MSG AsyncStorageInternal(getItem, 1208): key(@@.rnps-home-ui:query-cache:cached:experiences:486509363:20495) is not found.
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 1 tapPoint = 0x2)
+[si] start pipe[0] 6863s:60us, p:0:1, 139:0101, 17142:0051, m:0, d:0x0, 0x1110
+<118>MSG AsyncStorageInternal(getItem, 1208): key(@@.rnps-home-ui:query-cache:cached:experiences:486509363:20495) is not found.
+savagewind: [paths] permission repair: result=0 scanned=16504 changed=0 skipped=0 failed=0
+savagewind: [startup] 451 ms: paths and permission repair done
+savagewind: [settings] loaded savagewind.ini
+savagewind: [paths] root=/data/savagewind stat=0 errno=0 is_dir=1 broker_write=1 chdir=-1 errno=1
+savagewind: [paths] data: /data/savagewind (absolute reads, broker writes)
+<118>[AvControl] entry process(appid:0x16 pid:0x6a)
+<118>[AvControl] -- app[0](appid=0x16 attr=0xaa0017)(GAME RUNNING)(HDR:o HFR:o VR:x VRR:TypeA) SpecialModeInBg(none) HDCP23(none) supInfo(0x0)
+<118>[AvControl]    process[0](0x6a)
+<118>[AvControl] New session(appid=0x16 pid=0x6a) system:0 bc:0 attr:0xaa0017
+savagewind: [ps5] HDR probe: VideoOut open=0x4e100100
+savagewind: [ps5] HDR probe: output status=0 current mode=0x80290018
+savagewind: [ps5] HDR probe: startup dynamic_range=2 mode_size=0 mode_color=0
+savagewind: [ps5] HDR probe: status +000 02000000020000000300000000000000
+savagewind: [ps5] HDR probe: status +010 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +020 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +030 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +040 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +050 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +060 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +070 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +080 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +090 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +0a0 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: status +0b0 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: mode +000 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: mode +010 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: mode +020 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: mode +030 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: mode +040 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: mode +050 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: mode +060 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: mode +070 00000000000000000000000000000000
+savagewind: [ps5] HDR probe: VideoOut close=0
+savagewind: [ps5] HDR at start: yes (system output dynamic range)
+savagewind: [ps5] window: VideoOut display plane, its size from the display mode (asked 0x0), no SDL video
+savagewind: [ps5] Video page (savagewind.ini): frame rate 60 (0: off), upscaler 3, upscaler mode 3, anti-aliasing 0, field of view 100%
+savagewind: [window] VideoOut display plane, fullscreen in the display's mode (Video > Resolution applies at the next start)
+savagewind: [vk] application version 0.3.103 (Savage Wind 0.3.1-alpha.3)
+savagewind: ac_compute_device_uuid's output is based on invalid pci bus info.
+<118>[AvControl] change output mode(video:o voption:o audio:x)
+<118>[AvControl] v-request auto attr=0xaa0017: hdmi:vrr hdr usbc:cinema 
+<118>[AvControl] 119.88Hz request is converted to VRR 119.88Hz
+<118>[AvControl] layout:HDMI
+<118>[AvControl] notify stop-scanin (idx:-1) dwb0(unusable) dwb1(usable) dwb2(usable) cause(hdmi)
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 1)
+[si] stop  pipe[0] 6863s: 2us, p:0:1, 159:0057, 17162:0876, m:0, d:0x0, 0x1110
+<118>[AvControl] ** v:130203020000000002/a:00 **
+<118>[AvControl] ** set_default_metadata ** -1 
+<118>[AvControl] ** mute(0) ** 
+[dce-proc:3923 Info]<49>p:0:1, m:0, d:0x0, b:0x1110, ft:0x11, fl:0x17171309
+<118>[AvControl] setmode interval-time 1431 [usec] 
+<118>[AvControl] hdmi state: plugged (wait_count=20)
+<118>[AvControl] ** set_mode(0) ** 0x6a/-1 
+<118>[AvControl]  video: port:HDMI 2160P_11988 YUV422 limited YCC2100_PQ 30bpp 16:9 allm-game o--tv-f-2 
+<118>[AvControl]       : VRR(peg:120 range:48 - 120) capable(allm 1 mdelata 0 range 40 - 120) (-)
+<118>[AvControl]  audio: port:HDMI src:I2S 48k 7.1 24bit fmt:LPCM LPCM once sp:TV -
+[dce-proc:3729 Info]<49>peg count: 0 (=1  -1(106))
+<118>[SceShellUI] I/PSM.UI : VideoOutStatus : res=(3840,2160) freq=119.8801, vrfreq=119.8801, default=False, gen1vr=False, gen2vr=False, gen2nonvr=False
+<118>[SceShellUI] I/PSM.UI : UISystem.IsRendering4KFrameBuffer is called: False
+<118>[SceShellUI] I/PSM.UI : UI RenderingSettings Resolution: Pixels2K[1920,1080]
+<118>[AvControl] ** unmute(0) ** 
+<118>[AvControl] notify ready-scanin(idx:-1) port0(res: 0xc ref:0x800d(48-120) col:0xe sup:0x421) port1(res:0xb ref:0x3 col:0x14 sup:0x0) vrType(0)
+<118>[AvControl] (pid = 0x6a) has video owener.(hdmi:owner usbc:system)
+savagewind: [ps5] VideoOut: display "PS5 VideoOut" 3840x2160, 2 modes
+savagewind: wsi/videoout: 119.88 Hz selected with title VRR metadata
+savagewind: [ps5] VideoOut: mode 0: 3840x2160 at 119.880 Hz
+savagewind: [ps5] VideoOut: mode 1: 3840x2160 at 59.940 Hz
+savagewind: [ps5] Video > Resolution: Auto (the largest mode)
+savagewind: [ps5] first-launch video defaults: FG 1, upscaler 3, quality 3, HDR on (saved choice)
+savagewind: [ps5] VideoOut: chose mode 0: display plane surface 3840x2160 at 119.880 Hz, present mode FIFO
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 1 tapPoint = 0x2)
+[si] start pipe[0] 6867s:47us, savagewind: [ps5] VideoOut: 119.88 Hz; the TV follows the presents with VRR (48-120 Hz) (param.json attribute3 0x40040: VRR on, high frame rate declared)
+p:0:1, 61:1116, 17372:0354, m:6d926db36d920000, d:0x0, 0x1110
+savagewind: [vk] gpu 0: PlayStation 5 GPU (RADV NAVI21) (api 1.4.354)
+savagewind: [vk] using PlayStation 5 GPU (RADV NAVI21)
+savagewind: [vk] maintenance5 on (unwritten point size is 1.0)
+savagewind: [vk] graphics pipeline libraries on (shaders compiled apart from the fixed state)
+savagewind: [vk] attachment feedback loops on (feedback loop layout)
+savagewind: [vk] device created: 1 queue(s), extensions: VK_KHR_swapchain VK_EXT_custom_border_color VK_EXT_vertex_attribute_divisor VK_EXT_external_memory_host VK_EXT_device_fault VK_KHR_maintenance5 VK_KHR_pipeline_library VK_EXT_graphics_pipeline_library VK_EXT_attachment_feedback_loop_layout VK_KHR_dynamic_rendering_local_read
+savagewind: [vk] device features: anisotropy 1, BC 1, int64 1, depth clamp 1, wide lines 1, precise occlusion 1, custom border 1, attribute divisor 1, host import 1
+savagewind: [vk] pipeline cache: cache/vk_pipelines.bin, 5.4 MB
+savagewind: [vk] precompiled shaders: cache/vk_precompiled.bin, 110.8 MB
+savagewind: [ps5] VideoOut HDR10 format offered=1 colorspace_extension=1; display HDR capability unknown
+savagewind: wsi/videoout: surface formats hdr_capable=1 (attribute=0x20000000 source=/app0/sce_sys/param.json read=ok) count=4: B8G8R8A8_UNORM/SRGB_NONLINEAR B8G8R8A8_SRGB/SRGB_NONLINEAR A2B10G10R10_UNORM_PACK32/HDR10_ST2084 A2R10G10B10_UNORM_PACK32/HDR10_ST2084
+savagewind: [vk] swapchain 3840x2160, 5 images, present mode fifo (VSync fifo; surface has fifo, mailbox, immediate), exclusive fullscreen (its own display mode), display 119.88 Hz
+savagewind: [ps5] VideoOut swapchain format=64 colorSpace=1000104008 (HDR10 ST2084 BT.2020)
+savagewind: wsi/videoout: create swapchain imageFormat=64 imageColorSpace=1000104008 presentMode=2 extent=3840x2160 minImageCount=5
+savagewind: [vk] HDR10 output (Video > HDR is On), SDR white at 200 nits
+savagewind: wsi/videoout: HDR scanout token=0x8100070422000000 source=default-missing config=/app0/wine/radv-hdr.conf
+savagewind: wsi/videoout: scanout attribute mode=register set=0 token=0x8100070422000000 result=0x00000000 status_before=0x00000000 dynamic_range=2 refresh=0x000000000000000d flags=0x0000000000000000 status_after=0x00000000 dynamic_range=2 refresh=0x000000000000000d flags=0x0000000000000000
+savagewind: wsi/videoout: 3840x2160 framebuffers registered as set 0, buffers 0-4 pixel_format=0x8100070422000000
+savagewind: radv/ps5: scanout layout format=64 extent=3840x2160 bpe=4 swizzle=27 tile_swizzle=0x0 dcc_levels=0 meta_size=0 surf_size=33423360 alignment=65536 flags=0x40436410301
+savagewind: [pso] pipeline list: 4105 pipelines (0 damaged and 0 repeated records dropped)
+savagewind: [pso] pre-warm: 4105 pipelines on 12 threads
+savagewind: wsi/videoout: HDR output mode=token-only requested=token-only status_before=0x00000000 dynamic_range=2 refresh=0x000000000000000d flags=0x0000000000000000 status_after=0x00000000 dynamic_range=2 refresh=0x000000000000000d flags=0x0000000000000000
+savagewind: [vk] recorder thread on (savagewind.ini vk_recorder)
+savagewind: [ps5] package open worker started (requested stack 8 MiB)
+savagewind-import: session=package-exefs step=open-package errno=0 type=begin what=/data/savagewind/import/E [[redacted]][v1114112][UPD1.9.0][US].nsp
+savagewind-import: session=package-exefs step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild[[redacted]][US][v0].nsp
+savagewind-import: session=package-exefs step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild [The Legend of Zelda Breath of the Wild DLC Pack 1][[redacted]][US][v196608].nsp
+savagewind-import: session=package-exefs step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild [The Legend of Zelda Breath of the Wild DLC Pack 2][[redacted]][US][v196608].nsp
+savagewind-import: session=package-exefs step=parse-keys errno=0 type=begin what=
+savagewind-import: session=package-exefs step=scan-cnmt errno=0 type=begin what=
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind: [blur] distance blur's half-size read made depth-aware
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind: [startup] 5778 ms: ExeFS open_inputs finished
+savagewind-import: session=package-runtime step=exefs-nca-construct errno=0 type=begin what=
+savagewind: memory stage=exefs-nca-construct heap_base=0x2000000000 mapped=301989888 peak=301989888 segments=17 arenas=8 libc_fallbacks=0 flex_free=283115520 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11955863552 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=exefs-nca-construct rc=0 base=7ee5dc000 size=8388608 used=6808
+savagewind-import: session=package-runtime step=exefs-nca-set-keys errno=0 type=begin what=
+savagewind: memory stage=exefs-nca-set-keys heap_base=0x2000000000 mapped=301989888 peak=301989888 segments=17 arenas=8 libc_fallbacks=0 flex_free=283115520 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11955863552 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=exefs-nca-set-keys rc=0 base=7ee5dc000 size=8388608 used=6808
+savagewind-import: session=package-runtime step=exefs-nca-open-update errno=0 type=begin what=
+savagewind: memory stage=exefs-nca-open-update heap_base=0x2000000000 mapped=301989888 peak=301989888 segments=17 arenas=8 libc_fallbacks=0 flex_free=283115520 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11955863552 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=exefs-nca-open-update rc=0 base=7ee5dc000 size=8388608 used=6808
+savagewind-import: session=package-runtime step=exefs-nca-process errno=0 type=begin what=
+savagewind: memory stage=exefs-nca-process heap_base=0x2000000000 mapped=301989888 peak=301989888 segments=17 arenas=8 libc_fallbacks=0 flex_free=283115520 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11955863552 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=exefs-nca-process rc=0 base=7ee5dc000 size=8388608 used=6808
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-begin partition=1
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-partition partition=1
+savagewind-nca: step=mount-done partition=0
+savagewind: [startup] 5891 ms: ExeFS NCA processed
+savagewind-import: session=package-runtime step=exefs-mount errno=0 type=begin what=
+savagewind: memory stage=exefs-mount heap_base=0x2000000000 mapped=301989888 peak=301989888 segments=17 arenas=8 libc_fallbacks=0 flex_free=283115520 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11955863552 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=exefs-mount rc=0 base=7ee5dc000 size=8388608 used=6808
+savagewind: [startup] 5912 ms: ExeFS open finished
+savagewind: [startup] 5915 ms: ExeFS build ID read finished
+savagewind-import: session=package-runtime step=open-package errno=0 type=begin what=/data/savagewind/import/E [[redacted]][v1114112][UPD1.9.0][US].nsp
+savagewind: [vk] presents on the calling thread
+savagewind-import: session=package-runtime step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild[[redacted]][US][v0].nsp
+savagewind-import: session=package-runtime step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild [The Legend of Zelda Breath of the Wild DLC Pack 1][[redacted]][US][v196608].nsp
+savagewind-import: session=package-runtime step=open-package errno=0 type=begin what=/data/savagewind/import/The Legend of Zelda Breath of the Wild [The Legend of Zelda Breath of the Wild DLC Pack 2][[redacted]][US][v196608].nsp
+savagewind-import: session=package-runtime step=parse-keys errno=0 type=begin what=
+savagewind: [blur] distance blur's half-size read made depth-aware
+savagewind-import: session=package-runtime step=scan-cnmt errno=0 type=begin what=
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-done partition=0
+savagewind: [startup] 6166 ms: RomFS open_inputs finished
+savagewind-import: session=package-runtime step=open-program-nca errno=0 type=begin what=
+savagewind: memory stage=open-program-nca heap_base=0x2000000000 mapped=436207616 peak=436207616 segments=24 arenas=8 libc_fallbacks=0 flex_free=266338304 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11679039488 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=open-program-nca rc=0 base=7eddd8000 size=8388608 used=6824
+savagewind-import: session=package-runtime step=nca-construct errno=0 type=begin what=
+savagewind: memory stage=nca-construct heap_base=0x2000000000 mapped=452984832 peak=452984832 segments=25 arenas=8 libc_fallbacks=0 flex_free=266338304 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11662262272 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-construct rc=0 base=7eddd8000 size=8388608 used=6824
+savagewind-import: session=package-runtime step=nca-set-keys errno=0 type=begin what=
+savagewind: [pso] pre-warm done in 617 ms: 4105 pipelines built, 0 built first by draws, 0 skipped (shaders missing or state unsupported); pipeline cache 78 hits, 0 misses
+savagewind: memory stage=nca-set-keys heap_base=0x2000000000 mapped=452984832 peak=452984832 segments=25 arenas=8 libc_fallbacks=0 flex_free=266338304 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11662262272 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-set-keys rc=0 base=7eddd8000 size=8388608 used=6824
+savagewind-import: session=package-runtime step=nca-keys-ready errno=0 type=begin what=
+savagewind: memory stage=nca-keys-ready heap_base=0x2000000000 mapped=452984832 peak=452984832 segments=25 arenas=8 libc_fallbacks=0 flex_free=266338304 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11662262272 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-keys-ready rc=0 base=7eddd8000 size=8388608 used=6824
+savagewind-import: session=package-runtime step=nca-open-update errno=0 type=begin what=
+savagewind: memory stage=nca-open-update heap_base=0x2000000000 mapped=452984832 peak=452984832 segments=25 arenas=8 libc_fallbacks=0 flex_free=266338304 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11662262272 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-open-update rc=0 base=7eddd8000 size=8388608 used=6824
+savagewind-import: session=package-runtime step=nca-open-base errno=0 type=begin what=
+savagewind: memory stage=nca-open-base heap_base=0x2000000000 mapped=452984832 peak=452984832 segments=25 arenas=8 libc_fallbacks=0 flex_free=266338304 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11662262272 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=nca-open-base rc=0 base=7eddd8000 size=8388608 used=6824
+savagewind-import: session=package-runtime step=nca-process errno=0 type=begin what=
+savagewind: memory stage=nca-process heap_base=0x2000000000 mapped=452984832 peak=452984832 segments=25 arenas=8 libc_fallbacks=0 flex_free=266338304 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11662262272 direct_total=12884901888 direct_rc=0
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 1)
+[si] stop  pipe[0] 6869s: 2us, p:0:1, 168:5144, 17504:0811, m:d89f92666d920000, d:0x2, 0x1100
+savagewind: stack stage=nca-process rc=0 base=7eddd8000 size=8388608 used=6824
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind: [gamecode] identity 0.402 s
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+savagewind-nca: step=partition-begin partition=1
+savagewind-nca: step=base-open-begin partition=1
+savagewind-nca: step=header-begin partition=0
+savagewind-nca: step=header-decrypt-begin partition=0
+savagewind-nca: step=header-decrypt-done partition=0
+savagewind-nca: step=header-done partition=0
+savagewind-nca: step=body-keys-begin partition=0
+savagewind-nca: step=body-keys-done partition=0
+savagewind-nca: step=partition-config-begin partition=0
+savagewind-nca: step=partition-begin partition=0
+savagewind-nca: step=hash-setup-begin partition=0
+savagewind-nca: step=hash-setup-done partition=0
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 1 tapPoint = 0x2)
+[si] start pipe[0] 6869s:52us, p:0:1, 172:0095, 17508:0678, m:d89f92666d920000, d:0x2, 0x1100
+savagewind-nca: step=partition-begin partition=1
+savagewind-nca: step=hash-setup-begin partition=1
+savagewind: savagewind-import: sha256: 16KiB blocks software=267.4 MiB/s sha_ni=547.1 MiB/s check=0
+savagewind: savagewind-import: sha256: sha_ni selected
+<118>[ScePsP:InputCtrl] LOST PAD DATA: 281msec
+savagewind-nca: step=hash-setup-done partition=1
+savagewind-nca: step=partition-begin partition=2
+savagewind-nca: step=hash-setup-begin partition=2
+savagewind-nca: step=hash-setup-done partition=2
+savagewind-nca: step=partition-config-done partition=0
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 1)
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-partition partition=1
+[si] stop  pipe[0] 6870s: 2us, p:0:1, 220:1632, 17563:0600, m:d89f92666d920000, d:0x2, 0x1100
+savagewind-nca: step=mount-partition partition=2
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 1 tapPoint = 0x2)
+[si] start pipe[0] 6870s:50us, p:0:1, 231:0075, 17575:0453, m:d89f92666d920000, d:0x2, 0x1100
+savagewind-nca: step=mount-done partition=0
+savagewind-nca: step=base-open-done partition=1
+savagewind: [startup] 7880 ms: RomFS base NCA parsed
+savagewind-nca: step=bktr-open-begin partition=1
+savagewind-nca: step=bktr-open-done partition=1
+savagewind: [startup] 7898 ms: RomFS BKTR built
+savagewind-nca: step=hash-setup-begin partition=1
+<118>[ScePsP:InputCtrl] LOST PAD DATA: 255msec
+savagewind-nca: step=hash-setup-done partition=1
+savagewind: [startup] 8439 ms: RomFS hash layers verified: bytes=16384,16384,16384,65536,29556736 total=29671424
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 1)
+[si] stop  pipe[0] 6871s: 2us, p:0:1, 285:3405, 17639:0595, m:d89f92666d920000, d:0x2, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 1 tapPoint = 0x2)
+[si] start pipe[0] 6871s:56us, p:0:1, 289:0151, 17643:0207, m:d89f92666d920000, d:0x2, 0x1100
+savagewind-nca: step=partition-config-done partition=0
+savagewind-nca: step=mount-begin partition=0
+savagewind-nca: step=mount-partition partition=0
+savagewind-nca: step=mount-partition partition=1
+savagewind-nca: step=mount-done partition=0
+savagewind-import: session=package-runtime step=mount-romfs errno=0 type=begin what=
+savagewind: memory stage=mount-romfs heap_base=0x2000000000 mapped=1092026368 peak=1092026368 segments=33 arenas=8 libc_fallbacks=0 flex_free=266338304 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11023220736 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=mount-romfs rc=0 base=7eddd8000 size=8388608 used=6824
+savagewind-import: session=package-runtime step=romfs-ready errno=0 type=begin what=
+savagewind: memory stage=romfs-ready heap_base=0x2000000000 mapped=1092026368 peak=1092026368 segments=33 arenas=8 libc_fallbacks=0 flex_free=266338304 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=11023220736 direct_total=12884901888 direct_rc=0
+savagewind: stack stage=romfs-ready rc=0 base=7eddd8000 size=8388608 used=6824
+savagewind: [startup] 9684 ms: startup RomFS open finished
+savagewind: [ps5] package RomFS opened: 15132662100 bytes in 3.769 s
+savagewind: [gamecode] cache load detail bytes=504806784 read=2.663 s hash=1.784 s validate_relocate=0.000 s
+savagewind: [gamecode] heap cache loaded mapped=1092026368 peak=1092026368 segments=33
+savagewind: [gamecode] cache miss: invalid cache manifest
+savagewind: [gamecode] generating (compiler threads=8)
+savagewind: [gamecode] compile start layout.c
+savagewind: radv/ps5 submissions: window count=101 kwords=191 claim_ms=0.2 copy_ms=0.2 flush_ms=0.2 agc_ms=1.4 suspend_ms=1.3
+savagewind: wsi/videoout: HDR scanout samples interval_s=10 at (480,270) (1440,270) (2400,270) (3360,270) (480,1080) (1440,1080) (2400,1080) (3360,1080): c0000000 c0000000 c0000000 c0000000 c0000000 c0000000 c0000000 c0000000
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3815.0 KB, trend +17.1 KB/min, peak 7759.5 KB, when 6862 [sec]
+savagewind: [gamecode] compile start main_001.c
+savagewind: [gamecode] compile start main_000.c
+savagewind: [gamecode] compile start main_002.c
+savagewind: [gamecode] compile start main_003.c
+savagewind: [gamecode] compile start main_005.c
+savagewind: [gamecode] compile start main_004.c
+savagewind: [gamecode] compile start main_006.c
+savagewind: [gamecode] compile start main_007.c
+savagewind: [gamecode] compile start main_008.c
+savagewind: [gamecode] compile start main_009.c
+savagewind: [gamecode] compile start main_010.c
+savagewind: [gamecode] compile start main_011.c
+savagewind: [gamecode] compile start main_012.c
+savagewind: [gamecode] compile start main_013.c
+savagewind: [gamecode] compile start main_014.c
+savagewind: radv/ps5 submissions: window count=100 kwords=195 claim_ms=0.2 copy_ms=0.3 flush_ms=0.2 agc_ms=1.9 suspend_ms=1.7
+savagewind: wsi/videoout: HDR scanout samples interval_s=10 at (480,270) (1440,270) (2400,270) (3360,270) (480,1080) (1440,1080) (2400,1080) (3360,1080): c0000000 c0000000 c0000000 c0000000 c0000000 c0000000 c0000000 c0000000
+savagewind: [gamecode] compile start main_015.c
+savagewind: [gamecode] compile start main_016.c
+savagewind: [gamecode] compile start main_017.c
+savagewind: [gamecode] compile start main_018.c
+savagewind: [gamecode] compile start main_019.c
+savagewind: [gamecode] compile start main_020.c
+savagewind: [gamecode] compile start main_021.c
+savagewind: [gamecode] compile start main_022.c
+savagewind: [gamecode] compile start main_023.c
+savagewind: [gamecode] compile start main_024.c
+savagewind: [gamecode] compile start main_025.c
+savagewind: [gamecode] compile start main_026.c
+savagewind: [gamecode] compile start main_027.c
+savagewind: [gamecode] compile start main_028.c
+savagewind: radv/ps5 submissions: window count=100 kwords=195 claim_ms=0.2 copy_ms=0.6 flush_ms=0.2 agc_ms=2.2 suspend_ms=2.2
+savagewind: wsi/videoout: HDR scanout samples interval_s=10 at (480,270) (1440,270) (2400,270) (3360,270) (480,1080) (1440,1080) (2400,1080) (3360,1080): c0000000 c0000000 c0000000 c0000000 c0000000 c0000000 c0000000 c0000000
+savagewind: [gamecode] compile start main_029.c
+savagewind: [gamecode] compile start main_030.c
+savagewind: [gamecode] compile start main_031.c
+savagewind: [gamecode] compile start main_032.c
+savagewind: [gamecode] compile start main_033.c
+savagewind: [gamecode] compile start main_034.c
+savagewind: [gamecode] compile start main_035.c
+savagewind: [gamecode] compile start main_036.c
+savagewind: [gamecode] compile start main_037.c
+<118>[AvControl] RemotePlay Status (0 -> 1) option 0x0 
+<118>[AvControl] v-request auto attr=0xaa0017: hdmi:vrr hdr usbc:cinema 
+<118>[AvControl] 119.88Hz request is converted to VRR 119.88Hz
+<118>[AvControl] (pid = 0x6a) has video owener.(hdmi:owner usbc:system)
+<118>#LOGIN MGR# Receive Event : SCE_MBUS_EVENT_VIDEO_OUT_EVENT eventType=0x1
+<118>#LOGIN MGR# Receive Event : SCE_MBUS_EVENT_VIDEO_OUT_EVENT
+<118>#LOGIN MGR# [NotifyMorpheusConnectStatusChangedForHmuSetupDialog] deviceId : 0xffffffffffffffff / userId : 0xffffffff / avSettingPuType : 0 / connectStatus : 6 
+<118>[SceLncService] remote play status has been changed. isRunning={1}
+<118>* registerDevice:L3119 not found sub device id.
+<118>* setAudioInDevConnection:L1783 not found sub device id.
+<118>[ReactNative.Modules.Vsh.Media.Arbitration] ProhibitionFlag change detected, currentFlags = [0,0,0,NPXS40087,] newFlags = [1,0,0,PPSA90212,]
+<118>ScePsP[TID:0x18972]: sceMbusEvent has been received. (eventId=1 ADD, deviceId=0xb0301)
+<118>#LOGIN MGR# Receive Event : SCE_MBUS_EVENT_DEVICE_ADDED [DeviceId:0xb0301][type:4][subType:22][capabilityBattery:0]
+<118>ScePsP[TID:0x18972]: Open Pad [0x00000000000b0301, 0, 0]: ret=0x03400402
+<118>ScePsP[TID:0x18972]: ConnectedDeviceStatus: count=3
+<118>  [c][DeviceId          ][UserId    ][Model     ]
+<118>  [o][0x0000000000050300][0x1cff8b33][DUALSENSE ]
+<118>  [o][0x00000000000b0301][0xffffffff][REMOTEPLAY]
+<118>  [ ][0xffffffffffffffff][0xffffffff][none      ]
+<118>  [ ][0xffffffffffffffff][0xffffffff][none      ]
+<118>[LoginMgr] [onDeviceBasicEvent] eventType=DeviceAdded / deviceId=0xb0301(721665)
+<118>[LoginMgr] [onDeviceBasicEvent] end
+<118>D/125878 X
+<118>#LOGIN MGR# isIduMode = 0
+<118>#LOGIN MGR# isIduMode = 0
+<118>[Umm] processMbusEvent() event=DEVICE_ADDED deviceId=0xb0301 deviceType=22 userId=0x0(0)
+<118>#LOGIN MGR# [assignRemotePlay] userId=0x1cff8b33 / isPrimaryDevice=1
+<118>#LOGIN MGR# [TriggerPapcUpdate] userId=0x1cff8b33
+<118>#LOGIN MGR# [BeforeLogin(Primary)] disconnectOther=0
+<118>#LOGIN MGR# getControllerNum() : 2
+<118>ForegroundUser : 0x1cff8b33
+<118>#LOGIN MGR# [Login] userId=0x1cff8b33, isAlreadyLoggedin=1
+<118>#LOGIN MGR# isIduMode = 0
+<118>#LOGIN MGR# #### LoginProcess start ####
+<118>#LOGIN MGR# isLogin = 1
+<118>#LOGIN MGR# #### LoginProcess end ####
+<118>#LOGIN MGR# [Assign] DeviceId:0x00000000000b0301 / UserId:0x1cff8b33
+<118>#LOGIN MGR# [AudioDeviceUtility::IsHoldAudioOutDevice] start - userId : 0x1cff8b33
+<118>#LOGIN MGR# isIduMode = 0
+<118>#LOGIN MGR# [AudioDeviceUtility::IsHoldAudioOutDevice] end - ret : 0
+<118>#LOGIN MGR# [Controller::onHoldDevice] userId = 0x1cff8b33 / holdAudioOutDevice : 0
+<118>#LOGIN MGR# [AudioFunction::audioDeviceStateChange] deviceId : 0xb0301 / isUpdateDefaultOnly : 1 / isSetEmbeddedMic : 0 / function - audioIn : 1 / audioOut : 1 / padSpk : 0
+<118>#LOGIN MGR# [AudioFunction::audioDeviceStateChange] check - updState : 0 / functionType : 1 / hasFunction : 0 / isEnabled : 0 / realState : 3 / scrachData : 128
+<118>#LOGIN MGR# [AudioFunction::audioDeviceStateChange] check - updState : 0 / functionType : 2 / hasFunction : 0 / isEnabled : 0 / realState : 3 / scrachData : 64
+<118>#LOGIN MGR# [AudioFunction::audioDeviceStateChange] check - updState : 0 / functionType : 18 / hasFunction : 0 / isEnabled : 0 / realState : 3 / scrachData : 64
+<118>@ mbusDisconnectDevice:L2214
+<118>* removeDevice:L1725 [MBUS] Receive device disconnect event.(deviceId=0x50300)
+<118>@ mbusDisconnectDevice:L2343
+<118>#LOGIN MGR# sceMbusDisconnectDevice(0x0000000000050300) : 0(0x00000000)
+<118>@ checkAudioOutHandleStatus:L4108
+<118>#LOGIN MGR# [AudioFunction::setEmbeddedMicFunction] userId : 0x1cff8b33 / deviceId : 0xb0301
+<118>@ connectDeviceByFunction:L2536
+<118>@ checkAudioOutHandleStatus:L4108
+<118>#LOGIN MGR# sceMbusBindDeviceWithUserId( 0x00000000000b0301, 0x1cff8b33 ) : 0(0x00000000)
+<118>#LOGIN MGR# SetVibrationStrength( 0x00000000000b0301, 1 )
+<118>#LOGIN MGR# SetTriggerEffectStrength( 0x00000000000b0301, 1 )
+<118>#LOGIN MGR# EnablePadKeyRemapping start( 1, 0xb0301, 0x1cff8b33, 1 )
+<118>#LOGIN MGR# IsKeyRemapEnable start( 0x1cff8b33 )
+<118>#LOGIN MGR# IsKeyRemapEnable end( 0x1cff8b33 ) -> 0 
+<118>#LOGIN MGR# EnablePadKeyRemapping end( 1, 0xb0301, 0x1cff8b33, 1 ) -> 0(0x00000000)
+<118>#LOGIN MGR# [ScratchData][ScratchDataResetBit] No resettings required
+<118>#LOGIN MGR# [PeripheralWelcomeScreen::RequestWelcomeScreen] No peripheral definition.
+<118>#LOGIN MGR# [IsRemotePlayDevice] DeviceId:0xb0301, IsRemotePlay:1
+<118>ScePsP[TID:0x18972]: sceMbusEvent has been received. (eventId=2 REMOVED, deviceId=0x50300)
+<118>ScePsP[TID:0x18972]: Close Pad [0x03030401]: ret=0x00000000
+<118>ScePsP[TID:0x18972]: ConnectedDeviceStatus: count=2
+<118>  [c][DeviceId          ][UserId    ][Model     ]
+<118>  [ ][0xffffffffffffffff][0xffffffff][none      ]
+<118>  [o][0x00000000000b0301][0x1cff8b33][REMOTEPLAY]
+<118>  [ ][0xffffffffffffffff][0xffffffff][none      ]
+<118>  [ ][0xffffffffffffffff][0xffffffff][none      ]
+<118>#LOGIN MGR# SCE_REMOTEPLAY_LOGIN_STATUS_BINDED
+<118>[Umm] processMbusEvent() event=DEVICE_REMOVED deviceId=0x50300 deviceType=22 userId=0x1cff8b33(486509363)
+<118>[Umm] audioInLosted()  userId=0x1cff8b33(486509363) UmmDeviceInfo:[deviceId=0x50300 userId=0x1cff8b33(486509363) deviceType=22 enabledFunctionType=18 inDeviceMicMuteState=0]
+<118>#LOGIN MGR# [onDeviceAdded] assignRemotePlay.
+<118>#LOGIN MGR# Receive Event : SCE_MBUS_EVENT_DEVICE_REMOVED [DeviceId:0x50300][SubType:22][REASON:1]
+<118>[LoginMgr] [onDeviceBasicEvent] eventType=DeviceRemoved / deviceId=0x50300(328448)
+<118>[LoginMgr] [onDeviceBasicEvent] end
+<118>[ResArbitrator][IpcServer]operator()              [18933](235)  : AddCallbackList(id:180)
+<118>[ResArbitrator][RA_main  ]IsExecutable            [18933](164)  : IsExecutable id[180] newState['RUNNING'] listConfirm[0]
+<118>[ResArbitrator][App      ]GetExecutable           [18933](136)  : Target id[180] budgets{vcn[ 20] acp[270] mem[  0]} prio[5(5)]
+<118>[ResArbitrator][QUEUE    ]Enqueue                 [18933]( 38)  : Enqueue(id[180], t[1], user[200a02ae8] state[RUNNING]) queue.size[1]
+<118>[ResArbitrator][App      ]GetExecutable           [18934](136)  : Target id[180] budgets{vcn[ 20] acp[270] mem[  0]} prio[5(5)]
+<118>[ResArbitrator][IpcServer]Callback                [18934]( 78)  : S->C Callback Set(id[180] type[RESULT] result[true] state[RUNNING])
+<118>[ResArbitrator][QUEUE    ]Remove                  [18934]( 69)  : Remove:(id[180] state[RUNNING] type[1]) queue.size[0]
+<118>[ResArbitrator][App      ]Dump                    [18934](501)  : -- Exec Apps *************************
+<118>[ResArbitrator][App      ]Dump                    [18934](510)  : -1: Id[  0] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[2(2)] from[DIRECT(0x0)] userData[0x0] appId[0x16]
+<118>[ResArbitrator][App      ]Dump                    [18934](518)  : -2: Id[100] state[RUNNING] vcn[  0] acp[ 0] mem[  0] prio[0(0)] from[IPMI(0x208ae8780)] userData[0x0] pid[0x43]
+<118>[ResArbitrator][App      ]Dump                    [18934](518)  : -3: Id[110] state[RUNNING] vcn[ 20] acp[368] mem[  0] prio[10(10)] from[IPMI(0x208ae86a0)] userData[0x0] pid[0x3a]*HB*
+<118>[ResArbitrator][App      ]Dump                    [18934](518)  : -4: Id[180] state[RUNNING] vcn[ 20] acp[270] mem[  0] prio[5(5)] from[IPMI(0x208ae8680)] userData[0x200a02ae8] pid[0x3c]
+<118>[ResArbitrator][App      ]Dump                    [18934](518)  : -5: Id[190] state[RUNNING] vcn[  0] acp[ 0] mem[ 34] prio[10(10)] from[DIRECT(0x0)] userData[0x0] pid[0x39]
+<118>[ResArbitrator][App      ]Dump                    [18934](819)  : -- No kicking Apps *************************
+<118>[ResArbitrator][IpcServer]GetCallbackDataInt      [18933](334)  : C->S Callback Get(id[180] type[RESULT] result[true] state[RUNNING] cb[2bdb72d0])
+<118>#LOGIN MGR# InvokeSendNotification : type = 24
+<118>**setScratchData:L5371 ERROR! getScratchData failed. (0xFFFFFFF6)
+<118>#LOGIN MGR# : \scratch_data.cpp(50) : Write : ERROR : [ScratchData][DeviceScratchData] sceMbusSetScratchData() failed. -2137325563(0x809b0005)
+<118>#LOGIN MGR# : \mbus_if.cpp(1541) : GetControllerNum : GetConnectionStatus()=0
+<118>#LOGIN MGR# GetControllerNum : 1
+<118>ScePsP[TID:0x18972]: sceMbusEvent has been received. (eventId=16 OWNERCHG, deviceId=0xb0301)
+<118>#LOGIN MGR# Receive Event : SCE_MBUS_EVENT_DEVICE_OWNER_CHANGED [DeviceId:0xb0301][UserId:0x1cff8b33]
+<118>[LoginMgr] [onDeviceBasicEvent] eventType=OwnerChanged / deviceId=0xb0301(721665)
+<118>[LoginMgr] [onDeviceBasicEvent] end
+<118>[LoginMgr] [EventQueue] RemoveBgItems - deviceId : 0x50300
+<118>[LoginMgr] [EventQueue] Dequeue - param : {"entry":"login","deviceId":721665}
+<118>[LoginMgr] [Queue] Dequeue - queueType : Level4 / eventType : Login / eventJson : {"entry":"login","deviceId":721665} / isForce : False / isDeviceRemoved : False
+<118>[LoginMgr] [Create] eventType=Level4
+<118>[LoginMgr] eventType="login"
+<118>[LoginMgr] [Queue] Dequeue - LEVEL1  : 0
+<118>[LoginMgr] [Queue] Dequeue - LEVEL2  : 0
+<118>[LoginMgr] [Queue] Dequeue - LEVEL3  : 0
+<118>[LoginMgr] [Queue] Dequeue - LEVEL4  : 0
+<118>[LoginMgr] [Queue] Dequeue - WELCOME : 1
+<118>#LOGIN MGR# [OnDeviceOwnerChanged] deviceId : 0xb0301 / userId : 0x1cff8b33 
+<118>[Umm] processMbusEvent() event=DEVICE_OWNER_CHANGED deviceId=0xb0301 deviceType=22 userId=0x1cff8b33(486509363)
+<118>[Umm] processMbusEvent() event=DEVICE_ADDED deviceId=0x10000000040100 deviceType=1 userId=0x0(0)
+<118>ScePsP[TID:0x18972]: sceMbusEvent has been received. (eventId=1 ADD, deviceId=0x10000000040100)
+<118>#LOGIN MGR# Receive Event : SCE_MBUS_EVENT_DEVICE_ADDED [DeviceId:0x10000000040100][type:4][subType:1][capabilityBattery:0]
+<118>#LOGIN MGR# [RemoteMicrophone::getVendorId]
+<118>#LOGIN MGR# [RemoteMicrophone::getProductId]
+<118>[LoginMgr] [onDeviceBasicEvent] eventType=DeviceAdded / deviceId=0x10000000040100(4503599627632896)
+<118>[LoginMgr] [onDeviceBasicEvent] end
+<118>D/125878 X
+<118>#LOGIN MGR# isIduMode = 0
+<118>#LOGIN MGR# isIduMode = 0
+<118>#LOGIN MGR# GetAuidoDeviceNum : 1
+<118>#LOGIN MGR# [RemoteMicrophone::isEnableDeviceConnect] audioDeviceNum : 1 
+<118>#LOGIN MGR# [RunBusTransitionNewDevice] ret : -2135556047 / deviceUniqueId : 0x0000000000000000
+<118>#LOGIN MGR# [RemoteMicrophone::getVendorId]
+<118>#LOGIN MGR# [RemoteMicrophone::getProductId]
+<118>#LOGIN MGR# [RemoteMicrophone::isRemoteMic] true 
+<118>#LOGIN MGR# [AudioDeviceUtility::IsHoldAudioOutDevice] start - userId : 0x1cff8b33
+<118>#LOGIN MGR# isIduMode = 0
+<118>#LOGIN MGR# [AudioDeviceUtility::IsHoldAudioOutDevice] end - ret : 0
+<118>#LOGIN MGR# The device(0x10000000040100) was auto assigned to User 0x1cff8b33.
+<118>#LOGIN MGR# [Assign] DeviceId:0x0010000000040100 / UserId:0x1cff8b33
+<118>#LOGIN MGR# [RemoteMicrophone::exclusionSameDevice] morpheusUserId : 0xffffffff / userId : 0x1cff8b33 
+<118>@ connectDeviceByFunction:L2536
+<118>[Umm] processMbusEvent() event=DEVICE_STATUS_UPDATED deviceId=0x10000000040100 deviceType=1 Info:[type=9 flag=0x00000000]
+<118>@ checkAudioOutHandleStatus:L4108
+<118>#LOGIN MGR# sceMbusBindDeviceWithUserId( 0x0010000000040100, 0x1cff8b33 ) : 0(0x00000000)
+<118>#LOGIN MGR# [RemoteMicrophone::setAudioDeviceFromUserValue]
+<118>#LOGIN MGR# [RemoteMicrophone::getVendorId]
+<118>#LOGIN MGR# [RemoteMicrophone::getProductId]
+<118>#LOGIN MGR# #LOGIN MGR# [RemoteMicrophone::getVendorId]
+<118>#LOGIN MGR# [RemoteMicrophone::getProductId]
+<118>[RemoteMicrophone::setAudioDeviceFromUserValue] sceUserServiceGetMicLevel ret : 0 / GetUserId : 0x1cff8b33 / VId : 0x054c / Pid : 0x04e4 / volume : 50 
+<118>#LOGIN MGR# [ScratchData][ScratchDataResetBit] No resettings required
+<118>#LOGIN MGR# [RemoteMicrophone::afterBindDevice] remotePlayUserId : 486509363 
+<118>#LOGIN MGR# [PeripheralWelcomeScreen::RequestWelcomeScreen] No peripheral definition.
+<118>Event OnControllerActivated isAutoAssignComplete:1, m_systemState:1000, isSendEvent:1
+<118>#LOGIN MGR# : \mbus_if.cpp(1541) : GetControllerNum : GetConnectionStatus()=0
+<118>#LOGIN MGR# GetControllerNum : 1
+<118>#LOGIN MGR# Receive Event : SCE_MBUS_EVENT_DEVICE_STATUS_UPDATED [DeviceId:0x10000000040100][type=9]
+<118>ScePsP[TID:0x18972]: sceMbusEvent has been received. (eventId=16 OWNERCHG, deviceId=0x10000000040100)
+<118>#LOGIN MGR# Receive Event : SCE_MBUS_EVENT_DEVICE_OWNER_CHANGED [DeviceId:0x10000000040100][UserId:0x1cff8b33]
+<118>[LoginMgr] [onDeviceBasicEvent] eventType=OwnerChanged / deviceId=0x10000000040100(4503599627632896)
+<118>[LoginMgr] [onDeviceBasicEvent] end
+<118>[LoginMgr] [EventQueue] Dequeue - param : {"entry":"login","deviceId":4503599627632896}
+<118>[LoginMgr] [Queue] Dequeue - queueType : Level4 / eventType : Login / eventJson : {"entry":"login","deviceId":4503599627632896} / isForce : False / isDeviceRemoved : False
+<118>[LoginMgr] [Create] eventType=Level4
+<118>[LoginMgr] eventType="login"
+<118>[LoginMgr] [Queue] Dequeue - LEVEL1  : 0
+<118>[LoginMgr] [Queue] Dequeue - LEVEL2  : 0
+<118>[LoginMgr] [Queue] Dequeue - LEVEL3  : 0
+<118>[LoginMgr] [Queue] Dequeue - LEVEL4  : 0
+<118>[LoginMgr] [Queue] Dequeue - WELCOME : 1
+<118>#LOGIN MGR# [OnDeviceOwnerChanged] deviceId : 0x10000000040100 / userId : 0x1cff8b33 
+<118>[Umm] processMbusEvent() event=DEVICE_OWNER_CHANGED deviceId=0x10000000040100 deviceType=1 userId=0x1cff8b33(486509363)
+<118>[Umm] setUmmDeviceInfo()  userId=0x1cff8b33(486509363) UmmDeviceInfo:[deviceId=0x10000000040100 userId=0x1cff8b33(486509363) deviceType=1 enabledFunctionType=2 inDeviceMicMuteState=2]
+<118>@ mbusSetUserMuteStatus:L5713
+<118>[Umm] onPostUmmStatusChanged() {"ummStatusInfo":[{"inDeviceMuteState":2,"state":3,"userId":486509363}]}
+<118>#LOGIN MGR# [GetAudioDeviceType] DeviceId:0x10000000040100, audioDeviceType:0x000000000000000c
+<118>#LOGIN MGR# [RemoteMicrophone::getVendorId]
+<118>#LOGIN MGR# [RemoteMicrophone::getProductId]
+<118>[SceShellUI] I/PSM.UI : [FirstClear] : ClearFrameBuffer=False
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x3)
+[si] start pipe[1] 6904s:48us, p:0:1, 2075:0107, 19593:1085, m:766fb75320710000, d:0x3, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 6904s: 2us, p:0:1, 2078:0727, 19595:0678, m:368330148ac00000, d:0x3, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x3)
+[si] start pipe[1] 6904s:48us, p:0:1, 2089:0135, 19600:1092, m:c911bb36313b0000, d:0x3, 0x1100
+<118>[AvControl] ** stop scanin(pid=0x3b scaninId = 2)
+[si] stop  pipe[1] 6904s: 2us, p:0:1, 2094:0556, 19603:0635, m:4b6eab0c36e70000, d:0x3, 0x1100
+<118>[AvControl] ** set scanin(pid=0x3b scaninId = 2 tapPoint = 0x3)
+[si] start pipe[1] 6904s:50us, p:0:1, 2095:0137, 19603:1093, m:4eccded356e80000, d:0x3, 0x1100
+savagewind: [gamecode] compile start main_038.c
+savagewind: [gamecode] compile start main_039.c
+savagewind: [gamecode] compile start main_040.c
+savagewind: [gamecode] compile start main_041.c
+savagewind: [gamecode] compile start main_042.c
+savagewind: [gamecode] compile start main_043.c
+savagewind: [gamecode] compile start main_044.c
+savagewind: [gamecode] compile start main_045.c
+savagewind: [gamecode] compile start main_046.c
+savagewind: [gamecode] compile start main_047.c
+savagewind: [gamecode] compile start main_048.c
+savagewind: [gamecode] compile start main_049.c
+savagewind: radv/ps5 submissions: window count=100 kwords=195 claim_ms=0.2 copy_ms=0.5 flush_ms=0.2 agc_ms=2.3 suspend_ms=2.1
+savagewind: wsi/videoout: HDR scanout samples interval_s=10 at (480,270) (1440,270) (2400,270) (3360,270) (480,1080) (1440,1080) (2400,1080) (3360,1080): c0000000 c0000000 c0000000 c0000000 c0000000 c0000000 c0000000 c0000000
+<118>[SceShellUI] I/PSM.UI : [NoDraw] : ClearFrameBuffer=False
+savagewind: [gamecode] compile start main_050.c
+savagewind: [gamecode] compile start main_051.c
+<118>[SceShellCore] Libc Heap Status: free 53%, in-use 3815.1 KB, trend +17.2 KB/min, peak 7759.5 KB, when 6893 [sec]
+savagewind: [gamecode] compile start main_052.c
+savagewind: [gamecode] compile start main_053.c
+savagewind: [gamecode] compile start main_055.c
+savagewind: [gamecode] compile start main_054.c
+savagewind: [gamecode] compile start main_056.c
+savagewind: [gamecode] compile start main_057.c
+savagewind: [gamecode] compile start main_058.c
+savagewind: [gamecode] compile start main_059.c
+savagewind: [gamecode] compile start main_060.c
+savagewind: [gamecode] compile start main_061.c
+savagewind: [gamecode] compile start main_062.c
+savagewind: [gamecode] compile start main_063.c
+savagewind: [gamecode] compile start main_064.c

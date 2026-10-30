@@ -350,6 +350,30 @@ static int resolve_target(Link *l, const GameLinkImage *image, GameLinkTarget ta
     }
 }
 
+/* Eligibility is recorded by the original relocation plus the unmodified canonical
+ * instruction bytes. Re-evaluate reach at each replay; the reserved GOT stays available. */
+static int got_relax_kind(const GameLinkImage *image, const GameLinkFixup *f)
+{
+    if ((f->type != R_X86_64_GOTPCRELX && f->type != R_X86_64_REX_GOTPCRELX) ||
+        f->addend != -4 || f->place_view != GAME_LINK_TARGET_RX || f->offset < 2 ||
+        f->offset > image->text_size || image->text_size - f->offset < 4 ||
+        (f->target.kind != GAME_LINK_TARGET_RW && f->target.kind != GAME_LINK_TARGET_RX &&
+         f->target.kind != GAME_LINK_TARGET_EXPORT))
+        return 0;
+    if (f->type == R_X86_64_REX_GOTPCRELX &&
+        (f->offset < 3 || (image->canonical[f->offset - 3] & 0xf0) != 0x40))
+        return 0;
+    unsigned char op = image->canonical[f->offset - 2];
+    unsigned char modrm = image->canonical[f->offset - 1];
+    if (op == 0x8b && (modrm & 0xc7) == 0x05)
+        return 1;
+    if (op == 0xff && modrm == 0x15)
+        return 2;
+    if (op == 0xff && modrm == 0x25)
+        return 3;
+    return 0;
+}
+
 static int apply_fixups(Link *l, const GameLinkImage *image)
 {
     size_t *owners = NULL;
@@ -360,7 +384,8 @@ static int apply_fixups(Link *l, const GameLinkImage *image)
         !image->alignment || (image->alignment & (image->alignment - 1)) ||
         ((uintptr_t)l->rw & (image->alignment - 1)) || (l->rx & (image->alignment - 1)) ||
         image->size > UINTPTR_MAX - (uintptr_t)l->rw || image->size > UINTPTR_MAX - l->rx ||
-        image->got_offset > image->size || image->got_count > (image->size - image->got_offset) / 8 ||
+        image->text_size > image->got_offset || image->got_offset > image->size ||
+        image->got_count > (image->size - image->got_offset) / 8 ||
         image->thunk_offset > image->size ||
         image->thunk_capacity > (image->size - image->thunk_offset) / 16 ||
         image->got_offset % 8 || image->thunk_offset % 16 ||
@@ -408,8 +433,9 @@ static int apply_fixups(Link *l, const GameLinkImage *image)
                 fail(l, "invalid fixup position");
             goto done_apply;
         }
-        for (size_t b = 0; b < width; b++) {
-            size_t pos = (size_t)f->offset + b;
+        size_t prefix = got_relax_kind(image, f) ? 2 : 0;
+        for (size_t b = 0; b < width + prefix; b++) {
+            size_t pos = (size_t)f->offset - prefix + b;
             unsigned char mask = (unsigned char)(1u << (pos % 8));
             if (covered[pos / 8] & mask) {
                 fail(l, "overlapping fixups");
@@ -458,8 +484,27 @@ static int apply_fixups(Link *l, const GameLinkImage *image)
         uintptr_t p = (f->place_view == GAME_LINK_TARGET_RW ? (uintptr_t)l->rw : l->rx) + f->offset;
         __int128 value;
         if (f->type == R_X86_64_GOTPCRELX || f->type == R_X86_64_REX_GOTPCRELX) {
-            memcpy(l->rw + f->slot_offset, &s, 8);
-            value = (__int128)l->rx + f->slot_offset + f->addend - p;
+            int kind = got_relax_kind(image, f);
+            value = (__int128)s + f->addend - p;
+            if (kind && value >= INT32_MIN && value <= INT32_MAX &&
+                (kind != 3 || value < INT32_MAX)) {
+                unsigned char *loc = l->rw + f->offset;
+                if (kind == 1) {
+                    loc[-2] = 0x8d;
+                } else if (kind == 2) {
+                    loc[-2] = 0x67;
+                    loc[-1] = 0xe8;
+                } else {
+                    loc[-2] = 0xe9;
+                    int32_t displacement = (int32_t)(value + 1);
+                    memcpy(loc - 1, &displacement, sizeof displacement);
+                    loc[3] = 0x90;
+                    continue;
+                }
+            } else {
+                memcpy(l->rw + f->slot_offset, &s, 8);
+                value = (__int128)l->rx + f->slot_offset + f->addend - p;
+            }
         } else if (f->type == R_X86_64_64) {
             value = (__int128)s + f->addend;
         } else {

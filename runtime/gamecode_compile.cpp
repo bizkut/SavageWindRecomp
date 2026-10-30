@@ -98,13 +98,13 @@ static std::vector<std::string> arguments(const std::string &root, const std::st
         "-x", "c", "/gamecode/" + name};
 }
 
-static Digest cache_key(const Job &job, const Digest &headers, const Digest &identity)
+static Digest cache_key(const Job &job, const Digest &headers, const Digest &llvm_build)
 {
     llvm::SHA256 hash;
-    add_field(hash, "gamecode-object-v1");
+    add_field(hash, "gamecode-object-v2");
     add_field(hash, LLVM_VERSION_STRING);
     add_field(hash, llvm::StringRef(reinterpret_cast<const char *>(headers.data()), headers.size()));
-    add_field(hash, llvm::StringRef(reinterpret_cast<const char *>(identity.data()), identity.size()));
+    add_field(hash, llvm::StringRef(reinterpret_cast<const char *>(llvm_build.data()), llvm_build.size()));
     for (const auto &arg : arguments("/include-root", job.name))
         add_field(hash, arg);
     add_field(hash, job.source);
@@ -155,7 +155,7 @@ static std::vector<char> compile_object(const Job &job, const std::string &root)
 
 struct Build {
     std::string root;
-    Digest headers, identity;
+    Digest headers, llvm_build;
     const GameCodeObjectCache *cache;
     GameCodeProgress progress;
     void *progress_context;
@@ -198,7 +198,7 @@ struct Build {
                     queue.pop_front();
                     changed.notify_all();
                 }
-                Digest key = cache_key(job, headers, identity);
+                Digest key = cache_key(job, headers, llvm_build);
                 std::vector<char> data;
                 bool hit = false;
                 if (cache) {
@@ -282,7 +282,7 @@ extern "C" int gamecode_build_objects(const GameCodeCompileInputs *inputs, const
         Build build;
         build.root = fs::absolute(include_root).lexically_normal().string();
         build.headers = header_digest(build.root);
-        std::copy(inputs->cache_identity, inputs->cache_identity + 32, build.identity.begin());
+        std::copy(inputs->llvm_build_identity, inputs->llvm_build_identity + 32, build.llvm_build.begin());
         build.cache = cache;
         build.progress = progress;
         build.progress_context = progress_context;

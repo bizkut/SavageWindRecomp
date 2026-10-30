@@ -18,7 +18,7 @@ typedef struct GameCodeCompileInputs {
     GameCodeBuffer modules[3]; /* main, subsdk0, sdk, in load order */
     GameCodeBuffer layout; /* optional; when supplied it must match the NSOs */
     GameCodeBuffer hle;
-    uint8_t cache_identity[32]; /* Optional caller identity; zero when not supplied. */
+    uint8_t llvm_build_identity[32]; /* SHA-256 of the compiler build, including patches. */
 } GameCodeCompileInputs;
 
 typedef struct GameCodeObjectCache {

@@ -94,17 +94,19 @@ if [[ $variant == console ]]; then
     title_name=gamecode-console
     generator_id=$(cat tools/gen_cpp/*.cpp tools/gen_cpp/*.h runtime/hle/hle_symbols.txt \
         "$root/build/ps5/capstone/libcapstone.a" | sha256sum | cut -d' ' -f1)
+    llvm_id=$(cd "$llvm_target/lib" && sha256sum libclang*.a libLLVM*.a | sha256sum | cut -d' ' -f1)
     compile_id=$(
         {
             cat runtime/gamecode_compile.cpp runtime/cpu.h runtime/gamelib.h runtime/simd*.h
-            sha256sum "$llvm_target"/lib/libclang*.a "$llvm_target"/lib/libLLVM*.a
+            printf '%s\n' "$llvm_id"
             (cd "$sdk/target/include" && find -L . -type f -print0 | sort -z | xargs -0 sha256sum)
             (cd "$(clang-18 -print-resource-dir)/include" && find -L . -type f -print0 | sort -z | xargs -0 sha256sum)
         } | sha256sum | cut -d' ' -f1
     )
     export PS5_GAMECODE_EXPORT_MANIFEST="$root/runtime/gamecode_export_symbols.txt"
     export PS5_CFLAGS="$PS5_CFLAGS -DGAMECODE_CONSOLE -DGAMECODE_GENERATOR_SHA256=\"$generator_id\" \
--DGAMECODE_COMPILE_SHA256=\"$compile_id\" -I$llvm_src/clang/include -I$llvm_target/tools/clang/include \
+-DGAMECODE_COMPILE_SHA256=\"$compile_id\" -DGAMECODE_LLVM_SHA256=\"$llvm_id\" \
+-I$llvm_src/clang/include -I$llvm_target/tools/clang/include \
 -I$llvm_src/llvm/include -I$llvm_target/include -I$root/build/s9-cpp/deps/capstone-5.0.9/src/include"
     console_sources=(runtime/platform/gamecode_ps5.c runtime/gamecode_compile.cpp runtime/gamecode_link.c \
         runtime/gamecode_cache.c tools/gen_cpp/patches.cpp ps5/probe/s8_compat.c)

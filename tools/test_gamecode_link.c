@@ -131,6 +131,52 @@ static void expect_failure(GameLinkObject *objects, size_t count, GameExport *ex
     }
 }
 
+typedef struct GotStats {
+    size_t uses, mov, call, jump, slots_used;
+    size_t target_rx, target_rw, target_export, target_absolute;
+} GotStats;
+
+static GotStats got_stats(const GameLinkImage *image)
+{
+    GotStats stats = {0};
+    unsigned char *used = calloc(image->got_count ? image->got_count : 1, 1);
+    CHECK(used);
+    for (size_t i = 0; i < image->fixup_count; i++) {
+        const GameLinkFixup *f = &image->fixups[i];
+        if (f->type != 41 && f->type != 42)
+            continue;
+        stats.uses++;
+        if (f->target.kind == GAME_LINK_TARGET_RX)
+            stats.target_rx++;
+        else if (f->target.kind == GAME_LINK_TARGET_RW)
+            stats.target_rw++;
+        else if (f->target.kind == GAME_LINK_TARGET_EXPORT)
+            stats.target_export++;
+        else
+            stats.target_absolute++;
+        const unsigned char *before = image->canonical + f->offset;
+        const unsigned char *after = (const unsigned char *)image->rw + f->offset;
+        if (f->offset >= 2 && before[-2] == 0x8b && after[-2] == 0x8d) {
+            stats.mov++;
+        } else if (f->offset >= 2 && before[-2] == 0xff && before[-1] == 0x15 &&
+                   after[-2] == 0x67 && after[-1] == 0xe8) {
+            stats.call++;
+        } else if (f->offset >= 2 && before[-2] == 0xff && before[-1] == 0x25 &&
+                   after[-2] == 0xe9 && after[3] == 0x90) {
+            stats.jump++;
+        } else {
+            size_t slot = (size_t)(f->slot_offset - image->got_offset) / 8;
+            CHECK(slot < image->got_count);
+            if (!used[slot]) {
+                used[slot] = 1;
+                stats.slots_used++;
+            }
+        }
+    }
+    free(used);
+    return stats;
+}
+
 static void replay_matches_fresh(const GameLinkImage *first, const GameLinkObject *objects, size_t count,
                                  const GameExport *exports, size_t export_count, int distant_rx)
 {
@@ -158,8 +204,12 @@ static void replay_matches_fresh(const GameLinkImage *first, const GameLinkObjec
         exit(1);
     }
     CHECK(fresh.size == size && fresh.alignment == first->alignment);
-    if (distant_rx)
+    if (distant_rx) {
         CHECK(first->thunk_count == 0 && fresh.thunk_count > 0);
+        GotStats old = got_stats(first);
+        GotStats now = got_stats(&fresh);
+        CHECK(now.slots_used > old.slots_used && now.call < old.call && now.jump < old.jump);
+    }
     CHECK(!memcmp(snapshot, rw, size));
     CHECK(!memcmp(first->canonical, fresh.canonical, size));
     CHECK(first->fixup_count == fresh.fixup_count);
@@ -218,9 +268,66 @@ static void synthetic(const char *path, GameLinkAllocator *a)
     image.layout[0] = saved_layout;
     gamecode_link_free_metadata(&image);
     void *external_address = exports[1].address;
-    exports[1].address = (void *)(image.rx + 64);
+    size_t stub_offset = image.size + 32;
+    CHECK(stub_offset + 4 <= ((Buffer *)a->context)->capacity);
+    exports[1].address = (void *)(image.rx + stub_offset);
     CHECK(gamecode_link(&object, 1, exports, 2, a, &image, error, sizeof error));
+    const unsigned char double_arg[] = {0x8d, 0x04, 0x3f, 0xc3};
+    memcpy((unsigned char *)image.rw + stub_offset, double_arg, sizeof double_arg);
+    CHECK(((int (*)(void))image.game_version)() == 34);
     CHECK(image.thunk_count == 0);
+    GotStats near = got_stats(&image);
+    CHECK(near.mov && near.call && near.jump);
+    GameLinkFixup *mov = NULL, *weak = NULL;
+    for (size_t i = 0; i < image.fixup_count; i++) {
+        GameLinkFixup *f = &image.fixups[i];
+        if ((f->type == 41 || f->type == 42) && f->offset >= 2 &&
+            image.canonical[f->offset - 2] == 0x8b) {
+            if (f->target.kind == GAME_LINK_TARGET_ABSOLUTE && f->target.value == 0)
+                weak = f;
+            else if (((unsigned char *)image.rw)[f->offset - 2] == 0x8d)
+                mov = f;
+        }
+    }
+    CHECK(mov && weak && ((unsigned char *)image.rw)[weak->offset - 2] == 0x8b);
+    unsigned char opcode = image.canonical[mov->offset - 2];
+    image.canonical[mov->offset - 2] = 0x8a;
+    CHECK(gamecode_link_apply_fixups(&image, image.rw, image.rx, exports, 2, error, sizeof error));
+    CHECK(((unsigned char *)image.rw)[mov->offset - 2] == 0x8a);
+    image.canonical[mov->offset - 2] = opcode;
+    CHECK(mov->type == 42 && mov->offset >= 3);
+    unsigned char rex = image.canonical[mov->offset - 3];
+    image.canonical[mov->offset - 3] = 0x90;
+    CHECK(gamecode_link_apply_fixups(&image, image.rw, image.rx, exports, 2, error, sizeof error));
+    CHECK(((unsigned char *)image.rw)[mov->offset - 2] == 0x8b);
+    image.canonical[mov->offset - 3] = rex;
+    int64_t addend = mov->addend;
+    mov->addend = -3;
+    CHECK(gamecode_link_apply_fixups(&image, image.rw, image.rx, exports, 2, error, sizeof error));
+    CHECK(((unsigned char *)image.rw)[mov->offset - 2] == 0x8b);
+    mov->addend = addend;
+    CHECK(gamecode_link_apply_fixups(&image, image.rw, image.rx, exports, 2, error, sizeof error));
+    CHECK(((int (*)(void))image.game_version)() == 34);
+    for (size_t i = 0; i < image.fixup_count; i++) {
+        GameLinkFixup *f = &image.fixups[i];
+        if ((f->type != 41 && f->type != 42) || f->target.kind != GAME_LINK_TARGET_EXPORT ||
+            f->target.value != 1 || f->offset < 2 || image.canonical[f->offset - 2] != 0xff)
+            continue;
+        unsigned char modrm = image.canonical[f->offset - 1];
+        if (modrm != 0x15 && modrm != 0x25) continue;
+        uintptr_t p = image.rx + f->offset;
+        exports[1].address = (void *)(p + 4 + (int64_t)INT32_MAX);
+        CHECK(gamecode_link_apply_fixups(&image, image.rw, image.rx, exports, 2, error, sizeof error));
+        CHECK(((unsigned char *)image.rw)[f->offset - 2] == (modrm == 0x15 ? 0x67 : 0xff));
+        exports[1].address = (void *)(p + 4 + (int64_t)INT32_MIN);
+        CHECK(gamecode_link_apply_fixups(&image, image.rw, image.rx, exports, 2, error, sizeof error));
+        CHECK(((unsigned char *)image.rw)[f->offset - 2] == (modrm == 0x15 ? 0x67 : 0xe9));
+        exports[1].address = (void *)(p + 5 + (int64_t)INT32_MAX);
+        CHECK(gamecode_link_apply_fixups(&image, image.rw, image.rx, exports, 2, error, sizeof error));
+        CHECK(((unsigned char *)image.rw)[f->offset - 2] == 0xff);
+    }
+    exports[1].address = (void *)(image.rx + stub_offset);
+    CHECK(gamecode_link_apply_fixups(&image, image.rw, image.rx, exports, 2, error, sizeof error));
     replay_matches_fresh(&image, &object, 1, exports, 2, 1);
     gamecode_link_free_metadata(&image);
     exports[1].address = external_address;
@@ -368,6 +475,10 @@ int main(int argc, char **argv)
                "seconds=%.3f peak_rss_kib=%ld\n", count, image.text_size, image.rodata_size,
                image.data_size, image.bss_size, image.size, image.got_count, image.thunk_count,
                (end.tv_sec - begin.tv_sec) + (end.tv_nsec - begin.tv_nsec) / 1e9, usage.ru_maxrss);
+        GotStats got = got_stats(&image);
+        printf("got_uses=%zu relaxed=%zu mov=%zu call=%zu jump=%zu active_slots=%zu reserved_slots=%zu\n",
+               got.uses, got.mov + got.call + got.jump, got.mov, got.call, got.jump,
+               got.slots_used, image.got_count);
         size_t cross_view_pc32 = 0;
         for (size_t i = 0; i < image.fixup_count; i++) {
             const GameLinkFixup *f = &image.fixups[i];

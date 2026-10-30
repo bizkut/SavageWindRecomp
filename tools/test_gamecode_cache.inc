@@ -18,6 +18,8 @@ static void cache_test(GameLinkObject *objects, size_t count, GameExport *export
 {
     GameCodeIdentity identity = {0};
     memcpy(identity.llvm_version, "clang-18", 9);
+    identity.linker_version = GAMECODE_LINKER_VERSION;
+    identity.cache_format_version = GAMECODE_CACHE_FORMAT_VERSION;
     char cache_path[] = "build/gamecode-cache.XXXXXX";
     int fd = mkstemp(cache_path);
     CHECK(fd >= 0);
@@ -70,7 +72,8 @@ static void cache_test(GameLinkObject *objects, size_t count, GameExport *export
     truncated.size--;
     CHECK(!gamecode_cache_load(&identity, &truncated, allocator, exports, export_count, &rejected, error,
                                sizeof error));
-    uint64_t offsets[] = {0, 704 + image_size / 2, 704 + image_size};
+    uint64_t offsets[] = {0, GAMECODE_CACHE_MANIFEST_SIZE + image_size / 2,
+                          GAMECODE_CACHE_MANIFEST_SIZE + image_size};
     for (size_t i = 0; i < sizeof offsets / sizeof offsets[0]; i++) {
         unsigned char byte;
         CHECK(cache_read(&fd, offsets[i], &byte, 1));
@@ -88,28 +91,30 @@ static void cache_test(GameLinkObject *objects, size_t count, GameExport *export
                                    sizeof error));
         id[i] ^= 1;
     }
-    size_t fixup_size = (size_t)reader.size - 704 - image_size;
+    size_t fixup_size = (size_t)reader.size - GAMECODE_CACHE_MANIFEST_SIZE - image_size;
     CHECK(fixup_size >= 48);
-    unsigned char manifest[704];
+    unsigned char manifest[GAMECODE_CACHE_MANIFEST_SIZE];
     unsigned char *fixups = malloc(fixup_size);
     CHECK(fixups && cache_read(&fd, 0, manifest, sizeof manifest) &&
-          cache_read(&fd, 704 + image_size, fixups, fixup_size));
+          cache_read(&fd, GAMECODE_CACHE_MANIFEST_SIZE + image_size, fixups, fixup_size));
     unsigned char original_type[4];
     memcpy(original_type, fixups + 36, sizeof original_type);
     fixups[36] = 0xff;
     fixups[37] = 0xff;
     fixups[38] = 0xff;
     fixups[39] = 0xff;
-    CHECK(!mbedtls_sha256_ret(fixups, fixup_size, manifest + 640, 0));
-    CHECK(!mbedtls_sha256_ret(manifest, 672, manifest + 672, 0));
+    CHECK(!mbedtls_sha256_ret(fixups, fixup_size, manifest + GAMECODE_CACHE_MANIFEST_SIZE - 64, 0));
+    CHECK(!mbedtls_sha256_ret(manifest, GAMECODE_CACHE_MANIFEST_SIZE - 32,
+                              manifest + GAMECODE_CACHE_MANIFEST_SIZE - 32, 0));
     CHECK(cache_write(&fd, 0, manifest, sizeof manifest) &&
-          cache_write(&fd, 704 + image_size, fixups, fixup_size));
+          cache_write(&fd, GAMECODE_CACHE_MANIFEST_SIZE + image_size, fixups, fixup_size));
     CHECK(!gamecode_cache_load(&identity, &reader, allocator, exports, export_count, &rejected, error, sizeof error));
     memcpy(fixups + 36, original_type, sizeof original_type);
-    CHECK(!mbedtls_sha256_ret(fixups, fixup_size, manifest + 640, 0));
-    CHECK(!mbedtls_sha256_ret(manifest, 672, manifest + 672, 0));
+    CHECK(!mbedtls_sha256_ret(fixups, fixup_size, manifest + GAMECODE_CACHE_MANIFEST_SIZE - 64, 0));
+    CHECK(!mbedtls_sha256_ret(manifest, GAMECODE_CACHE_MANIFEST_SIZE - 32,
+                              manifest + GAMECODE_CACHE_MANIFEST_SIZE - 32, 0));
     CHECK(cache_write(&fd, 0, manifest, sizeof manifest) &&
-          cache_write(&fd, 704 + image_size, fixups, fixup_size));
+          cache_write(&fd, GAMECODE_CACHE_MANIFEST_SIZE + image_size, fixups, fixup_size));
     free(fixups);
     close(fd);
     struct rusage usage;
