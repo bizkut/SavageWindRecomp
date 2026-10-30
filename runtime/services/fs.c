@@ -26,6 +26,7 @@
 #include "../nvn/sharp_ui.h"
 #include "../romfs_image.h"
 #ifdef ROMFS_PACKAGE
+#include "../../ps5/importer/package_exefs.h"
 #include <strings.h>
 #endif
 #ifdef __PROSPERO__
@@ -992,6 +993,18 @@ static void free_packages(char **paths, size_t count) {
     free(paths);
 }
 
+ssize_t fs_control_read(const char *name, void *buffer, size_t capacity, char *why, size_t why_size) {
+    char keys[1200], **paths = NULL;
+    size_t count = 0;
+    ssize_t result = -1;
+    if (list_packages(keys, &paths, &count, why, why_size)) {
+        result = savagewind_control_read(keys, (const char *const *)paths, count, name,
+                                        buffer, capacity, why, why_size);
+    }
+    free_packages(paths, count);
+    return result;
+}
+
 static RomfsImage *open_package_image(unsigned index, char *why, size_t why_size) {
     char keys[1200], **paths = NULL;
     size_t count = 0;
@@ -1129,6 +1142,25 @@ int fs_hd_ui_layouts(HdUiLayoutCallback callback, void *context) {
     if (!callback) return -1;
     HdUiLayouts job = {callback, context};
     return fs_hd_ui_packs(hd_ui_pack_layouts, &job);
+}
+
+int fs_hd_ui_layouts_in_pack(const char *pack, HdUiLayoutCallback callback, void *context) {
+    const RomImage *m = &images[0];
+    if (!pack || !callback || !m->img || !m->rom_files) return -1;
+    for (int i = 0; i < m->rom_nfiles; i++) {
+        const RomFile *f = &m->rom_files[i];
+        if (strcmp(f->path, pack)) continue;
+        if (f->size > (1ull << 30)) return -1;
+        size_t size = (size_t)f->size;
+        uint8_t *bytes = malloc(size ? size : 1);
+        if (!bytes) return -1;
+        HdUiLayouts job = {callback, context};
+        int result = romfs_image_pread(m->img, bytes, size, f->off) == (ssize_t)size
+                     ? hd_ui_pack_layouts(&job, f->path, bytes, size) : -1;
+        free(bytes);
+        return result;
+    }
+    return -1;
 }
 
 // Item icons: UI/StockItem/*.sbitemico (Yaz0 FRES) of the merged base/update RomFS, decompressed for the callback

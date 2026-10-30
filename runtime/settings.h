@@ -103,6 +103,9 @@ typedef struct {
     bool sharp_ui_chosen;  // sharp_ui came from the ini (PS5: otherwise the 4K first-launch default decides)
     bool hd_ui;          // Load the user's generated UI texture pack when present
     bool hd_ui_generate; // PS5: generate the user-owned UI pack during first-start precompilation
+#ifdef __PROSPERO__
+    bool home_art;       // Generate home-screen art from the player's files; 0 restores shipped art.
+#endif
     bool async_shaders;  // draw on while new shaders compile (no stutter; what needs them is skipped meanwhile)
     bool precompile_shaders;  // setting the game files up also precompiles every shader (runtime/nvn/precompile.h)
     bool startup_splash;  // PS5: show the startup image until the game's first present

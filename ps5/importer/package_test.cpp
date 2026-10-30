@@ -214,6 +214,24 @@ int main(int argc, char **argv) {
         if (savagewind_exefs_open(nullptr, nullptr, 0, invalid_why, sizeof invalid_why) ||
             !std::strstr(invalid_why, "keys_missing"))
             throw std::runtime_error("invalid ExeFS input did not return an error");
+        const auto control_paths = const_cast<const char *const *>(argv + 4);
+        size_t control_count = size_t(argc - 4);
+        char control_why[256] = {};
+        if (savagewind_control_read(argv[1], control_paths, control_count, "../control.nacp",
+                                   nullptr, 0, control_why, sizeof control_why) != -1)
+            throw std::runtime_error("Control NCA accepted an invalid file name");
+        ssize_t icon_size = savagewind_control_read(argv[1], control_paths, control_count,
+                                                   "icon_AmericanEnglish.dat", nullptr, 0,
+                                                   control_why, sizeof control_why);
+        if (icon_size < 4 || icon_size > 1024 * 1024) throw std::runtime_error("invalid Control icon size");
+        std::vector<unsigned char> icon(size_t(icon_size), 0);
+        if (savagewind_control_read(argv[1], control_paths, control_count, "icon_AmericanEnglish.dat",
+                                   icon.data(), icon.size(), control_why, sizeof control_why) != icon_size ||
+            icon[0] != 0xff || icon[1] != 0xd8 || icon[icon.size() - 2] != 0xff || icon.back() != 0xd9)
+            throw std::runtime_error("Control NCA icon read failed");
+        if (savagewind_control_read(argv[1], control_paths, control_count, "not-present",
+                                   nullptr, 0, control_why, sizeof control_why) != -1)
+            throw std::runtime_error("Control NCA accepted a missing file");
         char exefs_why[256] = {};
         void *exefs = savagewind_exefs_open(argv[1], const_cast<const char *const *>(argv + 4),
                                            size_t(argc - 4), exefs_why, sizeof exefs_why);

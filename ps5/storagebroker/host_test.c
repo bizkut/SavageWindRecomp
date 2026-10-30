@@ -52,6 +52,117 @@ static void *append_records(void *arg)
     sb_close(&client);
     return NULL;
 }
+static void test_home_art(struct sb_client *client)
+{
+    static const char *dirs[] = {
+        SB_ROOT "/home-art", SB_ROOT "/home-art/user", SB_ROOT "/home-art/user/app",
+        SB_ROOT "/home-art/user/app/PPSA90212", SB_ROOT "/home-art/user/app/PPSA90212/sce_sys",
+        SB_ROOT "/home-art/user/appmeta", SB_ROOT "/home-art/user/appmeta/PPSA90212"
+    };
+    static const char *files[] = {
+        SB_ROOT "/home-art/user/app/PPSA90212/sce_sys/icon0.png",
+        SB_ROOT "/home-art/user/app/PPSA90212/icon0.png",
+        SB_ROOT "/home-art/user/appmeta/PPSA90212/icon0.png",
+        SB_ROOT "/home-art/user/app/PPSA90212/sce_sys/pic0.dds",
+        SB_ROOT "/home-art/user/appmeta/PPSA90212/pic0.dds",
+        SB_ROOT "/home-art/user/app/PPSA90212/sce_sys/pic1.dds",
+        SB_ROOT "/home-art/user/appmeta/PPSA90212/pic1.dds"
+    };
+    unsigned char png[33] = {137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13,
+                             'I', 'H', 'D', 'R', 0, 0, 2, 0, 0, 0, 2, 0};
+    unsigned char *dds = malloc(SB_HOME_ART_DDS_SIZE);
+    struct stat before, after;
+    int fd;
+    int ok = dds != NULL;
+    for (size_t i = 0; i < sizeof(dirs) / sizeof(dirs[0]); ++i)
+        if (mkdir(dirs[i], 0700)) ok = 0;
+    for (size_t i = 0; i < sizeof(files) / sizeof(files[0]); ++i) {
+        fd = open(files[i], O_WRONLY | O_CREAT | O_EXCL, 0640);
+        if (fd < 0) ok = 0;
+        else {
+            if (write(fd, "old", 3) != 3) ok = 0;
+            close(fd);
+        }
+    }
+    fd = open("../sce_sys/pic0.dds", O_RDONLY);
+    if (fd < 0 || !dds || read(fd, dds, SB_HOME_ART_DDS_SIZE) != SB_HOME_ART_DDS_SIZE) ok = 0;
+    if (fd >= 0) close(fd);
+    check(ok, "home art fixtures");
+    if (!ok) { free(dds); return; }
+    check(stat(files[0], &before) == 0 &&
+          sb_install_home_art(client, SB_HOME_ART_ICON0, png, sizeof(png)) == 0 &&
+          stat(files[0], &after) == 0 && before.st_uid == after.st_uid && before.st_gid == after.st_gid &&
+          (before.st_mode & 07777) == (after.st_mode & 07777), "install icon preserves metadata");
+    for (size_t i = 0; i < 3; ++i) {
+        unsigned char copy[sizeof(png)];
+        fd = open(files[i], O_RDONLY);
+        ok = fd >= 0 && read(fd, copy, sizeof(copy)) == sizeof(copy) && !memcmp(copy, png, sizeof(copy));
+        if (fd >= 0) close(fd);
+        check(ok, "icon fixed destination content");
+    }
+    for (size_t i = 3; i < 7; ++i)
+        check(unlink(files[i]) == 0, "remove existing DDS fixture");
+    check(sb_install_home_art(client, SB_HOME_ART_PIC0, dds, SB_HOME_ART_DDS_SIZE) == 0 &&
+          sb_install_home_art(client, SB_HOME_ART_PIC1, dds, SB_HOME_ART_DDS_SIZE) == 0,
+          "create missing DDS destinations for both kinds");
+    for (size_t i = 3; i < 7; ++i) {
+        unsigned char *copy = malloc(SB_HOME_ART_DDS_SIZE);
+        fd = open(files[i], O_RDONLY);
+        ok = copy && fd >= 0 && read(fd, copy, SB_HOME_ART_DDS_SIZE) == SB_HOME_ART_DDS_SIZE &&
+             !memcmp(copy, dds, SB_HOME_ART_DDS_SIZE);
+        if (fd >= 0) close(fd);
+        free(copy);
+        check(ok, "DDS fixed destination content");
+    }
+    check(stat(files[3], &before) == 0 && (before.st_mode & 07777) == 0644 &&
+          chmod(files[3], 0600) == 0 && stat(files[3], &before) == 0 &&
+          sb_install_home_art(client, SB_HOME_ART_PIC0, dds, SB_HOME_ART_DDS_SIZE) == 0 &&
+          stat(files[3], &after) == 0 && before.st_uid == after.st_uid && before.st_gid == after.st_gid &&
+          (after.st_mode & 07777) == 0600, "existing DDS metadata preserved on replacement");
+    {
+        struct sb_client old = {-1, 0};
+        check(sb_connect_version(&old, 6) == 0 &&
+              sb_install_home_art(&old, SB_HOME_ART_PIC0, dds, SB_HOME_ART_DDS_SIZE) == 0,
+              "version 6 client retains home art operation");
+        sb_close(&old);
+    }
+    check(sb_install_home_art(client, (enum sb_home_art_kind)99, png, sizeof(png)) == -EINVAL &&
+          sb_install_home_art(client, SB_HOME_ART_PIC0, dds, SB_HOME_ART_DDS_SIZE - 1) == -EINVAL &&
+          sb_install_home_art(client, SB_HOME_ART_ICON0, png, 20) == -EINVAL, "reject kind and sizes");
+    png[0] ^= 1;
+    check(sb_install_home_art(client, SB_HOME_ART_ICON0, png, sizeof(png)) == -EINVAL, "reject PNG magic");
+    png[0] ^= 1;
+    png[18] ^= 1;
+    check(sb_install_home_art(client, SB_HOME_ART_ICON0, png, sizeof(png)) == -EINVAL, "reject PNG dimensions");
+    dds[0] ^= 1;
+    check(sb_install_home_art(client, SB_HOME_ART_PIC0, dds, SB_HOME_ART_DDS_SIZE) == -EINVAL,
+          "reject DDS magic");
+    dds[0] ^= 1;
+    dds[16] ^= 1;
+    check(sb_install_home_art(client, SB_HOME_ART_PIC0, dds, SB_HOME_ART_DDS_SIZE) == -EINVAL,
+          "reject DDS dimensions");
+    dds[16] ^= 1;
+    dds[128] ^= 1;
+    check(sb_install_home_art(client, SB_HOME_ART_PIC0, dds, SB_HOME_ART_DDS_SIZE) == -EINVAL,
+          "reject DDS format");
+    dds[128] ^= 1;
+    dds[28] = 2;
+    check(sb_install_home_art(client, SB_HOME_ART_PIC0, dds, SB_HOME_ART_DDS_SIZE) == -EINVAL,
+          "reject DDS mip count");
+    dds[28] = 1;
+    png[18] ^= 1;
+    unlink(files[2]);
+    check(stat(files[0], &before) == 0 &&
+          sb_install_home_art(client, SB_HOME_ART_ICON0, png, sizeof(png)) < 0 &&
+          stat(files[0], &after) == 0 && after.st_ino == before.st_ino,
+          "failed preparation leaves destinations unchanged");
+    check(symlink(files[0], files[2]) == 0 &&
+          sb_install_home_art(client, SB_HOME_ART_ICON0, png, sizeof(png)) < 0 &&
+          stat(files[0], &after) == 0 && after.st_ino == before.st_ino,
+          "reject destination symlink without touching its target");
+    unlink(files[2]);
+    free(dds);
+}
 
 
 int main(void) {
@@ -65,13 +176,17 @@ int main(void) {
     {
         struct sb_client old = {-1, 0};
         check(sb_connect_version(&old, 2) == -EPROTONOSUPPORT && old.fd == -1,
-              "v5 rejects v2 requests");
+              "v7 rejects v2 requests");
         check(sb_connect_version(&old, 3) == -EPROTONOSUPPORT && old.fd == -1,
-              "v5 rejects v3 requests");
+              "v7 rejects v3 requests");
         check(sb_connect_version(&old, 4) == -EPROTONOSUPPORT && old.fd == -1,
-              "v5 rejects v4 requests");
+              "v7 rejects v4 requests");
+        check(sb_connect_version(&old, 5) == 0 && sb_stat(&old, "missing", &size) == -ENOENT,
+              "version 5 client retains existing operations");
+        sb_close(&old);
     }
     if (client.fd < 0) return 1;
+    test_home_art(&client);
     {
         int fd;
         check(sb_mkdir(&client, "import") == 0, "create import directory");

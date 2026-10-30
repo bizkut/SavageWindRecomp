@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copy selected pack archives from the merged, package-backed RomFS to a private output directory.
+#include "package_exefs.h"
 #include <cstdint>
 #include <cstdlib>
 #include <cstdio>
@@ -17,6 +18,30 @@ static uint32_t u32(const uint8_t *p) { uint32_t v; std::memcpy(&v,p,4); return 
 static uint64_t u64(const uint8_t *p) { uint64_t v; std::memcpy(&v,p,8); return v; }
 int main(int argc, char **argv) {
     if (argc < 5) { std::fprintf(stderr,"usage: hd-ui-extract <keys> <output-dir> <base.nsp> <update.nsp> [packages...]\n"); return 2; }
+    const char *control = std::getenv("HD_UI_CONTROL");
+    if (control) {
+        char error[256] = {};
+        const char *const *packages = const_cast<const char *const *>(argv + 3);
+        ssize_t size = savagewind_control_read(argv[1], packages, argc - 3, control, nullptr, 0,
+                                               error, sizeof error);
+        if (size < 0 || size > 16 * 1024 * 1024) {
+            std::fprintf(stderr, "Control NCA: %s\n", error);
+            return 1;
+        }
+        std::vector<uint8_t> bytes(size);
+        if (savagewind_control_read(argv[1], packages, argc - 3, control, bytes.data(), bytes.size(),
+                                    error, sizeof error) != size) {
+            std::fprintf(stderr, "Control NCA: %s\n", error);
+            return 1;
+        }
+        std::filesystem::create_directories(argv[2]);
+        auto output = std::filesystem::path(argv[2]) / control;
+        FILE *f = std::fopen(output.string().c_str(), "wb");
+        if (!f) return 1;
+        bool ok = std::fwrite(bytes.data(), 1, bytes.size(), f) == bytes.size();
+        ok = std::fclose(f) == 0 && ok;
+        return ok ? 0 : 1;
+    }
     char why[256] = {}; void *pkg=savagewind_package_open(argv[1],const_cast<const char *const *>(argv+3),argc-3,0,why,sizeof why);
     if (!pkg) { std::fprintf(stderr,"%s\n",why); return 1; }
     try {

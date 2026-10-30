@@ -30,6 +30,7 @@
 
 static int root_fd;
 static unsigned char token[SB_TOKEN_BYTES];
+static __thread uint32_t reply_version = SB_VERSION;
 static pthread_mutex_t temp_lock = PTHREAD_MUTEX_INITIALIZER;
 /* Keep path checks and namespace changes indivisible relative to other clients. */
 static pthread_mutex_t request_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -65,7 +66,7 @@ static int io_all(int fd, void *buffer, size_t length, int writing)
 }
 static int reply_to(int fd, int result, uint64_t value)
 {
-    struct sb_reply r = { SB_MAGIC, result, SB_VERSION, 0, value };
+    struct sb_reply r = { SB_MAGIC, result, reply_version, 0, value };
     return io_all(fd, &r, sizeof(r), 1);
 }
 
@@ -165,6 +166,106 @@ static int replace_file(int dir, const char *leaf, const unsigned char *data, si
     if (!rc && renameat(dir, name, dir, leaf)) rc = -errno;
     if (!rc && fsync(dir)) rc = -errno;
     if (rc) unlinkat(dir, name, 0);
+    return rc;
+}
+
+#ifdef SB_HOST_TEST
+#define HOME_ART_PREFIX SB_ROOT "/home-art"
+#else
+#define HOME_ART_PREFIX ""
+#endif
+
+static uint32_t le32(const unsigned char *p)
+{
+    return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;
+}
+
+static int valid_home_art(uint64_t kind, const unsigned char *data, uint32_t size)
+{
+    static const unsigned char png[] = {137, 80, 78, 71, 13, 10, 26, 10};
+    if (kind == SB_HOME_ART_ICON0) {
+        return size >= 33 && size <= SB_HOME_ART_ICON_MAX && !memcmp(data, png, sizeof(png)) &&
+               !memcmp(data + 8, "\0\0\0\15IHDR\0\0\2\0\0\0\2\0", 16);
+    }
+    if (kind != SB_HOME_ART_PIC0 && kind != SB_HOME_ART_PIC1) return 0;
+    return size == SB_HOME_ART_DDS_SIZE && !memcmp(data, "DDS ", 4) && le32(data + 4) == 124 &&
+           le32(data + 12) == 2160 && le32(data + 16) == 3840 && le32(data + 24) <= 1 &&
+           le32(data + 28) == 1 && le32(data + 76) == 32 && le32(data + 80) == 4 &&
+           !memcmp(data + 84, "DX10", 4) && le32(data + 128) == 98 && le32(data + 132) == 3 &&
+           le32(data + 136) == 0 && le32(data + 140) == 1;
+}
+
+/* Open each fixed component without following symlinks. */
+static int home_art_dir(const char *path)
+{
+    char copy[256], *part, *slash;
+    int dir = open("/", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (dir < 0) return -errno;
+    if (strlen(path) >= sizeof(copy)) { close(dir); return -ENAMETOOLONG; }
+    strcpy(copy, path + 1);
+    part = copy;
+    while (part && *part) {
+        int next;
+        slash = strchr(part, '/');
+        if (slash) *slash = 0;
+        next = openat(dir, part, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+        if (next < 0) { int rc = -errno; close(dir); return rc; }
+        close(dir);
+        dir = next;
+        part = slash ? slash + 1 : NULL;
+    }
+    return dir;
+}
+
+static int install_home_art(uint64_t kind, const unsigned char *data, uint32_t size)
+{
+    static const char *dirs[] = {
+        HOME_ART_PREFIX "/user/app/PPSA90212/sce_sys",
+        HOME_ART_PREFIX "/user/app/PPSA90212",
+        HOME_ART_PREFIX "/user/appmeta/PPSA90212"
+    };
+    const char *leaf;
+    int indexes[3] = {0, 1, 2};
+    int dir[3] = {-1, -1, -1};
+    char names[3][80] = {{0}};
+    int count = kind == SB_HOME_ART_ICON0 ? 3 : 2;
+    int rc = 0;
+    if (!valid_home_art(kind, data, size)) return -EINVAL;
+    leaf = kind == SB_HOME_ART_ICON0 ? "icon0.png" :
+           kind == SB_HOME_ART_PIC0 ? "pic0.dds" : "pic1.dds";
+    if (count == 2) indexes[1] = 2;
+    for (int i = 0; i < count; ++i) {
+        struct stat st;
+        int fd, exists = 1;
+        dir[i] = home_art_dir(dirs[indexes[i]]);
+        if (dir[i] < 0) { rc = dir[i]; break; }
+        if (fstatat(dir[i], leaf, &st, AT_SYMLINK_NOFOLLOW)) {
+            if (errno != ENOENT || kind == SB_HOME_ART_ICON0) { rc = -errno; break; }
+            exists = 0;
+        } else if (!S_ISREG(st.st_mode) || st.st_nlink != 1) {
+            rc = -EINVAL;
+            break;
+        }
+        fd = temp_file(dir[i], names[i]);
+        if (fd < 0) { rc = fd; names[i][0] = 0; break; }
+        rc = write_all_file(fd, data, size);
+        if (!rc && exists && fchown(fd, st.st_uid, st.st_gid)) rc = -errno;
+        if (!rc && fchmod(fd, exists ? st.st_mode & 07777 : 0644)) rc = -errno;
+        if (!rc && fsync(fd)) rc = -errno;
+        if (close(fd) && !rc) rc = -errno;
+        if (rc) break;
+    }
+    for (int i = 0; !rc && i < count; ++i) {
+        rc = existing_regular(dir[i], leaf, kind != SB_HOME_ART_ICON0);
+        if (!rc && renameat(dir[i], names[i], dir[i], leaf)) rc = -errno;
+        if (!rc) names[i][0] = 0;
+        if (!rc && fsync(dir[i])) rc = -errno;
+    }
+    for (int i = 0; i < count; ++i) {
+        if (dir[i] < 0) continue;
+        if (names[i][0]) unlinkat(dir[i], names[i], 0);
+        close(dir[i]);
+    }
     return rc;
 }
 static int list_directory(int dir, unsigned char *data, uint32_t capacity, int root)
@@ -399,10 +500,11 @@ static int do_request(struct sb_request *r, char *path, unsigned char *data, uin
 }
 static int valid_request(const struct sb_request *r)
 {
-    if (r->magic != SB_MAGIC || r->operation < SB_CREATE || r->operation > SB_PACKAGE_READ ||
+    if (r->magic != SB_MAGIC || r->operation < SB_CREATE || r->operation > SB_INSTALL_HOME_ART ||
         r->path_length > SB_MAX_PATH || r->length > SB_MAX_TRANSFER) return 0;
     if (r->operation == SB_QUIT || r->operation == SB_REPAIR)
         return !r->path_length && !r->length && !r->offset;
+    if (r->operation == SB_INSTALL_HOME_ART) return !r->path_length;
     if (r->operation == SB_PACKAGE_READ)
         return !r->path_length && r->offset <= INT64_MAX &&
                r->length <= (uint64_t)INT64_MAX - r->offset;
@@ -427,14 +529,17 @@ static void *serve(void *arg)
     char path[SB_MAX_PATH + 1];
     if (io_all(client, &hello, sizeof(hello), 0) || hello.magic != SB_MAGIC ||
         !hello.version || memcmp(hello.token, token, sizeof(token))) goto done;
-    if (reply_to(client, hello.version == SB_VERSION ? 0 : -EPROTONOSUPPORT, 0)) goto done;
+    reply_version = hello.version == 5 || hello.version == 6 ? hello.version : SB_VERSION;
+    if (reply_to(client, hello.version >= 5 && hello.version <= SB_VERSION ? 0 : -EPROTONOSUPPORT, 0))
+        goto done;
     while (!io_all(client, &r, sizeof(r), 0)) {
         unsigned char *data = NULL;
         struct sb_repair_stats repair_stats = {0};
         uint64_t value = 0;
         int rc;
         if (!valid_request(&r)) break;
-        if (hello.version != SB_VERSION && r.operation != SB_QUIT) break;
+        if ((hello.version < 5 || hello.version > SB_VERSION) && r.operation != SB_QUIT) break;
+        if (hello.version == 5 && r.operation == SB_INSTALL_HOME_ART) break;
         if (r.operation == SB_QUIT) {
             rc = hello.version > SB_VERSION ? 0 : -EPERM;
             if (reply_to(client, rc, 0)) break;
@@ -453,7 +558,7 @@ static void *serve(void *arg)
         path[r.path_length] = 0;
         if (r.length && (r.operation == SB_READ || r.operation == SB_PACKAGE_READ || r.operation == SB_WRITE ||
                          r.operation == SB_REPLACE || r.operation == SB_APPEND ||
-                         r.operation == SB_RENAME || r.operation == SB_LIST)) {
+                         r.operation == SB_RENAME || r.operation == SB_LIST || r.operation == SB_INSTALL_HOME_ART)) {
             data = malloc((size_t)r.length + (r.operation == SB_RENAME));
             if (!data) {
                 unsigned char discard[4096];
@@ -468,8 +573,8 @@ static void *serve(void *arg)
             }
         }
         if ((r.operation == SB_WRITE || r.operation == SB_REPLACE ||
-             r.operation == SB_APPEND || r.operation == SB_RENAME) && r.length &&
-            io_all(client, data, r.length, 0)) { free(data); break; }
+             r.operation == SB_APPEND || r.operation == SB_RENAME || r.operation == SB_INSTALL_HOME_ART) &&
+            r.length && io_all(client, data, r.length, 0)) { free(data); break; }
         if (r.operation == SB_RENAME) data[r.length] = 0;
         if (r.operation == SB_PACKAGE_OPEN) {
             char *leaf = NULL;
@@ -497,6 +602,10 @@ static void *serve(void *arg)
                 while (count < 0 && errno == EINTR);
                 rc = count < 0 ? -errno : (int)count;
             }
+        } else if (r.operation == SB_INSTALL_HOME_ART) {
+            pthread_mutex_lock(&request_lock);
+            rc = install_home_art(r.offset, data, r.length);
+            pthread_mutex_unlock(&request_lock);
         } else {
             pthread_mutex_lock(&request_lock);
             rc = do_request(&r, path, data, &value);

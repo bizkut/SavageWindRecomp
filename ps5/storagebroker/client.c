@@ -78,7 +78,7 @@ static int request(struct sb_client *c, uint32_t op, const char *path,
     int rc;
     if (!c || c->fd < 0 || length > SB_MAX_TRANSFER || (length && !data &&
         (op == SB_READ || op == SB_PACKAGE_READ || op == SB_WRITE || op == SB_REPLACE ||
-         op == SB_APPEND || op == SB_RENAME || op == SB_LIST))) return -EINVAL;
+         op == SB_APPEND || op == SB_RENAME || op == SB_LIST || op == SB_INSTALL_HOME_ART))) return -EINVAL;
     if ((op == SB_READ || op == SB_PACKAGE_READ || op == SB_WRITE) &&
         (offset > INT64_MAX || length > (uint64_t)INT64_MAX - offset)) return -EINVAL;
     if (op == SB_TRUNCATE && offset > INT64_MAX) return -EINVAL;
@@ -86,11 +86,12 @@ static int request(struct sb_client *c, uint32_t op, const char *path,
         size_t n = strnlen(path, SB_MAX_PATH + 1u);
         if (!n || n > SB_MAX_PATH) return -EINVAL;
         req.path_length = (uint32_t)n;
-    } else if (op != SB_QUIT && op != SB_REPAIR && op != SB_PACKAGE_READ) return -EINVAL;
+    } else if (op != SB_QUIT && op != SB_REPAIR && op != SB_PACKAGE_READ &&
+               op != SB_INSTALL_HOME_ART) return -EINVAL;
     if ((rc = io_all(c->fd, &req, sizeof(req), 1)) ||
         (req.path_length && (rc = io_all(c->fd, (void *)path, req.path_length, 1))) ||
-        ((op == SB_WRITE || op == SB_REPLACE || op == SB_APPEND || op == SB_RENAME) && length &&
-         (rc = io_all(c->fd, data, length, 1))) ||
+        ((op == SB_WRITE || op == SB_REPLACE || op == SB_APPEND || op == SB_RENAME ||
+          op == SB_INSTALL_HOME_ART) && length && (rc = io_all(c->fd, data, length, 1))) ||
         (rc = io_all(c->fd, &reply, sizeof(reply), 0))) goto fail;
     if (reply.magic != SB_MAGIC || reply.reserved || reply.version != c->server_version ||
         (reply.result > 0 && op != SB_READ && op != SB_PACKAGE_READ && op != SB_WRITE &&
@@ -147,5 +148,9 @@ int sb_repair(struct sb_client *c, struct sb_repair_stats *stats)
     if (!stats) return -EINVAL;
     memset(stats, 0, sizeof(*stats));
     return request(c, SB_REPAIR, NULL, stats, 0, 0, NULL);
+}
+int sb_install_home_art(struct sb_client *c, enum sb_home_art_kind kind, const void *data, uint32_t length)
+{
+    return request(c, SB_INSTALL_HOME_ART, NULL, (void *)data, length, (uint64_t)kind, NULL);
 }
 int sb_quit(struct sb_client *c) { return request(c, SB_QUIT, NULL, NULL, 0, 0, NULL); }

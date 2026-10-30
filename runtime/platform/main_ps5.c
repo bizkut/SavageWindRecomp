@@ -7,6 +7,10 @@
 #include "../nvn/precompile.h"
 #include "../paths.h"
 #include "../settings.h"
+#include "../storage_ps5.h"
+#include "home_art_gate.h"
+#include "home_art_ps5.h"
+#include <errno.h>
 #include <ps5platform/heap.h>
 #include <ps5platform/klog.h>
 #include <pthread.h>
@@ -190,6 +194,91 @@ static void first_start_precompile(void) {
         g_pc.shaders, g_pc.keys, g_pc.made, g_pc.cached, g_pc.failed, g_pc.pipelines, st == SP_FAILED ? ": " : "",
         st == SP_FAILED ? g_pc.why : "", heap.mapped_bytes / 1048576.0, heap.peak_bytes / 1048576.0);
 }
+static const char home_art_marker_path[] = "cache/home-art/marker";
+static unsigned char g_home_art_source[128];
+static atomic_int g_home_art_finished;
+static int g_home_art_result;
+
+static size_t home_art_read_marker(void *context, HomeArtMarker *marker) {
+    (void)context;
+    FILE *file = fopen("/data/savagewind/cache/home-art/marker", "rb");
+    if (!file) return 0;
+    size_t size = fread(marker, 1, sizeof *marker, file);
+    if (fgetc(file) != EOF) size++;
+    if (ferror(file)) size = 0;
+    fclose(file);
+    return size;
+}
+
+static int home_art_remove_marker(void *context) {
+    (void)context;
+    int rc = rt_storage_unlink(home_art_marker_path);
+    return rc == -ENOENT ? 0 : rc;
+}
+
+static int home_art_install(void *context, int enabled, unsigned char digests[3][32]) {
+    (void)context;
+    return home_art_generate(enabled, digests);
+}
+
+static int home_art_write_marker(void *context, const HomeArtMarker *marker) {
+    (void)context;
+    int rc = rt_storage_mkdirs("cache/home-art");
+    if (rc < 0) return rc;
+    return rt_storage_replace(home_art_marker_path, marker, sizeof *marker);
+}
+
+static const HomeArtGateOps home_art_ops = {
+    home_art_read_marker, home_art_remove_marker, home_art_install, home_art_write_marker
+};
+
+static void *home_art_main(void *unused) {
+    (void)unused;
+    g_home_art_result = home_art_gate_run(&home_art_ops, NULL, g_settings.home_art, g_home_art_source);
+    atomic_store(&g_home_art_finished, 1);
+    return NULL;
+}
+
+static void first_start_home_art(void) {
+    if (ps5_exefs_home_art_identity(g_home_art_source) < 0) {
+        LOG("[home-art] package identity unavailable; skipped\n");
+        return;
+    }
+    HomeArtMarker marker;
+    size_t size = home_art_read_marker(NULL, &marker);
+    if (home_art_marker_matches(&marker, size, g_settings.home_art, g_home_art_source)) {
+        LOG("[home-art] current; skipped\n");
+        return;
+    }
+    LOG("[home-art] installing %s art\n", g_settings.home_art ? "generated" : "shipped");
+    pthread_attr_t attr;
+    pthread_t thread;
+    int rc = pthread_attr_init(&attr);
+    if (rc) {
+        LOG("[home-art] thread attributes failed (%d)\n", rc);
+        return;
+    }
+    rc = pthread_attr_setstacksize(&attr, 8u << 20);
+    if (!rc) rc = pthread_create(&thread, &attr, home_art_main, NULL);
+    pthread_attr_destroy(&attr);
+    if (rc) {
+        LOG("[home-art] thread creation failed (%d)\n", rc);
+        return;
+    }
+    extern void vk_present_progress(float done, const char *const *lines);
+    extern void gpu_lock(void), gpu_unlock(void);
+    const char *lines[] = {"Preparing game files", "", "Home screen art", "This happens only when the art changes."};
+    while (!atomic_load(&g_home_art_finished)) {
+        gpu_lock();
+        vk_present_progress(0, lines);
+        gpu_unlock();
+        usleep(100000);
+    }
+    pthread_join(thread, NULL);
+    if (g_home_art_result < 0) LOG("[home-art] failed (stage %d); continuing\n", g_home_art_result);
+    else LOG("[home-art] installed and recorded\n");
+}
+
 #ifdef GAMECODE_CONSOLE
 bool ps5_gamecode_prepare(unsigned threads, bool overlap,
                           void (*progress)(void *, const char *, size_t, size_t), void *context,
@@ -437,6 +526,7 @@ int main(void) {
 #else
     first_start_precompile();
 #endif
+    first_start_home_art();
     ps5_startup_mark("precompile done or skipped");
     extern void ps5_startup_splash_start(void);
     if (g_settings.startup_splash) ps5_startup_splash_start();

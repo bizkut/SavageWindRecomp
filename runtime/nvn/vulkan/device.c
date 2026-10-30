@@ -28,6 +28,7 @@
 #include "../renderer.h"
 #ifdef __PROSPERO__
 #include "../../ps5/dynamic_resolution.h"
+#include "../startup_splash_source.h"
 #include "../../storage_ps5.h"
 #endif
 #ifdef __PROSPERO__
@@ -1852,16 +1853,25 @@ static uint32_t startup_pixel(const unsigned char *p, VkFormat format) {
     return r | g << 8 | b << 16 | 0xffu << 24;
 }
 
+static unsigned char *startup_splash_load(const char *path, int *width, int *height, void *context) {
+    (void)context;
+    if (!rt_image_info(path, width, height) || *width <= 0 || *height <= 0 ||
+        *width > 8192 || *height > 8192) return NULL;
+    return rt_image_rgba(path, width, height);
+}
+
 static void *startup_splash_main(void *unused) {
     (void)unused;
     struct sched_param priority = {.sched_priority = sched_get_priority_min(SCHED_OTHER)};
     if (priority.sched_priority >= 0) pthread_setschedparam(pthread_self(), SCHED_OTHER, &priority);
-    char path[1100];
-    if (!rt_user_splash(path, sizeof path)) snprintf(path, sizeof path, "/app0/sce_sys/background-source.png");
+    char user_path[1100] = "", cache_path[1100] = "";
+    rt_user_splash(user_path, sizeof user_path);
+    rt_data_path("cache/home-art/splash.png", cache_path, sizeof cache_path);
+    const char *selected = NULL;
     int iw = 0, ih = 0, w = 0, h = 0;
-    unsigned char *image = NULL;
-    if (rt_image_info(path, &iw, &ih) && iw > 0 && ih > 0 && iw <= 8192 && ih <= 8192)
-        image = rt_image_rgba(path, &iw, &ih);
+    unsigned char *image = startup_splash_choose(user_path, cache_path, "/app0/sce_sys/background-source.png",
+                                                 startup_splash_load, NULL, &iw, &ih, &selected);
+    if (image) LOG("[splash] using %s\n", selected);
     SDL_GetWindowSizeInPixels(window, &w, &h);
     // The picture is converted once into a mapped buffer the frames copy from (not re-uploaded every frame: 33 MB
     // at 4K).

@@ -72,6 +72,9 @@ int sb_rename(struct sb_client *client, const char *from, const char *to);
 int sb_rmdir(struct sb_client *client, const char *path);
 int sb_list(struct sb_client *client, const char *path, void *buffer, uint32_t capacity);
 int sb_repair(struct sb_client *client, struct sb_repair_stats *stats);
+/* Install validated artwork to the fixed PPSA90212 system destinations. */
+int sb_install_home_art(struct sb_client *client, enum sb_home_art_kind kind,
+                        const void *data, uint32_t length);
 int sb_quit(struct sb_client *client);
 #ifdef __cplusplus
 }

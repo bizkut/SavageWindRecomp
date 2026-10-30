@@ -26,6 +26,8 @@ def main():
         lib = ctypes.CDLL(str(library))
         lib.hd_ui_dds_encode.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32,
                                          ctypes.c_int, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)]
+        lib.hd_ui_dds_encode_single.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_uint32,
+                                                ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)]
         libc = ctypes.CDLL(None)
         libc.free.argtypes = [ctypes.c_void_p]
         encoder = Path(temp) / 'bc7'
@@ -60,6 +62,20 @@ def main():
                         reference = pc.dds(planes)
                         top = ((w+3)//4)*((h+3)//4)*(8 if channels == 1 else 16)
                         assert blob[148:148+top] == reference[148:148+top]
+        pixels = bytes((37, 100, 210, 255)) * (32 * 16)
+        result, size = ctypes.c_void_p(), ctypes.c_size_t()
+        assert lib.hd_ui_dds_encode_single(ctypes.c_char_p(pixels), 32, 16,
+                                           ctypes.byref(result), ctypes.byref(size)) == 0
+        try:
+            blob = ctypes.string_at(result, size.value)
+        finally:
+            libc.free(result)
+        assert len(blob) == 148 + 32 * 16
+        assert (u32(blob, 24), u32(blob, 28), u32(blob, 108)) == (1, 1, 0x1000)
+        assert (u32(blob, 128), u32(blob, 132), u32(blob, 140), u32(blob, 144)) == (98, 3, 1, 1)
+        reference = subprocess.run([str(encoder), '32', '16'], input=pixels,
+                                   stdout=subprocess.PIPE, check=True).stdout
+        assert blob[148:] == reference
         print('DDS BC4/BC5/BC7 headers and complete mip sizes passed')
 
 

@@ -62,7 +62,7 @@ static void decode(const uint8_t *src, uint8_t *dst, uint32_t w, uint32_t h, uin
     }
 }
 
-static int bntx(const uint8_t *b, size_t size, HdUiTextureCallback callback, void *context) {
+static int bntx(const uint8_t *b, size_t size, const char *wanted, HdUiTextureCallback callback, void *context) {
     if (size < 0x30 || memcmp(b, "BNTX", 4)) return -1;
     uint32_t count = u32(b+0x24);
     uint64_t table = u64(b+0x28);
@@ -72,15 +72,17 @@ static int bntx(const uint8_t *b, size_t size, HdUiTextureCallback callback, voi
         if (!span(size, off, 0x78) || memcmp(b+off, "BRTI", 4)) return -1;
         const uint8_t *r = b+off;
         uint32_t fmt = u32(r+0x1c), w = u32(r+0x24), h = u32(r+0x28), channels, nvn;
-        if (!hd_ui_source_format(fmt,NULL,NULL,&channels,&nvn)) return -1;
-        int policy = hd_ui_texture_policy(w, h, 1024, channels, NULL, 0);
-        if (policy == 1 || policy == 2) continue;
-        uint32_t scale = hd_ui_texture_scale(w, h), bh = u32(r+0x34)&7;
-        if (!w || !h || w > 4096/scale || h > 4096/scale || u32(r+0x30) != 1 || bh > 4) return -1;
         uint64_t np = u64(r+0x60), offsets = u64(r+0x70);
         if (!span(size,np,2) || !span(size,offsets,8)) return -1;
         size_t name_len = u16(b+np);
         if (!span(size,np+2,name_len)) return -1;
+        if (wanted && (strlen(wanted) != name_len || memcmp(b+np+2, wanted, name_len))) continue;
+        if (!hd_ui_source_format(fmt,NULL,NULL,&channels,&nvn)) return -1;
+        int policy = wanted ? 0 : hd_ui_texture_policy(w, h, 1024, channels, NULL, 0);
+        if (policy == 1 || policy == 2) continue;
+        uint32_t scale = hd_ui_texture_scale(w, h), bh = u32(r+0x34)&7;
+        if (!w || !h || w > (wanted ? 4096u : 4096u/scale) ||
+            h > (wanted ? 4096u : 4096u/scale) || u32(r+0x30) != 1 || bh > 4) return -1;
         TexLayout t = {.width=w,.height=h,.depth=1,.layers=1,.levels=1,.fmt=nvn_format_info(nvn),.block_height_log2=bh};
         LevelLayout level = tegra_level(&t,0);
         uint64_t data = u64(b+offsets), storage = tegra_layer_size(&t);
@@ -92,7 +94,7 @@ static int bntx(const uint8_t *b, size_t size, HdUiTextureCallback callback, voi
         uint64_t hash = 0xcbf29ce484222325ull;
         for (size_t j=0; j<linear_size; j++) hash=(hash^linear[j])*0x100000001b3ull;
         decode(linear,pixels,w,h,fmt,channels);
-        policy = hd_ui_texture_policy(w,h,1024,channels,pixels,(size_t)w*channels);
+        policy = wanted ? 0 : hd_ui_texture_policy(w,h,1024,channels,pixels,(size_t)w*channels);
         int result = 0;
         if (!policy) {
             HdUiTexture item = {(const char *)b+np+2,name_len,fmt,w,h,channels,scale,hash,linear,linear_size,pixels};
@@ -104,7 +106,8 @@ static int bntx(const uint8_t *b, size_t size, HdUiTextureCallback callback, voi
     return 0;
 }
 
-int hd_ui_extract_layout(const uint8_t *archive, size_t size, HdUiTextureCallback callback, void *context) {
+static int layout(const uint8_t *archive, size_t size, const char *wanted,
+                  HdUiTextureCallback callback, void *context) {
     if (!archive || !callback) return -1;
     for (uint32_t i=0;;i++) {
         const char *name; const uint8_t *payload; size_t name_len, payload_size;
@@ -114,8 +117,18 @@ int hd_ui_extract_layout(const uint8_t *archive, size_t size, HdUiTextureCallbac
         const char *p = name+name_len-5;
         if ((p[0] == '.') && (p[1] == 'b' || p[1] == 'B') && (p[2] == 'n' || p[2] == 'N') &&
             (p[3] == 't' || p[3] == 'T') && (p[4] == 'x' || p[4] == 'X') &&
-            bntx(payload,payload_size,callback,context)) return -1;
+            bntx(payload,payload_size,wanted,callback,context)) return -1;
     }
+}
+
+int hd_ui_extract_layout(const uint8_t *archive, size_t size, HdUiTextureCallback callback, void *context) {
+    return layout(archive, size, NULL, callback, context);
+}
+
+int hd_ui_extract_layout_named(const uint8_t *archive, size_t size, const char *name,
+                               HdUiTextureCallback callback, void *context) {
+    if (!name || !*name) return -1;
+    return layout(archive, size, name, callback, context);
 }
 
 // Item icons (UI/StockItem/*.sbitemico, decompressed): an FRES whose embedded file is a BNTX. The BNTX is found by
@@ -126,7 +139,7 @@ int hd_ui_extract_fres(const uint8_t *fres, size_t size, HdUiTextureCallback cal
         if (memcmp(fres + at, "BNTX", 4)) continue;
         size_t len = u32(fres + at + 0x1c);
         if (len < 0x30 || len > size - at) len = size - at;
-        return bntx(fres + at, len, callback, context);
+        return bntx(fres + at, len, NULL, callback, context);
     }
     return 0;  // (no textures)
 }

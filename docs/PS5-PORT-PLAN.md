@@ -555,6 +555,12 @@ atomic manifest updates go through the storage broker to `/data/savagewind/hd-ui
 resumes after interruption. A generator or game version change triggers regeneration. To force regeneration for
 testing, back up and remove `hd-ui/manifest.json`; matching DDS files will be replaced. The PC tool remains available.
 
+The PS5 first-start flow also installs home-screen art from the player's game files. Set `home_art = 0` in
+`savagewind.ini` to restore the shipped art instead; the default is `1`, and only the disabled setting is saved.
+`cache/home-art/marker` records the package identity, art mode, generator version and installed-file digests.
+A matching marker skips generation and installation; changing the package identity or mode triggers a new install.
+Failures are logged as `[home-art]` and do not prevent the game from starting.
+
 Host evidence: the corrected extraction code matched the PC generator for 881 selected entries in the merged Common
 and Title packs. On lavapipe, two real texture inputs at both scales matched the pinned release binary at infinite,
 infinite, 65.03 and 65.49 dB PSNR; BC4/BC5/BC7 top-level blocks matched the PC encoders on the test inputs.

@@ -2,6 +2,7 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/types.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -14,6 +15,10 @@ int fs_hd_ui_packs(HdUiPackCallback callback, void *context);
 typedef int (*HdUiLayoutCallback)(void *context, const char *pack, const char *layout, size_t layout_length,
                                   const uint8_t *archive, size_t size);
 int fs_hd_ui_layouts(HdUiLayoutCallback callback, void *context);
+// Enumerate layouts in one named Pack/*.pack without reading unrelated archives.
+int fs_hd_ui_layouts_in_pack(const char *pack, HdUiLayoutCallback callback, void *context);
+// Read a named Control NCA file from the imported packages; same contract as savagewind_control_read.
+ssize_t fs_control_read(const char *name, void *buffer, size_t capacity, char *why, size_t why_size);
 // Enumerate each UI/StockItem/*.sbitemico (item icons), Yaz0-decoded: an FRES with an embedded BNTX.
 int fs_hd_ui_icons(HdUiLayoutCallback callback, void *context);
 #ifdef __cplusplus

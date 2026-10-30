@@ -309,6 +309,30 @@ struct PackageExefs {
     PackageExefs() : importer(".") { importer.st.session = "package-exefs"; }
 };
 
+extern "C" int savagewind_exefs_home_art_identity(void *handle, unsigned char out[128]) {
+    if (!handle || !out) return -1;
+    auto &importer = static_cast<PackageExefs *>(handle)->importer;
+    std::memcpy(out, importer.base.hash.data(), 32);
+    std::memcpy(out + 32, importer.update.hash.data(), 32);
+    std::memset(out + 64, 0, 64);
+    size_t slot = 0;
+    for (const auto *candidates : {&importer.bases, &importer.updates}) {
+        bool found = false;
+        for (const auto &candidate : *candidates) {
+            for (const auto &entry : candidate.meta.getContentInfo()) {
+                if (entry.getContentType() != pie::hac::cnmt::ContentType_Control || entry.getIdOffset() != 0)
+                    continue;
+                if (found && std::memcmp(out + 64 + slot * 32, entry.getContentHash().data(), 32))
+                    return -1;
+                std::memcpy(out + 64 + slot * 32, entry.getContentHash().data(), 32);
+                found = true;
+            }
+        }
+        ++slot;
+    }
+    return 0;
+}
+
 extern "C" void *savagewind_exefs_open(const char *keys_path, const char *const *paths,
                                        size_t count, char *why, size_t why_size) {
     try {
@@ -382,4 +406,58 @@ extern "C" void savagewind_exefs_file_close(void *file) {
 extern "C" void savagewind_exefs_close(void *handle) {
     try { delete static_cast<PackageExefs *>(handle); }
     catch (...) { diagnostic("package-exefs", "close", errno, "exception", "non-standard exception"); }
+}
+
+extern "C" ssize_t savagewind_control_read(const char *keys, const char *const *packages, size_t count,
+                                           const char *name, void *buffer, size_t capacity,
+                                           char *why, size_t why_size) {
+    try {
+        if (!name || !safe_component(name) || (!buffer && capacity))
+            fail("invalid_input", "Invalid Control NCA file request.");
+        std::lock_guard<std::mutex> guard(nstool_process_mutex);
+        PackageCore importer(".");
+        importer.open_inputs(keys, packages, count);
+        for (const auto *candidates : {&importer.updates, &importer.bases}) {
+            Selection selected;
+            for (const auto &candidate : *candidates) {
+                for (const auto &entry : candidate.meta.getContentInfo()) {
+                    if (entry.getContentType() != pie::hac::cnmt::ContentType_Control || entry.getIdOffset() != 0)
+                        continue;
+                    std::string id = hex(entry.getContentId().data(), entry.getContentId().size()) + ".nca";
+                    if (!std::equal(entry.getContentId().begin(), entry.getContentId().end(),
+                                    entry.getContentHash().begin()))
+                        fail("content_corrupt", "Control NCA identifier does not match its checksum.");
+                    if (selected.pkg && (selected.name != id || selected.size != entry.getContentSize() ||
+                                         selected.hash != entry.getContentHash()))
+                        fail("ambiguous_content", "Multiple different Control NCAs were found.");
+                    selected = {candidate.pkg, id, entry.getContentSize(), entry.getContentHash()};
+                }
+            }
+            if (!selected.pkg) continue;
+            Stream nca = vopen(selected.pkg->vfs, selected.pkg->prefix + "/" + selected.name);
+            if (nca->length() != selected.size)
+                fail("content_corrupt", "Control NCA is truncated.");
+            nstool::NcaProcess proc;
+            proc.setKeyCfg(*importer.keys);
+            proc.setInputFile(nca);
+            proc.process();
+            Vfs vfs = proc.getFileSystem();
+            auto files = listing(vfs, "/0");
+            if (std::find(files.file_list.begin(), files.file_list.end(), name) == files.file_list.end())
+                continue;
+            Stream file = vopen(vfs, std::string("/0/") + name);
+            int64_t size = file->length();
+            if (size < 0 || uint64_t(size) > uint64_t(SSIZE_MAX))
+                fail("content_corrupt", "Invalid Control NCA file size.");
+            if (uint64_t(size) <= capacity && file->read(static_cast<byte_t *>(buffer), size_t(size)) != size_t(size))
+                fail("content_corrupt", "Truncated Control NCA file.");
+            return ssize_t(size);
+        }
+        fail("content_missing", "Control NCA file not found.");
+    } catch (const Failure &e) {
+        if (why && why_size) std::snprintf(why, why_size, "%s: %s", e.code.c_str(), e.message.c_str());
+    } catch (...) {
+        if (why && why_size) std::snprintf(why, why_size, "Unable to read Control NCA.");
+    }
+    return -1;
 }

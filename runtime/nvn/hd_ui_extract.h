@@ -19,6 +19,9 @@ typedef int (*HdUiTextureCallback)(void *context, const HdUiTexture *texture);
 // Enumerates supported, selected BNTX textures from one decompressed layout SARC.
 // Borrowed data remains valid only for the callback. Returns -1 on malformed data or callback failure.
 int hd_ui_extract_layout(const uint8_t *archive, size_t size, HdUiTextureCallback callback, void *context);
+// Extract one named texture without the HD UI generator's size and edge-content policy.
+int hd_ui_extract_layout_named(const uint8_t *archive, size_t size, const char *name,
+                               HdUiTextureCallback callback, void *context);
 // The same for one decompressed item-icon FRES (UI/StockItem/*.sbitemico) holding an embedded BNTX.
 int hd_ui_extract_fres(const uint8_t *fres, size_t size, HdUiTextureCallback callback, void *context);
 #ifdef __cplusplus

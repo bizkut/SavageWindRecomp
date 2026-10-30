@@ -18,6 +18,9 @@ extern void savagewind_package_close(void *);
 
 
 static void *exefs;
+int ps5_exefs_home_art_identity(unsigned char out[128]) {
+    return savagewind_exefs_home_art_identity(exefs, out);
+}
 static uint64_t exefs_bytes, exefs_read_ns, exefs_reads;
 #ifdef GAMECODE_CONSOLE
 // ExeFS streams can share seekable package state; shader and generator reads must not overlap.

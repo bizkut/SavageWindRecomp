@@ -78,24 +78,31 @@ static std::vector<uint8_t> resize(const std::vector<uint8_t>& in, uint32_t w, u
     return out;
 }
 
-int hd_ui_dds_encode(const uint8_t *pixels, uint32_t width, uint32_t height, uint32_t channels,
-                     int srgb, uint8_t **out, size_t *out_size) {
+static int encode(const uint8_t *pixels, uint32_t width, uint32_t height, uint32_t channels,
+                  int srgb, bool single, uint8_t **out, size_t *out_size) {
     if (!pixels || !out || !out_size || !width || !height || width>4096 || height>4096 ||
         (channels!=1 && channels!=2 && channels!=4)) return -1;
     *out=nullptr; *out_size=0;
     try {
         size_t size=148; uint32_t w=width,h=height,levels=0;
-        do { size+=(size_t)((w+3)/4)*((h+3)/4)*(channels==1?8:16); levels++; w=std::max(1u,w/2); h=std::max(1u,h/2); }
-        while (w>1 || h>1);
-        if (width>1 || height>1) { size+=channels==1?8:16; levels++; }
+        if (single) {
+            size += (size_t)((w+3)/4)*((h+3)/4)*(channels==1?8:16);
+            levels = 1;
+        } else {
+            do { size+=(size_t)((w+3)/4)*((h+3)/4)*(channels==1?8:16); levels++; w=std::max(1u,w/2); h=std::max(1u,h/2); }
+            while (w>1 || h>1);
+            if (width>1 || height>1) { size+=channels==1?8:16; levels++; }
+        }
         std::vector<uint8_t> blob(size,0), image(pixels,pixels+(size_t)width*height*channels);
         memcpy(blob.data(),"DDS ",4); put32(blob.data()+4,124); put32(blob.data()+8,0xa1007);
         put32(blob.data()+12,height); put32(blob.data()+16,width);
         put32(blob.data()+20,((width+3)/4)*((height+3)/4)*(channels==1?8:16));
+        if (single) put32(blob.data()+24,1);
         put32(blob.data()+28,levels); put32(blob.data()+76,32); put32(blob.data()+80,4);
-        memcpy(blob.data()+84,"DX10",4); put32(blob.data()+108,0x401008);
+        memcpy(blob.data()+84,"DX10",4); put32(blob.data()+108,single ? 0x1000 : 0x401008);
         put32(blob.data()+128,channels==1?80:channels==2?83:srgb?99:98);
         put32(blob.data()+132,3); put32(blob.data()+140,1);
+        if (single) put32(blob.data()+144,1);
         static std::once_flag once;
         if (channels==4) std::call_once(once,[]{ bc7enc_compress_block_init(); });
         bc7enc_compress_block_params params{};
@@ -112,7 +119,7 @@ int hd_ui_dds_encode(const uint8_t *pixels, uint32_t width, uint32_t height, uin
                 else { encode_bc4(block,channels,0,blob.data()+at); if (channels==2) encode_bc4(block,channels,1,blob.data()+at+8); }
                 at+=channels==1?8:16;
             }
-            if (w==1 && h==1) break;
+            if (single || (w==1 && h==1)) break;
             uint32_t nw=std::max(1u,w/2), nh=std::max(1u,h/2);
             image=resize(image,w,h,nw,nh,channels); w=nw; h=nh;
         }
@@ -121,4 +128,14 @@ int hd_ui_dds_encode(const uint8_t *pixels, uint32_t width, uint32_t height, uin
         if (!result) return -1;
         memcpy(result,blob.data(),size); *out=result; *out_size=size; return 0;
     } catch (...) { return -1; }
+}
+
+int hd_ui_dds_encode(const uint8_t *pixels, uint32_t width, uint32_t height, uint32_t channels,
+                     int srgb, uint8_t **out, size_t *out_size) {
+    return encode(pixels, width, height, channels, srgb, false, out, out_size);
+}
+
+int hd_ui_dds_encode_single(const uint8_t *pixels, uint32_t width, uint32_t height,
+                            uint8_t **out, size_t *out_size) {
+    return encode(pixels, width, height, 4, 0, true, out, out_size);
 }

@@ -20,6 +20,15 @@ This extracts the selected ExeFS locally, generates and compiles C from it, then
 
 Install the PS5 homebrew prerequisites, including ShadowMountPlus. Once per console boot, load the supplied `bin/storagebroker.elf` with your root ELF loader; it serves only Savage Wind storage on loopback port 9142. Copy the completed `title/PPSA90212` folder to `/data/homebrew/PPSA90212/`. Copy your base and update packages, optional DLC and your `prod.keys` (and `title.keys` if needed) to `/data/savagewind/import/`. Package reads require these inputs on every launch; they are not included in the kit. Start the title: the first launch precompiles shaders and can take time. The on-console UI pack is generated from the user's own UI assets; it is not included in the kit. Saves, settings, caches and generated UI data live under `/data/savagewind/`.
 
+**Home-screen art.** The kit ships neutral, original home-screen art. On the first start (as one step of the
+first-start work, once) the title makes the PS5 home-screen icon and backgrounds from your own game files and
+installs them through the storage broker; it records what it made in `/data/savagewind/cache/home-art/` and does
+nothing on later starts unless your game files change. The start-up splash uses, in this order: your own
+`/data/savagewind/splash.jpg` (or `.jpeg`/`.png`), the background generated from your game files
+(`cache/home-art/splash.png`), then the shipped neutral picture. Nothing is uploaded or shared. Put `home_art = 0` in
+`/data/savagewind/savagewind.ini` to restore the shipped art and remove the generated splash (also done once). The
+home screen may show the new art only after it refreshes the title's tile (e.g. after a console restart).
+
 ## Unattended benchmark
 
 With an existing save, write `soak = 60` to `/data/savagewind/benchmark.txt` and launch. The benchmark copies the saves to `benchmark/save`, loads the copy, settles for 20 seconds, then repeats the Great Plateau camera route for 60 minutes. Every five minutes and at the end it appends cumulative frames, on-time frames, hitches, mapped heap bytes, flexible-memory availability, direct-memory largest available block, and VMA allocation/block bytes to `/data/savagewind/benchmark/soak.txt`; the normal detailed summary is in `benchmark/last.txt` for the first minute. Memory figures are not interchangeable: direct largest block is not total free memory and VMA does not account for all GPU allocations. Remove `benchmark.txt` to disable the benchmark.
