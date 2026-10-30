@@ -1841,6 +1841,17 @@ static atomic_bool startup_stop;
 static atomic_bool startup_active;
 static bool startup_started;
 
+int sceSystemServiceHideSplashScreen(void);
+
+// The system keeps the launch picture (pic1.dds) over the title's output until the title hides it. Hidden once, after
+// the first frame of ours (the start-up screen's or, without it, the game's) has been presented.
+static void ps5_hide_system_splash(void) {
+    static atomic_bool hidden;
+    if (atomic_exchange(&hidden, true)) return;
+    int rc = sceSystemServiceHideSplashScreen();
+    LOG("[startup] system launch screen hidden (%#x)\n", (unsigned)rc);
+}
+
 static uint32_t startup_pixel(const unsigned char *p, VkFormat format) {
     unsigned r = p[0], g = p[1], b = p[2];
     if (format == VK_FORMAT_A2B10G10R10_UNORM_PACK32)
@@ -1934,6 +1945,7 @@ static void *startup_splash_main(void *unused) {
                     if (r.rect.offset.x >= 0 && r.rect.offset.y >= 0) rec_CmdClearAttachments(cb, 1, &a, 1, &r);
                 }
                 vk_frame_end(NULL);
+                if (!frame) ps5_hide_system_splash();
                 frame++;
             }
         }
@@ -2243,6 +2255,7 @@ static void present_locked(NvnTexture *t) {
             extern void ps5_startup_mark(const char *step);
             startup_presented = true;
             ps5_startup_mark("game first present");
+            ps5_hide_system_splash();
         }
 #endif
         frame_capture[0] = 0;
