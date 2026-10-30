@@ -260,9 +260,10 @@ static bool install(sb_client &client, sb_home_art_kind kind, const char *name,
 
 extern "C" int home_art_generate(int enabled, unsigned char digests[3][32]) {
     if (!digests) return -1;
+    std::memset(digests, 0, 3 * 32);
     const char *stage = "initialization";
     try {
-        std::vector<unsigned char> png, pic0, pic1;
+        std::vector<unsigned char> png, pic0;
         if (enabled) {
             stage = "package and texture extraction";
             Image source_icon, picture;
@@ -291,17 +292,21 @@ extern "C" int home_art_generate(int enabled, unsigned char digests[3][32]) {
             if (rc < 0) throw 1;
         } else {
             stage = "shipped art read";
-            if (!read_file("/app0/home-art-original-icon0.png", png) ||
-                !read_file("/app0/home-art-original-pic0.dds", pic0) ||
-                !read_file("/app0/home-art-original-pic1.dds", pic1)) throw 1;
+            if (!read_file("/app0/home-art-original-icon0.png", png)) throw 1;
         }
         stage = "broker connection";
         sb_client client{-1, 0};
         if (sb_connect(&client)) throw 1;
         stage = "broker art installation";
-        bool ok = install(client, SB_HOME_ART_ICON0, "icon0.png", png, digests[0]) &&
-                  install(client, SB_HOME_ART_PIC0, "pic0.dds", pic0, digests[1]) &&
-                  install(client, SB_HOME_ART_PIC1, "pic1.dds", enabled ? pic0 : pic1, digests[2]);
+        bool ok = install(client, SB_HOME_ART_ICON0, "icon0.png", png, digests[0]);
+        if (ok && enabled) {
+            ok = install(client, SB_HOME_ART_PIC0, "pic0.dds", pic0, digests[1]) &&
+                 install(client, SB_HOME_ART_PIC1, "pic1.dds", pic0, digests[2]);
+        } else if (ok) {
+            int rc = sb_remove_home_backgrounds(&client);
+            if (rc) std::fprintf(stderr, "[home-art] background removal failed: %d\n", rc);
+            ok = rc == 0;
+        }
         sb_close(&client);
         if (!ok) throw 1;
         if (!enabled) {

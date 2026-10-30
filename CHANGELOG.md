@@ -2,8 +2,9 @@
 
 What changed in each Savage Wind release. The `test` branch holds what the next one will contain.
 
-On PS5, the home-screen icon and backgrounds are made once, at the first start, from your own game files and
-installed on your console (`home_art = 0` restores the shipped art); the release itself ships only original art.
+On PS5, the home-screen icon and backgrounds and the start-up splash are made once, at the first start, from your
+own game files and installed on your console (`home_art = 0` restores the shipped icon and removes the rest). The
+release ships only a neutral icon: no background or splash picture.
 
 On PS5, **Dynamic resolution** works with FSR 3.1 (and with frame generation): FSR 3.1 gets the current render size
 each frame, so a size step needs no shader, pipeline or FSR rebuild, and DRS costs nothing while at full size. With

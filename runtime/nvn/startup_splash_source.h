@@ -4,10 +4,10 @@
 #include <stddef.h>
 
 typedef unsigned char *(*StartupSplashLoad)(const char *path, int *width, int *height, void *context);
-static inline unsigned char *startup_splash_choose(const char *user, const char *cached, const char *shipped,
+static inline unsigned char *startup_splash_choose(const char *user, const char *cached,
                                                     StartupSplashLoad load, void *context,
                                                     int *width, int *height, const char **selected) {
-    const char *paths[] = {user, cached, shipped};
+    const char *paths[] = {user, cached};
     if (selected) *selected = NULL;
     for (size_t i = 0; i < sizeof paths / sizeof paths[0]; ++i) {
         if (!paths[i] || !paths[i][0]) continue;

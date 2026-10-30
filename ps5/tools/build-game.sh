@@ -150,10 +150,8 @@ cp "$mh/THIRD_PARTY_NOTICES.txt" "$app/MihawkGen-THIRD_PARTY_NOTICES.txt"
 cp "$ffx/LICENSE.txt" "$app/FidelityFX-LICENSE.txt"
 cp "$model/realesr-animevideov3-x2.param" "$model/realesr-animevideov3-x4.param" "$model/realesr-animevideov3-x4.bin" "$app/"
 cp ps5/REAL-ESRGAN-LICENSE.txt "$app/REAL-ESRGAN-LICENSE.txt"
-# Preserve neutral release art inside app0 so the player can restore it after generated art is installed.
+# Preserve the neutral release icon for restoring after generated art is installed.
 cp ps5/sce_sys/icon0.png "$app/home-art-original-icon0.png"
-cp ps5/sce_sys/pic0.dds "$app/home-art-original-pic0.dds"
-cp ps5/sce_sys/pic1.dds "$app/home-art-original-pic1.dds"
 cp "$ncnn/src/LICENSE.txt" "$app/NCNN-LICENSE.txt"
 cp "$bc7/LICENSE" "$app/BC7ENC-LICENSE.txt"
 if [[ $variant == console ]]; then

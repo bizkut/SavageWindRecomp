@@ -68,9 +68,17 @@ static void test_home_art(struct sb_client *client)
         SB_ROOT "/home-art/user/app/PPSA90212/sce_sys/pic1.dds",
         SB_ROOT "/home-art/user/appmeta/PPSA90212/pic1.dds"
     };
+    static const unsigned char dds_header[148] = {
+        [0] = 'D', [1] = 'D', [2] = 'S', [3] = ' ', [4] = 124,
+        [8] = 0x07, [9] = 0x10, [10] = 0x0a,
+        [12] = 0x70, [13] = 0x08, [17] = 0x0f,
+        [21] = 0x90, [22] = 0x7e, [24] = 1, [28] = 1,
+        [76] = 32, [80] = 4, [84] = 'D', [85] = 'X', [86] = '1', [87] = '0',
+        [109] = 0x10, [128] = 98, [132] = 3, [140] = 1, [144] = 1
+    };
     unsigned char png[33] = {137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13,
                              'I', 'H', 'D', 'R', 0, 0, 2, 0, 0, 0, 2, 0};
-    unsigned char *dds = malloc(SB_HOME_ART_DDS_SIZE);
+    unsigned char *dds = calloc(1, SB_HOME_ART_DDS_SIZE);
     struct stat before, after;
     int fd;
     int ok = dds != NULL;
@@ -84,9 +92,7 @@ static void test_home_art(struct sb_client *client)
             close(fd);
         }
     }
-    fd = open("../sce_sys/pic0.dds", O_RDONLY);
-    if (fd < 0 || !dds || read(fd, dds, SB_HOME_ART_DDS_SIZE) != SB_HOME_ART_DDS_SIZE) ok = 0;
-    if (fd >= 0) close(fd);
+    if (dds) memcpy(dds, dds_header, sizeof(dds_header));
     check(ok, "home art fixtures");
     if (!ok) { free(dds); return; }
     check(stat(files[0], &before) == 0 &&
@@ -126,6 +132,13 @@ static void test_home_art(struct sb_client *client)
               "version 6 client retains home art operation");
         sb_close(&old);
     }
+    {
+        struct sb_client old = {-1, 0};
+        check(sb_connect_version(&old, 7) == 0 &&
+              sb_install_home_art(&old, SB_HOME_ART_PIC1, dds, SB_HOME_ART_DDS_SIZE) == 0,
+              "version 7 client retains home art operation");
+        sb_close(&old);
+    }
     check(sb_install_home_art(client, (enum sb_home_art_kind)99, png, sizeof(png)) == -EINVAL &&
           sb_install_home_art(client, SB_HOME_ART_PIC0, dds, SB_HOME_ART_DDS_SIZE - 1) == -EINVAL &&
           sb_install_home_art(client, SB_HOME_ART_ICON0, png, 20) == -EINVAL, "reject kind and sizes");
@@ -161,6 +174,17 @@ static void test_home_art(struct sb_client *client)
           stat(files[0], &after) == 0 && after.st_ino == before.st_ino,
           "reject destination symlink without touching its target");
     unlink(files[2]);
+    check(unlink(files[4]) == 0 && symlink(files[0], files[4]) == 0 &&
+          sb_remove_home_backgrounds(client) < 0 && access(files[3], F_OK) == 0 &&
+          stat(files[0], &after) == 0 && after.st_ino == before.st_ino,
+          "background removal rejects symlink without touching files");
+    unlink(files[4]);
+    check(sb_remove_home_backgrounds(client) == 0 &&
+          access(files[3], F_OK) < 0 && access(files[4], F_OK) < 0 &&
+          access(files[5], F_OK) < 0 && access(files[6], F_OK) < 0 &&
+          access(files[0], F_OK) == 0 && access(files[1], F_OK) == 0,
+          "remove only fixed background files");
+    check(sb_remove_home_backgrounds(client) == 0, "missing backgrounds are successful");
     free(dds);
 }
 
@@ -176,11 +200,11 @@ int main(void) {
     {
         struct sb_client old = {-1, 0};
         check(sb_connect_version(&old, 2) == -EPROTONOSUPPORT && old.fd == -1,
-              "v7 rejects v2 requests");
+              "v8 rejects v2 requests");
         check(sb_connect_version(&old, 3) == -EPROTONOSUPPORT && old.fd == -1,
-              "v7 rejects v3 requests");
+              "v8 rejects v3 requests");
         check(sb_connect_version(&old, 4) == -EPROTONOSUPPORT && old.fd == -1,
-              "v7 rejects v4 requests");
+              "v8 rejects v4 requests");
         check(sb_connect_version(&old, 5) == 0 && sb_stat(&old, "missing", &size) == -ENOENT,
               "version 5 client retains existing operations");
         sb_close(&old);

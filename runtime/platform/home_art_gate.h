@@ -6,7 +6,7 @@
 #include <string.h>
 
 #define HOME_ART_MARKER_FORMAT 1u
-#define HOME_ART_GENERATOR_VERSION 2u
+#define HOME_ART_GENERATOR_VERSION 3u
 
 typedef struct {
     unsigned char magic[8];
@@ -14,6 +14,7 @@ typedef struct {
     uint32_t generator;
     uint32_t mode;
     unsigned char source[128];
+    // For disabled mode, only installed[0] is an icon digest; background slots are zero.
     unsigned char installed[3][32];
     uint32_t checksum;
 } HomeArtMarker;

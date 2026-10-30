@@ -87,7 +87,7 @@ static int request(struct sb_client *c, uint32_t op, const char *path,
         if (!n || n > SB_MAX_PATH) return -EINVAL;
         req.path_length = (uint32_t)n;
     } else if (op != SB_QUIT && op != SB_REPAIR && op != SB_PACKAGE_READ &&
-               op != SB_INSTALL_HOME_ART) return -EINVAL;
+               op != SB_INSTALL_HOME_ART && op != SB_REMOVE_HOME_BACKGROUNDS) return -EINVAL;
     if ((rc = io_all(c->fd, &req, sizeof(req), 1)) ||
         (req.path_length && (rc = io_all(c->fd, (void *)path, req.path_length, 1))) ||
         ((op == SB_WRITE || op == SB_REPLACE || op == SB_APPEND || op == SB_RENAME ||
@@ -152,5 +152,9 @@ int sb_repair(struct sb_client *c, struct sb_repair_stats *stats)
 int sb_install_home_art(struct sb_client *c, enum sb_home_art_kind kind, const void *data, uint32_t length)
 {
     return request(c, SB_INSTALL_HOME_ART, NULL, (void *)data, length, (uint64_t)kind, NULL);
+}
+int sb_remove_home_backgrounds(struct sb_client *c)
+{
+    return request(c, SB_REMOVE_HOME_BACKGROUNDS, NULL, NULL, 0, 0, NULL);
 }
 int sb_quit(struct sb_client *c) { return request(c, SB_QUIT, NULL, NULL, 0, 0, NULL); }

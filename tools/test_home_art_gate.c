@@ -27,7 +27,12 @@ static int install(void *ctx, int enabled, unsigned char digests[3][32]) {
     Fixture *f = ctx;
     f->installs++;
     if (f->fail_install) return -1;
-    memset(digests, enabled ? 1 : 2, 96);
+    memset(digests, 0, 96);
+    memset(digests[0], enabled ? 1 : 2, 32);
+    if (enabled) {
+        memset(digests[1], 1, 32);
+        memset(digests[2], 1, 32);
+    }
     return 0;
 }
 
@@ -50,6 +55,9 @@ int main(void) {
     source[3] = 1;
     assert(home_art_gate_run(&ops, &f, 1, source) == 1);
     assert(home_art_gate_run(&ops, &f, 0, source) == 1);
+    assert(f.marker.mode == 0 && f.marker.installed[0][0] == 2 &&
+           f.marker.installed[1][0] == 0 && f.marker.installed[2][0] == 0);
+    assert(home_art_gate_run(&ops, &f, 0, source) == 0);
     f.marker.installed[0][0] ^= 1;
     assert(home_art_gate_run(&ops, &f, 0, source) == 1);
     source[4] = 1;

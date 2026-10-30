@@ -216,14 +216,16 @@ static int home_art_dir(const char *path)
     }
     return dir;
 }
+static const char *home_art_dirs[] = {
+    HOME_ART_PREFIX "/user/app/PPSA90212/sce_sys",
+    HOME_ART_PREFIX "/user/app/PPSA90212",
+    HOME_ART_PREFIX "/user/appmeta/PPSA90212"
+};
+
 
 static int install_home_art(uint64_t kind, const unsigned char *data, uint32_t size)
 {
-    static const char *dirs[] = {
-        HOME_ART_PREFIX "/user/app/PPSA90212/sce_sys",
-        HOME_ART_PREFIX "/user/app/PPSA90212",
-        HOME_ART_PREFIX "/user/appmeta/PPSA90212"
-    };
+    const char *const *dirs = home_art_dirs;
     const char *leaf;
     int indexes[3] = {0, 1, 2};
     int dir[3] = {-1, -1, -1};
@@ -266,6 +268,37 @@ static int install_home_art(uint64_t kind, const unsigned char *data, uint32_t s
         if (names[i][0]) unlinkat(dir[i], names[i], 0);
         close(dir[i]);
     }
+    return rc;
+}
+
+static int remove_home_backgrounds(void)
+{
+    static const char *names[] = {"pic0.dds", "pic1.dds"};
+    static const int indexes[] = {0, 2};
+    int dirs[2] = {-1, -1};
+    int rc = 0;
+    for (int i = 0; i < 2; ++i) {
+        dirs[i] = home_art_dir(home_art_dirs[indexes[i]]);
+        if (dirs[i] < 0) { rc = dirs[i]; break; }
+        for (int j = 0; j < 2; ++j) {
+            rc = existing_regular(dirs[i], names[j], 1);
+            if (rc) break;
+        }
+        if (rc) break;
+    }
+    for (int i = 0; !rc && i < 2; ++i) {
+        int changed = 0;
+        for (int j = 0; j < 2; ++j) {
+            if (unlinkat(dirs[i], names[j], 0)) {
+                if (errno != ENOENT) { rc = -errno; break; }
+            } else {
+                changed = 1;
+            }
+        }
+        if (changed && fsync(dirs[i]) && !rc) rc = -errno;
+    }
+    for (int i = 0; i < 2; ++i)
+        if (dirs[i] >= 0) close(dirs[i]);
     return rc;
 }
 static int list_directory(int dir, unsigned char *data, uint32_t capacity, int root)
@@ -500,9 +533,9 @@ static int do_request(struct sb_request *r, char *path, unsigned char *data, uin
 }
 static int valid_request(const struct sb_request *r)
 {
-    if (r->magic != SB_MAGIC || r->operation < SB_CREATE || r->operation > SB_INSTALL_HOME_ART ||
+    if (r->magic != SB_MAGIC || r->operation < SB_CREATE || r->operation > SB_REMOVE_HOME_BACKGROUNDS ||
         r->path_length > SB_MAX_PATH || r->length > SB_MAX_TRANSFER) return 0;
-    if (r->operation == SB_QUIT || r->operation == SB_REPAIR)
+    if (r->operation == SB_QUIT || r->operation == SB_REPAIR || r->operation == SB_REMOVE_HOME_BACKGROUNDS)
         return !r->path_length && !r->length && !r->offset;
     if (r->operation == SB_INSTALL_HOME_ART) return !r->path_length;
     if (r->operation == SB_PACKAGE_READ)
@@ -529,7 +562,7 @@ static void *serve(void *arg)
     char path[SB_MAX_PATH + 1];
     if (io_all(client, &hello, sizeof(hello), 0) || hello.magic != SB_MAGIC ||
         !hello.version || memcmp(hello.token, token, sizeof(token))) goto done;
-    reply_version = hello.version == 5 || hello.version == 6 ? hello.version : SB_VERSION;
+    reply_version = hello.version >= 5 && hello.version <= SB_VERSION ? hello.version : SB_VERSION;
     if (reply_to(client, hello.version >= 5 && hello.version <= SB_VERSION ? 0 : -EPROTONOSUPPORT, 0))
         goto done;
     while (!io_all(client, &r, sizeof(r), 0)) {
@@ -540,6 +573,7 @@ static void *serve(void *arg)
         if (!valid_request(&r)) break;
         if ((hello.version < 5 || hello.version > SB_VERSION) && r.operation != SB_QUIT) break;
         if (hello.version == 5 && r.operation == SB_INSTALL_HOME_ART) break;
+        if (hello.version < 8 && r.operation == SB_REMOVE_HOME_BACKGROUNDS) break;
         if (r.operation == SB_QUIT) {
             rc = hello.version > SB_VERSION ? 0 : -EPERM;
             if (reply_to(client, rc, 0)) break;
@@ -605,6 +639,10 @@ static void *serve(void *arg)
         } else if (r.operation == SB_INSTALL_HOME_ART) {
             pthread_mutex_lock(&request_lock);
             rc = install_home_art(r.offset, data, r.length);
+            pthread_mutex_unlock(&request_lock);
+        } else if (r.operation == SB_REMOVE_HOME_BACKGROUNDS) {
+            pthread_mutex_lock(&request_lock);
+            rc = remove_home_backgrounds();
             pthread_mutex_unlock(&request_lock);
         } else {
             pthread_mutex_lock(&request_lock);

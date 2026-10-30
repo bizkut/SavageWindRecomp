@@ -1869,8 +1869,8 @@ static void *startup_splash_main(void *unused) {
     rt_data_path("cache/home-art/splash.png", cache_path, sizeof cache_path);
     const char *selected = NULL;
     int iw = 0, ih = 0, w = 0, h = 0;
-    unsigned char *image = startup_splash_choose(user_path, cache_path, "/app0/sce_sys/background-source.png",
-                                                 startup_splash_load, NULL, &iw, &ih, &selected);
+    unsigned char *image = startup_splash_choose(user_path, cache_path, startup_splash_load, NULL,
+                                                 &iw, &ih, &selected);
     if (image) LOG("[splash] using %s\n", selected);
     SDL_GetWindowSizeInPixels(window, &w, &h);
     // The picture is converted once into a mapped buffer the frames copy from (not re-uploaded every frame: 33 MB

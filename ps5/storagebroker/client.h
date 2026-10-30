@@ -75,6 +75,8 @@ int sb_repair(struct sb_client *client, struct sb_repair_stats *stats);
 /* Install validated artwork to the fixed PPSA90212 system destinations. */
 int sb_install_home_art(struct sb_client *client, enum sb_home_art_kind kind,
                         const void *data, uint32_t length);
+/* Remove pic0 and pic1 from their fixed destinations; missing files are fine. */
+int sb_remove_home_backgrounds(struct sb_client *client);
 int sb_quit(struct sb_client *client);
 #ifdef __cplusplus
 }
