@@ -17,6 +17,13 @@
 // SAVAGEWIND_GLYPH_DUMP=1 saves each sheet as uploaded, the original beside it (build/glyph_sheet_<n>.pgm, bottom-up).
 #include <math.h>
 #include <pthread.h>
+#include <sched.h>
+#ifdef __linux__
+#include <sys/resource.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+extern long syscall(long number, ...);
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,7 +31,7 @@
 #include <SDL3/SDL.h>
 
 #include "glyphs.h"
-#include "text_sdf.h"
+#include "text_reconstruct.h"
 #include "../framepace.h"
 #include "../input_bind.h"
 #include "../paths.h"
@@ -80,7 +87,6 @@ typedef struct {
     uint64_t hash;
     uint32_t w, h, format;
     uint16_t cell_w, cell_h, cols, rows;
-    uint32_t *ink; // per-cell [left,right) and CJK flag, from CWDH/CMAP
 } TextSheet;
 static TextSheet text_sheets[128];
 static size_t text_sheet_count;
@@ -88,12 +94,6 @@ static size_t text_sheet_count;
 static uint16_t font_u16(const uint8_t *p) { return (uint16_t)(p[0] | p[1] << 8); }
 static uint32_t font_u32(const uint8_t *p) { return (uint32_t)font_u16(p) | (uint32_t)font_u16(p + 2) << 16; }
 static uint64_t font_u64(const uint8_t *p) { return font_u32(p) | (uint64_t)font_u32(p + 4) << 32; }
-
-static bool font_cjk(uint32_t c) {
-    return (c >= 0x3000 && c <= 0x30ff) || (c >= 0x3400 && c <= 0x9fff) ||
-           (c >= 0xf900 && c <= 0xfaff) || (c >= 0xff00 && c <= 0xffef) ||
-           (c >= 0x20000 && c <= 0x3134f) || (c >= 0xac00 && c <= 0xd7af);
-}
 
 void glyphs_register_font(const uint8_t *b, uint64_t n) {
     if (n < 0x54 || memcmp(b, "FFNT", 4) || b[4] != 0xff || b[5] != 0xfe) return;
@@ -129,59 +129,8 @@ void glyphs_register_font(const uint8_t *b, uint64_t n) {
         for (j = 0; j < text_sheet_count; j++)
             if (text_sheets[j].hash == hash && text_sheets[j].w == w && text_sheets[j].h == h &&
                 text_sheets[j].format == format) break;
-        if (j == text_sheet_count) {
-            size_t cells = (size_t)cols * rows;
-            uint32_t *ink = malloc(cells * sizeof(*ink));
-            if (!ink) continue;
-            for (size_t k = 0; k < cells; k++) ink[k] = (uint16_t)(cw << 8);
-            uint32_t p = font_u32(b + 0x2c);
-            for (unsigned chain = 0; p && chain < 256; chain++) {
-                if (p < 8 || (uint64_t)p + 8 > n) break;
-                const uint8_t *s = b + p - 8;
-                uint32_t size = font_u32(s + 4), first = font_u16(s + 8), last = font_u16(s + 10);
-                if (memcmp(s, "CWDH", 4) || size < 16 || (uint64_t)(p - 8) + size > n ||
-                    last < first || (uint64_t)(last - first + 1) * 3 > size - 16) break;
-                for (uint32_t k = first; k <= last; k++) {
-                    if (k / cells != i) continue;
-                    const uint8_t *m = s + 16 + (k - first) * 3;
-                    int left = (int8_t)m[0]; if (left < 0) left = 0;
-                    int right = left + m[1]; left -= 2; right += 2;
-                    if (left < 0) left = 0; if (right > (int)cw) right = cw;
-                    if (!m[1]) left = right = 0;
-                    ink[k % cells] = (uint16_t)(left | right << 8);
-                }
-                p = font_u32(s + 12);
-            }
-            p = font_u32(b + 0x30);
-            for (unsigned chain = 0; p && chain < 256; chain++) {
-                if (p < 8 || (uint64_t)p + 16 > n) break;
-                const uint8_t *s = b + p - 8;
-                uint32_t size = font_u32(s + 4), first = font_u32(s + 8), last = font_u32(s + 12);
-                uint32_t type = font_u16(s + 16), next = font_u32(s + 20);
-                if (memcmp(s, "CMAP", 4) || size < 26 || (uint64_t)(p - 8) + size > n || last < first || last > 0x10ffff) break;
-                if (type == 0) {
-                    uint32_t base = font_u16(s + 24);
-                    for (uint32_t k = 0; k < cells; k++) {
-                        uint32_t index = i * cells + k;
-                        if (index >= base && index - base <= last - first && font_cjk(first + index - base)) ink[k] |= 0x10000;
-                    }
-                } else if (type == 1 && (uint64_t)(last - first + 1) * 2 <= size - 24) {
-                    for (uint32_t k = 0; k <= last - first; k++) {
-                        uint32_t index = font_u16(s + 24 + 2 * k);
-                        if (font_cjk(first + k) && index / cells == i) ink[index % cells] |= 0x10000;
-                    }
-                } else if (type == 2 && size >= 28) {
-                    uint32_t entries = font_u16(s + 24);
-                    if ((uint64_t)entries * 8 > size - 28) break;
-                    for (uint32_t k = 0; k < entries; k++) {
-                        uint32_t c = font_u32(s + 28 + k * 8), index = font_u16(s + 32 + k * 8);
-                        if (font_cjk(c) && index / cells == i) ink[index % cells] |= 0x10000;
-                    }
-                }
-                p = next;
-            }
-            text_sheets[text_sheet_count++] = (TextSheet){hash, w, h, format, cw, ch, cols, rows, ink};
-        }
+        if (j == text_sheet_count)
+            text_sheets[text_sheet_count++] = (TextSheet){hash, w, h, format, cw, ch, cols, rows};
     }
     if (text_sheet_count != before)
         LOG("[font] indexed %u new %ux%u sheets (cells %ux%u, grid %ux%u)\n",
@@ -195,11 +144,18 @@ typedef struct {
     uint32_t w, h, format;
     uint16_t cell_w, cell_h, cols, rows;
     int scale, state;  // 1 working, 2 ready, 3 failed
-    bool sharpen;
-    const uint32_t *ink;
     uint8_t *input, *output;
 } TextCache;
 static TextCache text_cache[32];
+static void text_low_priority(void) {
+#ifdef __PROSPERO__
+    struct sched_param p = { .sched_priority = sched_get_priority_min(SCHED_OTHER) };
+    if (p.sched_priority >= 0) pthread_setschedparam(pthread_self(), SCHED_OTHER, &p);
+#elif defined(__linux__)
+    setpriority(PRIO_PROCESS, (id_t)syscall(SYS_gettid), 10);
+#endif
+}
+
 
 static void *text_worker(void *arg) {
     TextCache *c = arg;
@@ -216,45 +172,16 @@ static void *text_worker(void *arg) {
     if (c->format == FMT_BC4) bc4_decode(c->input, w / 4, h / 4, src);
     else memcpy(src, c->input, (uint64_t)w * h);
     free(c->input);
-    uint32_t ow = w * scale, denom = scale * 2;
-    for (uint32_t y = 0; y < h * scale; y++) {
-        int sy = (int)y * 2 + 1 - (int)scale, y0 = sy < 0 ? 0 : sy / (int)denom, fy = sy < 0 ? 0 : sy % (int)denom;
-        int y1 = y0 + 1 < (int)h ? y0 + 1 : y0;
-        uint32_t py = y / scale;
-        uint32_t row = (h - 1 - py) / (c->cell_h + 1);
-        int top = (int)h - 1 - (int)(row * (c->cell_h + 1));
-        int bottom = top - c->cell_h + 1;
-        for (uint32_t x = 0; x < ow; x++) {
-            int sx = (int)x * 2 + 1 - (int)scale, x0 = sx < 0 ? 0 : sx / (int)denom, fx = sx < 0 ? 0 : sx % (int)denom;
-            int x1 = x0 + 1 < (int)w ? x0 + 1 : x0;
-            uint32_t px = x / scale, col = px / (c->cell_w + 1);
-            int left = col * (c->cell_w + 1), right = left + c->cell_w - 1;
-            if (row >= c->rows || col >= c->cols || py < (uint32_t)bottom || px > (uint32_t)right) {
-                dst[(uint64_t)y * ow + x] = src[(uint64_t)py * w + px];
-                continue;
-            }
-            int ax = x0 < left ? left : x0 > right ? right : x0;
-            int bx = x1 < left ? left : x1 > right ? right : x1;
-            int ay = y0 < bottom ? bottom : y0 > top ? top : y0;
-            int by = y1 < bottom ? bottom : y1 > top ? top : y1;
-            int v = (src[(uint64_t)ay * w + ax] * (denom-fx) * (denom-fy) +
-                     src[(uint64_t)ay * w + bx] * fx * (denom-fy) +
-                     src[(uint64_t)by * w + ax] * (denom-fx) * fy +
-                     src[(uint64_t)by * w + bx] * fx * fy + denom * denom / 2) / (denom * denom);
-            dst[(uint64_t)y * ow + x] = (uint8_t)v;
-        }
-    }
-    int sdf_count = 0, sharpen_count = 0;
-    if (!text_sdf_sheet(src, dst, w, h, c->cell_w, c->cell_h, c->cols, c->rows, scale, c->ink, c->sharpen, &sdf_count, &sharpen_count)) {
-        free(src); free(dst);
-        __atomic_store_n(&c->state, 3, __ATOMIC_RELEASE);
-        return NULL;
-    }
+    uint32_t ow = w * scale;
+    for (uint32_t y = 0; y < h * scale; y++)
+        for (uint32_t x = 0; x < ow; x++)
+            dst[(uint64_t)y * ow + x] = src[(uint64_t)(y / scale) * w + x / scale];
+    text_reconstruct_sheet(src, dst, w, h, c->cell_w, c->cell_h, c->cols, c->rows, scale);
     free(src);
     c->output = dst;
     __atomic_store_n(&c->state, 2, __ATOMIC_RELEASE);
-    LOG("[font] %ux%u hash=%016llx %dx method=%s sdf_glyphs=%d sharpen_glyphs=%d worker %.2f ms finished_frame=%llu\n",
-        w, h, (unsigned long long)c->hash, scale, c->sharpen ? "sharpen" : "sdf", sdf_count, sharpen_count, (SDL_GetTicksNS() - started) / 1000000.0,
+    LOG("[font] %ux%u hash=%016llx %dx method=cubic worker %.2f ms finished_frame=%llu\n",
+        w, h, (unsigned long long)c->hash, scale, (SDL_GetTicksNS() - started) / 1000000.0,
         (unsigned long long)framepace_game_frame());
     return NULL;
 }
@@ -287,7 +214,8 @@ bool glyphs_sharp_text(uint64_t addr, uint64_t pool_lo, uint64_t pool_hi, uint32
     size_t slot;
     for (slot = 0; slot < sizeof text_cache / sizeof *text_cache; slot++) {
         TextCache *c = &text_cache[slot];
-        if (__atomic_load_n(&c->state, __ATOMIC_ACQUIRE) && c->hash == hash && c->scale == scale && c->format == format && c->w == w && c->h == h && c->sharpen == g_settings.sharp_text_sharpen) break;
+        if (__atomic_load_n(&c->state, __ATOMIC_ACQUIRE) && c->hash == hash && c->scale == scale &&
+            c->format == format && c->w == w && c->h == h) break;
     }
     if (slot == sizeof text_cache / sizeof *text_cache) {
         for (slot = 0; slot < sizeof text_cache / sizeof *text_cache && __atomic_load_n(&text_cache[slot].state, __ATOMIC_ACQUIRE); slot++) {}
@@ -297,10 +225,8 @@ bool glyphs_sharp_text(uint64_t addr, uint64_t pool_lo, uint64_t pool_hi, uint32
         if (!c->input) return true;
         memcpy(c->input, lin, bytes);
         c->hash = hash; c->w = w; c->h = h; c->format = format; c->scale = scale;
-        c->sharpen = g_settings.sharp_text_sharpen;
         c->cell_w = text_sheets[i].cell_w; c->cell_h = text_sheets[i].cell_h;
         c->cols = text_sheets[i].cols; c->rows = text_sheets[i].rows;
-        c->ink = text_sheets[i].ink;
         __atomic_store_n(&c->state, 1, __ATOMIC_RELEASE);
         pthread_t thread;
         if (pthread_create(&thread, NULL, text_worker, c)) {

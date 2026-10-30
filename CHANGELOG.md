@@ -20,15 +20,13 @@ the background while the game code loads and the display starts; the game code's
 game data's patch tables; and the code's symbols are resolved through an index (2.6 s → 30 ms). `fast_start = 0`
 and `fast_exefs = 0` restore the old steps for comparisons.
 
-On PS5, the title includes original Savage Wind menu and launch backgrounds and shows an animated startup picture
-until the first game present. A player's `splash.jpg`, `splash.jpeg` or `splash.png` in the data root overrides the
-runtime picture; `startup_splash = 0` disables the runtime screen for startup comparisons.
+On PS5, a startup screen shows until the first game present: the player's `splash.jpg`, `splash.jpeg` or `splash.png`
+in the data root, else the background made from their own game files, else a plain dark screen with loading dots;
+`startup_splash = 0` disables it for startup comparisons.
 
-Unreleased: Vulkan reconstructs identified game font sheets at 4K from the player's own game files. The per-glyph
-distance-field path retains the original soft coverage curve for the game's text shader; thin or dense glyphs use a
-coverage-preserving interpolation instead. **Sharp game text** defaults on for PS5 and off on desktop; unknown sheets
-stay unchanged. For comparisons, `sharp_text_method = sdf` selects the mixed distance-field method (PS5 default),
-and `sharpen` selects coverage-preserving interpolation for all glyphs (desktop default).
+Unreleased: Vulkan reconstructs identified game font sheets at 4K from the player's own game files, using the same
+shape-preserving coverage interpolation and a shared ink-weight correction for every glyph in a sheet. **Sharp game
+text** defaults on for PS5 and off on desktop; unknown sheets stay unchanged.
 Vulkan also offers **Sharp layout artwork**, which enlarges selected title artwork from the player's own archive.
 It defaults off on all platforms; restart after changing it. Unrecognized textures stay unchanged.
 An experimental user-generated UI HD pack can replace matching layout textures with compressed mipmapped artwork

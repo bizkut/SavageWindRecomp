@@ -43,7 +43,6 @@ Settings g_settings = {
     .package_read_broker = true,
     .fast_start = true,
     .fast_exefs = true,
-    .sharp_text_sharpen = SHARP_TEXT_SHARPEN_DEFAULT,
     .hd_ui = true,
     .vsync = VSYNC_DEFAULT,
 #ifdef GAMECODE_CONSOLE
@@ -180,10 +179,6 @@ void settings_load(void) {
                 if (!strcmp(val, k_icons[i])) g_settings.button_icons = i;
         }
         else if (!strcmp(key, "sharp_text")) g_settings.sharp_text = atoi(val) != 0;
-        else if (!strcmp(key, "sharp_text_method")) {
-            if (!strcmp(val, "sdf")) g_settings.sharp_text_sharpen = false;
-            else if (!strcmp(val, "sharpen")) g_settings.sharp_text_sharpen = true;
-        }
         else if (!strcmp(key, "sharp_ui")) { g_settings.sharp_ui = atoi(val) != 0; g_settings.sharp_ui_chosen = true; }
         else if (!strcmp(key, "hd_ui")) g_settings.hd_ui = atoi(val) != 0;
         else if (!strcmp(key, "hd_ui_generate")) g_settings.hd_ui_generate = atoi(val) != 0;
@@ -345,8 +340,6 @@ void settings_save(void) {
     fprintf(f, "button_icons = %s\n", k_icons[g_settings.button_icons >= 0 && g_settings.button_icons < ICONS_COUNT ?
                                                 g_settings.button_icons : ICONS_AUTO]);
     fprintf(f, "sharp_text = %d\n", g_settings.sharp_text);
-    if (g_settings.sharp_text_sharpen != SHARP_TEXT_SHARPEN_DEFAULT) // written only when it differs from the platform's
-        fprintf(f, "sharp_text_method = %s\n", g_settings.sharp_text_sharpen ? "sharpen" : "sdf");
     fprintf(f, "sharp_ui = %d\n", g_settings.sharp_ui);
     fprintf(f, "hd_ui = %d\n", g_settings.hd_ui);
 #ifdef __PROSPERO__
