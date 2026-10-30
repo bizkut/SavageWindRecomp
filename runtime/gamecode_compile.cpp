@@ -220,8 +220,23 @@ struct Build {
                         hit = true;
                     }
                 }
-                if (!hit)
-                    data = compile_object(job, root);
+                if (!hit) {
+                    {
+                        std::lock_guard<std::mutex> lock(mutex);
+                        report("compile-start", completed, finished ? submitted : 0);
+                    }
+                    try {
+                        data = compile_object(job, root);
+                    } catch (...) {
+                        std::lock_guard<std::mutex> lock(mutex);
+                        report("compile-finish", completed, finished ? submitted : 0);
+                        throw;
+                    }
+                    {
+                        std::lock_guard<std::mutex> lock(mutex);
+                        report("compile-finish", completed, finished ? submitted : 0);
+                    }
+                }
                 {
                     std::lock_guard<std::mutex> lock(mutex);
                     if (!hit && cache && cache->store(cache->context, key.data(), data.data(), data.size()))

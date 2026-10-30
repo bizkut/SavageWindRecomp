@@ -362,6 +362,8 @@ the SIGSYS-on-exit crash vkQuake recorded (`PS5_vkQuake/docs/FINDINGS.md`).
 objects. Fix `runtime/gamelib.c`'s CPU check to a fixed `x86-64-v3` on PS5.
 **Done when:** runtime starts, reserves guest memory, runs its linked game code, opens the game's ExeFS and RomFS
 from the packages in `/data/savagewind/import/` (D11), and reaches the game's first NVN call (no rendering yet).
+The `GAMECODE_CONSOLE` build accepts `gamecode_overlap` (default `0`) and `gamecode_threads` (default `8`, clamped
+to `1..16`) in `savagewind.ini`; the default PS5 build ignores these settings.
 
 The M2 link uses desktop `hle/vi.c` for guest-side VI objects, but does not create a PS5 display surface. Its
 `nvnBootstrapLoader` handler logs the requested entry point and exits before the desktop NVN implementation runs.
@@ -777,13 +779,19 @@ The linker still rejects any generated object's unresolved runtime symbol absent
   last; the record contains the unrelocated image, section and layout metadata, identity and checked fixups.
   Both files and each object plus its checksum sidecar are replaced through the broker. Cache reads validate the
   manifest and record before relocation. This describes the implementation, not console qualification.
+  `last-build.txt` records status, actual startup overlap, requested and used compiler threads, cache hits/misses,
+  per-stage wall times, total time and title-heap peak via the broker. `compile_seconds` is the union of intervals
+  with at least one uncached compiler worker active; generation and compilation overlap, so their combined elapsed
+  time is reported separately rather than added to the generation time.
 - **Cutover and startup:** build a release variant without `libgamecode.a` or static references to its symbols.
   Resolve the five layout symbols from the finished image and construct `GameLibTables` in the runtime; keep
   `gamelib_load`'s version/site checks, `gamelib_tables`' lifetime and all existing dispatch consumers unchanged.
   Validate every module's build ID against the user's ExeFS, not only `main`. On first start enumerate/validate
   inputs, generate C, reuse or compile each object, link/fix up, validate tables, then start the guest. Show
-  stage and completed/total progress beside shader precompile; only overlap where measured memory and CPU budgets
-  permit. Subsequent starts validate and relocate the cache before guest execution.
+  stage and completed/total progress beside shader precompile. `gamecode_threads` defaults to 8 and clamps to 1–16;
+  `gamecode_overlap` defaults to 0, with 1 enabling experimental concurrent shader/HD work. The 4.29 GB observed
+  compiler heap peak and package/driver contention require console qualification before enabling overlap by default.
+  Subsequent starts validate and relocate the cache before guest execution.
 - **Qualification and order:** (1) census/ABI and linker contract, including unwind and memory budget (2–4
   engineer-days); (2) deterministic ELF linker, exports and relocation/negative tests (8–15 days); (3) cache,
   restart and runtime cutover (4–7 days); (4) generator/compiler orchestration and progress UI (4–7 days);

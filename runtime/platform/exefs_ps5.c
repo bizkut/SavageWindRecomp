@@ -19,6 +19,10 @@ extern void savagewind_package_close(void *);
 
 static void *exefs;
 static uint64_t exefs_bytes, exefs_read_ns, exefs_reads;
+#ifdef GAMECODE_CONSOLE
+// ExeFS streams can share seekable package state; shader and generator reads must not overlap.
+static pthread_mutex_t exefs_io_lock = PTHREAD_MUTEX_INITIALIZER;
+#endif
 static struct {
     pthread_t thread;
     char keys[1200], why[512];
@@ -90,11 +94,22 @@ void ps5_exefs_read_summary(void) {
 static uint8_t *read_exefs(const char *path, size_t *len, size_t max) {
     const char *name = strrchr(path, '/');
     name = name ? name + 1 : path;
+#ifdef GAMECODE_CONSOLE
+    pthread_mutex_lock(&exefs_io_lock);
+#endif
     void *file = savagewind_exefs_file_open(exefs, name);
-    if (!file) return NULL;
+    if (!file) {
+#ifdef GAMECODE_CONSOLE
+        pthread_mutex_unlock(&exefs_io_lock);
+#endif
+        return NULL;
+    }
     int64_t size = savagewind_exefs_file_size(file);
     if (size < 0 || (uint64_t)size > max || (uint64_t)size > SIZE_MAX) {
         savagewind_exefs_file_close(file);
+#ifdef GAMECODE_CONSOLE
+        pthread_mutex_unlock(&exefs_io_lock);
+#endif
         return NULL;
     }
     uint64_t start = plat_now_ns();
@@ -107,6 +122,9 @@ static uint8_t *read_exefs(const char *path, size_t *len, size_t max) {
     exefs_reads++;
     exefs_bytes += (uint64_t)size;
     exefs_read_ns += plat_now_ns() - start;
+#ifdef GAMECODE_CONSOLE
+    pthread_mutex_unlock(&exefs_io_lock);
+#endif
     return data;
 }
 #ifdef GAMECODE_CONSOLE

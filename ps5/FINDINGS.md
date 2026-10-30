@@ -1539,3 +1539,23 @@ cache format v2 only in the image identity). Benchmark, same session, alternatin
 came from the unrelaxed GOT loads). An earlier session (`ab-gcr-*`) gave 77.8 vs 77.5 / 77.7 %. Warm start
 (`gamecode-keyfix-warm`): cache load 6.6 s, ready 7.1 s, title 20.6 s. The first start's own timing wasn't captured
 (the console log stream dropped); its cache was rewritten (manifest timestamp) and loaded on the next start.
+
+## 2026-10-30 — M12 first start: compile threads (.41, `cache/gamecode/last-build.txt` receipts)
+
+Console variant `5868c0b0…` (display opened before the build, progress on the first-start screen; overlap off),
+object cache and image cleared before each run, one run each. The receipt is written by the title through the
+broker, so it doesn't depend on the console log stream (which drops during long runs).
+
+| `gamecode_threads` | Compile s | First start total s | Peak title heap |
+|---|---|---|---|
+| 4 | 932.6 | 973.6 | 3.88 GB |
+| 6 | 676.3 | 717.1 | 4.05 GB |
+| **8 (default)** | **581.2** | **622.1** | 4.12 GB |
+| 12 | 695.9 | 736.9 | 5.36 GB |
+| 16 | 856.9 | 897.9 | 6.35 GB |
+
+More than 8 compile threads is slower: the title evidently gets no more real CPU than 8 compiles use, and extra
+threads only contend and grow memory. Generation and compile overlap (generation is held back by the bounded
+queue). Every run also spent 20.9 s saving the cache and 9.5 s reloading it right after; the reload of an image that
+is already in memory is avoidable. Link 0.58 s. Not measured yet: the progress screen's look, and overlap with the
+shader precompile and HD interface generation (`gamecode_overlap = 1`).

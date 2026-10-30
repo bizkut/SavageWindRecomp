@@ -33,7 +33,12 @@ extern const uint32_t game_site_count;
 #endif
 
 GameSites g_site;
+#ifdef GAMECODE_CONSOLE
+// This variant accepts only 1.9.0; keep the pointer stable while early HD work runs.
+const char *g_game_version = "1.9.0";
+#else
 const char *g_game_version = "";
+#endif
 #ifndef GAMECODE_CONSOLE
 static const GameLibTables tables = {
     GAMELIB_ABI, GAMELIB_ID, game_modules, &game_module_count,
@@ -71,7 +76,9 @@ bool gamelib_load(const char *game_dir, char *why, size_t why_size) {
         }
         *(uint64_t *)((char *)&g_site + wanted[i].offset) = j < game_site_count ? game_sites[j].addr : 0;
     }
+#ifndef GAMECODE_CONSOLE
     g_game_version = game_version;
+#endif
     loaded = true;
     return true;
 }

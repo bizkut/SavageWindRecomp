@@ -46,6 +46,9 @@ Settings g_settings = {
     .sharp_text_sharpen = SHARP_TEXT_SHARPEN_DEFAULT,
     .hd_ui = true,
     .vsync = VSYNC_DEFAULT,
+#ifdef GAMECODE_CONSOLE
+    .gamecode_threads = 8,
+#endif
 #ifdef __PROSPERO__
     .hdr = HDR_OFF,
     .sharp_text = true,
@@ -217,6 +220,13 @@ void settings_load(void) {
         else if (!strcmp(key, "package_read_broker")) g_settings.package_read_broker = atoi(val) != 0;
         else if (!strcmp(key, "fast_start")) g_settings.fast_start = atoi(val) != 0;
         else if (!strcmp(key, "fast_exefs")) g_settings.fast_exefs = atoi(val) != 0;
+#ifdef GAMECODE_CONSOLE
+        else if (!strcmp(key, "gamecode_overlap")) g_settings.gamecode_overlap = atoi(val) != 0;
+        else if (!strcmp(key, "gamecode_threads")) {
+            int n = atoi(val);
+            g_settings.gamecode_threads = n < 1 ? 1 : n > 16 ? 16 : n;
+        }
+#endif
         else bind_settings_load(key, val);  // bind_pad_* / bind_key_*: runtime/hle/bindings.c
     }
     fclose(f);
@@ -310,6 +320,10 @@ void settings_save(void) {
     if (!g_settings.package_read_broker) fprintf(f, "package_read_broker = 0\n");
     if (!g_settings.fast_start) fprintf(f, "fast_start = 0\n");  // (A/B only: written while off)
     if (!g_settings.fast_exefs) fprintf(f, "fast_exefs = 0\n");  // (A/B only: written while off)
+#ifdef GAMECODE_CONSOLE
+    if (g_settings.gamecode_overlap) fprintf(f, "gamecode_overlap = 1\n");
+    if (g_settings.gamecode_threads != 8) fprintf(f, "gamecode_threads = %d\n", g_settings.gamecode_threads);
+#endif
     fprintf(f, "dpad_move = %d\n", g_settings.dpad_move);
     fprintf(f, "left_stick_deadzone = %.0f\n", g_settings.stick_deadzone[0] * 100);
     fprintf(f, "right_stick_deadzone = %.0f\n", g_settings.stick_deadzone[1] * 100);

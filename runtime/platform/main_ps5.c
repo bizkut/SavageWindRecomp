@@ -191,28 +191,71 @@ static void first_start_precompile(void) {
         st == SP_FAILED ? g_pc.why : "", heap.mapped_bytes / 1048576.0, heap.peak_bytes / 1048576.0);
 }
 #ifdef GAMECODE_CONSOLE
-bool ps5_gamecode_prepare(void (*progress)(void *, const char *, size_t, size_t), void *context,
+bool ps5_gamecode_prepare(unsigned threads, bool overlap,
+                          void (*progress)(void *, const char *, size_t, size_t), void *context,
                           char *why, size_t why_size);
+void ps5_gamecode_record_start_failure(unsigned threads, bool overlap);
 bool ps5_exefs_validate_gamecode(char *why, size_t why_size);
 static struct {
     atomic_int stage, done, total, finished;
     bool success;
     char why[512];
 } g_gamecode;
+static pthread_t g_overlap_thread;
+static bool g_overlap_started;
+
+static bool start_overlap_precompile(void) {
+    if (!g_settings.gamecode_overlap) return false;
+    int status = shader_precompile_status(NULL, NULL, 0);
+    g_run_shaders = status != 1 && g_settings.precompile_shaders;
+    g_generate_hd = g_settings.hd_ui_generate && hd_ui_generate_needed();
+    if (!g_run_shaders && !g_generate_hd) return false;
+    pthread_attr_t attr;
+    int rc = pthread_attr_init(&attr);
+    if (rc) {
+        LOG("[gamecode] overlap thread attributes failed (%d); running serially\n", rc);
+        return false;
+    }
+    rc = pthread_attr_setstacksize(&attr, 8u << 20);
+    if (!rc) rc = pthread_create(&g_overlap_thread, &attr, precompile_main, NULL);
+    pthread_attr_destroy(&attr);
+    if (rc) {
+        LOG("[gamecode] overlap thread failed (%d); running serially\n", rc);
+        return false;
+    }
+    g_overlap_started = true;
+    LOG("[gamecode] overlapping shader/HD first-start work\n");
+    return true;
+}
+
+static void join_overlap_precompile(void) {
+    if (!g_overlap_started) return;
+    pthread_join(g_overlap_thread, NULL);
+    int state = atomic_load(&g_pc.state);
+    if (state == SP_FAILED) LOG("[precompile] failed: %s\n", g_pc.why);
+    else if (state == SP_CANCELLED) LOG("[precompile] cancelled\n");
+    else LOG("[precompile] overlap finished: %d shaders, %d pipelines\n", g_pc.shaders, g_pc.pipelines);
+    if (hd_ui_generate_progress(NULL, NULL))
+        LOG("[hd-ui-gen] continuing in background after shader precompile\n");
+}
 
 static void gamecode_progress(void *unused, const char *stage, size_t done, size_t total) {
     (void)unused;
     int value = strstr(stage, "generat") ? 1 :
-                (strstr(stage, "compil") || !strcmp(stage, "cache")) ? 2 : strstr(stage, "link") ? 3 : 0;
-    atomic_store(&g_gamecode.stage, value);
+                (strstr(stage, "compil") || !strcmp(stage, "cache")) ? 2 :
+                strstr(stage, "link") ? 3 : strstr(stage, "sav") ? 4 : 0;
+    int previous = atomic_load(&g_gamecode.stage);
+    if (value == 1 && previous >= 2) return;
     atomic_store(&g_gamecode.done, (int)done);
     atomic_store(&g_gamecode.total, (int)total);
+    atomic_store(&g_gamecode.stage, value);
 }
 
 static void *gamecode_main(void *unused) {
     (void)unused;
     plat_thread_heap_own();
-    g_gamecode.success = ps5_gamecode_prepare(gamecode_progress, NULL, g_gamecode.why, sizeof g_gamecode.why);
+    g_gamecode.success = ps5_gamecode_prepare((unsigned)g_settings.gamecode_threads, g_overlap_started,
+                                               gamecode_progress, NULL, g_gamecode.why, sizeof g_gamecode.why);
     atomic_store(&g_gamecode.finished, 1);
     return NULL;
 }
@@ -220,11 +263,17 @@ static void *gamecode_main(void *unused) {
 static bool first_start_gamecode(char *why, size_t why_size) {
     extern void vk_present_progress(float done, const char *const *lines);
     extern void gpu_lock(void), gpu_unlock(void);
+    start_overlap_precompile();
     pthread_attr_t attr;
     pthread_t thread;
     int rc = pthread_attr_init(&attr);
     if (rc) {
         snprintf(why, why_size, "game code thread attributes failed: %d", rc);
+        ps5_gamecode_record_start_failure((unsigned)g_settings.gamecode_threads, g_overlap_started);
+        if (g_overlap_started) {
+            atomic_store(&g_pc.cancel, true);
+            join_overlap_precompile();
+        }
         return false;
     }
     rc = pthread_attr_setstacksize(&attr, 8u << 20);
@@ -232,29 +281,62 @@ static bool first_start_gamecode(char *why, size_t why_size) {
     pthread_attr_destroy(&attr);
     if (rc) {
         snprintf(why, why_size, "game code thread creation failed: %d", rc);
+        ps5_gamecode_record_start_failure((unsigned)g_settings.gamecode_threads, g_overlap_started);
+        if (g_overlap_started) {
+            atomic_store(&g_pc.cancel, true);
+            join_overlap_precompile();
+        }
         return false;
     }
-    while (!atomic_load(&g_gamecode.finished)) {
+    bool hd_reads_released = false;
+    for (;;) {
+        bool game_done = atomic_load(&g_gamecode.finished);
+        int shader_state = atomic_load(&g_pc.state);
+        if (g_overlap_started && g_generate_hd && !hd_reads_released && shader_state >= SP_COMPILING) {
+            hd_ui_generate_shader_reads_done();
+            hd_reads_released = true;
+        }
+        if (game_done && !g_gamecode.success && g_overlap_started) atomic_store(&g_pc.cancel, true);
+        if (game_done && (!g_overlap_started || shader_state >= SP_DONE)) break;
         int stage = atomic_load(&g_gamecode.stage);
         int done = atomic_load(&g_gamecode.done);
         int total = atomic_load(&g_gamecode.total);
         if (stage == 2 && !total) total = 996;
         float part = total > 0 ? (float)done / (float)total : 0;
         if (part > 1) part = 1;
-        float fraction = stage == 1 ? part * 0.1f : stage == 2 ? 0.1f + part * 0.8f : stage == 3 ? 0.9f : 0;
-        char pct[32], step[160];
-        snprintf(pct, sizeof pct, "%d %%", (int)(fraction * 100));
-        if (stage == 1) snprintf(step, sizeof step, "Building game code: generating");
-        else if (stage == 2) snprintf(step, sizeof step, "Building game code: compiling %d of %d", done, total);
-        else if (stage == 3) snprintf(step, sizeof step, "Building game code: linking");
-        else snprintf(step, sizeof step, "Building game code: checking cache");
-        const char *lines[] = {"Building game code", pct, step, "This happens only on the first start and after an update."};
+        float fraction = game_done && g_gamecode.success ? 1 :
+            stage == 1 ? part * 0.13f : stage == 2 ? 0.13f + part * 0.82f :
+            stage == 3 ? 0.95f : stage == 4 ? 0.96f + part * 0.02f : 0;
+        char step[160], shader[160], hd[160];
+        int percent = (int)(fraction * 100);
+        if (game_done) snprintf(step, sizeof step, "Game code: %s (%d%%)",
+                                g_gamecode.success ? "ready" : "failed", percent);
+        else if (stage == 1) snprintf(step, sizeof step, "Generating (%d%%)", percent);
+        else if (stage == 2) snprintf(step, sizeof step, "Compiling %d of %d (%d%%)", done, total, percent);
+        else if (stage == 3) snprintf(step, sizeof step, "Linking (%d%%)", percent);
+        else if (stage == 4) snprintf(step, sizeof step, "Saving (%d%%)", percent);
+        else snprintf(step, sizeof step, "Checking game code cache (%d%%)", percent);
+        if (!g_overlap_started) snprintf(shader, sizeof shader, "Shaders: after game code");
+        else if (!g_run_shaders) snprintf(shader, sizeof shader, "Shaders: up to date or disabled");
+        else if (shader_state == SP_DONE) snprintf(shader, sizeof shader, "Shaders: complete");
+        else if (shader_state == SP_FAILED) snprintf(shader, sizeof shader, "Shaders: failed (see log)");
+        else if (shader_state == SP_CANCELLED) snprintf(shader, sizeof shader, "Shaders: cancelled");
+        else snprintf(shader, sizeof shader, "Shaders: %d%%", (int)(shader_precompile_progress(&g_pc) * 100));
+        int hd_done = 0, hd_total = 0;
+        bool hd_active = g_overlap_started && hd_ui_generate_progress(&hd_done, &hd_total);
+        if (!g_overlap_started) snprintf(hd, sizeof hd, "HD interface: after game code");
+        else if (!g_generate_hd) snprintf(hd, sizeof hd, "HD interface: up to date or disabled");
+        else if (hd_active && hd_total) snprintf(hd, sizeof hd, "HD interface: %d of %d", hd_done, hd_total);
+        else if (hd_active || shader_state == SP_IDLE) snprintf(hd, sizeof hd, "HD interface: preparing");
+        else snprintf(hd, sizeof hd, "HD interface: complete or unavailable");
+        const char *lines[] = {"Building game code (first start only)", step, shader, hd};
         gpu_lock();
         vk_present_progress(fraction, lines);
         gpu_unlock();
         usleep(100000);
     }
     pthread_join(thread, NULL);
+    join_overlap_precompile();
     if (!g_gamecode.success) snprintf(why, why_size, "%s", g_gamecode.why);
     return g_gamecode.success;
 }
@@ -350,7 +432,11 @@ int main(void) {
     }
     extern void ps5_s7_run(void);
     ps5_s7_run();
+#ifdef GAMECODE_CONSOLE
+    if (!g_overlap_started) first_start_precompile();
+#else
     first_start_precompile();
+#endif
     ps5_startup_mark("precompile done or skipped");
     extern void ps5_startup_splash_start(void);
     if (g_settings.startup_splash) ps5_startup_splash_start();

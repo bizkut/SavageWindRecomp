@@ -121,6 +121,10 @@ typedef struct {
     bool package_read_broker;   // PS5: package reads >= 256 KiB through the root storage broker (A/B: ini 0)
     bool fast_start;            // PS5: the start-up RomFS open kept, overlapping ExeFS/loader/window (A/B: ini 0)
     bool fast_exefs;            // PS5: the start-up ExeFS open processes only the ExeFS partition (A/B: ini 0)
+#ifdef GAMECODE_CONSOLE
+    bool gamecode_overlap;      // overlap game-code loading with startup work
+    int gamecode_threads;       // loading worker count, 1..16
+#endif
 } Settings;
 
 #define STICK_DEADZONE_DEFAULT 0.10f  // (the Switch's own input service has one: the game expects 0 at rest)

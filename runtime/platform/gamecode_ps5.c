@@ -21,6 +21,7 @@
 #define CACHE_DIR "cache/gamecode"
 #define CACHE_IMAGE CACHE_DIR "/image.bin"
 #define CACHE_MANIFEST CACHE_DIR "/manifest"
+#define CACHE_RECEIPT CACHE_DIR "/last-build.txt"
 #define CACHE_ROOT "/data/savagewind/"
 #define INCLUDE_ROOT "/app0/gamecode-include"
 #define MAX_CACHE_BYTES ((size_t)2 * 1024 * 1024 * 1024)
@@ -308,14 +309,28 @@ struct progress_state {
     GameCodeProgress callback;
     void *context;
     uint64_t generation_start;
+    uint64_t generation_end;
+    uint64_t compile_start, compile_elapsed;
+    size_t compile_active;
 };
 
 static void report_progress(void *context, const char *stage, size_t done, size_t total) {
     struct progress_state *state = context;
+    if (!strcmp(stage, "compile-start")) {
+        if (!state->compile_active++) state->compile_start = plat_now_ns();
+        return;
+    }
+    if (!strcmp(stage, "compile-finish")) {
+        if (state->compile_active && !--state->compile_active)
+            state->compile_elapsed += plat_now_ns() - state->compile_start;
+        return;
+    }
     if (!strcmp(stage, "generate")) {
         if (!state->generation_start) state->generation_start = plat_now_ns();
-        if (total && done == total)
-            fprintf(stderr, "[gamecode] generating %.3f s\n", (plat_now_ns() - state->generation_start) / 1e9);
+        if (total && done == total) {
+            state->generation_end = plat_now_ns();
+            fprintf(stderr, "[gamecode] generating %.3f s\n", (state->generation_end - state->generation_start) / 1e9);
+        }
     }
     if ((!strcmp(stage, "compile") || !strcmp(stage, "cache")) && done && done % 100 == 0)
         fprintf(stderr, "[gamecode] compiling %zu of %zu%s\n", done, total ? total : 996,
@@ -323,15 +338,91 @@ static void report_progress(void *context, const char *stage, size_t done, size_
     if (state->callback) state->callback(state->context, stage, done, total);
 }
 
-bool ps5_gamecode_prepare(GameCodeProgress progress, void *context, char *why, size_t why_size) {
+static void finish_compiles(struct progress_state *state) {
+    if (state->compile_active) {
+        state->compile_elapsed += plat_now_ns() - state->compile_start;
+        state->compile_active = 0;
+    }
+}
+
+enum receipt_stage {
+    RECEIPT_IDENTITY,
+    RECEIPT_CACHE_LOAD,
+    RECEIPT_GENERATE_COMPILE,
+    RECEIPT_LINK,
+    RECEIPT_SAVE,
+    RECEIPT_CACHE_RELOAD,
+    RECEIPT_VALIDATE,
+    RECEIPT_STAGE_COUNT
+};
+
+struct build_receipt {
+    uint64_t start, stage_start, elapsed[RECEIPT_STAGE_COUNT];
+    enum receipt_stage stage;
+    unsigned threads, requested_threads;
+    int overlap, image_hit;
+};
+
+static void receipt_stage(struct build_receipt *receipt, enum receipt_stage stage) {
+    uint64_t now = plat_now_ns();
+    receipt->elapsed[receipt->stage] += now - receipt->stage_start;
+    receipt->stage = stage;
+    receipt->stage_start = now;
+}
+
+static void write_receipt(const struct build_receipt *receipt, const struct progress_state *progress,
+                          const struct object_stats *stats, uint64_t peak_heap, int ok) {
+    char text[1024];
+    uint64_t generation = progress->generation_start ?
+        (progress->generation_end ? progress->generation_end : plat_now_ns()) - progress->generation_start : 0;
+    int n = snprintf(text, sizeof text,
+                     "status=%s\nthreads=%u\noverlap=%d\nimage_cache_hit=%d\nrequested_threads=%u\n"
+                     "object_cache_hits=%zu\nobject_cache_misses=%zu\nidentity_seconds=%.3f\ncache_load_seconds=%.3f\n"
+                     "generation_seconds=%.3f\ncompile_seconds=%.3f\ngeneration_compile_seconds=%.3f\n"
+                     "link_seconds=%.3f\n"
+                     "save_seconds=%.3f\ncache_reload_seconds=%.3f\nvalidate_seconds=%.3f\n"
+                     "peak_heap_bytes=%llu\ntotal_seconds=%.3f\n",
+                     ok ? "ready" : "failed", receipt->threads, receipt->overlap, receipt->image_hit,
+                     receipt->requested_threads, stats->hits, stats->misses, receipt->elapsed[RECEIPT_IDENTITY] / 1e9,
+                     receipt->elapsed[RECEIPT_CACHE_LOAD] / 1e9, generation / 1e9, progress->compile_elapsed / 1e9,
+                     receipt->elapsed[RECEIPT_GENERATE_COMPILE] / 1e9, receipt->elapsed[RECEIPT_LINK] / 1e9,
+                     receipt->elapsed[RECEIPT_SAVE] / 1e9, receipt->elapsed[RECEIPT_CACHE_RELOAD] / 1e9,
+                     receipt->elapsed[RECEIPT_VALIDATE] / 1e9, (unsigned long long)peak_heap,
+                     (plat_now_ns() - receipt->start) / 1e9);
+    if (n < 0 || (size_t)n >= sizeof text || rt_storage_replace(CACHE_RECEIPT, text, (size_t)n) < 0)
+        fprintf(stderr, "[gamecode] cannot write build receipt through storage broker\n");
+}
+void ps5_gamecode_record_start_failure(unsigned threads, bool overlap) {
+    uint64_t start = plat_now_ns();
+    if (threads < 1) threads = 1;
+    if (threads > 16) threads = 16;
+    struct build_receipt receipt = {.start = start, .stage_start = start, .stage = RECEIPT_IDENTITY,
+                                    .requested_threads = threads, .overlap = overlap};
+    struct progress_state progress = {0};
+    struct object_stats stats = {0};
+    struct ps5_heap_stats heap;
+    rt_storage_mkdirs(CACHE_DIR);
+    ps5_heap_stats(&heap);
+    receipt_stage(&receipt, receipt.stage);
+    write_receipt(&receipt, &progress, &stats, heap.peak_bytes, 0);
+}
+
+
+bool ps5_gamecode_prepare(unsigned threads, bool overlap, GameCodeProgress progress, void *context,
+                          char *why, size_t why_size) {
     static const char *const names[] = {"main", "subsdk0", "sdk"};
     uint64_t start = plat_now_ns(), stage = start;
+    struct build_receipt receipt = {.start = start, .stage_start = start, .stage = RECEIPT_IDENTITY,
+                                    .overlap = overlap};
+    if (threads < 1) threads = 1;
+    if (threads > 16) threads = 16;
+    receipt.requested_threads = threads;
     GameCodeIdentity identity = {0};
     GameCodeCompileInputs inputs = {0};
     GameCodeObjects objects = {0};
     struct object_stats stats = {0};
     GameCodeObjectCache cache = {&stats, object_lookup, object_release, object_store};
-    struct progress_state progress_state = {progress, context, 0};
+    struct progress_state progress_state = {.callback = progress, .context = context};
     GameLinkAllocator allocator = {NULL, allocate_image, release_image};
     int ok = 0;
     if (why && why_size) why[0] = 0;
@@ -363,10 +454,12 @@ bool ps5_gamecode_prepare(GameCodeProgress progress, void *context, char *why, s
     memcpy(inputs.llvm_build_identity, identity.llvm_build_sha256, sizeof inputs.llvm_build_identity);
     fprintf(stderr, "[gamecode] identity %.3f s\n", (plat_now_ns() - stage) / 1e9);
     stage = plat_now_ns();
+    receipt_stage(&receipt, RECEIPT_CACHE_LOAD);
     if (load_cache(&identity, &allocator, &loaded_image, why, why_size)) {
         if (validate_layout(&loaded_image, &identity)) {
             fprintf(stderr, "[gamecode] cache hit image=%zu load=%.3f s\n", loaded_image.size,
                     (plat_now_ns() - stage) / 1e9);
+            receipt.image_hit = 1;
             goto publish;
         }
         gamecode_link_free_metadata(&loaded_image);
@@ -376,17 +469,18 @@ bool ps5_gamecode_prepare(GameCodeProgress progress, void *context, char *why, s
     }
     fprintf(stderr, "[gamecode] cache miss: %s\n", why && *why ? why : "not present or invalid");
     if (why && why_size) why[0] = 0;
+    receipt_stage(&receipt, RECEIPT_GENERATE_COMPILE);
     size_t hle_size;
     inputs.hle.data = read_file(INCLUDE_ROOT "/hle_symbols.txt", 1024 * 1024, &hle_size);
     inputs.hle.size = inputs.hle.data ? hle_size : 0;
     if (!inputs.hle.data) { snprintf(why, why_size, "game code HLE symbol list is missing"); goto done; }
-    long cores = sysconf(_SC_NPROCESSORS_ONLN);
-    unsigned threads = cores < 1 ? 1 : cores > 8 ? 8 : (unsigned)cores;
+    receipt.threads = threads;
     fprintf(stderr, "[gamecode] generating (compiler threads=%u)\n", threads);
     stage = plat_now_ns();
-    if (gamecode_build_objects(&inputs, INCLUDE_ROOT, threads, &cache, report_progress, &progress_state,
-                               &objects, why, why_size) != 0)
-        goto done;
+    int compile_result = gamecode_build_objects(&inputs, INCLUDE_ROOT, threads, &cache, report_progress,
+                                                &progress_state, &objects, why, why_size);
+    finish_compiles(&progress_state);
+    if (compile_result != 0) goto done;
     double seconds = (plat_now_ns() - stage) / 1e9;
     fprintf(stderr, "[gamecode] generate and compile %.3f s objects=%zu compile_throughput=%.2f/s "
             "cache_hits=%zu cache_misses=%zu\n",
@@ -400,12 +494,16 @@ bool ps5_gamecode_prepare(GameCodeProgress progress, void *context, char *why, s
     }
     if (progress) progress(context, "linking", 0, 1);
     stage = plat_now_ns();
+    receipt_stage(&receipt, RECEIPT_LINK);
     if (!gamecode_link(objects.objects, objects.count, game_exports, game_export_count, &allocator,
                        &loaded_image, why, why_size)) goto done;
     gamecode_free_objects(&objects);
     fprintf(stderr, "[gamecode] linking %.3f s image=%zu\n", (plat_now_ns() - stage) / 1e9, loaded_image.size);
     log_heap("linked");
+    receipt_stage(&receipt, RECEIPT_SAVE);
+    if (progress) progress(context, "saving", 0, 1);
     if (!save_cache(&loaded_image, &identity, why, why_size)) goto done;
+    if (progress) progress(context, "saving", 1, 1);
     fprintf(stderr, "[gamecode] cache saved image=%zu\n", loaded_image.size);
     log_heap("cache saved");
     gamecode_link_free_metadata(&loaded_image);
@@ -413,6 +511,7 @@ bool ps5_gamecode_prepare(GameCodeProgress progress, void *context, char *why, s
     memset(&loaded_image, 0, sizeof loaded_image);
     gamecode_free_objects(&objects);
     stage = plat_now_ns();
+    receipt_stage(&receipt, RECEIPT_CACHE_RELOAD);
     if (!load_cache(&identity, &allocator, &loaded_image, why, why_size)) {
         if (why && why_size && !*why) snprintf(why, why_size, "saved game code cache could not be reloaded");
         goto done;
@@ -420,6 +519,7 @@ bool ps5_gamecode_prepare(GameCodeProgress progress, void *context, char *why, s
     fprintf(stderr, "[gamecode] cache reload image=%zu load=%.3f s\n", loaded_image.size,
             (plat_now_ns() - stage) / 1e9);
 publish:
+    receipt_stage(&receipt, RECEIPT_VALIDATE);
     if (!validate_layout(&loaded_image, &identity)) {
         snprintf(why, why_size, "game code image has invalid or mismatched layout tables");
         goto done;
@@ -439,6 +539,8 @@ done:
     if (!ok) gamecode_link_free_metadata(&loaded_image);
     struct ps5_heap_stats heap;
     ps5_heap_stats(&heap);
+    receipt_stage(&receipt, receipt.stage);
+    write_receipt(&receipt, &progress_state, &stats, heap.peak_bytes, ok);
     fprintf(stderr, "[gamecode] %s total=%.3f s peak_heap=%llu cache_hits=%zu cache_misses=%zu\n",
             ok ? "ready" : "failed", (plat_now_ns() - start) / 1e9,
             (unsigned long long)heap.peak_bytes, stats.hits, stats.misses);
