@@ -360,7 +360,7 @@ struct build_receipt {
     uint64_t start, stage_start, elapsed[RECEIPT_STAGE_COUNT];
     enum receipt_stage stage;
     unsigned threads, requested_threads;
-    int overlap, image_hit;
+    int overlap, image_hit, reused_fresh_image;
 };
 
 static void receipt_stage(struct build_receipt *receipt, enum receipt_stage stage) {
@@ -376,13 +376,15 @@ static void write_receipt(const struct build_receipt *receipt, const struct prog
     uint64_t generation = progress->generation_start ?
         (progress->generation_end ? progress->generation_end : plat_now_ns()) - progress->generation_start : 0;
     int n = snprintf(text, sizeof text,
-                     "status=%s\nthreads=%u\noverlap=%d\nimage_cache_hit=%d\nrequested_threads=%u\n"
-                     "object_cache_hits=%zu\nobject_cache_misses=%zu\nidentity_seconds=%.3f\ncache_load_seconds=%.3f\n"
+                     "status=%s\nthreads=%u\noverlap=%d\nimage_cache_hit=%d\nreused_fresh_image=%d\n"
+                     "requested_threads=%u\nobject_cache_hits=%zu\nobject_cache_misses=%zu\n"
+                     "identity_seconds=%.3f\ncache_load_seconds=%.3f\n"
                      "generation_seconds=%.3f\ncompile_seconds=%.3f\ngeneration_compile_seconds=%.3f\n"
                      "link_seconds=%.3f\n"
                      "save_seconds=%.3f\ncache_reload_seconds=%.3f\nvalidate_seconds=%.3f\n"
                      "peak_heap_bytes=%llu\ntotal_seconds=%.3f\n",
                      ok ? "ready" : "failed", receipt->threads, receipt->overlap, receipt->image_hit,
+                     ok && receipt->reused_fresh_image,
                      receipt->requested_threads, stats->hits, stats->misses, receipt->elapsed[RECEIPT_IDENTITY] / 1e9,
                      receipt->elapsed[RECEIPT_CACHE_LOAD] / 1e9, generation / 1e9, progress->compile_elapsed / 1e9,
                      receipt->elapsed[RECEIPT_GENERATE_COMPILE] / 1e9, receipt->elapsed[RECEIPT_LINK] / 1e9,
@@ -506,18 +508,8 @@ bool ps5_gamecode_prepare(unsigned threads, bool overlap, GameCodeProgress progr
     if (progress) progress(context, "saving", 1, 1);
     fprintf(stderr, "[gamecode] cache saved image=%zu\n", loaded_image.size);
     log_heap("cache saved");
-    gamecode_link_free_metadata(&loaded_image);
-    ps5_exec_free(&region);
-    memset(&loaded_image, 0, sizeof loaded_image);
-    gamecode_free_objects(&objects);
-    stage = plat_now_ns();
-    receipt_stage(&receipt, RECEIPT_CACHE_RELOAD);
-    if (!load_cache(&identity, &allocator, &loaded_image, why, why_size)) {
-        if (why && why_size && !*why) snprintf(why, why_size, "saved game code cache could not be reloaded");
-        goto done;
-    }
-    fprintf(stderr, "[gamecode] cache reload image=%zu load=%.3f s\n", loaded_image.size,
-            (plat_now_ns() - stage) / 1e9);
+    receipt.reused_fresh_image = 1;
+    fprintf(stderr, "[gamecode] using freshly linked image without cache reload\n");
 publish:
     receipt_stage(&receipt, RECEIPT_VALIDATE);
     if (!validate_layout(&loaded_image, &identity)) {

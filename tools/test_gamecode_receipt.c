@@ -42,7 +42,8 @@ static void expect(const char *line) {
 
 int main(void) {
     struct build_receipt receipt = {.start = 1000000000, .stage_start = 1000000000,
-                                    .stage = RECEIPT_IDENTITY, .threads = 4, .overlap = 1};
+                                    .stage = RECEIPT_IDENTITY, .threads = 4, .overlap = 1,
+                                    .reused_fresh_image = 1};
     struct progress_state progress = {0};
     struct object_stats stats = {.hits = 7, .misses = 3};
     now_ns = 3000000000;
@@ -66,18 +67,16 @@ int main(void) {
     now_ns = 11000000000;
     receipt_stage(&receipt, RECEIPT_SAVE);
     now_ns = 12000000000;
-    receipt_stage(&receipt, RECEIPT_CACHE_RELOAD);
-    now_ns = 13000000000;
     receipt_stage(&receipt, RECEIPT_VALIDATE);
     now_ns = 14000000000;
     receipt_stage(&receipt, receipt.stage);
     write_receipt(&receipt, &progress, &stats, 12345, 1);
     assert(writes == 1);
-    expect("status=ready\nthreads=4\noverlap=1\nimage_cache_hit=0\n");
+    expect("status=ready\nthreads=4\noverlap=1\nimage_cache_hit=0\nreused_fresh_image=1\n");
     expect("object_cache_hits=7\nobject_cache_misses=3\n");
     expect("identity_seconds=2.000\ncache_load_seconds=1.000\n");
     expect("generation_seconds=3.000\ncompile_seconds=3.000\ngeneration_compile_seconds=5.000\n");
-    expect("link_seconds=2.000\nsave_seconds=1.000\ncache_reload_seconds=1.000\nvalidate_seconds=1.000\n");
+    expect("link_seconds=2.000\nsave_seconds=1.000\ncache_reload_seconds=0.000\nvalidate_seconds=2.000\n");
     expect("peak_heap_bytes=12345\ntotal_seconds=13.000\n");
 
     struct build_receipt failure = {.start = 20000000000, .stage_start = 20000000000,
@@ -88,7 +87,7 @@ int main(void) {
     receipt_stage(&failure, failure.stage);
     write_receipt(&failure, &no_progress, &no_stats, 99, 0);
     assert(writes == 2);
-    expect("status=failed\nthreads=0\noverlap=0\nimage_cache_hit=0\n");
+    expect("status=failed\nthreads=0\noverlap=0\nimage_cache_hit=0\nreused_fresh_image=0\n");
     expect("identity_seconds=2.500\ncache_load_seconds=0.000\n");
     expect("generation_seconds=0.000\ncompile_seconds=0.000\ngeneration_compile_seconds=0.000\n");
     expect("peak_heap_bytes=99\ntotal_seconds=2.500\n");
@@ -104,7 +103,7 @@ int main(void) {
     broker_failure = 0;
     ps5_gamecode_record_start_failure(99, true);
     assert(writes == 4);
-    expect("status=failed\nthreads=0\noverlap=1\nimage_cache_hit=0\nrequested_threads=16\n");
+    expect("status=failed\nthreads=0\noverlap=1\nimage_cache_hit=0\nreused_fresh_image=0\nrequested_threads=16\n");
     expect("peak_heap_bytes=4321\n");
     puts("gamecode receipt tests passed");
     return 0;

@@ -779,6 +779,8 @@ The linker still rejects any generated object's unresolved runtime symbol absent
   last; the record contains the unrelocated image, section and layout metadata, identity and checked fixups.
   Both files and each object plus its checksum sidecar are replaced through the broker. Cache reads validate the
   manifest and record before relocation. This describes the implementation, not console qualification.
+  After a successful save the fresh, validated in-memory image is used directly; later starts still validate and
+  relocate the stored image. The receipt records `reused_fresh_image` and a zero reload time for the fresh path.
   `last-build.txt` records status, actual startup overlap, requested and used compiler threads, cache hits/misses,
   per-stage wall times, total time and title-heap peak via the broker. `compile_seconds` is the union of intervals
   with at least one uncached compiler worker active; generation and compilation overlap, so their combined elapsed

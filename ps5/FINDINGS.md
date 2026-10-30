@@ -1557,5 +1557,18 @@ broker, so it doesn't depend on the console log stream (which drops during long 
 More than 8 compile threads is slower: the title evidently gets no more real CPU than 8 compiles use, and extra
 threads only contend and grow memory. Generation and compile overlap (generation is held back by the bounded
 queue). Every run also spent 20.9 s saving the cache and 9.5 s reloading it right after; the reload of an image that
-is already in memory is avoidable. Link 0.58 s. Not measured yet: the progress screen's look, and overlap with the
-shader precompile and HD interface generation (`gamecode_overlap = 1`).
+is already in memory is avoidable. Link 0.58 s.
+
+**Reuse and overlap** (variant `73ca30d5…`: after saving, the freshly linked image is used instead of reloaded; host
+check: identical to a load of the saved cache at the same bases). Each run cleared the object cache, the image, the
+shader precompile markers and the HD pack manifest; full first-start time from the `[startup]` title-screen line:
+
+| `gamecode_overlap` | Game-code build s | Title screen s | Peak title heap |
+|---|---|---|---|
+| **0 (default)** | 611.6 (reload 0) | **643.4** | 3.97 GB |
+| 1 | 717.1 | 729.6 | 4.62 GB |
+
+With overlap the HD interface generation (GPU upscale, CPU BC7 encode) and the shader precompile slow the compile by
+~105 s, more than they save; sequentially the precompile took 19.1 s (its translations were cached; a cold one is
+~119 s) and the HD generation continues in the background after the title (complete in 574.6 s in the overlap
+run). Overlap stays off. First start is now 643 s to the title; later starts ~20.6 s.

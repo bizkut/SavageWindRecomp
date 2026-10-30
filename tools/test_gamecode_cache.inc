@@ -20,6 +20,12 @@ static void cache_test(GameLinkObject *objects, size_t count, GameExport *export
     memcpy(identity.llvm_version, "clang-18", 9);
     identity.linker_version = GAMECODE_LINKER_VERSION;
     identity.cache_format_version = GAMECODE_CACHE_FORMAT_VERSION;
+    size_t image_size = initial->size;
+    unsigned char *initial_snapshot = malloc(image_size);
+    CHECK(initial_snapshot);
+    memcpy(initial_snapshot, initial->rw, image_size);
+    void *initial_layout[] = {initial->game_modules, initial->game_module_count, initial->game_version,
+                              initial->game_sites, initial->game_site_count};
     char cache_path[] = "build/gamecode-cache.XXXXXX";
     int fd = mkstemp(cache_path);
     CHECK(fd >= 0);
@@ -33,7 +39,6 @@ static void cache_test(GameLinkObject *objects, size_t count, GameExport *export
     struct stat st;
     CHECK(!fstat(fd, &st));
     GameCodeCacheReader reader = {&fd, (uint64_t)st.st_size, cache_read};
-    size_t image_size = initial->size;
     gamecode_link_free_metadata(initial);
 
     int backing = memfd_create("gamecode-cache-second", 0);
@@ -54,6 +59,12 @@ static void cache_test(GameLinkObject *objects, size_t count, GameExport *export
         clock_gettime(CLOCK_MONOTONIC, &end);
         load_seconds += elapsed(start, end);
         CHECK(loaded.size == image_size);
+        if (!pass) {
+            CHECK(!memcmp(initial_snapshot, loaded.rw, image_size));
+            CHECK(initial_layout[0] == loaded.game_modules && initial_layout[1] == loaded.game_module_count &&
+                  initial_layout[2] == loaded.game_version && initial_layout[3] == loaded.game_sites &&
+                  initial_layout[4] == loaded.game_site_count);
+        }
         unsigned char *snapshot = malloc(image_size);
         CHECK(snapshot);
         memcpy(snapshot, loaded.rw, image_size);
@@ -67,6 +78,7 @@ static void cache_test(GameLinkObject *objects, size_t count, GameExport *export
         gamecode_link_free_metadata(&loaded);
         gamecode_link_free_metadata(&fresh);
     }
+    free(initial_snapshot);
     GameLinkImage rejected;
     GameCodeCacheReader truncated = reader;
     truncated.size--;
