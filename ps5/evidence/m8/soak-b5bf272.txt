@@ -1,0 +1,4 @@
+soak sample seconds=300.0 frames=17769 on_time=16156 hitches=16 heap_mapped=1325400064 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=5283119104 direct_total=12884901888 direct_rc=0 gpu_vma_allocation=1285979472 gpu_vma_block=1711276032
+soak sample seconds=600.0 frames=35639 on_time=33349 hitches=18 heap_mapped=1358954496 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=5249564672 direct_total=12884901888 direct_rc=0 gpu_vma_allocation=1286077776 gpu_vma_block=1711276032
+soak final seconds=600.0 frames=35639 on_time=33349 hitches=18 heap_mapped=1358954496 flex_free=100663296 flex_total=469762048 flex_rc=0 config_rc=0 direct_largest=5249564672 direct_total=12884901888 direct_rc=0 gpu_vma_allocation=1286077776 gpu_vma_block=1711276032
+
