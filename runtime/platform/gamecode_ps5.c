@@ -189,6 +189,13 @@ static int cache_read(void *context, uint64_t offset, void *data, size_t size) {
 
 struct cache_manifest { unsigned char magic[8]; uint64_t size; unsigned char sha256[32]; };
 static const unsigned char manifest_magic[8] = {'S','W','G','C','0','0','0','1'};
+static void log_heap(const char *stage) {
+    struct ps5_heap_stats heap;
+    ps5_heap_stats(&heap);
+    fprintf(stderr, "[gamecode] heap %s mapped=%llu peak=%llu segments=%u\n", stage,
+            (unsigned long long)heap.mapped_bytes, (unsigned long long)heap.peak_bytes, heap.segments);
+}
+
 
 static int load_cache(const GameCodeIdentity *identity, const GameLinkAllocator *allocator,
                       GameLinkImage *image, char *why, size_t why_size) {
@@ -200,17 +207,24 @@ static int load_cache(const GameCodeIdentity *identity, const GameLinkAllocator 
     memcpy(&manifest, manifest_data, sizeof manifest);
     free(manifest_data);
     if (memcmp(manifest.magic, manifest_magic, sizeof manifest_magic) || manifest.size > MAX_CACHE_BYTES) return 0;
+    uint64_t start = plat_now_ns();
     unsigned char *bytes = read_file(CACHE_ROOT CACHE_IMAGE, MAX_CACHE_BYTES, &image_size);
+    uint64_t read_end = plat_now_ns();
     unsigned char digest[32];
     if (!bytes) return 0;
     int valid = image_size == manifest.size && hash_bytes(bytes, image_size, digest) &&
                 !memcmp(digest, manifest.sha256, 32);
+    uint64_t hash_end = plat_now_ns();
     if (valid) {
         struct memory_reader input = {bytes, image_size};
         GameCodeCacheReader reader = {&input, image_size, cache_read};
         valid = gamecode_cache_load(identity, &reader, allocator, game_exports, game_export_count, image, why,
                                     why_size);
     }
+    uint64_t load_end = plat_now_ns();
+    fprintf(stderr, "[gamecode] cache load detail bytes=%zu read=%.3f s hash=%.3f s validate_relocate=%.3f s\n",
+            image_size, (read_end - start) / 1e9, (hash_end - read_end) / 1e9, (load_end - hash_end) / 1e9);
+    log_heap("cache loaded");
     free(bytes);
     return valid;
 }
@@ -377,6 +391,7 @@ bool ps5_gamecode_prepare(GameCodeProgress progress, void *context, char *why, s
     fprintf(stderr, "[gamecode] generate and compile %.3f s objects=%zu compile_throughput=%.2f/s "
             "cache_hits=%zu cache_misses=%zu\n",
             seconds, objects.count, seconds > 0 ? stats.misses / seconds : 0, stats.hits, stats.misses);
+    log_heap("compiled");
     free((void *)inputs.hle.data);
     inputs.hle.data = NULL;
     for (size_t i = 0; i < 3; i++) {
@@ -389,8 +404,10 @@ bool ps5_gamecode_prepare(GameCodeProgress progress, void *context, char *why, s
                        &loaded_image, why, why_size)) goto done;
     gamecode_free_objects(&objects);
     fprintf(stderr, "[gamecode] linking %.3f s image=%zu\n", (plat_now_ns() - stage) / 1e9, loaded_image.size);
+    log_heap("linked");
     if (!save_cache(&loaded_image, &identity, why, why_size)) goto done;
     fprintf(stderr, "[gamecode] cache saved image=%zu\n", loaded_image.size);
+    log_heap("cache saved");
     gamecode_link_free_metadata(&loaded_image);
     ps5_exec_free(&region);
     memset(&loaded_image, 0, sizeof loaded_image);
@@ -407,6 +424,10 @@ publish:
         snprintf(why, why_size, "game code image has invalid or mismatched layout tables");
         goto done;
     }
+    fprintf(stderr, "[gamecode] views rx=%p rw=%p bytes=%zu modules=%p module_count=%p version=%p "
+            "sites=%p site_count=%p\n", (void *)loaded_image.rx, loaded_image.rw, loaded_image.size,
+            loaded_image.game_modules, loaded_image.game_module_count, loaded_image.game_version,
+            loaded_image.game_sites, loaded_image.game_site_count);
     ps5_gamelib_set_image(&loaded_image);
     gamecode_link_free_metadata(&loaded_image);
     ok = 1;

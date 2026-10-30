@@ -58,6 +58,7 @@ static bool map_chunk(uint64_t address, _Atomic unsigned char *state) {
             sceKernelReleaseDirectMemory(physical, CHUNK);
             rc = rc ? rc : -1;
         }
+        if (!rc) memset(p, 0, CHUNK);  // Direct memory can contain data from a released allocation.
     }
     atomic_store(state, rc ? 0 : 2);
     return rc == 0;

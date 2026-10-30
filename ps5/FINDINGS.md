@@ -1484,3 +1484,26 @@ This is a host result, not a console loader or game execution result. The earlie
 in 992 objects; it is preserved and relocated here, but unwinder registration is not implemented or measured.
 Whether C++ exceptions cross generated C frames remains unaudited; the census alone cannot establish that contract.
 Console allocation/reach, loader integration, unwinding, startup and cache behavior remain unmeasured.
+
+## 2026-10-30 — M12: the game runs from game code built on the console (.41, ps5/evidence/m8/gamecode-*.klog, ab-gc-*.klog)
+
+Console variant (`PS5_GAMECODE=console`, eboot `e58e627c…`, no libgamecode.a in the title). Two console bugs found
+and fixed first: (1) LLVM's `TrailingObjects` under-allocated on the PS5 ABI (empty bases don't carry alignment;
+`MachineInstr::ExtraInfo` got 12+8n bytes but its payload starts at 16), corrupting the last MachineMemOperand
+pointer and crashing BranchFolder in compile workers (`gamecode-cold/warm.klog`); fixed for all users by
+`ps5/patches/llvm-18-ps5-trailingobjects.patch` with a PS5-target layout guard, objects unchanged. (2) The guest
+mapper (`runtime/platform/ps5.c` map_chunk) didn't zero recycled direct memory; after the compiler freed its heap
+the SDK's BSS held a stale host pointer and `__nnmusl_init_dso` called `0x2072ff6020` (`gamecode-finish.klog`); fresh
+guest chunks are now zeroed (host regression `tools/test_ps5_guest_commit.sh`). Host check: all 179,671 data
+pointer relocations of the linked image match the PC-linked title symbol by symbol, fresh and after replay.
+
+| Start | Game code | Title screen | Peak title heap |
+|---|---|---|---|
+| First (`gamecode-fixA`) | 629.3 s: generate+compile 593.6 s (996 objects, 8 threads, 1.68/s), link 0.55 s, save, reload 9.4 s | 642.7 s | 4.29 GB |
+| Warm (`gamecode-fixB`) | 7.0 s cache load (read 2.7, hash 1.8, validate/relocate 2.1; 505 MB cache) | 20.6 s | 1.89 GB |
+
+Benchmark (100 % save's route, FG 120 Hz, alternating, `ab-gc-*`), PC-linked vs console-built: on time 79.6 / 79.5 /
+79.5 vs 75.7 / 79.4 / 77.0 % (mean 79.5 vs 77.4), render thread 11.16–11.18 vs 11.19–11.25 ms, GPU 12.42–12.46 vs
+12.42–12.45 ms, game fps 58.0–58.1 vs 57.8–58.0; no fatal errors. **Not yet within the 2 % target** (−2.1 points
+on time, ~0.4 % render time). Candidate [inference]: the in-title linker keeps 133,144 GOT loads where the PC linker
+relaxes GOTPCRELX to direct addresses; also unmeasured: page size and placement of the code region.
