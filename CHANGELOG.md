@@ -16,6 +16,9 @@ On PS5, sharp Latin game text can use the bundled Open Sans vector font, fitted 
 `sharp_text_font = 0` restores reconstruction-only text. A shared sheet scale and cell guards prevent atlas bleed
 without shrinking individual ASCII descenders; oversized accented glyphs are fitted to their cells.
 
+The Vulkan renderer invalidates cached texture views when the scene or output scale changes, so a lookup in the same
+frame does not reuse a view resolved at the old scale.
+
 On PS5, the home-screen icon and backgrounds and the start-up splash are made once, at the first start, from your
 own game files and installed on your console (`home_art = 0` restores the shipped icon and removes the rest). The
 release ships only a neutral icon: no background or splash picture.

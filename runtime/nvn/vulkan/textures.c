@@ -13,6 +13,7 @@
 #include "../../framepace.h"
 #include "vk.h"
 #include "record.h"
+#include "idle_retention.h"
 #include "../../settings.h"
 #include "../../window_size.h"
 #include "../astc.h"
@@ -168,11 +169,19 @@ static bool format_supports(VkFormat f, VkFormatFeatureFlags want) {
 #include "../../ps5/dynamic_resolution.h"
 #endif
 static float g_rs[4][2] = {{1, 1}, {1, 1}, {1, 1}, {1, 1}};
+uint32_t vk_view_gen;  // invalidates exec.c's per-frame texture-view memo
 static uint32_t g_shadow_size;
 void renderer_get_scale(float *sx, float *sy) { *sx = g_rs[RS_OUT][0]; *sy = g_rs[RS_OUT][1]; }
-void renderer_set_scale(float sx, float sy) { g_rs[RS_OUT][0] = sx; g_rs[RS_OUT][1] = sy; }
+void renderer_set_scale(float sx, float sy) {
+    if (g_rs[RS_OUT][0] != sx || g_rs[RS_OUT][1] != sy) ++vk_view_gen;
+    g_rs[RS_OUT][0] = sx; g_rs[RS_OUT][1] = sy;
+}
 void renderer_get_scene_scale(float *sx, float *sy) { *sx = g_rs[RS_SCENE][0]; *sy = g_rs[RS_SCENE][1]; }
+uint64_t renderer_present_count(void);
 void renderer_set_scene_scale(float sx, float sy) {
+    if (g_rs[RS_SCENE][0] != sx || g_rs[RS_SCENE][1] != sy) {
+        ++vk_view_gen;
+    }
     g_rs[RS_SCENE][0] = sx; g_rs[RS_SCENE][1] = sy;
 #ifdef __PROSPERO__
     dynamic_resolution_begin_frame(sx, sy);
@@ -181,7 +190,6 @@ void renderer_set_scene_scale(float sx, float sy) {
 void renderer_set_shadow_size(uint32_t n) {  // (never past what the GPU can make: Extreme is 8192)
     g_shadow_size = n < g_vk.props.limits.maxImageDimension2D ? n : g_vk.props.limits.maxImageDimension2D;
 }
-uint64_t renderer_present_count(void);
 static float rs_want(const TexBackend *b, int axis) {  // the scale a texture of b's group is wanted at now
     if (b->rs_group != RS_SHADOW) return g_rs[b->rs_group][axis];
     return b->guest_w && g_shadow_size > b->guest_w ? (float)g_shadow_size / (float)b->guest_w : 1.0f;  // (square)
@@ -538,11 +546,9 @@ static void free_backend(TexBackend *b) {
 // Images the GPU drew have no copy in guest memory, and BOTW makes some of them again later and samples them without
 // drawing them again, as on the console, where the texels stay in that memory: the save dialog's 256x144 picture
 // (blitted from the final image the first time the dialog opens) came back black when the dialog was opened again.
-// Past PARK_FRAMES such an image is kept, with a hash of the guest memory under it, up to KEEP_BUDGET bytes (the oldest
-// go first); a texture made there again takes it back if that memory is unchanged (else the CPU reused it: a new image).
+// Past PARK_FRAMES such an image is kept if its guest memory remains unchanged. The retention budget and the
+// per-scene-image limit grow with scene area, capped at 768 MiB total; the least recently parked go first.
 // SAVAGEWIND_NO_KEEP_IMAGES=1: freed after PARK_FRAMES, as before.
-#define KEEP_MAX_IMAGE (16ull << 20)
-#define KEEP_BUDGET (192ull << 20)
 static uint64_t hash_full(const uint8_t *p, uint64_t n);
 static uint64_t storage_size(const NvnTexture *t);
 
@@ -554,7 +560,8 @@ static bool keep_ok(TexBackend *b, uint64_t *bytes) {
     VmaAllocationInfo ai;
     vmaGetAllocationInfo(g_vk.vma, b->mem, &ai);
     *bytes = ai.size;
-    return ai.size <= KEEP_MAX_IMAGE;
+    uint64_t limit = b->rs_group == RS_SCENE ? idle_keep_image_limit(b->sx, b->sy) : IDLE_KEEP_BASE_IMAGE;
+    return ai.size <= limit;
 }
 
 static void idle_expire(void) {  // (gpu lock held)
@@ -562,17 +569,37 @@ static void idle_expire(void) {  // (gpu lock held)
     for (int i = g_nidle - 1; i >= 0; i--) {
         TexBackend *b = g_idle[i];
         if (b->kept || now - b->idle_frame <= PARK_FRAMES) continue;
-        if (!keep_ok(b, &bytes)) { free_backend(b); continue; }
+        if (!keep_ok(b, &bytes)) {
+#ifdef __PROSPERO__
+            if (b->rs_group == RS_SCENE) {
+                VmaAllocationInfo ai = {0};
+                if (b->mem) vmaGetAllocationInfo(g_vk.vma, b->mem, &ai);
+                const char *reason = getenv("SAVAGEWIND_NO_KEEP_IMAGES") ? "disabled" :
+                    !b->gpu_owned ? "not-gpu-owned" : !b->image || !b->mem ? "no-image" :
+                    !b->guest_size || b->key_addr < GUEST_LO || b->key_addr + b->guest_size > GUEST_HI
+                        ? "guest-range" : "size-limit";
+                LOG("[idle-scene] drop addr=%llx guest=%ux%u fmt=%#x vma=%llu parked=%llu reason=%s limit=%llu\n",
+                    (unsigned long long)b->key_addr, b->key[2], b->key[3], b->key[1], (unsigned long long)ai.size,
+                    (unsigned long long)(now - b->idle_frame), reason, (unsigned long long)idle_keep_image_limit(b->sx, b->sy));
+            }
+#endif
+            free_backend(b); continue;
+        }
         b->kept = true;
         b->kept_bytes = bytes;
         b->kept_hash = hash_full((const uint8_t *)(uintptr_t)b->key_addr, b->guest_size);
         g_kept_bytes += bytes;
     }
-    while (g_kept_bytes > KEEP_BUDGET) {
+    float sx = g_rs[RS_SCENE][0], sy = g_rs[RS_SCENE][1];
+    while (idle_keep_over_budget(g_kept_bytes, sx, sy)) {
         TexBackend *old = NULL;
         for (int i = 0; i < g_nidle; i++)
             if (g_idle[i]->kept && (!old || g_idle[i]->idle_frame < old->idle_frame)) old = g_idle[i];
         if (!old) break;
+        LOG("[idle-scene] drop addr=%llx guest=%ux%u fmt=%#x group=%u vma=%llu parked=%llu reason=budget used=%llu limit=%llu\n",
+            (unsigned long long)old->key_addr, old->key[2], old->key[3], old->key[1], old->rs_group,
+            (unsigned long long)old->kept_bytes, (unsigned long long)(now - old->idle_frame),
+            (unsigned long long)g_kept_bytes, (unsigned long long)idle_keep_budget(sx, sy));
         free_backend(old);
     }
 }
@@ -608,14 +635,16 @@ static void zombies_expire(void) {  // (gpu lock held)
     g_nzombies = k;
 }
 
+static void resize_image(NvnTexture *t, TexBackend *b) {
+    destroy_image(b);
+    create_image(t, b);
+}
+
 static TexBackend *tex_backend(NvnTexture *t) {
     TexBackend *b = t->backend;
     if (b) {
         if (t->finalized) b->used_frame = renderer_present_count();
-        if (rs_stale(b)) {  // output resolution changed: reallocate
-            destroy_image(b);
-            create_image(t, b);
-        }
+        if (rs_stale(b)) resize_image(t, b);  // output resolution changed
         return b;
     }
     static uint64_t expired_at = ~0ull;  // the lists run to thousands in the open world: once a frame is enough
@@ -640,7 +669,7 @@ static TexBackend *tex_backend(NvnTexture *t) {
         b->kept = false;
         if (!same) { free_backend(b); b = NULL; }
     }
-    if (b && rs_stale(b)) { destroy_image(b); create_image(t, b); }
+    if (b && rs_stale(b)) resize_image(t, b);
     if (!b) {
         b = calloc(1, sizeof *b);
         b->rs_group = tex_scale_group(t);
@@ -1481,7 +1510,6 @@ static ViewEnt view_tab[VIEW_TAB];
 
 // Views may still be referenced by submitted or pending work: destroyed once that has completed.
 void vk_views_forget(TexBackend *b) { views_forget(b); }
-uint32_t vk_view_gen;  // bumped whenever a cached view may be destroyed (exec.c's per-frame texture memo)
 static void views_forget(TexBackend *b) {
     vk_view_gen++;
     for (int i = 0; i < VIEW_TAB; i++)

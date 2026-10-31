@@ -13,6 +13,7 @@
 
 #include "../../benchmark.h"
 #include "../../frametime.h"
+#include "../../framepace.h"
 #include "../../kernel.h"
 #include "../../paths.h"
 #include "shaders.h"
@@ -1084,8 +1085,8 @@ static void oq_apply(void) {  // (readback_lock held) reports whose submission c
 static void readbacks_apply(void) {
     pthread_mutex_lock(&readback_lock);
     oq_apply();
+    uint64_t done = vk_completed_seq();
     if (nreadbacks) {
-        uint64_t done = vk_completed_seq();
         int k = 0;
         for (int i = 0; i < nreadbacks; i++) {
             Readback *r = &readbacks[i];
@@ -1254,6 +1255,7 @@ static void vk_end_pass_at(int line) {
 }
 
 static uint32_t level_extent(uint32_t v, uint32_t lv) { v >>= lv; return v ? v : 1; }
+
 
 static void begin_pass(void) {
     if (in_pass && !st.rt_dirty) return;
@@ -3281,7 +3283,7 @@ static bool sdw_patch(uint64_t addr, uint64_t size, VkDescriptorBufferInfo *out)
 // vertex constant row (w, h, 1/w, 1/h) with (w, h) the target's size times 1/4 .. 4 is made that size times the
 // gathered texture's own scale (its allocated size over the game's: each scaled size is rounded on its own), and a
 // fragment constant pair (1/w, 1/h) of the gathered texture's size becomes its allocated texel: the same choice in the
-// scaled image's texels. At the game's own size nothing changes. SAVAGEWIND_NO_UPSAMPLE_FIX=1: as before.
+// scaled image's texels. At the game's own size nothing changes.
 static struct { uint32_t gw, gh; float sx, sy; uint32_t tw, th, aw, ah; } up_fix;  // (the draw in progress; sx 0: not such a draw)
 
 static bool up_patch(uint64_t addr, uint64_t size, VkDescriptorBufferInfo *out) {
@@ -5311,9 +5313,7 @@ have_pipe:
     }
     up_fix.sx = 0;
     {   // a scaled scene's half-size buffers brought back by nearest depth: the texel grid and step scaled (up_fix)
-        static int off = -1;
-        if (off < 0) off = getenv("SAVAGEWIND_NO_UPSAMPLE_FIX") != NULL;
-        bool scaled = !off && st.rt.ncolor && st.rt.color[0] && (pass_sx > 1 || pass_sy > 1);
+        bool scaled = st.rt.ncolor && st.rt.color[0] && (pass_sx > 1 || pass_sy > 1);
         if (scaled && !pr->fs_gather) {  // (the first gathered texture's slot, from the translated source: 2 + slot)
             const char *p = pr->fi->msl ? strstr(pr->fi->msl, "textureGather(t") : NULL;
             int slot = p ? atoi(p + 15) : -1;

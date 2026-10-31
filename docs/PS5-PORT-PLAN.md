@@ -866,6 +866,10 @@ release ZIP's no-game-content check still passes.
   names have wider letter spacing. The user checked the title menu, Take/label, inventory and map text and found it
   good. `sharp_text_font = 0` restores reconstruction-only text.
 
+- White world after the Sheikah Slate at 1.6x scale: the 192 MiB idle keep budget evicted the world’s 1600×900
+  render targets. Retention now scales with scene area; scale changes invalidate view memos. Scale exclusion,
+  scene-scale overrides, readback and upsample investigations did not resolve the underlying eviction.
+
 ### After M11 (optional) — Community texture packs
 High-resolution texture packs dropped into the existing overlay folder (`runtime/services/fs.c`); never shipped by
 the project. **Done when:** one pack loads, with GPU/flexible memory and load-time cost logged against the M6
