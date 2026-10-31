@@ -32,6 +32,11 @@ extern long syscall(long number, ...);
 
 #include "glyphs.h"
 #include "text_reconstruct.h"
+#ifdef __PROSPERO__
+#include "player_font.h"
+#include "../storage_ps5.h"
+#include <mbedtls/sha256.h>
+#endif
 #include "../framepace.h"
 #include "../input_bind.h"
 #include "../paths.h"
@@ -87,6 +92,11 @@ typedef struct {
     uint64_t hash;
     uint32_t w, h, format;
     uint16_t cell_w, cell_h, cols, rows;
+#ifdef __PROSPERO__
+    PlayerFontGlyph *glyphs;
+    const char *name;
+    uint8_t baseline;
+#endif
 } TextSheet;
 static TextSheet text_sheets[128];
 static size_t text_sheet_count;
@@ -94,6 +104,70 @@ static size_t text_sheet_count;
 static uint16_t font_u16(const uint8_t *p) { return (uint16_t)(p[0] | p[1] << 8); }
 static uint32_t font_u32(const uint8_t *p) { return (uint32_t)font_u16(p) | (uint32_t)font_u16(p + 2) << 16; }
 static uint64_t font_u64(const uint8_t *p) { return font_u32(p) | (uint64_t)font_u32(p + 4) << 32; }
+#ifdef __PROSPERO__
+static const char *text_sheet_name(unsigned cw, unsigned ch) {
+    if (cw == 31 && ch == 39) return "Normal_00";
+    if (cw == 24 && ch == 30) return "NormalS_00";
+    if (cw == 18 && ch == 22) return "Caption_00";
+    return "Special_00";
+}
+
+// A CMAP index is global across atlas pages; only Latin codes are replaced.
+static PlayerFontGlyph *text_codes(const uint8_t *b, uint64_t n, unsigned page, unsigned cells, unsigned cw) {
+    PlayerFontGlyph *glyphs = calloc(cells, sizeof *glyphs);
+    if (!glyphs) return NULL;
+    for (unsigned i = 0; i < cells; i++) glyphs[i].width = cw;
+    uint32_t ptr = font_u32(b + 0x30);
+    for (unsigned sections = 0; ptr >= 8 && (uint64_t)ptr + 16 <= n && sections < 4096; sections++) {
+        uint64_t off = ptr - 8;
+        if (memcmp(b + off, "CMAP", 4)) break;
+        uint32_t size = font_u32(b + off + 4);
+        if (size < 24 || size > n - off) break;
+        uint32_t first = font_u32(b + off + 8), last = font_u32(b + off + 12);
+        unsigned method = font_u16(b + off + 16);
+        const uint8_t *data = b + off + 24;
+        uint32_t len = size - 24;
+        for (uint32_t code = 0x20; code <= 0x1eff; code++) {
+            if ((code > 0x24f && code < 0x1e00) || code < first || code > last) continue;
+            uint32_t index = 0xffff;
+            if (method == 0 && len >= 2) index = font_u16(data) + code - first;
+            if (method == 1 && (uint64_t)(code - first + 1) * 2 <= len)
+                index = font_u16(data + (code - first) * 2);
+            if (method == 2 && len >= 4) {
+                uint32_t entries = font_u32(data);
+                if (entries <= (len - 4) / 8)
+                    for (uint32_t j = 0; j < entries; j++)
+                        if (font_u32(data + 4 + j * 8) == code) {
+                            index = font_u32(data + 8 + j * 8);
+                            break;
+                        }
+            }
+            if (index >= page * cells && index - page * cells < cells)
+                glyphs[index - page * cells].code = code;
+        }
+        ptr = font_u32(b + off + 20);
+    }
+    ptr = font_u32(b + 0x2c);
+    for (unsigned sections = 0; ptr >= 8 && (uint64_t)ptr + 8 <= n && sections < 4096; sections++) {
+        uint64_t off = ptr - 8;
+        if (memcmp(b + off, "CWDH", 4)) break;
+        uint32_t size = font_u32(b + off + 4);
+        if (size < 16 || size > n - off) break;
+        uint32_t first = font_u16(b + off + 8), last = font_u16(b + off + 10);
+        if (last < first || (uint64_t)(last - first + 1) * 3 > size - 16) break;
+        for (uint32_t index = first; index <= last; index++) {
+            if (index < page * cells || index - page * cells >= cells) continue;
+            const uint8_t *m = b + off + 16 + (index - first) * 3;
+            PlayerFontGlyph *g = &glyphs[index - page * cells];
+            g->left = (int8_t)m[0];
+            g->width = m[1];
+            g->advance = m[2];
+        }
+        ptr = font_u32(b + off + 12);
+    }
+    return glyphs;
+}
+#endif
 
 void glyphs_register_font(const uint8_t *b, uint64_t n) {
     if (n < 0x54 || memcmp(b, "FFNT", 4) || b[4] != 0xff || b[5] != 0xfe) return;
@@ -129,8 +203,14 @@ void glyphs_register_font(const uint8_t *b, uint64_t n) {
         for (j = 0; j < text_sheet_count; j++)
             if (text_sheets[j].hash == hash && text_sheets[j].w == w && text_sheets[j].h == h &&
                 text_sheets[j].format == format) break;
-        if (j == text_sheet_count)
-            text_sheets[text_sheet_count++] = (TextSheet){hash, w, h, format, cw, ch, cols, rows};
+        if (j == text_sheet_count) {
+            TextSheet sheet = {hash, w, h, format, cw, ch, cols, rows
+#ifdef __PROSPERO__
+                               , text_codes(b, n, i, cols * rows, cw), text_sheet_name(cw, ch), b[0x1f]
+#endif
+            };
+            text_sheets[text_sheet_count++] = sheet;
+        }
     }
     if (text_sheet_count != before)
         LOG("[font] indexed %u new %ux%u sheets (cells %ux%u, grid %ux%u)\n",
@@ -145,8 +225,97 @@ typedef struct {
     uint16_t cell_w, cell_h, cols, rows;
     int scale, state;  // 1 working, 2 ready, 3 failed
     uint8_t *input, *output;
+#ifdef __PROSPERO__
+    const PlayerFontGlyph *glyphs;
+    const char *name;
+    uint8_t baseline;
+#endif
 } TextCache;
 static TextCache text_cache[32];
+#ifdef __PROSPERO__
+typedef struct {
+    char magic[8];
+    uint64_t bytes;
+    unsigned char digest[32];
+    PlayerFontFit fit;
+} FontCacheHeader;
+
+static bool text_font_digest(FILE *f, unsigned char digest[32]) {
+    mbedtls_sha256_context ctx;
+    mbedtls_sha256_init(&ctx);
+    int rc = mbedtls_sha256_starts_ret(&ctx, 0);
+    uint8_t block[16384];
+    size_t n;
+    while (!rc && (n = fread(block, 1, sizeof block, f)) != 0)
+        rc = mbedtls_sha256_update_ret(&ctx, block, n);
+    if (ferror(f)) rc = -1;
+    if (!rc) rc = mbedtls_sha256_finish_ret(&ctx, digest);
+    mbedtls_sha256_free(&ctx);
+    return rc == 0;
+}
+// These are the first Open Sans build's fitted axes, retained so the guard fix does not retune the look.
+static PlayerFontPreset text_preset(const TextCache *c) {
+    if (c->cell_w == 31 && c->cell_h == 39) return (PlayerFontPreset){612.5, 98.75, 1};
+    if (c->cell_w == 24 && c->cell_h == 30) return (PlayerFontPreset){612.5, 100, 0};
+    if (c->cell_w == 18 && c->cell_h == 22) return (PlayerFontPreset){300, 100, 1};
+    return (PlayerFontPreset){581.25, 97.5, 0};
+}
+
+
+static void text_bundled_font(TextCache *c, const uint8_t *src, uint8_t *dst) {
+    char path[1024];
+    if (!rt_resource("fonts/OpenSans.ttf", NULL, path, sizeof path)) return;
+    FILE *f = fopen(path, "rb");
+    if (!f) return;
+    unsigned char digest[32];
+    bool ok = text_font_digest(f, digest);
+    fclose(f);
+    if (!ok) return;
+    char hex[65];
+    for (int i = 0; i < 32; i++) snprintf(hex + i * 2, 3, "%02x", digest[i]);
+    char cache[180];
+    snprintf(cache, sizeof cache, "cache/glyphs/v12-%016llx-%s-%d.bin",
+             (unsigned long long)c->hash, hex, c->scale);
+    size_t bytes = (size_t)c->w * c->h * c->scale * c->scale;
+    FontCacheHeader hdr = {0};
+    uint8_t *packed = malloc(sizeof hdr + bytes);
+    uint64_t started = SDL_GetTicksNS();
+    bool cached = false;
+    f = rt_data_fopen(cache, "rb");
+    if (f && packed && fread(packed, 1, sizeof hdr + bytes, f) == sizeof hdr + bytes && fgetc(f) == EOF) {
+        memcpy(&hdr, packed, sizeof hdr);
+        unsigned char check[32];
+        if (!memcmp(hdr.magic, "SWFNT12", 8) && hdr.bytes == bytes &&
+            !mbedtls_sha256_ret(packed + sizeof hdr, bytes, check, 0) && !memcmp(check, hdr.digest, 32)) {
+            memcpy(dst, packed + sizeof hdr, bytes);
+            cached = true;
+        }
+    }
+    if (f) fclose(f);
+    if (!cached) {
+        PlayerFontPreset preset = text_preset(c);
+        if (!player_font_fit(path, c->glyphs, (size_t)c->cols * c->rows, src, dst, c->w, c->h,
+                             c->cell_w, c->cell_h, c->cols, c->rows, c->scale, c->baseline, &preset, &hdr.fit)) {
+            free(packed);
+            return;
+        }
+        if (packed && !mbedtls_sha256_ret(dst, bytes, hdr.digest, 0)) {
+            memcpy(hdr.magic, "SWFNT12", 8);
+            hdr.bytes = bytes;
+            memcpy(packed, &hdr, sizeof hdr);
+            memcpy(packed + sizeof hdr, dst, bytes);
+            if (!rt_storage_mkdirs("cache/glyphs")) rt_storage_replace(cache, packed, sizeof hdr + bytes);
+        }
+    }
+    free(packed);
+    LOG("[font] bundled font active: sheet %s, %u glyphs from the font, %u missing, %u condensed, "
+        "%u non-ASCII scaled (min %.4f), sheet scale factor %.4f, baseline shift %.2f, %.2f ms (%s)\n",
+        c->name, hdr.fit.fitted, hdr.fit.fallback, hdr.fit.condensed, hdr.fit.scaled, hdr.fit.min_glyph_factor,
+        hdr.fit.scale_factor, hdr.fit.baseline_shift, (SDL_GetTicksNS() - started) / 1000000.0,
+        cached ? "cached" : "fitted");
+}
+#endif
+
 static void text_low_priority(void) {
 #ifdef __PROSPERO__
     struct sched_param p = { .sched_priority = sched_get_priority_min(SCHED_OTHER) };
@@ -177,6 +346,9 @@ static void *text_worker(void *arg) {
         for (uint32_t x = 0; x < ow; x++)
             dst[(uint64_t)y * ow + x] = src[(uint64_t)(y / scale) * w + x / scale];
     text_reconstruct_sheet(src, dst, w, h, c->cell_w, c->cell_h, c->cols, c->rows, scale);
+#ifdef __PROSPERO__
+    if (c->glyphs && g_settings.sharp_text_font) text_bundled_font(c, src, dst);
+#endif
     free(src);
     c->output = dst;
     __atomic_store_n(&c->state, 2, __ATOMIC_RELEASE);
@@ -227,6 +399,11 @@ bool glyphs_sharp_text(uint64_t addr, uint64_t pool_lo, uint64_t pool_hi, uint32
         c->hash = hash; c->w = w; c->h = h; c->format = format; c->scale = scale;
         c->cell_w = text_sheets[i].cell_w; c->cell_h = text_sheets[i].cell_h;
         c->cols = text_sheets[i].cols; c->rows = text_sheets[i].rows;
+#ifdef __PROSPERO__
+        c->glyphs = text_sheets[i].glyphs;
+        c->name = text_sheets[i].name;
+        c->baseline = text_sheets[i].baseline;
+#endif
         __atomic_store_n(&c->state, 1, __ATOMIC_RELEASE);
         pthread_t thread;
         if (pthread_create(&thread, NULL, text_worker, c)) {

@@ -91,6 +91,7 @@ typedef struct {
     int button_icons;    // ICONS_*: the game's button prompts show this device's buttons (Automatic: the one in use)
     bool action_prompt_debug; // Read-only diagnostics for 1.9.0 action prompt panes; ini only.
     bool sharp_text;     // Vulkan: sharpen identified game font sheets at 4K
+    bool sharp_text_font;  // PS5: use fitted vector glyphs instead of cubic-only reconstruction
     bool sharp_ui;       // Vulkan: enlarge selected layout artwork from the player's archives
     bool sharp_ui_chosen;  // sharp_ui came from the ini (PS5: otherwise the 4K first-launch default decides)
     bool hd_ui;          // Load the user's generated UI texture pack when present

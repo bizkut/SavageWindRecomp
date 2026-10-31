@@ -35,49 +35,8 @@ static float text_tone(int v, float slope, float offset) {
     return x < 0 ? 0 : x > 1 ? 1 : x;
 }
 
-static void text_reconstruct_sheet(const uint8_t *src, uint8_t *dst, int w, int h, int cw, int ch,
-                                   int cols, int rows, int scale) {
-    int ow = w * scale;
-    uint64_t original[256] = {0}, reconstructed[256] = {0};
-    for (int row = 0; row < rows; row++) for (int col = 0; col < cols; col++) {
-        int x0 = col * (cw + 1), y0 = h - row * (ch + 1) - ch;
-        unsigned sum = 0;
-        for (int y = 0; y < ch; y++) for (int x = 0; x < cw; x++) {
-            int v = src[(y0 + y) * w + x0 + x];
-            original[v]++;
-            sum += v;
-        }
-        if (!sum) {
-            reconstructed[0] += (uint64_t)cw * ch * scale * scale;
-            for (int y = 0; y < ch * scale; y++)
-                memset(dst + (size_t)(y0 * scale + y) * ow + x0 * scale, 0, cw * scale);
-            continue;
-        }
-        for (int y = 0; y < ch * scale; y++) {
-            float sy = (y + 0.5f) / scale - 0.5f;
-            int iy = (int)floorf(sy);
-            float fy = sy - iy;
-            for (int x = 0; x < cw * scale; x++) {
-                float sx = (x + 0.5f) / scale - 0.5f;
-                int ix = (int)floorf(sx);
-                float fx = sx - ix, v[4];
-                for (int j = 0; j < 4; j++) {
-                    int py = y0 + text_clamp(iy + j - 1, ch - 1);
-                    float a = src[py * w + x0 + text_clamp(ix - 1, cw - 1)];
-                    float b = src[py * w + x0 + text_clamp(ix, cw - 1)];
-                    float c = src[py * w + x0 + text_clamp(ix + 1, cw - 1)];
-                    float d = src[py * w + x0 + text_clamp(ix + 2, cw - 1)];
-                    v[j] = text_cubic(a, b, c, d, fx);
-                }
-                float value = text_cubic(v[0], v[1], v[2], v[3], fy);
-                if (value < 0) value = 0;
-                if (value > 255) value = 255;
-                uint8_t output = (uint8_t)(value + 0.5f);
-                dst[(y0 * scale + y) * ow + x0 * scale + x] = output;
-                reconstructed[output]++;
-            }
-        }
-    }
+static void text_fit_tone(const uint64_t original[256], const uint64_t reconstructed[256], int scale,
+                          uint8_t lut[256]) {
     // One tone curve for the whole sheet, not an independent weight for each glyph.
     double target[3] = {0, 0, 0};
     for (int k = 0; k < 256; k++) {
@@ -126,7 +85,6 @@ static void text_reconstruct_sheet(const uint8_t *src, uint8_t *dst, int w, int 
             }
         }
     }
-    uint8_t lut[256];
     for (int k = 0; k < 256; k++) lut[k] = (uint8_t)(255 * text_tone(k, best_slope, best_offset) + 0.5f);
     int source_peak = 255, base_peak = 255;
     while (source_peak && !original[source_peak]) source_peak--;
@@ -162,6 +120,53 @@ static void text_reconstruct_sheet(const uint8_t *src, uint8_t *dst, int w, int 
             }
         }
     }
+}
+
+static void text_reconstruct_sheet(const uint8_t *src, uint8_t *dst, int w, int h, int cw, int ch,
+                                   int cols, int rows, int scale) {
+    int ow = w * scale;
+    uint64_t original[256] = {0}, reconstructed[256] = {0};
+    for (int row = 0; row < rows; row++) for (int col = 0; col < cols; col++) {
+        int x0 = col * (cw + 1), y0 = h - row * (ch + 1) - ch;
+        unsigned sum = 0;
+        for (int y = 0; y < ch; y++) for (int x = 0; x < cw; x++) {
+            int v = src[(y0 + y) * w + x0 + x];
+            original[v]++;
+            sum += v;
+        }
+        if (!sum) {
+            reconstructed[0] += (uint64_t)cw * ch * scale * scale;
+            for (int y = 0; y < ch * scale; y++)
+                memset(dst + (size_t)(y0 * scale + y) * ow + x0 * scale, 0, cw * scale);
+            continue;
+        }
+        for (int y = 0; y < ch * scale; y++) {
+            float sy = (y + 0.5f) / scale - 0.5f;
+            int iy = (int)floorf(sy);
+            float fy = sy - iy;
+            for (int x = 0; x < cw * scale; x++) {
+                float sx = (x + 0.5f) / scale - 0.5f;
+                int ix = (int)floorf(sx);
+                float fx = sx - ix, v[4];
+                for (int j = 0; j < 4; j++) {
+                    int py = y0 + text_clamp(iy + j - 1, ch - 1);
+                    float a = src[py * w + x0 + text_clamp(ix - 1, cw - 1)];
+                    float b = src[py * w + x0 + text_clamp(ix, cw - 1)];
+                    float c = src[py * w + x0 + text_clamp(ix + 1, cw - 1)];
+                    float d = src[py * w + x0 + text_clamp(ix + 2, cw - 1)];
+                    v[j] = text_cubic(a, b, c, d, fx);
+                }
+                float value = text_cubic(v[0], v[1], v[2], v[3], fy);
+                if (value < 0) value = 0;
+                if (value > 255) value = 255;
+                uint8_t output = (uint8_t)(value + 0.5f);
+                dst[(y0 * scale + y) * ow + x0 * scale + x] = output;
+                reconstructed[output]++;
+            }
+        }
+    }
+    uint8_t lut[256];
+    text_fit_tone(original, reconstructed, scale, lut);
     for (int row = 0; row < rows; row++) for (int col = 0; col < cols; col++) {
         int x0 = col * (cw + 1) * scale, y0 = (h - row * (ch + 1) - ch) * scale;
         for (int y = 0; y < ch * scale; y++) for (int x = 0; x < cw * scale; x++) {

@@ -3,6 +3,8 @@
 payload-sdk           ../forever/PS5_PayloadSDK                        fdb2763789a50a4fcc9a98dcae13f5e336c6a1ee
 payload-sdk-release   ../forever/.downloads/ps5-payload-sdk.zip        sha256:8cfbc7cd5811e719eb4f0c47eea668d3dc7b40bc8ab11c4a5031d40c23ec02da
 title-tooling         ../PS5_vkQuake (tooling/, copied to ps5/tooling) 3de45e5099758a0247b39b0510da89d2f7331637
+opensans-revision     googlefonts/opensans                            bd7e37632246368c60fdcbd374dbf9bad11969b6
+opensans-font         fonts/variable/OpenSans[wdth,wght].ttf           sha256:36643644f318a812aab2d2ed3bb98f8cf0872527f835fe9398d95fe6b9adb878
 nstool2              ../nstool2                                      7e0a49b61ae98b730900709e3ac5ba1945c1906e
 radv-archive          .deps/ps5/radv/libvulkan_radeon.ps5.a           sha256:9d12cff020676c3533f25842827f768b71fea4de4d32d68105523efbc1476929
 # ^ PS5_Mesa f10c4bac9b + ps5-wow patches 0001 HDR10/immediate, 0002 cache DB, 0003 VRR (Forever build cache, 2026-10-23)

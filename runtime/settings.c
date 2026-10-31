@@ -52,6 +52,7 @@ Settings g_settings = {
     .home_art = true,
     .hdr = HDR_OFF,
     .sharp_text = true,
+    .sharp_text_font = true,
     .drs_fsr3 = true,
     .drs_lean = true,
 #endif
@@ -180,6 +181,7 @@ void settings_load(void) {
         }
         else if (!strcmp(key, "action_prompt_debug")) g_settings.action_prompt_debug = atoi(val) != 0;
         else if (!strcmp(key, "sharp_text")) g_settings.sharp_text = atoi(val) != 0;
+        else if (!strcmp(key, "sharp_text_font")) g_settings.sharp_text_font = atoi(val) != 0;
         else if (!strcmp(key, "sharp_ui")) { g_settings.sharp_ui = atoi(val) != 0; g_settings.sharp_ui_chosen = true; }
         else if (!strcmp(key, "hd_ui")) g_settings.hd_ui = atoi(val) != 0;
         else if (!strcmp(key, "hd_ui_generate")) g_settings.hd_ui_generate = atoi(val) != 0;
@@ -342,6 +344,7 @@ void settings_save(void) {
                                                 g_settings.button_icons : ICONS_AUTO]);
     if (g_settings.action_prompt_debug) fprintf(f, "action_prompt_debug = 1\n");
     fprintf(f, "sharp_text = %d\n", g_settings.sharp_text);
+    fprintf(f, "sharp_text_font = %d\n", g_settings.sharp_text_font);
     fprintf(f, "sharp_ui = %d\n", g_settings.sharp_ui);
     fprintf(f, "hd_ui = %d\n", g_settings.hd_ui);
 #ifdef __PROSPERO__

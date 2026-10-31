@@ -12,6 +12,10 @@ device-specific button glyphs are not replaced by upscaled original artwork.
 On game version 1.9.0, the action diamond can rearrange its face buttons to match the controller bindings live,
 using the appropriate backing from the player's own files.
 
+On PS5, sharp Latin game text can use the bundled Open Sans vector font, fitted to the player's font sheets.
+`sharp_text_font = 0` restores reconstruction-only text. A shared sheet scale and cell guards prevent atlas bleed
+without shrinking individual ASCII descenders; oversized accented glyphs are fitted to their cells.
+
 On PS5, the home-screen icon and backgrounds and the start-up splash are made once, at the first start, from your
 own game files and installed on your console (`home_art = 0` restores the shipped icon and removes the rest). The
 release ships only a neutral icon: no background or splash picture.

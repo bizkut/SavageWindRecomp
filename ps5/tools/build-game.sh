@@ -48,6 +48,7 @@ export PS5_NCNN_SRC="$ncnn/src"
 # pacbrew's FFmpeg (pinned in ps5/deps.lock, read-only): the prefix, then its archives (and theirs) in link order
 mapfile -t ffmpeg < <(bash ps5/tools/setup-ffmpeg.sh)
 [[ ${#ffmpeg[@]} -gt 1 ]] || { echo "ps5/tools/setup-ffmpeg.sh failed" >&2; exit 1; }
+opensans=$(bash ps5/tools/setup-opensans.sh)
 
 # PS5_MihawkGen (pinned in ps5/deps.lock): its framegen/ library, licence and weights, exported from the pinned
 # revision of the checkout (git archive, never its working tree) into .deps/ps5/mihawkgen; another revision or other
@@ -85,6 +86,7 @@ export PS5_RADV_ARCHIVE="$radv/libvulkan_radeon.ps5.a"
 export PS5_CFLAGS="-fexceptions -Iruntime -Iruntime/nvn -Iruntime/ps5/include -Ithird_party -I$radv/include \
 -I$shaderc/include -I$bc7 -I$ns -I$ns/libmbedtls/include \
 -isystem third_party/stb -I$gen/inc -Ithird_party/smaa/Textures -I$zlib -isystem ${ffmpeg[0]}/include \
+-isystem ${ffmpeg[0]}/include/freetype2 \
 -I$mh -I$mh/framegen/include -I$ffx/sdk/include -I$ffx/sdk/include/FidelityFX/gpu \
 -I$ffx/sdk/src/components -I$ffx/sdk/src/shared -I$ffx/sdk/src/backends/shared -I$ffx/spirv \
 -DSW_FSR3=1 -DROMFS_PACKAGE -DTRANSLATOR_ID=\"$translator_id\" -DSPIRV_ID=\"$spirv_id\" -march=x86-64-v3 -Wno-format"
@@ -117,7 +119,7 @@ console_libs=
 if [[ $variant == console ]]; then
     console_libs="$root/build/ps5/capstone/libcapstone.a $llvm_target/lib/*.a"
 fi
-export PS5_LINK_INPUTS="--gc-sections --wrap=exit --wrap=_exit --wrap=_Exit --wrap=quick_exit --wrap=abort --wrap=sceSystemServiceLoadExec --wrap=ps5_heap_malloc --wrap=ps5_heap_calloc --wrap=ps5_heap_memalign --wrap=ps5_heap_free --start-group $game $console_libs $package/libsavagewind-package.a $ncnn/build/src/libncnn.a $ns/libpietendo/bin/linux/libpietendo.a $ns/libtoolchain/bin/linux/libtoolchain.a $ns/libfmt/bin/linux/libfmt.a $ns/liblz4/bin/linux/liblz4.a $ns/libmbedtls/bin/linux/libmbedtls.a $shaderc/lib/libshaderc_combined.a ${ffmpeg[*]:1} --end-group"
+export PS5_LINK_INPUTS="--gc-sections --wrap=exit --wrap=_exit --wrap=_Exit --wrap=quick_exit --wrap=abort --wrap=sceSystemServiceLoadExec --wrap=ps5_heap_malloc --wrap=ps5_heap_calloc --wrap=ps5_heap_memalign --wrap=ps5_heap_free --start-group $game $console_libs $package/libsavagewind-package.a $ncnn/build/src/libncnn.a $ns/libpietendo/bin/linux/libpietendo.a $ns/libtoolchain/bin/linux/libtoolchain.a $ns/libfmt/bin/linux/libfmt.a $ns/liblz4/bin/linux/liblz4.a $ns/libmbedtls/bin/linux/libmbedtls.a $shaderc/lib/libshaderc_combined.a ${ffmpeg[*]:1} ${ffmpeg[0]}/lib/libfreetype.a ${ffmpeg[0]}/lib/libpng.a --end-group"
 app=$(bash ps5/tools/build-title.sh "$title_name" \
     "${console_sources[@]}" runtime/platform/main_ps5.c runtime/platform/s7_ps5.c runtime/platform/ps5.c runtime/platform/gamelib_ps5.c \
     runtime/platform/exefs_ps5.c runtime/platform/home_art_ps5.cpp runtime/ps5/sdl_shim.c runtime/ps5/log.c runtime/ps5/unavailable.c runtime/ps5/diagnostics.cpp \
@@ -129,7 +131,7 @@ app=$(bash ps5/tools/build-title.sh "$title_name" \
     runtime/hle/heaps.c runtime/hle/setjmp.c runtime/hle/pl.c runtime/hle/yaz0.c runtime/hle/vibration.c runtime/hle/vi.c \
     runtime/hle/nvn_boot.c runtime/hle/framepace.c runtime/hle/npad.c runtime/hle/motion.c \
     runtime/hle/input.c runtime/hle/bindings.c runtime/hle/wheel_zoom.c runtime/hle/movie.c \
-    runtime/ui/game_options.mm runtime/ui/i18n.mm runtime/ps5/video_page.cpp runtime/nvn/glyphs.c runtime/nvn/sharp_ui.c \
+    runtime/ui/game_options.mm runtime/ui/i18n.mm runtime/ps5/video_page.cpp runtime/nvn/glyphs.c runtime/nvn/player_font.c runtime/nvn/sharp_ui.c \
     runtime/nvn/hd_ui_policy.c runtime/nvn/hd_ui_extract.c runtime/nvn/hd_ui_ncnn.cpp runtime/nvn/hd_ui_dds.cpp runtime/nvn/hd_ui_generate.cpp \
     "${bc7#$root/}/bc7enc.cpp" "${bc7#$root/}/bc7decomp.cpp" \
     runtime/nvn/astc.c runtime/nvn/cmdbuf.c runtime/nvn/formats.c runtime/nvn/objects.c runtime/nvn/output_scale.c \
@@ -143,6 +145,9 @@ app=$(bash ps5/tools/build-title.sh "$title_name" \
 # The button prompts' label font (runtime/nvn/glyphs.c: rt_resource, /app0), with its licence
 cp third_party/fonts/FiraSans/FiraSans-SemiBold.ttf "$app/FiraSans-SemiBold.ttf"
 cp third_party/fonts/FiraSans/OFL.txt "$app/FiraSans-OFL.txt"
+mkdir -p "$app/fonts" "$app/notices"
+cp "$opensans" "$app/fonts/OpenSans.ttf"
+cp ps5/release/notices/OPENSANS.txt "$app/notices/OPENSANS.txt"
 # MihawkGen's weights (runtime/nvn/vulkan/mihawk.cpp reads /app0/network.fgw), its licence and third-party notices
 cp "$mh/framegen/models/network.fgw" "$app/network.fgw"
 cp "$mh/LICENSE.md" "$app/MihawkGen-LICENSE.md"

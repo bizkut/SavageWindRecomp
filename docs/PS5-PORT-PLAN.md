@@ -861,6 +861,11 @@ release ZIP's no-game-content check still passes.
   On PS5 the game's Minus (Sheikah Slate) defaults to the touchpad (a touchpad pictogram in prompts); Create can't be
   bound in Controls, and a saved binding to it falls back to the slot's default. .41: the touchpad opens the map.
 
+- Sharp Latin text defaults to bundled Open Sans, fitted per sheet with cell guards; unsupported glyphs retain the
+  original reconstruction. Normal uses 0.94 and Caption 0.91 scale, with at most a 1 px baseline shift; bold item
+  names have wider letter spacing. The user checked the title menu, Take/label, inventory and map text and found it
+  good. `sharp_text_font = 0` restores reconstruction-only text.
+
 ### After M11 (optional) — Community texture packs
 High-resolution texture packs dropped into the existing overlay folder (`runtime/services/fs.c`); never shipped by
 the project. **Done when:** one pack loads, with GPU/flexible memory and load-time cost logged against the M6
