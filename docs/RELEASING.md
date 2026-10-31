@@ -16,8 +16,8 @@ worktree and unresolved source provenance, and marks dirty candidates in the fil
 Register a self-hosted Linux x64 runner for `bizkut/SavageWindRecomp` on the build machine and label it
 `savagewind-ps5`. The existing runner registered to `bizkut/ps5-forever` is not automatically available to the
 fork. Install clang/LLVM 18, CMake, Ninja, Python 3 and its pip, the GitHub CLI, and the title build's other host
-requirements, including Meson, Ninja, rsync and the LLVM 18 development tools required by Mesa. The workflow fetches
-the pinned SDK, nstool, MihawkGen, zlib, Mesa and public RADV build recipe sources. It builds RADV from those sources
+requirements, including Meson, Ninja, rsync and LLVM 19, SPIR-V translator and libclc development tools for Mesa.
+The workflow fetches pinned SDK, nstool, MihawkGen, zlib, Mesa and public RADV build recipe sources. It builds RADV
 and verifies the archive and headers against `ps5/deps.lock`. The runner must not have private game files in its
 workspace. It retains a digest-checked LLVM cache; release runs are serialized. Dispatching on `ps5` uploads a
 non-distributable candidate artifact from a clean worktree; a PS5 release tag publishes a release.

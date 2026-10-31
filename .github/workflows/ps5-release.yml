@@ -101,7 +101,7 @@ jobs:
           ln -sfn "$GITHUB_WORKSPACE/.deps/ps5/ps5-payload-sdk" "$sandbox/PS5_Vulkan/.deps/native/ps5-payload-sdk"
           PS5_RADV_REVISION="$(awk '$1 == "radv-mesa" { print $3 }' ps5/deps.lock)" \
             PS5_RADV_INSTALL="$GITHUB_WORKSPACE/.deps/ps5/radv-source/install" \
-            LLVM_CONFIG="$(command -v llvm-config-18)" JOBS=8 \
+            LLVM_CONFIG="$(command -v llvm-config-19)" JOBS=8 \
             python3 "$sandbox/ps5-proton/ps5-wow/ps5/radv/build-radv.py"
           cp "$sandbox/../install/lib/libvulkan_radeon.ps5.a" .deps/ps5/radv/
           cp -a "$sandbox/../install/include" .deps/ps5/radv/
