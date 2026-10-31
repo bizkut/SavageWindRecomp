@@ -30,7 +30,7 @@
 #define SB_PORT 9142
 #endif
 #define SB_MAGIC UINT32_C(0x31574253) /* SBW1 */
-#define SB_VERSION 9u /* same-version takeover and fixed-key video mode */
+#define SB_VERSION 10u /* refresh replaced data roots before serving connections */
 #define SB_TOKEN_BYTES 32u
 #ifndef SB_ROOT
 #define SB_ROOT "/data/savagewind"

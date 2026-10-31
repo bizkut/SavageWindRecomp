@@ -585,8 +585,11 @@ static void *serve(void *arg)
     struct sb_hello hello;
     struct sb_request r;
     char path[SB_MAX_PATH + 1];
-    if (io_all(client, &hello, sizeof(hello), 0) || hello.magic != SB_MAGIC ||
-        !hello.version || memcmp(hello.token, token, sizeof(token))) goto done;
+    if (io_all(client, &hello, sizeof(hello), 0) || hello.magic != SB_MAGIC || !hello.version) goto done;
+    pthread_mutex_lock(&request_lock);
+    int authenticated = !memcmp(hello.token, token, sizeof(token));
+    pthread_mutex_unlock(&request_lock);
+    if (!authenticated) goto done;
     reply_version = hello.version >= 5 && hello.version <= SB_VERSION ? hello.version : SB_VERSION;
     if (reply_to(client, hello.version >= 5 && hello.version <= SB_VERSION ? 0 : -EPROTONOSUPPORT, 0))
         goto done;
@@ -698,6 +701,7 @@ done:
 static int open_root(void)
 {
 #ifdef SB_HOST_TEST
+    if (mkdir(SB_ROOT, 0777) && errno != EEXIST) return -1;
     return open(SB_ROOT, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
 #else
     int data = open("/data", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC), root;
@@ -721,10 +725,11 @@ static int publish_token(void)
 {
     char name[80];
     size_t done = 0;
+    unsigned char new_token[SB_TOKEN_BYTES];
     int random = open("/dev/urandom", O_RDONLY | O_CLOEXEC), fd, rc;
     if (random < 0) return -1;
-    while (done < sizeof(token)) {
-        ssize_t n = read(random, token + done, sizeof(token) - done);
+    while (done < sizeof(new_token)) {
+        ssize_t n = read(random, new_token + done, sizeof(new_token) - done);
         if (n < 0 && errno == EINTR) continue;
         if (n <= 0) { close(random); return -1; }
         done += (size_t)n;
@@ -732,13 +737,48 @@ static int publish_token(void)
     close(random);
     fd = temp_file(root_fd, name);
     if (fd < 0) return -1;
-    rc = write_all_file(fd, token, sizeof(token));
+    rc = write_all_file(fd, new_token, sizeof(new_token));
     if (!rc && fchmod(fd, 0666)) rc = -errno;
     if (!rc && fsync(fd)) rc = -errno;
     if (close(fd) && !rc) rc = -errno;
     if (!rc) rc = existing_regular(root_fd, SB_TOKEN_NAME, 1);
     if (!rc && renameat(root_fd, name, root_fd, SB_TOKEN_NAME)) rc = -errno;
-    if (rc) { unlinkat(root_fd, name, 0); return -1; }
+    if (rc) { unlinkat(root_fd, name, 0); errno = -rc; return -1; }
+    memcpy(token, new_token, sizeof(token));
+    return 0;
+}
+
+/* Called under request_lock before a newly accepted connection is served. */
+static int refresh_root(void)
+{
+    struct stat path_stat, current_stat, opened_stat;
+    int new_root, old_root, error;
+    if (lstat(SB_ROOT, &path_stat)) {
+        if (errno != ENOENT) return -1;
+        new_root = open_root();
+        if (new_root < 0) return -1;
+    } else {
+        if (!S_ISDIR(path_stat.st_mode)) { errno = ENOTDIR; return -1; }
+        if (fstat(root_fd, &current_stat)) return -1;
+        if (path_stat.st_dev == current_stat.st_dev && path_stat.st_ino == current_stat.st_ino) return 0;
+        new_root = open_root();
+        if (new_root < 0) return -1;
+    }
+    if (fstat(new_root, &opened_stat) || lstat(SB_ROOT, &path_stat) ||
+        !S_ISDIR(path_stat.st_mode) || opened_stat.st_dev != path_stat.st_dev ||
+        opened_stat.st_ino != path_stat.st_ino) {
+        error = errno ? errno : ESTALE;
+        close(new_root); errno = error; return -1;
+    }
+    old_root = root_fd;
+    root_fd = new_root;
+    if (publish_token()) {
+        error = errno;
+        root_fd = old_root;
+        close(new_root); errno = error; return -1;
+    }
+    close(old_root);
+    say("data folder replaced; serving the new one");
     return 0;
 }
 int main(void)
@@ -769,10 +809,15 @@ int main(void)
         if (errno != EADDRINUSE || attempt >= 20) { say("cannot bind port %d: errno=%d", SB_PORT, errno); return 1; }
         // A newly loaded broker always takes over: the running one may hold a stale root (the data folder renamed
         // or recreated since it started), and a silent exit would leave the title on that stale root
-        if (!attempt && !sb_connect_version(&old, SB_VERSION)) {
-            say("replacing the running broker (version %u)", old.server_version);
-            (void)sb_quit(&old);
-            sb_close(&old);
+        if (!attempt) {
+            int rc = sb_connect_version(&old, SB_VERSION);
+            if (rc) say("cannot authenticate running broker for takeover: error %d", -rc);
+            else {
+                say("replacing the running broker (version %u)", old.server_version);
+                rc = sb_quit(&old);
+                if (rc) say("running broker refused takeover: error %d", -rc);
+                sb_close(&old);
+            }
         }
         usleep(100000);
     }
@@ -796,6 +841,14 @@ int main(void)
         pthread_t thread;
         int client = accept(listener, NULL, NULL);
         if (client < 0) { if (errno == EINTR) continue; break; }
+        pthread_mutex_lock(&request_lock);
+        int refreshed = refresh_root();
+        int refresh_error = errno;
+        pthread_mutex_unlock(&request_lock);
+        if (refreshed) {
+            say("cannot refresh data folder: errno=%d", refresh_error);
+            close(client); continue;
+        }
         if (setsockopt(client, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) ||
             pthread_create(&thread, NULL, serve, (void *)(intptr_t)client)) {
             close(client); continue;

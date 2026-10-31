@@ -23,11 +23,11 @@ HOST_FLAGS := -D_GNU_SOURCE -DSB_HOST_TEST -DSB_ROOT='"$(HOST_ROOT)"' -DSB_PORT=
 host-test:
 	$${CC:-cc} -D_GNU_SOURCE -Wall -Wextra -Werror -O2 -o /tmp/savagewind-broker-startup-test startup_test.c startup.c
 	/tmp/savagewind-broker-startup-test
-	rm -rf $(HOST_ROOT)
+	rm -rf $(HOST_ROOT) $(HOST_ROOT)-old
 	mkdir -p $(HOST_ROOT)
 	$${CC:-cc} $(HOST_FLAGS) -o /tmp/savagewind-storagebroker broker.c client.c
 	$${CC:-cc} $(HOST_FLAGS) -o /tmp/savagewind-storagebroker-check host_test.c client.c
 	/tmp/savagewind-storagebroker > /tmp/savagewind-storagebroker.log 2>&1 & pid=$$!; \
-		trap 'kill $$pid 2>/dev/null || true; rm -rf $(HOST_ROOT)' EXIT; \
+		trap 'kill $$pid 2>/dev/null || true; rm -rf $(HOST_ROOT) $(HOST_ROOT)-old' EXIT; \
 		for n in 1 2 3 4 5; do test -f $(HOST_ROOT)/.storage-broker-token && break; sleep .1; done; \
 		/tmp/savagewind-storagebroker-check

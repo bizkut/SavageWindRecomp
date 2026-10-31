@@ -46,6 +46,8 @@ Your imports, saves, settings, generated game code, UI and caches live under `/d
 
 - **Storage unavailable:** start elfldr on port 9021, or load `storagebroker.elf` manually, then restart the title.
   Ensure ShadowMountPlus is active.
+  If the storage helper reports an error after the data folder was moved or deleted, restart the console, start elfldr,
+  and then start Savage Wind. A running older helper may no longer have an accessible authentication token.
 - **Missing or unsupported update:** check that the base package and the matching 1.9.0 update NSP are both in `/data/savagewind/import/`.
 - **Keys or package cannot be opened:** check that your own `prod.keys` is present and corresponds to the packages; keys dumped from a Switch on firmware 19.0.0 are recommended. Add your own `title.keys` when required. Do not share keys or packages when asking for help.
 - **First start takes a long time:** compilation and shader preparation are expected on first start or after relevant inputs change. Leave the console on and consult the progress screen.

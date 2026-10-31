@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <netinet/in.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -216,6 +217,54 @@ static void test_home_art(struct sb_client *client)
     free(dds);
 }
 
+/* A connection without a token wakes the listener after the root is moved. */
+static int wake_broker(void)
+{
+    struct sockaddr_in addr = {0};
+    struct sb_hello hello = {SB_MAGIC, SB_VERSION, {0}};
+    char byte;
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) return -1;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(SB_PORT);
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    int rc = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
+    if (!rc && send(fd, &hello, sizeof(hello), 0) != sizeof(hello)) rc = -1;
+    if (!rc && recv(fd, &byte, 1, 0) > 0) rc = -1;
+    close(fd);
+    return rc;
+}
+
+static int read_token(unsigned char *token)
+{
+    int fd = open(SB_ROOT "/" SB_TOKEN_NAME, O_RDONLY);
+    if (fd < 0) return -1;
+    ssize_t n = read(fd, token, SB_TOKEN_BYTES);
+    close(fd);
+    return n == SB_TOKEN_BYTES ? 0 : -1;
+}
+
+static void test_root_refresh(void)
+{
+    unsigned char old_token[SB_TOKEN_BYTES], new_token[SB_TOKEN_BYTES];
+    struct sb_client client = {-1, 0};
+    struct stat st;
+    check(read_token(old_token) == 0 && rename(SB_ROOT, SB_ROOT "-old") == 0 &&
+          mkdir(SB_ROOT, 0777) == 0 && wake_broker() == 0 &&
+          read_token(new_token) == 0 && memcmp(old_token, new_token, sizeof(old_token)) != 0 &&
+          sb_connect(&client) == 0 && sb_create(&client, "new-root") == 0 &&
+          access(SB_ROOT "/new-root", F_OK) == 0 && access(SB_ROOT "-old/new-root", F_OK) != 0,
+          "replaced root gets a fresh token and serves new folder");
+    sb_close(&client);
+    check(unlink(SB_ROOT "/new-root") == 0 && unlink(SB_ROOT "/" SB_TOKEN_NAME) == 0 &&
+          rmdir(SB_ROOT) == 0 && wake_broker() == 0 && stat(SB_ROOT, &st) == 0 &&
+          S_ISDIR(st.st_mode) && read_token(old_token) == 0 &&
+          memcmp(old_token, new_token, sizeof(old_token)) != 0 && sb_connect(&client) == 0 &&
+          sb_create(&client, "recreated") == 0 && access(SB_ROOT "/recreated", F_OK) == 0,
+          "deleted root is recreated with a fresh token");
+    sb_close(&client);
+}
+
 
 int main(void) {
     struct sb_client client = {-1, 0};
@@ -236,6 +285,11 @@ int main(void) {
         check(sb_connect_version(&old, 5) == 0 && sb_stat(&old, "missing", &size) == -ENOENT,
               "version 5 client retains existing operations");
         sb_close(&old);
+        for (uint32_t version = 6; version <= 9; ++version) {
+            check(sb_connect_version(&old, version) == 0 && sb_stat(&old, "missing", &size) == -ENOENT,
+                  "versions 6 through 9 retain existing operations");
+            sb_close(&old);
+        }
     }
     if (client.fd < 0) return 1;
     test_video_mode();
@@ -543,6 +597,7 @@ int main(void) {
 
     sb_close(&client);
     rmdir(SB_ROOT "/save");
+    test_root_refresh();
     printf("done: %d failed check(s)\n", failures);
     return failures != 0;
 }
