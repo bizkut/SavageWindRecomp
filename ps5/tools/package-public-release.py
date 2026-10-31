@@ -188,6 +188,9 @@ for name, data in files.items():
         hits = ', '.join(f'{m.decode()}={data.count(m)}' for m in markers if m in data)
         print(f"Executable literal exception {executables[name]}  {name}  {hits or 'no magic literals'}")
     elif not (name.startswith('notices/') or name in ('README.txt', 'SOURCE.txt', 'LICENSE')):
+        if name == 'PPSA90212/sce_sys/param.json':
+            # The home-screen name is the game's name (maintainer decision); only that exact field is exempt.
+            data = data.replace(b'"titleName": "Breath of the Wild"', b'')
         if signature.search(data) or title.search(data):
             raise SystemExit(f'game signature in {name}')
 
