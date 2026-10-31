@@ -62,20 +62,35 @@ jobs:
                           if f.read(4) == b'NSO0':
                               raise SystemExit(f'Private NSO in workspace: {path}')
           PY
-      - name: Prepare pinned local dependencies
+      - name: Prepare pinned dependencies
         run: |
-          # The build scripts resolve these siblings relative to the checkout.
+          set -euo pipefail
           parent=$(dirname "$GITHUB_WORKSPACE")
-          source_root=/home/bizkut/workspaces
-          for name in forever nstool2 PS5_MihawkGen; do
-            target="$source_root/$name"
-            test -d "$target"
-            if [[ -e "$parent/$name" || -L "$parent/$name" ]]; then
-              [[ $(realpath "$parent/$name") == "$(realpath "$target")" ]] || exit 1
-            else
-              ln -s "$target" "$parent/$name"
+          checkout() {
+            local path=$1 url=$2 revision=$3
+            if [[ ! -d "$path/.git" ]]; then
+              git init "$path"
+              git -C "$path" remote add origin "$url"
             fi
-          done
+            git -C "$path" fetch --depth 1 origin "$revision"
+            git -C "$path" checkout --detach --force "$revision"
+          }
+          mkdir -p "$parent/forever"
+          checkout "$parent/forever/PS5_PayloadSDK" https://github.com/bizkut/ps5-forever-sdk.git \
+            "$(awk '$1 == "payload-sdk" { print $3 }' ps5/deps.lock)"
+          checkout "$parent/PS5_MihawkGen" https://github.com/mihawk-99/PS5_MihawkGen.git \
+            "$(awk '$1 == "mihawkgen" { print $NF }' ps5/deps.lock)"
+          checkout "$parent/nstool2" https://github.com/Clearmist/nstool.git \
+            "$(awk '$1 == "nstool2" { print $3 }' ps5/deps.lock)"
+          git -C "$parent/nstool2" submodule update --init --recursive
+          zlib="$parent/forever/PS5_Vulkan/.deps/native/zlib"
+          mkdir -p "$zlib"
+          read -r zlib_url zlib_sha < <(awk '$1 == "zlib-source" { sub(/^sha256:/, "", $3); print $2, $3 }' ps5/deps.lock)
+          curl -fL --retry 3 "$zlib_url" -o "$zlib/zlib.tar.gz"
+          echo "$zlib_sha  $zlib/zlib.tar.gz" | sha256sum --check --strict
+          tar -xzf "$zlib/zlib.tar.gz" -C "$zlib"
+          # The RADV binary is a digest-pinned local cache, not a public download.
+          source_root=/home/bizkut/workspaces
           mkdir -p .deps/ps5/radv
           if [[ ! -f .deps/ps5/radv/libvulkan_radeon.ps5.a ]]; then
             cp "$source_root/SavageWindRecomp/.deps/ps5/radv/libvulkan_radeon.ps5.a" .deps/ps5/radv/

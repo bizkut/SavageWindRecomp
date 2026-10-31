@@ -16,11 +16,11 @@ worktree and unresolved source provenance, and marks the ZIP accordingly; it is 
 Register a self-hosted Linux x64 runner for `bizkut/SavageWindRecomp` on the build machine and label it
 `savagewind-ps5`. The existing runner registered to `bizkut/ps5-forever` is not automatically available to the
 fork. Install clang/LLVM 18, CMake, Ninja, Python 3 and its pip, the GitHub CLI, and the title build's other host
-requirements. The runner checkout needs the pinned sibling checkouts and build inputs in `ps5/deps.lock`, including
-`/home/bizkut/workspaces/forever`, `nstool2`, `PS5_MihawkGen`, the pinned RADV archive and headers under the local
-SavageWindRecomp `.deps/ps5/radv`, and the pinned pacbrew FFmpeg prefix. The build scripts check the relevant pins.
-The runner must not have private game files in its workspace. It retains a digest-checked LLVM cache; release runs
-are serialized. Manual dispatch must select the existing `ps5-v*` tag and also publishes a release.
+requirements. The workflow fetches pinned SDK, nstool, MihawkGen and zlib sources; it currently copies the pinned
+RADV archive and its headers from `/home/bizkut/workspaces/SavageWindRecomp/.deps/ps5/radv`. The archive is checked
+against `ps5/deps.lock`; the copied headers are not independently pinned. The runner must not have private game
+files in its workspace. It retains a digest-checked LLVM cache; release runs are serialized. Dispatching on `ps5`
+uploads a non-distributable candidate artifact; a PS5 release tag publishes a release.
 
 ## Cut a release
 
