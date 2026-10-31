@@ -52,13 +52,13 @@ cmake -S "$source/llvm" -B "$out/target" -G Ninja \
     -DLLVM_INCLUDE_DOCS=OFF -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF \
     -DLLVM_ENABLE_TERMINFO=OFF -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_ENABLE_LIBEDIT=OFF \
     -DLLVM_ENABLE_BINDINGS=OFF -DLLVM_BUILD_TOOLS=OFF -DCLANG_BUILD_TOOLS=OFF
+start=$SECONDS
+cmake --build "$out/target" --parallel "${LLVM_JOBS:-$(nproc)}" \
+    --target clangFrontend clangCodeGen clangDriver LLVMX86CodeGen LLVMX86AsmParser
 # Compile real LLVM/clang trailing-object layouts for the console ABI.
 # shellcheck disable=SC2086
 clang++-18 $flags -std=c++17 -fno-access-control -fsyntax-only \
     -I"$source/llvm/include" -I"$out/target/include" -I"$source/clang/include" -I"$out/target/tools/clang/include" \
     "$root/ps5/tools/llvm-ps5-layout-check.cpp"
-start=$SECONDS
-cmake --build "$out/target" --parallel "${LLVM_JOBS:-$(nproc)}" \
-    --target clangFrontend clangCodeGen clangDriver LLVMX86CodeGen LLVMX86AsmParser
 printf 'LLVM build elapsed %d seconds\n' "$((SECONDS-start))" >&2
 du -ch "$out"/target/lib/*.a | tail -1 >&2
