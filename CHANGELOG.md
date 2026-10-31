@@ -2,6 +2,12 @@
 
 What changed in each Savage Wind release. The `test` branch holds what the next one will contain.
 
+On PS5 (ps5-v0.1.1), the home-screen name is now "Breath of the Wild".
+
+On PS5 (ps5-v0.1.1), the storage helper keeps working when `/data/savagewind` is deleted or replaced while it runs
+(it recreates or follows the folder), and any helper problem at start is shown on screen instead of closing the game.
+The new title replaces a running older helper.
+
 On PS5, the title starts its bundled storage helper through elfldr when necessary; manual loading still works.
 
 On PS5, output now follows the console's Resolution setting by default; Video > Output can override it at the next
