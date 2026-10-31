@@ -1,0 +1,147 @@
+name: PS5 release
+
+on:
+  push:
+    tags: ['ps5-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: savagewind-ps5-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'bizkut/SavageWindRecomp'
+    runs-on: [self-hosted, Linux, X64, savagewind-ps5]
+    timeout-minutes: 720
+    permissions:
+      contents: write
+    steps:
+      - name: Require a PS5 release tag
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          [[ "$REF_TYPE" == tag && "$REF_NAME" =~ ^ps5-v[0-9][A-Za-z0-9._+-]*$ ]] || {
+            echo 'Select a ps5-v* tag when dispatching this workflow.' >&2; exit 1;
+          }
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          clean: false
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Refuse private game inputs and generated game code
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          root = Path.cwd()
+          for directory, dirs, files in os.walk(root, followlinks=False):
+              rel = Path(directory).relative_to(root)
+              if not rel.parts:
+                  dirs[:] = [d for d in dirs if d != '.git']
+              for name in dirs:
+                  path = rel / name
+                  if len(path.parts) == 1 and (name in {'input', 'extracted', 'generated', 'keys', 'dump'}
+                                               or name.startswith(('extracted-', 'generated-'))):
+                      raise SystemExit(f'Private game directory in workspace: {path}')
+              for name in files:
+                  path = rel / name
+                  low = name.lower()
+                  if (low.endswith(('.nsp', '.xci', '.nca', '.nsz', '.xcz', '.keys'))
+                      or low in {'main.npdm', 'libgamecode.a'}
+                      or re.fullmatch(r'(main|sdk|subsdk\d+)_\d+\.c', low)):
+                      raise SystemExit(f'Private game file in workspace: {path}')
+                  if not (root / path).is_symlink():
+                      with (root / path).open('rb') as f:
+                          if f.read(4) == b'NSO0':
+                              raise SystemExit(f'Private NSO in workspace: {path}')
+          PY
+      - name: Prepare pinned local dependencies
+        run: |
+          # The build scripts resolve these siblings relative to the checkout.
+          parent=$(dirname "$GITHUB_WORKSPACE")
+          source_root=/home/bizkut/workspaces
+          for name in forever nstool2 PS5_MihawkGen; do
+            target="$source_root/$name"
+            test -d "$target"
+            if [[ -e "$parent/$name" || -L "$parent/$name" ]]; then
+              [[ $(realpath "$parent/$name") == "$(realpath "$target")" ]] || exit 1
+            else
+              ln -s "$target" "$parent/$name"
+            fi
+          done
+          mkdir -p .deps/ps5/radv
+          if [[ ! -f .deps/ps5/radv/libvulkan_radeon.ps5.a ]]; then
+            cp "$source_root/SavageWindRecomp/.deps/ps5/radv/libvulkan_radeon.ps5.a" .deps/ps5/radv/
+            cp -a "$source_root/SavageWindRecomp/.deps/ps5/radv/include" .deps/ps5/radv/
+          fi
+          pin=$(awk '$1 == "radv-archive" { sub(/^sha256:/, "", $3); print $3 }' ps5/deps.lock)
+          echo "$pin  .deps/ps5/radv/libvulkan_radeon.ps5.a" | sha256sum --check --strict
+          bash ps5/tools/setup-deps.sh
+      - name: Build or reuse pinned LLVM
+        run: |
+          set -euo pipefail
+          llvm=build/ps5/llvm
+          key=$(cat ps5/tools/build-llvm-ps5.sh ps5/patches/llvm-18-ps5-*.patch ps5/deps.lock | sha256sum)
+          archive="$llvm/llvm-project-18.1.8.src.tar.xz"
+          source_sha=0b58557a6d32ceee97c8d533a59b9212d87e0fc4d2833924eb6c611247db2f2a
+          if [[ -f $llvm/.release-key && $(<"$llvm/.release-key") == "$key" && -f $llvm/.release-digests ]] &&
+             echo "$source_sha  $archive" | sha256sum --check --strict &&
+             sha256sum --check --strict "$llvm/.release-digests" &&
+             [[ -x $llvm/host/bin/llvm-config && -f $llvm/target/lib/libclangCodeGen.a ]]; then
+            echo 'Reusing digest-verified LLVM build'
+          else
+            rm -rf -- "$llvm/host" "$llvm/target"
+            bash ps5/tools/build-llvm-ps5.sh
+            (find "$llvm/host/lib" "$llvm/target/lib" -maxdepth 1 -name '*.a' -type f -print0;
+             printf '%s\0' "$llvm/host/bin/llvm-config" "$llvm/host/bin/llvm-tblgen" \
+               "$llvm/host/bin/clang-tblgen") | sort -z | xargs -0 sha256sum > "$llvm/.release-digests"
+            printf '%s\n' "$key" > "$llvm/.release-key"
+          fi
+      - name: Prepare host test dependencies
+        run: |
+          PYTHON=python3 bash ps5/tools/build-capstone-ps5.sh
+          rm -rf -- build/ps5/importer/host/source
+          make -C ps5/importer package
+      - name: Run host tests without game files
+        run: |
+          mkdir -p build
+          make -C ps5/storagebroker host-test
+          bash tools/test_gamecode_link.sh
+          bash tools/test_gamecode_identity.sh
+          bash tools/test_gamecode_receipt.sh
+          bash tools/test_gamecode_settings.sh
+          cc -std=c11 -O2 tools/test_home_art_gate.c -o build/test_home_art_gate
+          build/test_home_art_gate
+          cc -std=c11 -O2 tools/test_text_sdf.c -lm -pthread -o build/test_text_sdf
+          build/test_text_sdf
+          make test-ps5-video-defaults
+          cc -std=c11 -O2 tools/test_dynamic_resolution.c runtime/ps5/dynamic_resolution.c -lm \
+            -o build/test_dynamic_resolution
+          build/test_dynamic_resolution
+      - name: Build console title and storage broker
+        run: |
+          PS5_GAMECODE=console PYTHON=python3 bash ps5/tools/build-game.sh
+          make -C ps5/storagebroker
+      - name: Package public release
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          bash ps5/tools/package-public-release.sh
+          cd build/ps5/releases
+          sha256sum "SavageWind-PS5-${RELEASE_TAG}.zip" > SHA256SUMS
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" --verify-tag --title "Savage Wind PS5 $RELEASE_TAG" \
+            --generate-notes "build/ps5/releases/SavageWind-PS5-${RELEASE_TAG}.zip" \
+            build/ps5/releases/SHA256SUMS

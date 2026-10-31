@@ -1,0 +1,69 @@
+Third-party notices and preliminary GPL-3.0 compatibility inventory
+
+Scope: build/ps5/gamecode-console/title.map and ps5/tools/build-game.sh;
+broker: ps5/storagebroker/Makefile and its ELF dynamic imports. Archive members
+of libavformat, libavcodec, libswscale, libswresample and libavutil are present
+in the console link map. liblz4 is a link input but no liblz4 archive member
+was observed in that map. SDL3 and Dear ImGui are not linked by the PS5 build
+(the PS5 uses its own SDL shim); they are not asserted to be part of the eboot.
+Assets staged separately are marked asset. Compatibility means licence-level
+assessment, not a finding of completed distribution compliance.
+
+Component | version / source URL | licence | GPL-3 compatibility | notice; local patches
+Savage Wind / LAS Recomp | release @COMMIT@ https://github.com/bizkut/SavageWindRecomp | MIT for upstream code, GPL-3.0-or-later for marked PS5 code | yes | SAVAGE-WIND.txt; PS5 changes in this repository
+MihawkGen (including network.fgw asset) | c57232a9f16bcb6df5fe07c9bb631518f2b1cc0e https://github.com/mihawk-99/PS5_MihawkGen | GPL-3.0-or-later | yes | MIHAWKGEN.txt, MIHAWKGEN-THIRD-PARTY.txt; no local upstream patch
+LLVM/Clang | 18.1.8 https://github.com/llvm/llvm-project/tree/llvmorg-18.1.8 | Apache-2.0 with LLVM exception | yes | LLVM.txt; ps5/patches/llvm-18-ps5-smallvector.patch and llvm-18-ps5-trailingobjects.patch
+Capstone | 5.0.9 https://github.com/capstone-engine/capstone/tree/5.0.9 | BSD-3 and LLVM-derived terms | yes | CAPSTONE.txt, CAPSTONE-LLVM.txt; no local patch identified
+ncnn | 6125c9f47cd14b589de0521350668cf9d3d37e3c https://github.com/Tencent/ncnn | BSD-3 and included notices | yes | NCNN.txt; ps5/patches/ncnn-shaderc-glslang.patch
+shaderc | v2026.3 https://github.com/google/shaderc | Apache-2.0 | yes | SHADERC.txt; no local patch identified
+glslang | 168d452a4f460d24b588fed08477a81c44ee27a1 https://github.com/KhronosGroup/glslang | BSD/MIT and other terms in notice | yes for identified terms | GLSLANG.txt; no local patch identified
+SPIRV-Tools | b707790a898e44038547df54580022fc1cf89c3d https://github.com/KhronosGroup/SPIRV-Tools | Apache-2.0 | yes | SPIRV-TOOLS.txt; no local patch identified
+SPIRV-Headers | 29981f65241605e08b0ede4cfeb999fe3b723c6a https://github.com/KhronosGroup/SPIRV-Headers | MIT and Apache-2.0 terms | yes | SPIRV-HEADERS.txt; no local patch identified
+nstool and libpietendo | nstool 7e0a49b61ae98b730900709e3ac5ba1945c1906e, libpietendo 76cebd9d53ad819ae415ae42dca4493f05fdca7f https://github.com/Clearmist/nstool https://github.com/Clearmist/libpietendo | MIT | yes | NSTOOL.txt, LIBPIETENDO.txt; ps5/importer/nstool-streams.patch
+libtoolchain | 0a871f9d2929376c24828216b9cc1f5dd0d356dd https://github.com/Clearmist/libtoolchain | MIT | yes | LIBTOOLCHAIN.txt; no local patch identified
+fmt | 5b2109c06c18d937b3f84b31003d64d673248542 https://github.com/Clearmist/libfmt | MIT | yes | FMT.txt; no local patch identified
+mbedTLS | 5ebfae0f7682b59f9d73c82470b6caaa808adefd https://github.com/Clearmist/libmbedtls | Apache-2.0, except as indicated per file | yes for identified terms | MBEDTLS.txt, MBEDTLS-APACHE.txt; no local patch identified
+lz4 | 61fc0b2f27d101257a3d83b58b8eadf64d328dac https://github.com/Clearmist/liblz4 | BSD-2 | yes | LZ4.txt; link input, no map member observed
+FidelityFX SDK | v1.1.4 https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK | MIT | yes | FIDELITYFX.txt; modifications under third_party/FidelityFX, see its README
+bc7enc_rdo | b9438627eef73a1157e84201b6fa6eb2ffd6d9f0 https://github.com/richgel999/bc7enc_rdo | MIT and embedded terms | yes for identified terms | BC7ENC.txt; no local patch identified
+Vulkan Memory Allocator | 3.3.0 vendored https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator | MIT | yes | VMA.txt; upstream commit not established, vendored copy under third_party/vma
+stb_image and stb_image_write | 2.30, 1.16 vendored https://github.com/nothings/stb | MIT or public domain | yes under MIT option | STB-IMAGE.txt, STB-IMAGE-WRITE.txt; upstream commits not established
+SMAA | vendored revision unknown https://github.com/iryoku/smaa | BSD-3 | yes | SMAA.txt; shader embedded via build-game.sh
+Fira Sans (asset) | vendored revision unknown https://github.com/mozilla/Fira | SIL OFL 1.1 | separate asset, generally compatible when OFL terms met | FIRASANS.txt
+FreeType | 2.13.2 https://download.savannah.gnu.org/releases/freetype/freetype-2.13.2.tar.xz
+  | FreeType License or GPL-2.0 | yes under FTL with attribution
+  | FREETYPE.txt (upstream docs/FTL.TXT); built from pinned source by ps5/tools/setup-fontlibs.sh with bundled zlib; this product is based in part on the work of the FreeType Team
+Open Sans (asset) | bd7e37632246368c60fdcbd374dbf9bad11969b6 https://github.com/googlefonts/opensans | SIL OFL 1.1 | separate asset, generally compatible when OFL terms met | OPENSANS.txt
+Real-ESRGAN animevideov3 (assets) | v0.2.5.0
+  https://github.com/xinntao/Real-ESRGAN/releases/tag/v0.2.5.0
+  | BSD-3-Clause, maintainer decision (2026-10-31), https://github.com/xinntao/Real-ESRGAN/blob/master/LICENSE
+  | compatible subject to conditions | REAL-ESRGAN.txt; see SOURCE.txt
+Mesa RADV | f10c4bac9b71c45a4c794ecc3c227eb6f6a56361 https://github.com/bizkut/ps5-forever-mesa
+  | mixed, individual source files control | unclear pending archive/component audit
+  | MESA.txt and MESA-LINUX-SYSCALL.txt contain the pinned Mesa licence catalogue, not all copyright notices;
+    see SOURCE.txt
+zlib in RADV and FreeType | RADV 1.3.1 https://zlib.net; FreeType bundled zlib | zlib | yes | ZLIB.txt; RADV archive linked whole
+PS5 payload SDK fork/platform and CRT | fdb2763789a50a4fcc9a98dcae13f5e336c6a1ee
+  https://github.com/bizkut/ps5-forever-sdk; upstream v0.42 https://github.com/ps5-payload-dev/sdk
+  | fork GPL-3.0-or-later, other components require individual audit | unclear pending source and notices audit
+  | PS5-PAYLOAD-SDK.txt; public fork additions in include, platform, libc, crt and sce_stubs
+SDK libc++, libc++abi, libunwind | v0.42 recipe builds LLVM 18.1.8
+  https://github.com/ps5-payload-dev/sdk/blob/4eb701204fc3f8d31e84cf8ca272974e2be9c867/libcxx.sh
+  | LLVM release licence | yes for identified terms | LLVM.txt; prebuilt archive provenance not independently verified
+Host compiler-rt builtins | Ubuntu libclang-rt-18-dev 1:18.1.3-1ubuntu1;
+  source package llvm-toolchain-18 1:18.1.3-1ubuntu1
+  https://github.com/llvm/llvm-project/tree/llvmorg-18.1.3/compiler-rt
+  | LLVM release licence | yes for identified terms | LLVM.txt
+FFmpeg | 7.0.1 https://ffmpeg.org/releases/ffmpeg-7.0.1.tar.xz
+  | LGPL-3.0-or-later | yes under GPL-3 when conditions met
+  | FFMPEG-LGPL3.txt, MIHAWKGEN.txt; built from pinned source by ps5/tools/setup-ffmpeg.sh, without external libraries
+nlohmann json | 3.12.0 vendored in nstool https://github.com/nlohmann/json/blob/v3.12.0/LICENSE.MIT
+  | MIT | yes | NLOHMANN-JSON.txt
+System modules and SCE stubs | system-provided; SDK v0.42/fork stubs | not established | unclear | do not assume right to redistribute system modules
+
+FFmpeg is built with --enable-version3, without --enable-gpl or external
+library autodetection. LGPL-3 permits conveying the library under GPL-3 terms
+subject to its conditions. This inventory is not a finding of completed
+distribution compliance or legal clearance. RADV's licence catalogue does not
+include all copyright notices; exact SDK prebuilt archive provenance and full
+broker static linkage have not been independently established.
