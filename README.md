@@ -7,6 +7,30 @@
 > trust code written by AI, you can simply ignore this project. As with anything on the internet, you run the code at
 > your own discretion.
 
+## This fork: Savage Wind on PS5
+
+This is **bizkut/SavageWindRecomp**, the PlayStation 5 port of Savage Wind Recomp
+([upstream](https://github.com/Revivedx/SavageWindRecomp)). It runs the recompiled game natively on a jailbroken PS5
+as the homebrew title **PPSA90212**, with RADV Vulkan graphics, up to 4K output with FSR 3.1 and frame generation,
+HDR, DualSense controls and a PS5 video settings page.
+
+- **Download:** [Releases](https://github.com/bizkut/SavageWindRecomp/releases). The release ZIP holds the title
+  folder, the storage helper and the licence notices. It contains no game files and no keys.
+- **Install and play:** see [README-PS5.md](README-PS5.md). In short: a jailbroken PS5 with ShadowMountPlus and an
+  ELF loader (elfldr, port 9021). Your own base NSP or XCI, the 1.9.0 update NSP and `prod.keys` (dumped from a
+  Switch on firmware 19.0.0 recommended) go in `/data/savagewind/import/`. The first start builds the game code on
+  the console (about 11 minutes); later starts take about 20 seconds.
+- **Output resolution** follows the console's Video Output setting (720p, 1080p, 1440p, or 4K for Automatic and
+  2160p).
+- **Built in the open:** every release is built by the [release workflow](.github/workflows/ps5-release.yml) from
+  this repository and pinned public sources (PS5 payload SDK, LLVM, Mesa/RADV, FFmpeg, FreeType). See
+  [docs/RELEASING.md](docs/RELEASING.md) and [ps5/release/SOURCE.txt](ps5/release/SOURCE.txt).
+- **PS5 problems:** report them [here](https://github.com/bizkut/SavageWindRecomp/issues), not upstream. Never
+  attach game files, keys or anything generated from them.
+
+The PS5 port is developed on the `ps5` branch (this fork's default). The rest of this README describes the upstream
+Windows and Linux project, which this branch still builds.
+
 **Savage Wind Recomp** is a work-in-progress static recompilation of *The Legend of Zelda: Breath of the Wild*
 (Nintendo Switch, version 1.9.0) into a native application for Windows and Linux. The goal is a full PC
 version of your own copy of the game: a launcher, PC-style graphics options, mods, any controller, keyboard and
