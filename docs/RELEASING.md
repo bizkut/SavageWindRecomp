@@ -18,8 +18,9 @@ Register a self-hosted Linux x64 runner for `bizkut/SavageWindRecomp` on the bui
 fork. Install clang/LLVM 18, CMake, Ninja, Python 3 and its pip, the GitHub CLI, and the title build's other host
 requirements, including Meson, Ninja, rsync and LLVM 19, SPIR-V translator and libclc development tools for Mesa.
 The workflow fetches pinned SDK, nstool, MihawkGen, zlib, Mesa and public RADV build recipe sources. It builds RADV
-and verifies the archive and headers against `ps5/deps.lock`. The runner must not have private game files in its
-workspace. It retains a digest-checked LLVM cache; release runs are serialized. Dispatching on `ps5` uploads a
+with `ps5/tools/meson-radv.sh` to normalize build and SDK debug paths, then verifies the archive and headers against
+`ps5/deps.lock`. The runner must not have private game files in its workspace. It retains a digest-checked LLVM cache;
+release runs are serialized. Dispatching on `ps5` uploads a
 non-distributable candidate artifact from a clean worktree; a PS5 release tag publishes a release.
 
 ## Cut a release

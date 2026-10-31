@@ -41,12 +41,14 @@ External inputs, exact revisions and local changes:
   https://github.com/llvm/llvm-project/tree/llvmorg-18.1.3/compiler-rt
 * Mesa RADV: https://github.com/bizkut/ps5-forever-mesa commit
   f10c4bac9b71c45a4c794ecc3c227eb6f6a56361; static archive SHA-256
-  9d12cff020676c3533f25842827f768b71fea4de4d32d68105523efbc1476929.
+  0513f789edf6702f5ae092e78d67c8baf526bc611bfb6edb5611992244180816.
   Patches 0001-videoout-hdr10-and-immediate.patch,
   0002-mesa-cache-db-defer-owned-access-times.patch and
   0003-videoout-vrr-idle-floor.patch are at
-  https://github.com/bizkut/ps5-forever/tree/1c78afb94654debacd85da94842fcba1d05d0a07/ps5/radv/patches
-  (not in this repository). RADV includes zlib 1.3.1.
+  https://github.com/bizkut/ps5-forever/tree/a5f0b29e31153afa13d6462481fb651cfaac650a/ps5/radv/patches
+  (not in this repository). The build recipe at that revision uses the cross file from
+  https://github.com/bizkut/ps5-forever-vulkan/tree/2cf759774168c9f99e9af1b1d87934fb98d8229e
+  and ps5/tools/meson-radv.sh normalizes build and SDK paths. RADV includes zlib 1.3.1.
 * LLVM/Clang 18.1.8: https://github.com/llvm/llvm-project/releases/tag/llvmorg-18.1.8;
   source tarball SHA-256 0b58557a6d32ceee97c8d533a59b9212d87e0fc4d2833924eb6c611247db2f2a;
   ps5/patches/llvm-18-ps5-smallvector.patch and
@@ -107,7 +109,7 @@ The PS5 payload SDK runtime source and build workflow are public at upstream
 commit 4eb701204fc3f8d31e84cf8ca272974e2be9c867 and the public fork commit
 fdb2763789a50a4fcc9a98dcae13f5e336c6a1ee, as linked above.
 RADV uses pinned Mesa f10c4bac9b71c45a4c794ecc3c227eb6f6a56361 and public
-patches at bizkut/ps5-forever commit 1c78afb94654debacd85da94842fcba1d05d0a07;
+patches at bizkut/ps5-forever commit a5f0b29e31153afa13d6462481fb651cfaac650a;
 notices/MESA.txt contains the licence catalogue, not all copyright notices.
 Vendored components' source is in this repository under third_party/ at the
 tagged commit. The maintainer's decision for the Real-ESRGAN weights is
