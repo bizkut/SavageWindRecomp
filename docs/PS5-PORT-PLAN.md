@@ -870,6 +870,8 @@ release ZIP's no-game-content check still passes.
   render targets. Retention now scales with scene area; scale changes invalidate view memos. Scale exclusion,
   scene-scale overrides, readback and upsample investigations did not resolve the underlying eviction.
 
+- Asynchronous shaders are on by default on PS5; `async_shaders = 0` restores synchronous compilation.
+
 ### After M11 (optional) — Community texture packs
 High-resolution texture packs dropped into the existing overlay folder (`runtime/services/fs.c`); never shipped by
 the project. **Done when:** one pack loads, with GPU/flexible memory and load-time cost logged against the M6

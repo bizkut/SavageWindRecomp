@@ -19,6 +19,9 @@ without shrinking individual ASCII descenders; oversized accented glyphs are fit
 The Vulkan renderer invalidates cached texture views when the scene or output scale changes, so a lookup in the same
 frame does not reuse a view resolved at the old scale.
 
+On PS5, **Asynchronous shaders** are on by default: no stutter the first time an effect appears; the effect pops in
+once its shader is ready (`async_shaders = 0` waits for every shader instead).
+
 On PS5, the home-screen icon and backgrounds and the start-up splash are made once, at the first start, from your
 own game files and installed on your console (`home_art = 0` restores the shipped icon and removes the rest). The
 release ships only a neutral icon: no background or splash picture.

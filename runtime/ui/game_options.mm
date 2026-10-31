@@ -933,7 +933,12 @@ Item video_sharp_ui() {
 Item video_async_shaders() {
     return toggle(P_VIDEO, "Asynchronous shaders", "On: no stutter, but some effects appear late.",
                   [](const Item &) { return (int)g_settings.async_shaders; },
-                  [](const Item &, int x) { g_settings.async_shaders = x; }, 0);
+                  [](const Item &, int x) { g_settings.async_shaders = x; },
+#ifdef __PROSPERO__
+                  1);  // (on by default on PS5, runtime/settings.c)
+#else
+                  0);
+#endif
 }
 
 Item video_shadows() {

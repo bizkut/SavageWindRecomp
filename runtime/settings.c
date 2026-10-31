@@ -55,6 +55,7 @@ Settings g_settings = {
     .sharp_text_font = true,
     .drs_fsr3 = true,
     .drs_lean = true,
+    .async_shaders = true,  // (user decision 2026-10-30: no first-sight shader stutter; late effects accepted)
 #endif
     .wide_view = true,
     .fov = 100,
