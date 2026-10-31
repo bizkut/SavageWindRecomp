@@ -51,6 +51,9 @@ extern "C" void controls_bindings_draw(float scale) {
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("%s", tr("Select a binding, then press the new button or key. Esc (or 5 seconds) cancels. A button "
                                  "that's already in use swaps with the old one."));
+#ifdef __PROSPERO__
+    ImGui::TextDisabled("%s", tr("Create belongs to the PS5 system and cannot be bound."));
+#endif
     ImGui::PopTextWrapPos();
 
     int cd, cs, ms;

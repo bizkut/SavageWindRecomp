@@ -4,6 +4,9 @@ What changed in each Savage Wind release. The `test` branch holds what the next 
 
 On PS5, fixed a file-descriptor leak that could crash the game while browsing Album and Compendium pictures.
 
+On PS5, Minus (the Sheikah Slate/map) defaults to the touchpad click. Create belongs to the system and cannot be bound;
+saved controller bindings to Create revert to their slot's default.
+
 On PS5, the home-screen icon and backgrounds and the start-up splash are made once, at the first start, from your
 own game files and installed on your console (`home_art = 0` restores the shipped icon and removes the rest). The
 release ships only a neutral icon: no background or splash picture.

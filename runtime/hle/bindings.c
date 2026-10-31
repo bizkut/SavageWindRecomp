@@ -17,10 +17,16 @@ _Static_assert(PADB_LTRIGGER == SDL_GAMEPAD_BUTTON_COUNT, "trigger pseudo-button
 // R = R (throw), Left Ctrl = left stick press (crouch), middle click = right stick press (look), Tab = Plus
 // (inventory), M = Minus (map), arrows = d-pad, T held = the mouse tilts the controller (motion puzzles,
 // runtime/hle/motion.c). Esc and F1 stay the overlay menu's (runtime/ui/menu.mm).
+#ifdef __PROSPERO__
+// The system reserves Create, so the PS5 default puts the map on the touchpad click instead.
+#define DEF_MINUS SDL_GAMEPAD_BUTTON_TOUCHPAD
+#else
+#define DEF_MINUS SDL_GAMEPAD_BUTTON_BACK
+#endif
 #define DEF_PAD { \
     SDL_GAMEPAD_BUTTON_EAST, SDL_GAMEPAD_BUTTON_SOUTH, SDL_GAMEPAD_BUTTON_NORTH, SDL_GAMEPAD_BUTTON_WEST, \
     SDL_GAMEPAD_BUTTON_LEFT_STICK, SDL_GAMEPAD_BUTTON_RIGHT_STICK, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, \
-    SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, PADB_LTRIGGER, PADB_RTRIGGER, SDL_GAMEPAD_BUTTON_START, SDL_GAMEPAD_BUTTON_BACK, \
+    SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, PADB_LTRIGGER, PADB_RTRIGGER, SDL_GAMEPAD_BUTTON_START, DEF_MINUS, \
     SDL_GAMEPAD_BUTTON_DPAD_LEFT, SDL_GAMEPAD_BUTTON_DPAD_UP, SDL_GAMEPAD_BUTTON_DPAD_RIGHT, SDL_GAMEPAD_BUTTON_DPAD_DOWN}
 #define DEF_KEY { \
     SDL_SCANCODE_E, SDL_SCANCODE_LSHIFT, SDL_SCANCODE_SPACE, BIND_MOUSE + SDL_BUTTON_LEFT, SDL_SCANCODE_LCTRL, \
@@ -216,8 +222,12 @@ bool bind_capture_event(const SDL_Event *e) {
     case SDL_EVENT_MOUSE_BUTTON_UP:
         return false;
     case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-        // Home / Guide opens the menu; a keyboard capture ignores the controller (it times out, or Esc)
-        if (dev != BIND_DEV_PAD || e->gbutton.button == SDL_GAMEPAD_BUTTON_GUIDE || e->gbutton.button >= SDL_GAMEPAD_BUTTON_COUNT) return true;
+        // Home / Guide opens the menu; PS5 reserves Create for the system.
+#ifdef __PROSPERO__
+        if (e->gbutton.button == SDL_GAMEPAD_BUTTON_BACK) return true;
+#endif
+        if (dev != BIND_DEV_PAD || e->gbutton.button == SDL_GAMEPAD_BUTTON_GUIDE ||
+            e->gbutton.button >= SDL_GAMEPAD_BUTTON_COUNT) return true;
         cap_dev = -1;
         assign(dev, cap_slot, e->gbutton.button);
         return true;
@@ -244,6 +254,13 @@ bool bind_settings_load(const char *key, const char *val) {
     for (int i = 0; i < (pad ? BIND_PAD_COUNT : BIND_KEY_COUNT); i++) {
         if (strcmp(key + 9, k_ini[i])) continue;
         if (pad) {
+#ifdef __PROSPERO__
+            if (!strcmp(val, "back")) {
+                g_bind_pad[i] = k_def_pad[i];
+                LOG("[input] controller %s: Create belongs to PS5; using the default binding\n", k_names[i]);
+                continue;
+            }
+#endif
             for (int h = 0; h < PADB_HOST_COUNT; h++)
                 if (!strcmp(val, k_pad_ini[h])) g_bind_pad[i] = (int16_t)h;
         } else {

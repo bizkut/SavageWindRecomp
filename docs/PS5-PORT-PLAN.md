@@ -847,6 +847,10 @@ release ZIP's no-game-content check still passes.
   logged. Host: 1,024 open/release cycles under a 64-descriptor limit with no growth. .41: the fixed fd census
   reported 13 descriptors at start; browsing the pictures was checked after the fix.
 
+- Minus on the touchpad: the DualSense Create button belongs to the PS5 system and no binding to it reaches the game.
+  On PS5 the game's Minus (Sheikah Slate) defaults to the touchpad (a touchpad pictogram in prompts); Create can't be
+  bound in Controls, and a saved binding to it falls back to the slot's default. .41: the touchpad opens the map.
+
 ### After M11 (optional) — Community texture packs
 High-resolution texture packs dropped into the existing overlay folder (`runtime/services/fs.c`); never shipped by
 the project. **Done when:** one pack loads, with GPU/flexible memory and load-time cost logged against the M6

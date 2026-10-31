@@ -261,7 +261,8 @@ void build_items(void) {
                        [](const Item &, int x) { g_settings.button_icons = x; }, ICONS_AUTO));
     // The confirm button (runtime/hle/bindings.c): the Switch layout (A on the east face button: Circle, Xbox B) or the
     // south one (Cross, Xbox A). A and B swap, X and Y with them; the Controller page and the prompts follow.
-    v.push_back(choice(P_CONTROLS, "Confirm button", "Which button confirms (A). The other goes back; X and Y swap too.",
+    v.push_back(choice(P_CONTROLS, "Confirm button",
+                       "Which button confirms (A). The other goes back; X and Y swap too.",
                        [](const Item &) { return 2; },
                        [](const Item &, int x) {
                            static std::string s;
@@ -275,10 +276,13 @@ void build_items(void) {
 
     // Keyboard and controller: one button per Switch input, showing what drives it; A waits for the new one
     auto bind = [&](int page, int action, int slot) {
-        Item it = button(page, bind_input_name(slot),
-                         action == A_BIND_KEY ? "Press A, then the new key. Esc cancels."
-                                              : "Press A, then the new button.",
-                         nullptr, action, slot);
+        const char *help = action == A_BIND_KEY ? "Press A, then the new key. Esc cancels."
+                                                : "Press A, then the new button.";
+#ifdef __PROSPERO__
+        if (action == A_BIND_PAD)
+            help = "Press A, then the new button. Create belongs to the PS5 system.";
+#endif
+        Item it = button(page, bind_input_name(slot), help, nullptr, action, slot);
         it.label = bind_label;
         v.push_back(it);
     };

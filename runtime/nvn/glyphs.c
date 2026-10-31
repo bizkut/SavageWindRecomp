@@ -670,6 +670,14 @@ static void pad_button(Canvas *c, Box b, int host, bool ps) {
     case PADB_RTRIGGER: tab_label(c, b, ps ? "R2" : "RT"); return;
     case SDL_GAMEPAD_BUTTON_START: menu_button(c, b, true, ps); return;
     case SDL_GAMEPAD_BUTTON_BACK: menu_button(c, b, false, ps); return;
+    case SDL_GAMEPAD_BUTTON_TOUCHPAD:
+        if (ps) {
+            float hw = minf(b.w * 0.46f, b.s * 0.60f);
+            fill(c, ring(box(b.cx, b.cy, hw, b.s * 0.28f, b.s * 0.10f), b.s * 0.06f));
+        } else {
+            tab_label(c, b, bind_pad_label(host, 1));
+        }
+        return;
     case SDL_GAMEPAD_BUTTON_LEFT_STICK: round_label(c, b, ps ? "L3" : "LS"); return;
     case SDL_GAMEPAD_BUTTON_RIGHT_STICK: round_label(c, b, ps ? "R3" : "RS"); return;
     case SDL_GAMEPAD_BUTTON_DPAD_UP: dpad(c, b, DIR_U); return;
