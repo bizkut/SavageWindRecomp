@@ -2,6 +2,15 @@
 
 What changed in each Savage Wind release. The `test` branch holds what the next one will contain.
 
+On PS5, fixed a crash during the first start's game-code build on some consoles (the compiler now reads its header
+files into terminated buffers instead of mapping them).
+
+On PS5, fixed the world turning white after closing the Sheikah Slate at higher internal resolutions: the game's
+scene buffers are kept while the Slate is open.
+
+On PS5, when the game files are missing or misplaced, the start screen says so and names the folder they belong in
+(`/data/savagewind/import/`) and what goes there, including when they were copied to `/data/savagewind/` instead.
+
 On PS5, fixed a file-descriptor leak that could crash the game while browsing Album and Compendium pictures.
 
 On PS5, Minus (the Sheikah Slate/map) defaults to the touchpad click. Create belongs to the system and cannot be bound;

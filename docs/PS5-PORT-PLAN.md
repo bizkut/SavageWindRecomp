@@ -6,14 +6,13 @@ M5 audio (movie playback untested); M6 benchmark 98–100 % on time (10-minute p
 M7 MihawkGen 2× at 119.3 Hz; M8 FSR 3.1/TAA integrated (FSR 4 measured too slow at 4K); M9 broker; M10 package reads;
 sharp text/UI and the user-generated UI HD pack. Open: M11 release. Other numbers in this file are explicit targets.
 
-The PS5 package carries `pic0.dds` and `pic1.dds`, both 3840×2160 single-mip BC7_UNORM, composed from the original
-`docs/icon/icon.svg` on a dark background. `background-source.png` is the same composition used by the runtime
-startup screen; `/data/savagewind/splash.jpg`, `.jpeg`, or `.png` overrides it there. `startup_splash = 0` disables
-that runtime screen, not system artwork. One-shot `[startup]` timestamps measure each startup milestone. The runtime
-screen joins its presentation worker before the first game presenter takes the GPU lock. System display of `pic1.dds`
-and the runtime screen require console visual qualification; asset validation alone does not establish that behavior.
-The source PNG SHA-256 is `d835977bb4d6a2c1e0371e4ec3218008a8a0230cbb008330a2cd204160f4c6bc`;
-both DDS files hash to `94f5d2464cfbdd0e11b88f7263dcad0115ed2eb98d522b4bda08dfa9313cf86e`.
+The PS5 package carries only `param.json` and a neutral, original `icon0.png`: no `pic0.dds`, `pic1.dds` or
+`background-source.png`. The home-screen icon, both backgrounds and the startup splash are made once, at the first
+start, from the player's own game files (see "Console fixes and polish" below). The runtime startup screen shows the
+player's `/data/savagewind/splash.jpg`, `.jpeg` or `.png`, else the generated `cache/home-art/splash.png`, else a plain
+dark screen with loading dots; `startup_splash = 0` disables it, not system artwork. One-shot `[startup]` timestamps
+measure each startup milestone. The runtime screen joins its presentation worker before the first game presenter
+takes the GPU lock.
 
 ## Goal
 
@@ -673,11 +672,17 @@ specific errors on the TV. No key material appears in logs; unsupported compress
 ### M11 — Release
 Settings persistence, save/load, DLC, 1-hour soak, README for the setup/import flow, notices (D10), release ZIP.
 Done: settings persist through the broker; soak mode (25 min run clean, memory flat; stopped by the user, who waived
-the hour); private release ZIP builder with a no-game-content check (`ps5/tools/package-release.sh`). Open: save/load
-trigger (below), DLC untested (user's DLC Pack 1 `01007EF00011F001` and Pack 2 `01007EF00011F002` NSPs, both
-v196608, available since 2026-10-29: test PC ExeFS/AOC selection, console AOC reads and both packs in game), public repos, README with NSP/XCI install steps, GitHub
-Actions on the self-hosted runner, catalog entry PPSA90212 (reserved, catalog PR #894), GPL source distribution, and
-deleting the local `ps5-backup-before-rewrite` branch (old history with game captures) before any push.
+the hour); home-screen icon, backgrounds and splash made once at first start from the player's own files (the
+package ships only a neutral icon). In progress and uncommitted: public release ZIP builder with a structured
+no-game-content check (`ps5/tools/package-public-release.sh`; real releases need a clean tree and a `ps5-v*` tag,
+`--candidate` for unpublished checks), player README, notices and SOURCE.txt (`ps5/release/`), the `ps5-release.yml`
+workflow (needs a runner registered for the fork, label `savagewind-ps5`) and docs/RELEASING.md. Release blockers:
+corresponding-source provenance for the prebuilt FFmpeg archives (embedded configure string differs from the pinned
+recipe) and the PS5
+payload SDK v0.42 prebuilt libc++/libc++abi/libunwind/compiler-rt. Open: save/load trigger (below), DLC untested
+(user's DLC Pack 1 `01007EF00011F001` and Pack 2 `01007EF00011F002` NSPs, v196608), public repos, catalog entry
+PPSA90212 (reserved, catalog PR #894), and deleting the local `ps5-backup-before-rewrite` branch (old history with
+game captures) before any push.
 
 User decisions (2026-10-29): (1) answered: the fork rewrites the "never decrypts" rule for the PS5 port (player's own
 NSP/XCI and keys, decrypted in memory on the player's console, nothing shipped; README and D11), so D11 no longer
@@ -834,20 +839,63 @@ start with a progress screen, plays, and on later starts loads the cached code i
 generator's; the benchmark is within 2 % of the PC-built eboot; first-start time and memory are recorded; the
 release ZIP's no-game-content check still passes.
 
-### Console fixes and polish
+### Console fixes and polish (2026-10-28 to 2026-10-30)
+Each item records the change, its commit and the available console evidence.
 
-- Game-code compilation: .39 crashed because an mmap-backed Clang header had a nonzero page tail. The VFS now
-  requests volatile, NUL-terminated buffers. Fresh-start .39 and regression .41 qualification remain open.
+Loading and start-up:
+- Loading stutters (`f6b70a2`): package reads are coalesced and reads of 256 KiB or more go through the broker;
+  package-read hitches while loading 55 → 2.
+- Start-up splash (`acb3f43`, `585110e`): a splash shows until the game's first frame; the picture is converted
+  once into a mapped buffer, at no measurable cost.
+- Faster start (`a30cac4`, `6cfb6b1`): the RomFS opens once, overlapped with other start-up work (`fast_start`); a
+  hash index for the loader's symbols; the ExeFS opens without the data patch tables (`fast_exefs`). Title screen at
+  10.7 s instead of 20.9 s.
+- First start of the console-built variant (`1239f41`, `3c6b503`): the display opens first with a progress screen;
+  `gamecode_threads` (default 8; 4/6/8/12/16 threads → 974/717/622/737/898 s) and `gamecode_overlap` (default 0:
+  729.6 s overlapped against 643.4 s sequential); receipt `cache/gamecode/last-build.txt`; the freshly linked image
+  is reused. Title at 643 s on the first start, about 20.6 s afterwards.
+- Game-code compilation (`a31cb07`): .39 crashed because an mmap-backed Clang header had a nonzero page tail; the
+  compiler VFS now requests volatile, NUL-terminated buffers. On a fresh .39 install, game code built in 575 s and
+  the game started in the Shrine of Resurrection (`ps5/evidence/m8/install-39-*`). Open: warm restart on .39 and
+  regression run of the console-built variant on .41.
+- System launch picture (`577a325`): the PS5 keeps a title's `pic1.dds` over its output until the title calls
+  `sceSystemServiceHideSplashScreen`; once home art installed `pic1.dds`, the TV stayed on it. Called once after the
+  first frame of ours; `system launch screen hidden (0)`, and the user confirmed the TV shows the game.
 
-- Browsing the Album/Compendium pictures crashed: `[fs] open failed: /pict_book/Enemy_Moriblin_Dark.jpg (Too many
-  open files)`, then the game's abort in `nn::fs::OpenFile`. The FS service opened a host descriptor for every
-  `IFile`/`IDirectory` and never closed it. They now close when IPC releases the last reference. As in ps5-wow
-  (Wine raises the soft `RLIMIT_NOFILE` to the hard limit and logs an fd census on EMFILE), the title raises the soft
-  limit, logs the limit and an fd census at start-up and every minute, and a census on EMFILE; failed opens are
-  logged. Host: 1,024 open/release cycles under a 64-descriptor limit with no growth. .41: the fixed fd census
-  reported 13 descriptors at start; browsing the pictures was checked after the fix.
+Rendering and defaults:
+- DRS with FSR 3.1 (`ad721ce`, `34dc32a`): `drs_fsr3` and `drs_lean` on by default, `dynamic_resolution` off; no
+  shader or pipeline builds at size steps. Quality 1440p with DRS as the 4K default was tried (`1639831`) and reverted
+  to Performance 1080p with FG, DRS off (`12e8c5a`). `drs_headroom_ms` (`01bf06c`) and the 120 Hz motion-vector
+  match window (`bacfab0`) were measured and dropped.
+- Sharp text (`efbf586`, `b5bf272`): pale glyphs (1, 2, comma) kept their ink; then the title menu's weight was
+  uneven because glyphs of one sheet took two reconstruction paths with separate tone curves ('t' bold, others thin).
+  Every glyph now uses monotone cubic coverage reconstruction with one ink-weight curve per sheet; the SDF path and
+  `sharp_text_method` are gone. Real-atlas weight error −2.4 … +1.5 %; title menu and inventory checked at 4K.
+- HD interface textures (`c41c3ae`, `d1a9e93`): item icons generated on the console (2,438 textures, 855 MB), used
+  at 4K output only; a Video page option.
+- Game test after these (`0b51ee6`): five benchmark routes 78.0–81.0 % on time, render 11.2 ms, no fatal; 10-minute
+  soak 93.6 % on time, 18 hitches, GPU memory flat.
+- White world after the Sheikah Slate (`4b124cd`): at 1.6x, the fixed 192 MiB idle keep budget evicted the world's
+  1600×900 render targets. The budget now scales with scene area (about 492 MiB at 1.6x, capped at 768 MiB);
+  scale changes also invalidate view memos. Scale exclusion, scene-scale overrides, readback, content preservation,
+  fixed chain sizes and disabling the upsample fix did not resolve the eviction. .39: about 12 Slate opens and quality
+  switches with the fix showed no white world or drops, after one Slate open reproduced it at 1.6x without the fix.
+- Asynchronous shaders (`b6d070a`) default on; `async_shaders = 0` waits for compilation instead. On the .39 Great
+  Plateau route at 1080p internal with warm caches, async on scored 91.5 / 87.9 % on time and off 91.0 %; the
+  cached route does not measure the first-sight benefit, and effects may appear late.
+- TV resolution: on .39, VideoOut reported 3840×2160 on a 1080p TV, so the title cannot detect that TV as 1080p.
+  A manual `Output: 1080p` option was proposed, not built.
 
-- Action prompts follow the controller and the bindings. The highlighted "A" button of the action prompt
+Home-screen art (`94ba2d7`, `c473254`):
+- At the first start, as one marker-gated step, the title reads the application icon from the player's Control NCA
+  and composes a 3840×2160 background from the title screen's textures (HD UI versions when present), installs
+  `icon0.png`, `pic0.dds` and `pic1.dds` through the broker (fixed destinations under `/user/app` and
+  `/user/appmeta` for PPSA90212 only; v7 creates missing backgrounds, v8 removes them) and caches the composition as
+  the startup splash. Later starts read only the marker. `home_art = 0` restores the shipped icon and removes the
+  backgrounds and cached splash. The package ships no drawn background or splash.
+
+Controls and prompts (done on .41; remaining checks below):
+- Action prompts (`78bf676`) follow the controller and the bindings. The highlighted "A" button of the action prompt
   (`PaDoCommandA_00`: a picture, `Nt_KeyTexA_00`) was replaced by HD UI art before the glyph hook ran, so it showed
   the Switch letter; recognised button pictures now skip that replacement. With Cross as confirm, the layout is
   patched at load (the highlighted button and its label bar move to the bottom, B to the right, and `P_Base_00` takes
@@ -856,21 +904,25 @@ release ZIP's no-game-content check still passes.
   the owning material. .41: Circle → Cross → Circle switches applied live, captures correct. The prompts follow the
   actual bindings (the user's ini swaps only A and B). Open: the B, X and Y prompts on screen, and a warp/area load
   after a switch.
+- Minus on the touchpad (`246ea7c`): the DualSense Create button belongs to the PS5 system and no binding to it reaches
+  the game. On PS5 the game's Minus (Sheikah Slate) defaults to the touchpad (a touchpad pictogram in prompts);
+  Create can't be bound in Controls, and a saved binding to it falls back to the slot's default. .41: the touchpad
+  opens the map.
 
-- Minus on the touchpad: the DualSense Create button belongs to the PS5 system and no binding to it reaches the game.
-  On PS5 the game's Minus (Sheikah Slate) defaults to the touchpad (a touchpad pictogram in prompts); Create can't be
-  bound in Controls, and a saved binding to it falls back to the slot's default. .41: the touchpad opens the map.
+Crash fix (done on .41):
+- Browsing the Album/Compendium pictures (`8a65822`) crashed: `[fs] open failed: /pict_book/Enemy_Moriblin_Dark.jpg
+  (Too many open files)`, then the game's abort in `nn::fs::OpenFile`. The FS service opened a host descriptor for every
+  `IFile`/`IDirectory` and never closed it. They now close when IPC releases the last reference. As in ps5-wow
+  (Wine raises the soft `RLIMIT_NOFILE` to the hard limit and logs an fd census on EMFILE), the title raises the soft
+  limit, logs the limit and an fd census at start-up and every minute, and a census on EMFILE; failed opens are
+  logged. Host: 1,024 open/release cycles under a 64-descriptor limit with no growth. .41: the fixed fd census
+  reported 13 descriptors at start; browsing the pictures was checked after the fix.
 
-- Sharp Latin text defaults to bundled Open Sans, fitted per sheet with cell guards; unsupported glyphs retain the
-  original reconstruction. Normal uses 0.94 and Caption 0.91 scale, with at most a 1 px baseline shift; bold item
-  names have wider letter spacing. The user checked the title menu, Take/label, inventory and map text and found it
-  good. `sharp_text_font = 0` restores reconstruction-only text.
-
-- White world after the Sheikah Slate at 1.6x scale: the 192 MiB idle keep budget evicted the world’s 1600×900
-  render targets. Retention now scales with scene area; scale changes invalidate view memos. Scale exclusion,
-  scene-scale overrides, readback and upsample investigations did not resolve the underlying eviction.
-
-- Asynchronous shaders are on by default on PS5; `async_shaders = 0` restores synchronous compilation.
+Text (done on .41):
+- Sharp Latin text (`7ac1f66`) defaults to bundled Open Sans, fitted per sheet with cell guards; unsupported glyphs
+  retain the original reconstruction. Normal uses 0.94 and Caption 0.91 scale, with at most a 1 px baseline shift;
+  bold item names have wider letter spacing. The user checked the title menu, Take/label, inventory and map text and found it
+  good. `sharp_text_font = 0` restores reconstruction-only text. Open: dialogue font check.
 
 ### After M11 (optional) — Community texture packs
 High-resolution texture packs dropped into the existing overlay folder (`runtime/services/fs.c`); never shipped by

@@ -1,36 +1,50 @@
-# Savage Wind PS5 — private setup kit
+# Savage Wind on PS5
 
-This kit is unpublished. **Public release requires the maintainers' decision on D11**, because the title decrypts the user's packages on the console and the current `docs/SAVAGE-WIND.md` policy says Savage Wind does not decrypt. No approval is implied by this kit.
+The PS5 title reads your own Switch game packages and keys on your console, decrypting in memory. The release contains no game files or keys. Keep your packages, keys and generated files private. No PC build is required.
 
-The kit contains no game executable, game-generated C, keys, game assets, or built title eboot. As in the upstream public generator and Windows release, its generator contains short game-specific signatures and site identifiers used to locate patch sites; these are not generated game code. Keep your own inputs and generated files private.
+## What you need
 
-## Build on a Linux x86-64 PC
+- A jailbroken PS5 with homebrew enabled. Firmware 5.50 has been tested; other firmware is not qualified here.
+- ShadowMountPlus and an ELF loader (elfldr).
+- Your own base NSP or XCI, the 1.9.0 update NSP, and `prod.keys` dumped from your own Switch. Recommended: `prod.keys` dumped from a Switch on firmware 19.0.0. Optional DLC NSPs and `title.keys` may also be supplied. The game and keys are not included.
+- Sufficient free console storage for the inputs, generated game code and caches.
 
-Install Python 3 with venv, clang-18, LLVM 18, LLD 18 (including compiler-rt builtins), bash, coreutils, xargs and the shared libraries needed by the bundled Linux `savagewind-exefs`. In this directory, run `bash ps5/tools/setup-release.sh`, then activate the environment (`source .venv/bin/activate`). The provided PS5 SDK is the pinned build recorded in `ps5/deps.lock`; the other bundled libraries and model are from the pinned inputs. The linked PS5 title is GPL-3.0-or-later. This private kit is not a complete corresponding-source distribution; fulfil the applicable source and licence obligations before distributing it.
+## Install and start
 
-Export your own base NSP or XCI, update NSP for 1.9.0, and `prod.keys` from your own console. Do not send these to anyone. With the same packages you will use on the PS5, run:
+1. Install the release's `PPSA90212` folder as `/data/homebrew/PPSA90212/` using your homebrew installation method.
+2. Load `storagebroker.elf` with elfldr once after each console boot, before starting the title. It serves Savage Wind storage over loopback port 9142.
+3. Put your own base package, 1.9.0 update, optional DLC, `prod.keys`, and, if needed, `title.keys` in `/data/savagewind/import/`. Keep these inputs there: the title reads them on subsequent starts too.
+4. Start Savage Wind from the PS5 home screen. The first start builds game code on the console, prepares shaders and generates home art and UI data. A progress screen shows the work. Allow roughly 11 minutes; time varies. Later starts are roughly 20 seconds with a warm cache.
 
-```sh
-bash ps5/tools/link-release.sh /private/prod.keys /private/base.xci /private/update.nsp
-```
+The home-screen icon and backgrounds are generated from your own game files and installed through the broker. The tile may not refresh until the console restarts. A custom `/data/savagewind/splash.jpg`, `.jpeg` or `.png` takes precedence over the generated splash. Set `home_art = 0` in `/data/savagewind/savagewind.ini` to restore the included neutral icon, remove the generated backgrounds and splash, and use the system background.
 
-This extracts the selected ExeFS locally, generates and compiles C from it, then links and signs `title/PPSA90212/eboot.bin`. It can take considerable time and disk space. `work/`, `generated-ps5/`, `build/ps5/gamecode/`, and the resulting eboot contain your game-derived data: do not distribute them. A fresh kit avoids stale compiled game objects. The helper does not upload anything.
+## Settings and storage
 
-## Install and first start
+The game's Options menu has a PS5 Video page. Settings are stored in `/data/savagewind/savagewind.ini`; useful keys include `frame_rate` (e.g. `30`, `60`, or `off`), `vsync` (`on`, `fast`, `adaptive`, `off`), `hdr` (`auto`, `on`, `off`), `home_art` (0/1), `precompile_shaders` (0/1), `async_shaders` (0/1), and `gamecode_threads`. Changing settings can affect performance or start-up time.
 
-Install the PS5 homebrew prerequisites, including ShadowMountPlus. Once per console boot, load the supplied `bin/storagebroker.elf` with your root ELF loader; it serves only Savage Wind storage on loopback port 9142. Copy the completed `title/PPSA90212` folder to `/data/homebrew/PPSA90212/`. Copy your base and update packages, optional DLC and your `prod.keys` (and `title.keys` if needed) to `/data/savagewind/import/`. Package reads require these inputs on every launch; they are not included in the kit. Start the title: the first launch precompiles shaders and can take time. The on-console UI pack is generated from the user's own UI assets; it is not included in the kit. Saves, settings, caches and generated UI data live under `/data/savagewind/`.
+Asynchronous shaders are on by default on PS5: the game doesn't pause while a new shader compiles, so there is no
+stutter the first time an effect appears, but that effect is skipped until its shader is ready (it pops in late) and a
+picture the game draws only once, such as a save file's screenshot, can come out incomplete. Set `async_shaders = 0` (or
+Video > Asynchronous shaders) to wait for every shader instead.
 
-**Home-screen art.** The kit ships neutral, original home-screen art. On the first start (as one step of the
-first-start work, once) the title makes the PS5 home-screen icon and backgrounds from your own game files and
-installs them through the storage broker; it records what it made in `/data/savagewind/cache/home-art/` and does
-nothing on later starts unless your game files change. The start-up splash uses, in this order: your own
-`/data/savagewind/splash.jpg` (or `.jpeg`/`.png`), the background generated from your game files
-(`cache/home-art/splash.png`), then the shipped neutral picture. Nothing is uploaded or shared. Put `home_art = 0` in
-`/data/savagewind/savagewind.ini` to restore the shipped art and remove the generated splash (also done once). The
-home screen may show the new art only after it refreshes the title's tile (e.g. after a console restart).
+Sharp game text uses the bundled Open Sans font (SIL Open Font License 1.1) for Latin glyphs, retaining the normal
+reconstruction for glyphs the font does not contain. Set `sharp_text_font = 0` in `savagewind.ini` and restart to
+use only the normal reconstruction; `sharp_text_font = 1` enables the bundled font.
 
-## Unattended benchmark
+On DualSense, Minus (the map) defaults to a touchpad click. Create is reserved by the PS5 system and cannot be
+bound; an old Create binding falls back to its default. Changing Confirm in Controls updates the action prompts
+immediately.
 
-With an existing save, write `soak = 60` to `/data/savagewind/benchmark.txt` and launch. The benchmark copies the saves to `benchmark/save`, loads the copy, settles for 20 seconds, then repeats the Great Plateau camera route for 60 minutes. Every five minutes and at the end it appends cumulative frames, on-time frames, hitches, mapped heap bytes, flexible-memory availability, direct-memory largest available block, and VMA allocation/block bytes to `/data/savagewind/benchmark/soak.txt`; the normal detailed summary is in `benchmark/last.txt` for the first minute. Memory figures are not interchangeable: direct largest block is not total free memory and VMA does not account for all GPU allocations. Remove `benchmark.txt` to disable the benchmark.
+Your imports, saves, settings, generated game code, UI and caches live under `/data/savagewind/`. Generated files are derived from your own game and must not be shared. Back up your saves before removing data.
 
-`save_check = 1` records **unavailable**, not success: the runtime has no game-level save initiation, completion or reload trigger, although filesystem operations and the isolated copied save exist. No save/load round trip is performed.
+## Troubleshooting
+
+- **Storage unavailable:** load `storagebroker.elf` after each boot, then restart the title. Ensure ShadowMountPlus is active.
+- **Missing or unsupported update:** check that the base package and the matching 1.9.0 update NSP are both in `/data/savagewind/import/`.
+- **Keys or package cannot be opened:** check that your own `prod.keys` is present and corresponds to the packages; keys dumped from a Switch on firmware 19.0.0 are recommended. Add your own `title.keys` when required. Do not share keys or packages when asking for help.
+- **First start takes a long time:** compilation and shader preparation are expected on first start or after relevant inputs change. Leave the console on and consult the progress screen.
+
+## Update or uninstall
+
+To update, replace the installed title folder and `storagebroker.elf` with the new release and load the new broker after a reboot. Keep `/data/savagewind/` to retain imports, saves and caches. To uninstall, remove the homebrew title and broker ELF; remove `/data/savagewind/` only if you also want to delete your imports, saves, settings and generated data.
+
