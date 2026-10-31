@@ -3,6 +3,7 @@ fnprof_hit
 g_fnprof
 hle_longjmp
 memset
+prompt_debug_entry
 rt_arrow_gravity
 rt_cam_pitch
 rt_cam_pitch_scale

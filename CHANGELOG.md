@@ -7,6 +7,11 @@ On PS5, fixed a file-descriptor leak that could crash the game while browsing Al
 On PS5, Minus (the Sheikah Slate/map) defaults to the touchpad click. Create belongs to the system and cannot be bound;
 saved controller bindings to Create revert to their slot's default.
 
+Unreleased: recognized HUD button textures take precedence over HD UI and sharp layout artwork, so their
+device-specific button glyphs are not replaced by upscaled original artwork.
+On game version 1.9.0, the action diamond can rearrange its face buttons to match the controller bindings live,
+using the appropriate backing from the player's own files.
+
 On PS5, the home-screen icon and backgrounds and the start-up splash are made once, at the first start, from your
 own game files and installed on your console (`home_art = 0` restores the shipped icon and removes the rest). The
 release ships only a neutral icon: no background or splash picture.

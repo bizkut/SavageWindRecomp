@@ -89,6 +89,7 @@ typedef struct {
     float motion_sens;   // motion controls: how far turning the controller turns the aim, 1 = 100%
     int motion_invert;   // MOTION_INVERT_* bits: turning the controller up / down, left / right goes the other way
     int button_icons;    // ICONS_*: the game's button prompts show this device's buttons (Automatic: the one in use)
+    bool action_prompt_debug; // Read-only diagnostics for 1.9.0 action prompt panes; ini only.
     bool sharp_text;     // Vulkan: sharpen identified game font sheets at 4K
     bool sharp_ui;       // Vulkan: enlarge selected layout artwork from the player's archives
     bool sharp_ui_chosen;  // sharp_ui came from the ini (PS5: otherwise the 4K first-launch default decides)

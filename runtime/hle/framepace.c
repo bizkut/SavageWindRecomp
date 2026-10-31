@@ -40,13 +40,17 @@
 //   SAVAGEWIND_LOG_FRAMEPACE=<n>   every n clock updates: target, frame length, VFR ratio and interval
 //   SAVAGEWIND_NO_CONTROLLER_STEP=1  the controllers count presented frames (as the game does)
 #include <math.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <SDL3/SDL.h>
 #include <string.h>
 
+#include "../input_bind.h"
 #include "../game_sites.h"
 #include "../hle.h"
 #include "../settings.h"
+#include "../services/action_prompt_restore.h"
 #include "../framepace.h"
 #include "../window_size.h"
 #ifdef __PROSPERO__
@@ -57,6 +61,379 @@ extern volatile int g_movie_playing;  // runtime/hle/movie.c: video decoders run
 extern volatile int g_movie_fps;      // runtime/hle/movie.c: the playing movie's frame rate
 
 #define VF(T, base, off) (*(T *)(uintptr_t)((base) + (off)))
+// 1.9.0 Pane constructor/destructor only. The guest's name and transform offsets come from that constructor.
+typedef struct {
+    uint64_t object;
+    uint64_t resource;
+    uint64_t context;
+    uint64_t caller;
+    char name[25];
+    bool picture;
+    bool dumped;
+} PromptDebugPane;
+static PromptDebugPane prompt_panes[256];
+static pthread_mutex_t prompt_lock = PTHREAD_MUTEX_INITIALIZER;
+typedef struct {
+    uint64_t group, loop, root, icon0, capture, base, label[4], guide0, guide1, icon1, bar, capture_pic;
+    uint64_t material, slot, original_texture, expected_texture;
+    int position, initial_position;
+} PromptLiveGroup;
+static PromptLiveGroup prompt_live[4];
+static bool prompt_live_ready;
+static bool prompt_live_modified;
+static bool prompt_records_changed;
+static const float prompt_button_xy[4][2] = {{0, -26}, {26, 0}, {-26, 0}, {0, 26}};
+static const float prompt_text_xy[4][2] = {{1, -26}, {26.25f, 0.75f}, {-25.5f, -0.25f}, {0.75f, 26}};
+static const char *const prompt_icon0[] = {"Nt_KeyTexA_00", "Nt_KeyTexB_00", "Nt_KeyTexX_00", "Nt_KeyTexY_00"};
+static const char *const prompt_icon1[] = {"Nt_KeyTexA_01", "Nt_KeyTexB_01", "Nt_KeyTexX_01", "Nt_KeyTexY_01"};
+static const char *const prompt_capture[] = {"N_CaptureA_00", "N_CaptureB_00", "N_CaptureX_00", "N_CaptureY_00"};
+static const char *const prompt_base[] = {"P_Base_00", "P_BaseB_00", "P_BaseX_00", "P_BaseY_00"};
+static const char *const prompt_guide0[] = {"T_GuideA_00", "T_GuideB_00", "T_GuideX_00", "T_GuideY_00"};
+static const char *const prompt_guide1[] = {"T_GuideA_01", "T_GuideB_01", "T_GuideX_01", "T_GuideY_01"};
+static const char *const prompt_bar[] = {"W_BaseA_00", "W_BaseB_00", "W_BaseX_00", "W_BaseY_00"};
+static const char *const prompt_labels[4][4] = {
+    {NULL, "T_B_00", "T_X_00", "T_Y_00"},
+    {"T_A_01", NULL, "T_X_00", "T_Y_00"},
+    {"T_A_00", "T_B_00", NULL, "T_Y_00"},
+    {"T_A_00", "T_B_00", "T_X_00", NULL},
+};
+
+static uint64_t prompt_parent(uint64_t object) {
+    uint64_t parent;
+    memcpy(&parent, (const void *)(uintptr_t)(object + 0x18), sizeof parent);
+    return parent;
+}
+static float prompt_float(uint64_t object, unsigned offset) {
+    float value;
+    memcpy(&value, (const void *)(uintptr_t)(object + offset), sizeof value);
+    return value;
+}
+static void prompt_set_float(uint64_t object, unsigned offset, float value) {
+    memcpy((void *)(uintptr_t)(object + offset), &value, sizeof value);
+    *(uint8_t *)(uintptr_t)(object + 0x58) |= 0x10;
+}
+static uint64_t prompt_find(const char *name, uint64_t parent) {
+    uint64_t found = 0;
+    for (size_t i = 0; i < sizeof prompt_panes / sizeof *prompt_panes; i++) {
+        PromptDebugPane *p = &prompt_panes[i];
+        if (!p->object || strcmp(p->name, name)) continue;
+        if (strncmp((const char *)(uintptr_t)(p->object + 0xb8), name, 24)) continue;
+        if (parent && prompt_parent(p->object) != parent) continue;
+        if (found) return 0;
+        found = p->object;
+    }
+    return found;
+}
+static bool prompt_tracked(uint64_t object) {
+    for (size_t i = 0; i < sizeof prompt_panes / sizeof *prompt_panes; i++)
+        if (prompt_panes[i].object == object)
+            return !strncmp((const char *)(uintptr_t)(object + 0xb8), prompt_panes[i].name, 24);
+    return false;
+}
+static bool prompt_xy_is(uint64_t object, const float xy[2]) {
+    return prompt_float(object, 0x30) == xy[0] && prompt_float(object, 0x34) == xy[1];
+}
+static bool prompt_live_init_locked(void) {
+    PromptLiveGroup groups[4] = {0};
+    unsigned used = 0;
+    for (int i = 0; i < 4; i++) {
+        uint64_t icon = prompt_find(prompt_icon0[i], 0);
+        if (!icon) return false;
+        uint64_t group = prompt_parent(icon);
+        if (!group) return false;
+        uint64_t loop = prompt_parent(group);
+        if (!loop) return false;
+        const char *group_name = i == 0 ? "N_BtnA_00" : i == 1 ? "N_BtnB_00" : "N_BtnX_00";
+        if (prompt_find(group_name, loop) != group) return false;
+        uint64_t root = prompt_parent(loop);
+        if (!root) return false;
+        PromptLiveGroup *g = &groups[i];
+        g->group = group;
+        g->loop = loop;
+        g->root = root;
+        g->icon0 = icon;
+        g->capture = prompt_find(prompt_capture[i], root);
+        g->base = prompt_find(prompt_base[i], loop);
+        if (!g->capture || !g->base) return false;
+        g->guide0 = prompt_find(prompt_guide0[i], g->capture);
+        g->guide1 = prompt_find(prompt_guide1[i], group);
+        g->icon1 = prompt_find(prompt_icon1[i], g->capture);
+        g->bar = prompt_find(prompt_bar[i], group);
+        g->capture_pic = prompt_find(i == 0 ? "P_CaptureUse00_00" : "P_CaptureUse_02", group);
+        if (!g->guide0 || !g->guide1 || !g->icon1 || !g->bar || !g->capture_pic) return false;
+        int position;
+        for (position = 0; position < 4; position++) if (prompt_xy_is(group, prompt_button_xy[position])) break;
+        if (position == 4 || (used & (1u << position))) return false;
+        used |= 1u << position;
+        g->position = g->initial_position = position;
+        for (int j = 0; j < 4; j++) {
+            if (i == j) continue;
+            g->label[j] = prompt_find(prompt_labels[i][j], loop);
+            if (!g->label[j]) return false;
+        }
+        uint64_t material, slots;
+        memcpy(&material, (const void *)(uintptr_t)(g->base + 0xe0), sizeof material);
+        if (!material) return false;
+        memcpy(&slots, (const void *)(uintptr_t)(material + 0x18), sizeof slots);
+        if (!slots) return false;
+        g->material = material;
+        g->slot = slots + 8;
+        memcpy(&g->original_texture, (const void *)(uintptr_t)g->slot, sizeof g->original_texture);
+        if (!g->original_texture) return false;
+        g->expected_texture = g->original_texture;
+    }
+    for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 4; j++)
+            if (i != j && !prompt_xy_is(groups[i].label[j], prompt_text_xy[groups[j].position])) return false;
+    memcpy(prompt_live, groups, sizeof groups);
+    prompt_live_ready = true;
+    return true;
+}
+
+static bool prompt_live_apply_locked(const int target[4]) {
+    uint64_t plate[2] = {0, 0};
+    unsigned used = 0;
+    for (int i = 0; i < 4; i++) {
+        PromptLiveGroup *g = &prompt_live[i];
+        if (!prompt_tracked(g->group) || !prompt_tracked(g->capture) || !prompt_tracked(g->base) ||
+            !prompt_tracked(g->guide0) || !prompt_tracked(g->guide1) || !prompt_tracked(g->icon1) ||
+            !prompt_tracked(g->bar) || !prompt_tracked(g->capture_pic)) return false;
+        for (int j = 0; j < 4; j++) if (i != j && !prompt_tracked(g->label[j])) return false;
+        if (!prompt_tracked(g->icon0) || prompt_parent(g->icon0) != g->group ||
+            prompt_parent(g->group) != g->loop || prompt_parent(g->loop) != g->root ||
+            prompt_parent(g->capture) != g->root || prompt_parent(g->base) != g->loop) return false;
+        uint64_t material, slots;
+        memcpy(&material, (const void *)(uintptr_t)(g->base + 0xe0), sizeof material);
+        if (material != g->material) return false;
+        memcpy(&slots, (const void *)(uintptr_t)(material + 0x18), sizeof slots);
+        if (!slots || slots + 8 != g->slot) return false;
+        if (target[i] < 0 || target[i] > 3 || (used & (1u << target[i])) ||
+            !prompt_xy_is(g->group, prompt_button_xy[g->position])) return false;
+        used |= 1u << target[i];
+        bool left = g->position == 2;
+        if (prompt_float(g->capture, 0x30) != prompt_button_xy[g->position][0] + (left ? -60 : 60) ||
+            prompt_float(g->capture, 0x34) != prompt_button_xy[g->position][1] + (i == 0 ? 4 : 0) ||
+            prompt_float(g->guide0, 0x30) != (left ? 37 : -39) ||
+            prompt_float(g->guide1, 0x30) != (left ? -23 : 21) ||
+            prompt_float(g->icon1, 0x30) != (left ? 60 : -60) ||
+            prompt_float(g->bar, 0x30) != (left ? 33 : -33) ||
+            prompt_float(g->bar, 0x48) != (left ? -1 : 1) ||
+            prompt_float(g->capture_pic, 0x30) != (left ? -60 : 60) ||
+            prompt_float(g->base, 0x44) != (g->position == 2 || g->position == 3 ? 180 : 0) ||
+            prompt_float(g->base, 0x48) != (g->position == 3 ? -1 : 1)) return false;
+        uint64_t current;
+        memcpy(&current, (const void *)(uintptr_t)g->slot, sizeof current);
+        if (current != g->expected_texture) return false;
+        int family = g->position == 0 || g->position == 3;
+        if (plate[family] && plate[family] != current) return false;
+        plate[family] = current;
+        for (int j = 0; j < 4; j++)
+            if (i != j && !prompt_xy_is(g->label[j], prompt_text_xy[prompt_live[j].position])) return false;
+    }
+    if (!plate[0] || !plate[1] || plate[0] == plate[1]) return false;
+    for (int i = 0; i < 4; i++) {
+        PromptLiveGroup *g = &prompt_live[i];
+        int position = target[i];
+        bool left = position == 2;
+        prompt_set_float(g->group, 0x30, prompt_button_xy[position][0]);
+        prompt_set_float(g->group, 0x34, prompt_button_xy[position][1]);
+        prompt_set_float(g->capture, 0x30, prompt_button_xy[position][0] + (left ? -60 : 60));
+        prompt_set_float(g->capture, 0x34, prompt_button_xy[position][1] + (i == 0 ? 4 : 0));
+        for (int j = 0; j < 4; j++) if (i != j) {
+            prompt_set_float(g->label[j], 0x30, prompt_text_xy[target[j]][0]);
+            prompt_set_float(g->label[j], 0x34, prompt_text_xy[target[j]][1]);
+        }
+        prompt_set_float(g->base, 0x44, position == 2 || position == 3 ? 180 : 0);
+        prompt_set_float(g->base, 0x48, position == 3 ? -1 : 1);
+        prompt_set_float(g->guide0, 0x30, left ? 37 : -39);
+        prompt_set_float(g->guide1, 0x30, left ? -23 : 21);
+        *(uint8_t *)(uintptr_t)(g->guide0 + 0x5b) = left ? 2 : 1;
+        *(uint8_t *)(uintptr_t)(g->guide1 + 0x5b) = left ? 2 : 1;
+        *(uint8_t *)(uintptr_t)(g->guide0 + 0x11e) = left ? 2 : 1;
+        *(uint8_t *)(uintptr_t)(g->guide1 + 0x11e) = left ? 2 : 1;
+        prompt_set_float(g->icon1, 0x30, left ? 60 : -60);
+        prompt_set_float(g->capture_pic, 0x30, left ? -60 : 60);
+        prompt_set_float(g->bar, 0x30, left ? 33 : -33);
+        prompt_set_float(g->bar, 0x48, left ? -1 : 1);
+        uint64_t texture = plate[position == 0 || position == 3];
+        memcpy((void *)(uintptr_t)g->slot, &texture, sizeof texture);
+        g->expected_texture = texture;
+    }
+    for (int i = 0; i < 4; i++) prompt_live[i].position = target[i];
+    return true;
+}
+static void prompt_restore_locked(void) {
+    if (!prompt_live_ready) return;
+    if (prompt_live_modified) {
+        int initial[4];
+        for (int i = 0; i < 4; i++) initial[i] = prompt_live[i].initial_position;
+        if (!prompt_live_apply_locked(initial)) LOG("[prompt-live] restore: pane guard failed\n");
+        uint64_t *slots[4], original[4], expected[4];
+        for (int i = 0; i < 4; i++) {
+            slots[i] = (uint64_t *)(uintptr_t)prompt_live[i].slot;
+            original[i] = prompt_live[i].original_texture;
+            expected[i] = prompt_live[i].expected_texture;
+        }
+        if (action_prompt_restore_slots(slots, original, expected, 4) != 4)
+            LOG("[prompt-live] restore: texture guard failed\n");
+    }
+    memset(prompt_live, 0, sizeof prompt_live);
+    prompt_live_ready = false;
+    prompt_live_modified = false;
+}
+static bool prompt_live_member(uint64_t object) {
+    if (!prompt_live_ready) return false;
+    for (int i = 0; i < 4; i++) {
+        PromptLiveGroup *g = &prompt_live[i];
+        if (object == g->group || object == g->capture || object == g->base || object == g->guide0 ||
+            object == g->guide1 || object == g->icon0 || object == g->icon1 ||
+            object == g->bar || object == g->capture_pic) return true;
+        for (int j = 0; j < 4; j++) if (object && object == g->label[j]) return true;
+    }
+    return false;
+}
+static void prompt_live_tick(void) {
+    static int skipped[4] = {-1, -1, -1, -1};
+    static int previous[4] = {-1, -1, -1, -1};
+    if (g_site.main_data != 0x7001b7a000ull) return;
+    int target[4] = {SDL_GAMEPAD_BUTTON_EAST, SDL_GAMEPAD_BUTTON_SOUTH,
+                     SDL_GAMEPAD_BUTTON_NORTH, SDL_GAMEPAD_BUTTON_WEST};
+    int kind = g_settings.button_icons;
+    int family = input_pad_family();
+    bool pad = (family == 1 || family == 2) && kind != ICONS_KEYBOARD && kind != ICONS_NINTENDO &&
+               (kind != ICONS_AUTO || input_last_device() != DEVICE_KEYBOARD);
+    if (pad) for (int i = 0; i < 4; i++) target[i] = g_bind_pad[BIND_A + i];
+    bool requested = memcmp(previous, target, sizeof target) != 0;
+    memcpy(previous, target, sizeof target);
+    pthread_mutex_lock(&prompt_lock);
+    if (!prompt_live_ready) {
+        bool retry = prompt_records_changed;
+        prompt_records_changed = false;
+        if (!retry || !prompt_live_init_locked()) {
+            if (requested) LOG("[prompt-live] skipped: prompt instances not ready\n");
+            pthread_mutex_unlock(&prompt_lock);
+            return;
+        }
+    }
+    bool changed = false;
+    for (int i = 0; i < 4; i++) if (prompt_live[i].position != target[i]) changed = true;
+    if (changed) {
+        if (prompt_live_apply_locked(target)) {
+            prompt_live_modified = true;
+            LOG("[prompt-live] applied A=%d B=%d X=%d Y=%d\n", target[0], target[1], target[2], target[3]);
+            memset(skipped, 0xff, sizeof skipped);
+        } else if (memcmp(skipped, target, sizeof target)) {
+            LOG("[prompt-live] skipped: invalid binding or pane/texture guard failed\n");
+            memcpy(skipped, target, sizeof target);
+        }
+    }
+    pthread_mutex_unlock(&prompt_lock);
+}
+
+static bool prompt_debug_name(const char *name) {
+    static const char *const prefixes[] = {
+        "N_BtnA_", "N_BtnB_", "N_BtnX_", "N_CaptureA_", "N_CaptureB_", "N_CaptureX_", "N_CaptureY_",
+        "P_Base_00", "P_BaseB_", "P_BaseX_", "P_BaseY_", "T_A_0", "T_B_0", "T_X_0", "T_Y_0",
+        "T_GuideA_", "T_GuideB_", "T_GuideX_", "T_GuideY_", "Nt_KeyTexA_", "Nt_KeyTexB_", "Nt_KeyTexX_",
+        "Nt_KeyTexY_", "W_BaseA_", "W_BaseB_", "W_BaseX_", "W_BaseY_", "P_CaptureUse",
+    };
+    for (size_t i = 0; i < sizeof prefixes / sizeof *prefixes; i++)
+        if (!strncmp(name, prefixes[i], strlen(prefixes[i]))) return true;
+    return false;
+}
+
+void prompt_debug_entry(uint64_t addr, uint64_t object, uint64_t resource, uint64_t context, uint64_t caller) {
+    if (g_site.main_data != 0x7001b7a000ull || !object) return;
+    pthread_mutex_lock(&prompt_lock);
+    if (addr == 0x70000268a4ull || addr == 0x70000287c4ull) {
+        for (size_t i = 0; i < sizeof prompt_panes / sizeof *prompt_panes; i++) {
+            if (prompt_panes[i].object != object) continue;
+            if (prompt_live_member(object)) prompt_restore_locked();
+            if (g_settings.action_prompt_debug)
+                LOG("[prompt-dbg] destroy %s object=%llx caller=%llx\n", prompt_panes[i].name,
+                    (unsigned long long)object, (unsigned long long)caller);
+            memset(&prompt_panes[i], 0, sizeof prompt_panes[i]);
+            prompt_records_changed = true;
+        }
+    } else if (resource) {
+        char name[25];
+        memcpy(name, (const void *)(uintptr_t)(resource + 12), 24);
+        name[24] = 0;
+        if (prompt_debug_name(name)) {
+            for (size_t i = 0; i < sizeof prompt_panes / sizeof *prompt_panes; i++) {
+                if (prompt_panes[i].object && prompt_panes[i].object != object) continue;
+                prompt_panes[i] = (PromptDebugPane){object, resource, context, caller, "",
+                                                   !memcmp((const void *)(uintptr_t)resource, "pic1", 4), false};
+                memcpy(prompt_panes[i].name, name, sizeof name);
+                prompt_records_changed = true;
+                if (g_settings.action_prompt_debug)
+                    LOG("[prompt-dbg] construct %s object=%llx resource=%llx context=%llx caller=%llx\n", name,
+                        (unsigned long long)object, (unsigned long long)resource, (unsigned long long)context,
+                        (unsigned long long)caller);
+                break;
+            }
+        }
+    }
+    pthread_mutex_unlock(&prompt_lock);
+}
+
+static void prompt_debug_hex(const char *label, uint64_t address, unsigned size) {
+    const uint8_t *p = (const uint8_t *)(uintptr_t)address;
+    for (unsigned off = 0; off < size; off += 16) {
+        char hex[49];
+        for (unsigned i = 0; i < 16; i++) snprintf(hex + i * 3, 4, "%02x ", p[off + i]);
+        LOG("[prompt-dbg] %s %llx+%02x %s\n", label, (unsigned long long)address, off, hex);
+    }
+}
+
+static void prompt_debug_tick(void) {
+    if (!g_settings.action_prompt_debug || g_site.main_data != 0x7001b7a000ull) return;
+    static uint64_t last;
+    uint64_t now = plat_now_ns();
+    if (last && now - last < 5000000000ull) return;
+    last = now;
+    pthread_mutex_lock(&prompt_lock);
+    for (size_t i = 0; i < sizeof prompt_panes / sizeof *prompt_panes; i++) {
+        PromptDebugPane *p = &prompt_panes[i];
+        if (!p->object || (p->dumped && strcmp(p->name, "N_BtnA_00") &&
+                           strncmp(p->name, "P_Base", 6))) continue;
+        const uint8_t *obj = (const uint8_t *)(uintptr_t)p->object;
+        if (strncmp((const char *)obj + 0xb8, p->name, 24)) continue;
+        float transform[8];
+        memcpy(transform, obj + 0x30, sizeof transform);
+        uint64_t links[5];
+        memcpy(links, obj + 8, sizeof links);
+        LOG("[prompt-dbg] live %s object=%llx resource=%llx context=%llx caller=%llx "
+            "translate=%g,%g,%g rotate=%g,%g,%g scale=%g,%g flags=%02x,%02x,%02x,%02x "
+            "links=%llx,%llx,%llx,%llx,%llx\n",
+            p->name, (unsigned long long)p->object, (unsigned long long)p->resource,
+            (unsigned long long)p->context, (unsigned long long)p->caller,
+            transform[0], transform[1], transform[2], transform[3], transform[4], transform[5],
+            transform[6], transform[7], obj[0x58], obj[0x59], obj[0x5a], obj[0x5b],
+            (unsigned long long)links[0], (unsigned long long)links[1], (unsigned long long)links[2],
+            (unsigned long long)links[3], (unsigned long long)links[4]);
+        if (p->picture && (!strcmp(p->name, "P_Base_00") || !strcmp(p->name, "P_BaseB_00") ||
+                           !strcmp(p->name, "P_BaseX_00") || !strcmp(p->name, "P_BaseY_00"))) {
+            uint64_t material, reference = 0, slots = 0, texture = 0;
+            memcpy(&material, obj + 0xe0, sizeof material);
+            if (material) {
+                memcpy(&reference, (const void *)(uintptr_t)(material + 0x28), sizeof reference);
+                memcpy(&slots, (const void *)(uintptr_t)(material + 0x18), sizeof slots);
+                if (slots) memcpy(&texture, (const void *)(uintptr_t)(slots + 8), sizeof texture);
+            }
+            LOG("[prompt-dbg] picture=%llx material=%llx material+28=%llx slots=%llx texture=%llx\n",
+                (unsigned long long)p->object, (unsigned long long)material, (unsigned long long)reference,
+                (unsigned long long)slots, (unsigned long long)texture);
+            if (!p->dumped) {
+                prompt_debug_hex("picture", p->object, 0x100);
+                // This SDK allocates exactly 0x50 bytes for a material; reading more would overrun it.
+                if (material) prompt_debug_hex("material", material, 0x50);
+            }
+        }
+        p->dumped = true;
+    }
+    pthread_mutex_unlock(&prompt_lock);
+}
 #define PAUSE_STATE g_site.pause_state  // (u32: 0 playing, 2 in the pause menu or the map)
 
 static int env_int(const char *name, int def) {
@@ -256,6 +633,8 @@ static uint64_t shown_frames;
 uint64_t framepace_shown_frame(void) { return __atomic_load_n(&shown_frames, __ATOMIC_RELAXED); }
 
 void rt_vfr_update(uint64_t vfr) {
+    prompt_live_tick();
+    prompt_debug_tick();
     __atomic_fetch_add(&game_frames, 1, __ATOMIC_RELAXED);
     static int ui_state = -1;
     int ui = framepace_loading_ui() ? 2 : framepace_title_ui() ? 1 : 0;

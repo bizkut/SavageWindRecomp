@@ -19,11 +19,13 @@
 #include "../ipc.h"
 #include "../language.h"
 #include "../paths.h"
+#include "../input_bind.h"
 #include "../settings.h"
 #include "../nvn/glyphs.h"
 #include "../nvn/hd_ui_pack_source.h"
 #include "../nvn/hd_ui_policy.h"
 #include "../nvn/sharp_ui.h"
+#include "action_prompt_layout.h"
 #include "../romfs_image.h"
 #ifdef ROMFS_PACKAGE
 #include "../../ps5/importer/package_exefs.h"
@@ -621,6 +623,16 @@ static void hud_letters_patch(const uint8_t *fmeta, uint64_t foff, uint64_t fsz)
     if (!why) {
         arc2 = malloc(an + 4 * (0x80 + 0x2000));
         memcpy(arc2, arc, an);
+        int family = bind_label_family();
+        bool pad_prompt = (family == 1 || family == 2) &&
+                          g_settings.button_icons != ICONS_KEYBOARD && g_settings.button_icons != ICONS_NINTENDO;
+        int positions[4] = {g_bind_pad[BIND_A], g_bind_pad[BIND_B], g_bind_pad[BIND_X], g_bind_pad[BIND_Y]};
+        bool remapped = positions[0] != SDL_GAMEPAD_BUTTON_EAST || positions[1] != SDL_GAMEPAD_BUTTON_SOUTH ||
+                        positions[2] != SDL_GAMEPAD_BUTTON_NORTH || positions[3] != SDL_GAMEPAD_BUTTON_WEST;
+        unsigned face_positions = 0;
+        for (int i = 0; i < 4; i++)
+            if (positions[i] >= 0 && positions[i] < 4) face_positions |= 1u << positions[i];
+        bool positionable = face_positions == 0xf;
         nn = an;
         for (int i = 0; i < 4 && !why; i++) {
             int li = sarc_find(arc, an, layouts[i], &adoff, &as, &ae);
@@ -629,6 +641,10 @@ static void hud_letters_patch(const uint8_t *fmeta, uint64_t foff, uint64_t fsz)
             memset(arc2 + nn, 0, at - nn);
             nn = at;
             size_t ln = hud_letters_flyt(arc + adoff + as, ae - as, arc2 + nn, &panes);
+            if (pad_prompt && remapped && positionable && !action_prompt_layout(arc2 + nn, ln, i, positions)) {
+                why = "action layout not as expected";
+                break;
+            }
             if (!ln) { why = "layout not as expected"; break; }
             uint32_t s = (uint32_t)(nn - adoff), e = (uint32_t)(nn - adoff + ln);
             memcpy(arc2 + 0x20 + li * 16 + 8, &s, 4);

@@ -847,6 +847,16 @@ release ZIP's no-game-content check still passes.
   logged. Host: 1,024 open/release cycles under a 64-descriptor limit with no growth. .41: the fixed fd census
   reported 13 descriptors at start; browsing the pictures was checked after the fix.
 
+- Action prompts follow the controller and the bindings. The highlighted "A" button of the action prompt
+  (`PaDoCommandA_00`: a picture, `Nt_KeyTexA_00`) was replaced by HD UI art before the glyph hook ran, so it showed
+  the Switch letter; recognised button pictures now skip that replacement. With Cross as confirm, the layout is
+  patched at load (the highlighted button and its label bar move to the bottom, B to the right, and `P_Base_00` takes
+  the game's bottom-highlight backing `Nt_KeyBtnSubBaseBL_00^s`); a later binding change is applied live to the
+  game's pane instances at the next frame (`[prompt-live] applied …`), and slots are restored before the game frees
+  the owning material. .41: Circle → Cross → Circle switches applied live, captures correct. The prompts follow the
+  actual bindings (the user's ini swaps only A and B). Open: the B, X and Y prompts on screen, and a warp/area load
+  after a switch.
+
 - Minus on the touchpad: the DualSense Create button belongs to the PS5 system and no binding to it reaches the game.
   On PS5 the game's Minus (Sheikah Slate) defaults to the touchpad (a touchpad pictogram in prompts); Create can't be
   bound in Controls, and a saved binding to it falls back to the slot's default. .41: the touchpad opens the map.

@@ -178,6 +178,7 @@ void settings_load(void) {
             for (int i = 0; i < ICONS_COUNT; i++)
                 if (!strcmp(val, k_icons[i])) g_settings.button_icons = i;
         }
+        else if (!strcmp(key, "action_prompt_debug")) g_settings.action_prompt_debug = atoi(val) != 0;
         else if (!strcmp(key, "sharp_text")) g_settings.sharp_text = atoi(val) != 0;
         else if (!strcmp(key, "sharp_ui")) { g_settings.sharp_ui = atoi(val) != 0; g_settings.sharp_ui_chosen = true; }
         else if (!strcmp(key, "hd_ui")) g_settings.hd_ui = atoi(val) != 0;
@@ -339,6 +340,7 @@ void settings_save(void) {
     fprintf(f, "motion_invert = %s\n", inv[g_settings.motion_invert & 3]);
     fprintf(f, "button_icons = %s\n", k_icons[g_settings.button_icons >= 0 && g_settings.button_icons < ICONS_COUNT ?
                                                 g_settings.button_icons : ICONS_AUTO]);
+    if (g_settings.action_prompt_debug) fprintf(f, "action_prompt_debug = 1\n");
     fprintf(f, "sharp_text = %d\n", g_settings.sharp_text);
     fprintf(f, "sharp_ui = %d\n", g_settings.sharp_ui);
     fprintf(f, "hd_ui = %d\n", g_settings.hd_ui);

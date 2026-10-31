@@ -1040,6 +1040,16 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
     if (layers > b->layers && b->depth == 1) layers = b->layers;
     bool linear = nvn_texture_flags_pitch(t->flags);
     uint64_t layer_size = linear ? t->stride * (t->layout.height ? t->layout.height : 1) : tegra_layer_size(&t->layout);
+    bool button_mask = false;
+    if (!linear && t->format == 0x01 && t->target == 1 && layers == 1 &&
+        ((t->width == 48 && t->height == 48) || (t->width == 46 && t->height == 46) ||
+         (t->width == 64 && t->height == 64))) {
+        uint8_t pixels[64 * 64];
+        LevelLayout l = tegra_level(&t->layout, 0);
+        tegra_deswizzle((const uint8_t *)(uintptr_t)t->addr + l.offset, pixels, l.wb, l.hb, 1, fi->bpb,
+                        l.block_height_log2, l.block_depth_log2);
+        button_mask = glyphs_layout_match(t->format, l.w, l.h, pixels, l.w);
+    }
     if (g_settings.hd_ui && hd_ui_available() && !b->gpu_owned && t->target==1 && layers==1 && !linear &&
         (b->scalable || t->samples>1 || !(level_mask&1) || b->hd_ui_blocked)) {
         LevelLayout l=tegra_level(&t->layout,0);
@@ -1051,7 +1061,7 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
             free(pixels);
         }
     }
-    if (g_settings.hd_ui && hd_ui_available() && !b->gpu_owned && !b->hd_ui_blocked && !b->scalable &&
+    if (!button_mask && g_settings.hd_ui && hd_ui_available() && !b->gpu_owned && !b->hd_ui_blocked && !b->scalable &&
         t->target == 1 && layers == 1 && t->samples <= 1 && !linear && (level_mask & 1)) {
         LevelLayout l=tegra_level(&t->layout,0);
         size_t bytes=(size_t)l.wb*l.hb*fi->bpb;
@@ -1078,7 +1088,7 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
     }
     // The edge fallback uploads RGBA, so it cannot reuse a compressed HD image.
     if (b->hd_ui_bytes) { ui_restore(t,b); level_mask=~0u; }
-    if (g_settings.sharp_ui && !b->gpu_owned && !b->storage && !b->scalable && !b->hd_ui_blocked &&
+    if (!button_mask && g_settings.sharp_ui && !b->gpu_owned && !b->storage && !b->scalable && !b->hd_ui_blocked &&
         t->target == 1 && layers == 1 && t->samples <= 1 && !linear &&
         (level_mask & 1) && sharp_ui_candidate(t->format,t->width,t->height)) {
         LevelLayout l=tegra_level(&t->layout,0);
