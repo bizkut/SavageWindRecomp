@@ -66,6 +66,13 @@ jobs:
         run: |
           set -euo pipefail
           parent=$(dirname "$GITHUB_WORKSPACE")
+          # Remove only links left by the earlier local-sibling workflow; never mutate those shared trees.
+          for name in forever nstool2 PS5_MihawkGen; do
+            if [[ -L "$parent/$name" ]]; then
+              [[ $(readlink "$parent/$name") == "/home/bizkut/workspaces/$name" ]] || exit 1
+              unlink "$parent/$name"
+            fi
+          done
           checkout() {
             local path=$1 url=$2 revision=$3
             if [[ ! -d "$path/.git" ]]; then
