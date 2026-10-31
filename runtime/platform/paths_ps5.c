@@ -64,9 +64,10 @@ void rt_paths_init(void) {
     int chdir_errno = chdir_result ? errno : 0;
     fprintf(stderr, "[paths] root=%s stat=%d errno=%d is_dir=%d broker_write=1 chdir=%d errno=%d\n",
             SB_ROOT, stat_result, stat_errno, !stat_result && S_ISDIR(st.st_mode), chdir_result, chdir_errno);
-    if (stat_result || !S_ISDIR(st.st_mode) || chdir_result) {
+    // chdir is refused to titles here (EPERM on every console); reads use absolute paths, so only stat decides.
+    if (stat_result || !S_ISDIR(st.st_mode)) {
         char reason[100];
-        int error = stat_result ? stat_errno : (!S_ISDIR(st.st_mode) ? ENOTDIR : chdir_errno);
+        int error = stat_result ? stat_errno : ENOTDIR;
         snprintf(reason, sizeof(reason), "Data folder inaccessible (error %d).", error);
         fail_title(reason);
     }
