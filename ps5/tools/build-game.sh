@@ -148,6 +148,10 @@ cp third_party/fonts/FiraSans/OFL.txt "$app/FiraSans-OFL.txt"
 mkdir -p "$app/fonts" "$app/notices"
 cp "$opensans" "$app/fonts/OpenSans.ttf"
 cp ps5/release/notices/OPENSANS.txt "$app/notices/OPENSANS.txt"
+# FreeType 2.13.2 (FTL) and libpng 1.6.43 are linked for the bundled font; their notices (the same upstream
+# versions' Debian copyright files, ps5/release/notices) ship with the title
+cp ps5/release/notices/FREETYPE.txt "$app/notices/FREETYPE.txt"
+cp ps5/release/notices/LIBPNG.txt "$app/notices/LIBPNG.txt"
 # MihawkGen's weights (runtime/nvn/vulkan/mihawk.cpp reads /app0/network.fgw), its licence and third-party notices
 cp "$mh/framegen/models/network.fgw" "$app/network.fgw"
 cp "$mh/LICENSE.md" "$app/MihawkGen-LICENSE.md"
