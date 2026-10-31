@@ -10,6 +10,56 @@ enum { VIDEO_HAS_FG = 1, VIDEO_HAS_UPSCALER = 2, VIDEO_HAS_QUALITY = 4,
        VIDEO_HAS_HD_UI_GENERATE = 128, VIDEO_HAS_ALL = 255 };
 typedef enum { VIDEO_HDR_UNKNOWN, VIDEO_HDR_NOT_CAPABLE, VIDEO_HDR_CAPABLE } VideoHdrCapability;
 
+enum { VIDEO_OUTPUT_AUTO, VIDEO_OUTPUT_4K, VIDEO_OUTPUT_1080P, VIDEO_OUTPUT_720P, VIDEO_OUTPUT_1440P };
+
+static inline int video_output_parse(const char *value) {
+    if (!strcmp(value, "4k")) return VIDEO_OUTPUT_4K;
+    if (!strcmp(value, "1080p")) return VIDEO_OUTPUT_1080P;
+    if (!strcmp(value, "720p")) return VIDEO_OUTPUT_720P;
+    if (!strcmp(value, "1440p")) return VIDEO_OUTPUT_1440P;
+    return VIDEO_OUTPUT_AUTO;
+}
+
+static inline const char *video_output_name(int output) {
+    switch (output) {
+    case VIDEO_OUTPUT_720P: return "720p";
+    case VIDEO_OUTPUT_1080P: return "1080p";
+    case VIDEO_OUTPUT_1440P: return "1440p";
+    case VIDEO_OUTPUT_4K: return "4k";
+    default: return "auto";
+    }
+}
+
+static inline int video_output_from_mode(int mode) {
+    switch (mode) {
+    case 2: return VIDEO_OUTPUT_720P;
+    case 0: return VIDEO_OUTPUT_1080P;
+    case 6: return VIDEO_OUTPUT_1440P;
+    default: return VIDEO_OUTPUT_4K;
+    }
+}
+
+static inline void video_output_extent(int output, int *width, int *height) {
+    switch (output) {
+    case VIDEO_OUTPUT_720P:
+        *width = 1280;
+        *height = 720;
+        break;
+    case VIDEO_OUTPUT_1080P:
+        *width = 1920;
+        *height = 1080;
+        break;
+    case VIDEO_OUTPUT_1440P:
+        *width = 2560;
+        *height = 1440;
+        break;
+    default:
+        *width = 3840;
+        *height = 2160;
+        break;
+    }
+}
+
 static unsigned video_defaults_present(FILE *f) {
     unsigned present = 0;
     char line[256], key[64], val[128];

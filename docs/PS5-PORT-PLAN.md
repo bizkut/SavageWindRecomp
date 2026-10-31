@@ -119,10 +119,22 @@ FrameGen Lab both use `0x80040`, which **turns system VRR off** (fixed 120 Hz) �
 FIFO; with VRR the panel follows the presents between 48 and 120 Hz. Replace `runtime/window_size.c`'s desktop mode
 list with "4K, 119.88 Hz if granted, else 59.94 Hz".
 
-Other displays (unmeasured): S4 on .41's 4K TV saw one display, one plane and two modes, both 3840×2160
-(119.88/59.94 Hz). A 1080p TV has not been tested. The window code enumerates the modes the display reports and
-picks the largest extent, preferring 119.88 Hz; the swapchain and internal resolution follow that extent. On a 60 Hz
-display, frame generation is off.
+On .39 with a 1080p TV, VideoOut reported a 3840×2160 title plane despite the system's 1080p HDMI output.
+The root storage broker reads the fixed `VIDEOOUT_mode` registry key; the title cannot read it directly (EPERM).
+Measurements on .39 and .41:
+
+| PS5 Resolution setting | Registry mode | Title output |
+| --- | ---: | --- |
+| 720p | 2 | 1280×720 |
+| 1080p | 0 | 1920×1080 |
+| 1440p | 6 | 2560×1440 |
+| 2160p | 19 | 3840×2160 |
+| Automatic | 19 | 3840×2160 |
+
+Automatic and 2160p are indistinguishable in this key: Automatic therefore uses 4K even if HDMI negotiates a smaller
+resolution. Unknown modes and broker failures also fall back to 4K. Video > Output overrides the system setting at
+the next start; smaller outputs render at their chosen size and scale once to the 4K swapchain. Console qualification
+of the new paths is pending.
 
 **D5. Game code is built from the user's files, never shipped.** Today on the user's PC; M12 moves it onto the console
 (requested 2026-10-29) so the public release needs no PC. The project's rule is that no build contains game code,

@@ -65,6 +65,7 @@ typedef struct {
     bool frame_gen;      // frame generation: a frame made between each two the game draws (vulkan/framegen.h: AMD FSR 3 on
                          // desktop, PS5_MihawkGen on the PS5, there at 119.88 Hz only)
 #ifdef __PROSPERO__
+    int output;              // VIDEO_OUTPUT_*; applies at the next start.
     bool dynamic_resolution; // DRS is disabled by default and while TAA is active
     bool drs_fsr3;           // DRS also with FSR 3.1 (A/B: ini 0)
     bool drs_lean;           // ordinary shaders while DRS is at full size (A/B: ini 0)

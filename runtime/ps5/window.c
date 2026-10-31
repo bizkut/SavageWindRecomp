@@ -24,6 +24,7 @@
 #include "../settings.h"
 #include "../window_size.h"
 #include "video_defaults.h"
+#include "../../ps5/storagebroker/client.h"
 
 #define HIGH_REFRESH_MHZ 119880
 // HDR default from the system's output at start (confirmed on .41, 2026-10-28: output status dynamic_range reads 2
@@ -37,10 +38,11 @@ int sceVideoOutClose(int32_t handle);
 int sceVideoOutGetOutputStatus(int32_t handle, void *status);
 int sceVideoOutGetCurrentOutputMode_(int32_t handle, void *mode);
 
+
 static VideoHdrCapability probe_hdr_capability(void) {
     // Query before RADV opens VideoOut: the system's current output (its HDR setting on an HDR-capable TV). The
     // output-status layout is RADV's struct videoout_output_status (resolution, dynamic_range, ...).
-    _Alignas(8) unsigned char status[192] = {0}, mode[128] = {0};
+    _Alignas(8) unsigned char status[192] = {0}, mode[32] = {0};
     VideoHdrCapability hdr = VIDEO_HDR_UNKNOWN;
     int handle = sceVideoOutOpen(0xff, 0, 0, NULL);
     ps5_logf("[ps5] HDR probe: VideoOut open=%#x\n", (unsigned)handle);
@@ -79,6 +81,62 @@ static SDL_Window g_window;
 static SDL_DisplayMode g_mode = {.displayID = 1, .pixel_density = 1};
 static atomic_bool g_window_made, g_quit;
 static _Atomic float g_hz;  // the display plane's refresh rate (0 until the surface is made)
+static int g_plane_w, g_plane_h;
+static int g_effective_output = VIDEO_OUTPUT_4K;
+
+int ps5_effective_output(void) { return g_effective_output; }
+
+void ps5_output_extent(int *width, int *height) {
+    *width = g_window.w;
+    *height = g_window.h;
+}
+
+static void ps5_output_finalize(void) {
+    g_effective_output = g_settings.output;
+    if (g_effective_output == VIDEO_OUTPUT_AUTO) {
+        struct sb_client broker = {-1, 0};
+        int mode = 0;
+        int rc = sb_connect(&broker);
+        if (!rc) rc = sb_get_video_mode(&broker, &mode);
+        sb_close(&broker);
+        if (rc) {
+            ps5_logf("[ps5] output: broker video mode read failed (%d), using 4K\n", rc);
+            g_effective_output = VIDEO_OUTPUT_4K;
+        } else {
+            g_effective_output = video_output_from_mode(mode);
+            if (mode != 0 && mode != 2 && mode != 6 && mode != 19)
+                ps5_logf("[ps5] output: unknown video mode %d, using 4K\n", mode);
+            else
+                ps5_logf("[ps5] output: system video mode %d\n", mode);
+        }
+    }
+    int width, height;
+    video_output_extent(g_effective_output, &width, &height);
+    if (g_plane_w != 3840 || g_plane_h != 2160) {
+        width = g_plane_w;
+        height = g_plane_h;
+    }
+    g_window.w = g_mode.w = width;
+    g_window.h = g_mode.h = height;
+    const char *settings = getenv("SAVAGEWIND_SETTINGS");
+    if (!settings || !*settings) settings = "savagewind.ini";
+    char path[2048];
+    if (!rt_data_path(settings, path, sizeof path)) return;
+    FILE *f = fopen(path, "r");
+    if (!f && errno != ENOENT) return;
+    unsigned present = video_defaults_present(f);
+    bool readable = !f || !ferror(f);
+    if (f) fclose(f);
+    if (!readable) return;
+    bool changed = video_defaults_apply(&g_settings, present, g_window.w, g_window.h,
+                                        (unsigned)g_mode.refresh_rate_numerator,
+                                        HDR_AUTO_DEFAULT ? g_hdr_capability : VIDEO_HDR_UNKNOWN);
+    if (changed) settings_save();
+    ps5_logf("[ps5] output: %dx%d; FG %d, upscaler %d, quality %d, HDR %d\n",
+             g_window.w, g_window.h, g_settings.frame_gen, g_settings.upscaler,
+             g_settings.upscale_quality, g_settings.hdr);
+}
+
 
 // ---- SDL video
 bool SDL_Init(uint32_t flags) {
@@ -245,36 +303,15 @@ bool SDL_Vulkan_CreateSurface(SDL_Window *window, VkInstance instance, const VkA
         return false;
     }
     float hz = mode->parameters.refreshRate / 1000.0f;
-    window->w = (int)mode->parameters.visibleRegion.width;
-    window->h = (int)mode->parameters.visibleRegion.height;
+    g_plane_w = window->w = (int)mode->parameters.visibleRegion.width;
+    g_plane_h = window->h = (int)mode->parameters.visibleRegion.height;
     g_mode.w = window->w;
     g_mode.h = window->h;
     g_mode.refresh_rate = hz;
     g_mode.refresh_rate_numerator = (int)mode->parameters.refreshRate;
     g_mode.refresh_rate_denominator = 1000;
     atomic_store(&g_hz, hz);
-    // Only fill missing choices once the actual output mode is known.
-    const char *settings = getenv("SAVAGEWIND_SETTINGS");
-    if (!settings || !*settings) settings = "savagewind.ini";
-    char path[2048];
-    if (rt_data_path(settings, path, sizeof path)) {
-        FILE *f = fopen(path, "r");
-        if (f || errno == ENOENT) {
-            unsigned present = video_defaults_present(f);
-            bool readable = !f || !ferror(f);
-            if (f) fclose(f);
-            if (readable) {
-                bool changed = video_defaults_apply(&g_settings, present, window->w, window->h,
-                                                    mode->parameters.refreshRate,
-                                                    HDR_AUTO_DEFAULT ? g_hdr_capability : VIDEO_HDR_UNKNOWN);
-                if (changed) settings_save();
-                ps5_logf("[ps5] first-launch video defaults: FG %d, upscaler %d, quality %d, HDR %s (%s)\n",
-                         g_settings.frame_gen, g_settings.upscaler, g_settings.upscale_quality,
-                         g_settings.hdr == HDR_ON ? "on" : g_settings.hdr == HDR_OFF ? "off" : "auto",
-                         present & VIDEO_HAS_HDR ? "saved choice" : "default");
-            }
-        }
-    }
+    ps5_output_finalize();
     long a3 = title_attribute3();
     ps5_logf("[ps5] VideoOut: chose mode %d: display plane surface %dx%d at %.3f Hz, present mode FIFO\n", best,
              window->w, window->h, hz);

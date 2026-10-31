@@ -17,11 +17,13 @@
 extern "C" {
 #include "dynamic_resolution.h"
 #include "../settings.h"
+#include "video_defaults.h"
 #include "../window_size.h"
 #include "../nvn/output_scale.h"
 #include "../nvn/hd_ui_generate.h"
 }
 extern "C" bool ps5_video_hdr_available(void);
+extern "C" int ps5_effective_output(void);
 
 namespace opts {
 namespace {
@@ -49,6 +51,29 @@ int sizes_offered(WinSize *out, const char **names) {
 }  // namespace
 
 void video_page(std::vector<Item> &v) {
+    static const int outputs[] = {VIDEO_OUTPUT_AUTO, VIDEO_OUTPUT_720P, VIDEO_OUTPUT_1080P,
+                                  VIDEO_OUTPUT_1440P, VIDEO_OUTPUT_4K};
+    static const char *const names[] = {"Auto", "720p", "1080p", "1440p", "4K"};
+    Item output = choice(P_VIDEO, "Output",
+                         "Auto follows the PS5 setting. Applies at the next start.",
+                         [](const Item &) { return 5; },
+                         [](const Item &, int x) -> const char * {
+                             if (x) return names[x];
+                             static char label[32];
+                             const char *effective = video_output_name(ps5_effective_output());
+                             snprintf(label, sizeof label, "Auto (%s)",
+                                      ps5_effective_output() == VIDEO_OUTPUT_4K ? "4K" : effective);
+                             return label;
+                         },
+                         [](const Item &) {
+                             for (int i = 0; i < 5; i++) if (outputs[i] == g_settings.output) return i;
+                             return 0;
+                         },
+                         [](const Item &, int x) {
+                             g_settings.output = outputs[x];
+                             settings_save();
+                         }, 0);
+    v.push_back(output);
     Item res = choice(P_VIDEO, "Resolution", "",
                       [](const Item &) { return 1 + sizes_offered(nullptr, nullptr); },
                       [](const Item &, int x) {

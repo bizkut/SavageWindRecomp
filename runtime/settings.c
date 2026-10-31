@@ -12,6 +12,7 @@
 #include "language.h"
 #ifdef __PROSPERO__
 #include "storage_ps5.h"
+#include "ps5/video_defaults.h"
 #include <ps5platform/libc.h>
 #endif
 
@@ -151,6 +152,8 @@ void settings_load(void) {
         }
         else if (!strcmp(key, "frame_generation")) g_settings.frame_gen = atoi(val) != 0;
 #ifdef __PROSPERO__
+        else if (!strcmp(key, "output"))
+            g_settings.output = video_output_parse(val);
         else if (!strcmp(key, "dynamic_resolution")) g_settings.dynamic_resolution = atoi(val) != 0;
         else if (!strcmp(key, "drs_fsr3")) g_settings.drs_fsr3 = atoi(val) != 0;
         else if (!strcmp(key, "drs_lean")) g_settings.drs_lean = atoi(val) != 0;
@@ -312,6 +315,7 @@ void settings_save(void) {
     fprintf(f, "sharpening = %d\n", g_settings.sharpening * 10);
     fprintf(f, "frame_generation = %d\n", g_settings.frame_gen ? 1 : 0);
 #ifdef __PROSPERO__
+    fprintf(f, "output = %s\n", video_output_name(g_settings.output));
     fprintf(f, "dynamic_resolution = %d\n", g_settings.dynamic_resolution ? 1 : 0);
     if (!g_settings.drs_fsr3) fprintf(f, "drs_fsr3 = 0\n");  // (A/B only: written while off)
     if (!g_settings.drs_lean) fprintf(f, "drs_lean = 0\n");

@@ -863,6 +863,8 @@ static VkFormat hdr_format;
 static VkImage hdr_sc_images[8];      // the swapchain's own images while g_hdr
 static VkImageView hdr_sc_views[8];
 static VmaAllocation hdr_mem[8];      // g_vk.sc_images' memory while g_hdr
+static bool g_output_scaled;           // draw into a smaller image, then scale into the scanout
+static VkExtent2D g_scanout_extent;
 static uint32_t hdr_count;
 static VkDescriptorSetLayout hdr_dsl;
 static VkPipelineLayout hdr_layout;
@@ -892,10 +894,10 @@ static const char k_hdr_vs[] =
 static const char k_hdr_fs[] =
     "#version 450\n"
     "layout(set = 0, binding = 0) uniform sampler2D src;\n"
-    "layout(push_constant) uniform P { float white; float srgb; } pc;\n"
+    "layout(push_constant) uniform P { float white; float srgb; float scale; } pc;\n"
     "layout(location = 0) out vec4 o;\n"
     "void main() {\n"
-    "    vec3 c = clamp(texelFetch(src, ivec2(gl_FragCoord.xy), 0).rgb, 0.0, 1.0);\n"
+    "    vec3 c = clamp(texelFetch(src, ivec2(gl_FragCoord.xy * pc.scale), 0).rgb, 0.0, 1.0);\n"
     "    vec3 l = pc.srgb > 0.5 ? mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)) : pow(c, vec3(2.2));\n"
     "    const mat3 to2020 = mat3(0.6274, 0.0691, 0.0164, 0.3293, 0.9195, 0.0880, 0.0433, 0.0114, 0.8956);\n"
     "    vec3 y = pow(clamp(to2020 * l * (pc.white / 10000.0), 0.0, 1.0), vec3(0.1593017578125));\n"
@@ -910,7 +912,7 @@ static bool hdr_pipeline(VkFormat fmt) {
         VkDescriptorSetLayoutCreateInfo di = {.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, .bindingCount = 1,
                                               .pBindings = &b};
         VK_CHECK(vkCreateDescriptorSetLayout(g_vk.dev, &di, NULL, &hdr_dsl));
-        VkPushConstantRange pr = {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 8};
+        VkPushConstantRange pr = {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 12};
         VkPipelineLayoutCreateInfo li = {.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, .setLayoutCount = 1,
                                          .pSetLayouts = &hdr_dsl, .pushConstantRangeCount = 1, .pPushConstantRanges = &pr};
         VK_CHECK(vkCreatePipelineLayout(g_vk.dev, &li, NULL, &hdr_layout));
@@ -971,7 +973,7 @@ static void hdr_make_images(uint32_t n, VkExtent2D ext) {
     for (uint32_t i = 0; i < n; i++) {
         hdr_sc_images[i] = g_vk.sc_images[i];  // (the swapchain's)
         VkImageViewCreateInfo vi = {.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, .image = hdr_sc_images[i],
-                                    .viewType = VK_IMAGE_VIEW_TYPE_2D, .format = hdr_format,
+                                    .viewType = VK_IMAGE_VIEW_TYPE_2D, .format = g_hdr ? hdr_format : g_vk.sc_format,
                                     .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
         VK_CHECK(vkCreateImageView(g_vk.dev, &vi, NULL, &hdr_sc_views[i]));
         VkImageCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, .imageType = VK_IMAGE_TYPE_2D,
@@ -1051,12 +1053,25 @@ static void create_swapchain(void) {
     hdr_release();
     if (old) vkDestroySwapchainKHR(g_vk.dev, old, NULL);
     g_vk.sc_format = draw.format;
+    g_scanout_extent = ext;
     g_vk.sc_extent = ext;
+#ifdef __PROSPERO__
+    int output_w, output_h;
+    extern void ps5_output_extent(int *width, int *height);
+    ps5_output_extent(&output_w, &output_h);
+    g_output_scaled = ext.width == 3840 && ext.height == 2160 &&
+                      (output_w != 3840 || output_h != 2160);
+    if (g_output_scaled) g_vk.sc_extent = (VkExtent2D){(uint32_t)output_w, (uint32_t)output_h};
+#else
+    g_output_scaled = false;
+#endif
     g_vk.sc_mode = wanted_present_mode();  // (what was asked: a change of Video > VSync makes it again)
     g_vk.sc_count = 8;
     vkGetSwapchainImagesKHR(g_vk.dev, g_vk.swapchain, &g_vk.sc_count, g_vk.sc_images);
     g_hdr = hdr_found;
-    if (g_hdr) hdr_make_images(g_vk.sc_count, ext);
+    if (g_hdr || g_output_scaled) hdr_make_images(g_vk.sc_count, g_vk.sc_extent);
+    if (g_output_scaled) LOG("[ps5] tv: render %ux%u, upscale to scanout %ux%u\n",
+                             g_vk.sc_extent.width, g_vk.sc_extent.height, ext.width, ext.height);
     for (uint32_t i = 0; i < g_vk.sc_count; i++) {
         VkImageViewCreateInfo vi = {.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, .image = g_vk.sc_images[i],
                                     .viewType = VK_IMAGE_VIEW_TYPE_2D, .format = draw.format,
@@ -1474,18 +1489,18 @@ static void hdr_write(VkCommandBuffer cb, uint32_t i) {
     VkRenderingAttachmentInfo ca = {.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, .imageView = hdr_sc_views[i],
                                     .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                                     .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .storeOp = VK_ATTACHMENT_STORE_OP_STORE};
-    VkRenderingInfo ri = {.sType = VK_STRUCTURE_TYPE_RENDERING_INFO, .renderArea = {{0, 0}, g_vk.sc_extent}, .layerCount = 1,
-                          .colorAttachmentCount = 1, .pColorAttachments = &ca};
+    VkRenderingInfo ri = {.sType = VK_STRUCTURE_TYPE_RENDERING_INFO, .renderArea = {{0, 0}, g_scanout_extent},
+                          .layerCount = 1, .colorAttachmentCount = 1, .pColorAttachments = &ca};
     rec_CmdBeginRendering(cb, &ri);
-    VkViewport vp = {0, 0, (float)g_vk.sc_extent.width, (float)g_vk.sc_extent.height, 0, 1};
-    VkRect2D sc = {{0, 0}, g_vk.sc_extent};
+    VkViewport vp = {0, 0, (float)g_scanout_extent.width, (float)g_scanout_extent.height, 0, 1};
+    VkRect2D sc = {{0, 0}, g_scanout_extent};
     rec_CmdSetViewport(cb, 0, 1, &vp);
     rec_CmdSetScissor(cb, 0, 1, &sc);
     rec_CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, hdr_pipe);
     rec_CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, hdr_layout, 0, 1, &hdr_sets[i], 0, NULL);
     static int srgb = -1;
     if (srgb < 0) srgb = getenv("SAVAGEWIND_HDR_SRGB") != NULL;
-    float pc[2] = {g_hdr_white, (float)srgb};
+    float pc[3] = {g_hdr_white, (float)srgb, g_output_scaled ? 0.5f : 1.0f};
     rec_CmdPushConstants(cb, hdr_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof pc, pc);
     rec_CmdDraw(cb, 3, 1, 0, 0);
     rec_CmdEndRendering(cb);
@@ -1681,7 +1696,19 @@ void vk_frame_end(const char *shot_path) {
     // Captures read the SDR intermediate before HDR encoding, so PNGs remain SDR-viewable.
     if (shot_path || capture) save_window_image(cb, &shot);
     if (g_hdr) hdr_write(cb, cur_frame.image);
-    else image_barrier(cb, g_vk.sc_images[cur_frame.image], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    else if (g_output_scaled) {
+        VkImageBlit bl = {.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
+                          .srcOffsets = {{0, 0, 0}, {(int32_t)g_vk.sc_extent.width, (int32_t)g_vk.sc_extent.height, 1}},
+                          .dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
+                          .dstOffsets = {{0, 0, 0}, {(int32_t)g_scanout_extent.width, (int32_t)g_scanout_extent.height, 1}}};
+        image_barrier(cb, g_vk.sc_images[cur_frame.image], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                      VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        image_barrier(cb, hdr_sc_images[cur_frame.image], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        rec_CmdBlitImage(cb, g_vk.sc_images[cur_frame.image], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                         hdr_sc_images[cur_frame.image], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bl, VK_FILTER_NEAREST);
+        image_barrier(cb, hdr_sc_images[cur_frame.image], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    } else image_barrier(cb, g_vk.sc_images[cur_frame.image], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                         VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     uint32_t img = cur_frame.image;
     if (!done_sem[img]) done_sem[img] = binary_semaphore();
     uint64_t seq = vk_pending_seq();
@@ -2495,6 +2522,7 @@ static void quick_exit_handler(void) {
     plat_terminate();
 #endif
 }
+
 
 void ui_window_init(void) {
     if (window) return;

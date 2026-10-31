@@ -16,6 +16,10 @@ The PS5 title reads your own Switch game packages and keys on your console, decr
 3. Put your own base package, 1.9.0 update, optional DLC, `prod.keys`, and, if needed, `title.keys` in `/data/savagewind/import/`. Keep these inputs there: the title reads them on subsequent starts too.
 4. Start Savage Wind from the PS5 home screen. The first start builds game code on the console, prepares shaders and generates home art and UI data. A progress screen shows the work. Allow roughly 11 minutes; time varies. Later starts are roughly 20 seconds with a warm cache.
 
+Output follows **Settings > Screen and Video > Video Output > Resolution** by default. Automatic and 2160p use 4K;
+720p, 1080p and 1440p use their corresponding output sizes. Video > Output overrides this for the next start.
+In `savagewind.ini`, `output` may be `auto`, `720p`, `1080p`, `1440p` or `4k`.
+
 The home-screen icon and backgrounds are generated from your own game files and installed through the broker. The tile may not refresh until the console restarts. A custom `/data/savagewind/splash.jpg`, `.jpeg` or `.png` takes precedence over the generated splash. Set `home_art = 0` in `/data/savagewind/savagewind.ini` to restore the included neutral icon, remove the generated backgrounds and splash, and use the system background.
 
 ## Settings and storage
