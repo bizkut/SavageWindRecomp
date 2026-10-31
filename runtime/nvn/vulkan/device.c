@@ -1835,6 +1835,10 @@ static void progress_text(VkCommandBuffer cb, const char *const *lines, int32_t 
     vk_frame_resume();
 }
 
+#ifdef __PROSPERO__
+static void ps5_hide_system_splash(void);
+#endif
+
 void vk_present_progress(float done, const char *const *lines) {
     static const float black[4] = {0, 0, 0, 1};
     if (!vk_frame_begin(black)) return;
@@ -1857,6 +1861,11 @@ void vk_present_progress(float done, const char *const *lines) {
     bool save = !shot && done > 0.25f && getenv("SAVAGEWIND_PSO_SLOW_MS");
     if (save) { shot = 1; mkdir("build", 0755); }
     vk_frame_end(save ? "build/pso_wait.png" : NULL);
+#ifdef __PROSPERO__
+    // Progress screens (game-code build, home art, errors) can run for minutes before the game's first frame: without
+    // this the PS5 launch picture stays over them and the title looks frozen.
+    ps5_hide_system_splash();
+#endif
 }
 
 #ifdef __PROSPERO__
