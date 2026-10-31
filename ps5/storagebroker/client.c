@@ -5,6 +5,7 @@
 #include <limits.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <poll.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -28,6 +29,25 @@ void sb_close(struct sb_client *c)
     if (c) { c->fd = -1; c->server_version = 0; }
 }
 
+// A v10+ broker checks its data folder on every accepted connection, before serving it, and writes a new token into
+// a replaced or recreated folder. A client that finds no token connects once and closes its side; the broker's
+// end-of-hello drop (after the check) tells it the token is there.
+static void wake_broker(void)
+{
+    struct sockaddr_in addr = {0};
+    char byte;
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) return;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(SB_PORT);
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (!connect(fd, (struct sockaddr *)&addr, sizeof(addr)) && !shutdown(fd, SHUT_WR)) {
+        struct pollfd p = {fd, POLLIN, 0};
+        if (poll(&p, 1, 2000) > 0) (void)recv(fd, &byte, 1, 0);
+    }
+    close(fd);
+}
+
 int sb_connect_version(struct sb_client *c, uint32_t version)
 {
     struct sb_hello hello = { SB_MAGIC, version, {0} };
@@ -37,6 +57,10 @@ int sb_connect_version(struct sb_client *c, uint32_t version)
     int fd, one = 1, rc;
     if (!c || !version || c->fd != -1) return -EINVAL;
     fd = open(SB_ROOT "/" SB_TOKEN_NAME, O_RDONLY | O_NOFOLLOW);
+    if (fd < 0 && errno == ENOENT) {
+        wake_broker();
+        fd = open(SB_ROOT "/" SB_TOKEN_NAME, O_RDONLY | O_NOFOLLOW);
+    }
     if (fd < 0) return -errno;
     while (done < sizeof(hello.token)) {
         ssize_t n = read(fd, hello.token + done, sizeof(hello.token) - done);

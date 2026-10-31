@@ -249,10 +249,11 @@ static void test_root_refresh(void)
     unsigned char old_token[SB_TOKEN_BYTES], new_token[SB_TOKEN_BYTES];
     struct sb_client client = {-1, 0};
     struct stat st;
+    // The title only calls sb_connect: it must find the running broker after the folder was replaced or deleted.
     check(read_token(old_token) == 0 && rename(SB_ROOT, SB_ROOT "-old") == 0 &&
-          mkdir(SB_ROOT, 0777) == 0 && wake_broker() == 0 &&
+          mkdir(SB_ROOT, 0777) == 0 && sb_connect(&client) == 0 &&
           read_token(new_token) == 0 && memcmp(old_token, new_token, sizeof(old_token)) != 0 &&
-          sb_connect(&client) == 0 && sb_create(&client, "new-root") == 0 &&
+          sb_create(&client, "new-root") == 0 &&
           access(SB_ROOT "/new-root", F_OK) == 0 && access(SB_ROOT "-old/new-root", F_OK) != 0,
           "replaced root gets a fresh token and serves new folder");
     sb_close(&client);
