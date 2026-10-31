@@ -8,6 +8,7 @@
 #include "../paths.h"
 #include "../settings.h"
 #include "../storage_ps5.h"
+#include "fd_census.h"
 #include "home_art_gate.h"
 #include "home_art_ps5.h"
 #include <errno.h>
@@ -18,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/resource.h>
 #include <unistd.h>
 
 int sceSystemServiceLoadExec(const char *path, const char *const *argv);
@@ -27,6 +29,52 @@ uint64_t g_program_id;
 static uint64_t startup_ns;
 void ps5_startup_mark(const char *step) {
     LOG("[startup] %llu ms: %s\n", (unsigned long long)((plat_now_ns() - startup_ns) / 1000000), step);
+}
+
+void ps5_fd_census(const char *reason) {
+    struct rlimit limit;
+    if (getrlimit(RLIMIT_NOFILE, &limit)) {
+        LOG("[fs] fd census %s: getrlimit failed: %s\n", reason, strerror(errno));
+        return;
+    }
+    // Existing descriptors can be above the current soft limit after it is lowered.
+    // Bound an infinite or unusually large hard limit, and report the bound explicitly.
+    const rlim_t scan_max = 65536;
+    int end = (int)(limit.rlim_max < scan_max ? limit.rlim_max : scan_max);
+    struct fd_census count = fd_census_scan(end);
+    LOG("[fs] open fds: %u (%s; scanned %d)\n",
+        count.regular + count.directories + count.sockets + count.other, reason, end);
+    LOG("[fs] fd types: regular %u directory %u socket %u other %u\n",
+        count.regular, count.directories, count.sockets, count.other);
+    LOG("[fs] fd limit at census: soft %llu hard %llu\n",
+        (unsigned long long)limit.rlim_cur, (unsigned long long)limit.rlim_max);
+}
+
+static void *fd_monitor(void *unused) {
+    (void)unused;
+    for (;;) {
+        sleep(60);
+        ps5_fd_census("periodic");
+    }
+    return NULL;
+}
+
+static void fd_monitor_start(void) {
+    struct rlimit limit;
+    if (getrlimit(RLIMIT_NOFILE, &limit)) {
+        LOG("[fs] getrlimit(RLIMIT_NOFILE) failed: %s\n", strerror(errno));
+    } else {
+        rlim_t old = limit.rlim_cur;
+        limit.rlim_cur = limit.rlim_max;
+        int rc = setrlimit(RLIMIT_NOFILE, &limit);
+        LOG("[fs] fd limit soft %llu hard %llu; raise: %s\n",
+            (unsigned long long)old, (unsigned long long)limit.rlim_max, rc ? strerror(errno) : "ok");
+    }
+    ps5_fd_census("startup");
+    pthread_t thread;
+    int rc = pthread_create(&thread, NULL, fd_monitor, NULL);
+    if (rc) LOG("[fs] fd monitor unavailable: %s\n", strerror(rc));
+    else pthread_detach(thread);
 }
 
 static void exit_title(void) {
@@ -444,6 +492,7 @@ int main(void) {
         fprintf(stderr, "cannot reserve guest address space\n");
         exit_title();
     }
+    fd_monitor_start();
     // RADV's own shader cache is off (by default a database in /app0/radv-shader-cache, radv_ps5_platform.c): the
     // title keeps the driver's compiled shaders itself (cache/vk_pipelines.bin, vk_precompiled.bin, through the
     // broker), and the database wrote every new shader again with direct title writes (two flushed writes each,

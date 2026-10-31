@@ -839,6 +839,14 @@ release ZIP's no-game-content check still passes.
 - Game-code compilation: .39 crashed because an mmap-backed Clang header had a nonzero page tail. The VFS now
   requests volatile, NUL-terminated buffers. Fresh-start .39 and regression .41 qualification remain open.
 
+- Browsing the Album/Compendium pictures crashed: `[fs] open failed: /pict_book/Enemy_Moriblin_Dark.jpg (Too many
+  open files)`, then the game's abort in `nn::fs::OpenFile`. The FS service opened a host descriptor for every
+  `IFile`/`IDirectory` and never closed it. They now close when IPC releases the last reference. As in ps5-wow
+  (Wine raises the soft `RLIMIT_NOFILE` to the hard limit and logs an fd census on EMFILE), the title raises the soft
+  limit, logs the limit and an fd census at start-up and every minute, and a census on EMFILE; failed opens are
+  logged. Host: 1,024 open/release cycles under a 64-descriptor limit with no growth. .41: the fixed fd census
+  reported 13 descriptors at start; browsing the pictures was checked after the fix.
+
 ### After M11 (optional) — Community texture packs
 High-resolution texture packs dropped into the existing overlay folder (`runtime/services/fs.c`); never shipped by
 the project. **Done when:** one pack loads, with GPU/flexible memory and load-time cost logged against the M6

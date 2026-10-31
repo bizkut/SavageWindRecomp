@@ -11,7 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <zlib.h>
-#include <SDL3/SDL_timer.h>
+#include <SDL3/SDL.h>  // (timer, and gamepad buttons for the action-prompt layout; the PS5 shim provides it too)
 
 #include "../benchmark.h"
 #include "../game_sites.h"
@@ -1262,6 +1262,21 @@ bool test_warp_active(void);
 void test_warp_patch(uint8_t *data, uint64_t size);
 typedef struct { DIR *d; char path[1024]; int mode; } HostDir;
 
+static void host_file_close(Service *s) {
+    HostFile *f = s->state;
+    close(f->fd);
+    free(f->patched);
+    free(f);
+    s->state = NULL;
+}
+
+static void host_dir_close(Service *s) {
+    HostDir *d = s->state;
+    closedir(d->d);
+    free(d);
+    s->state = NULL;
+}
+
 static const char *in_path(IpcReq *req, int i) {
     if (i < req->nx) return (const char *)(uintptr_t)req->x[i].addr;
     if (i < req->na) return (const char *)(uintptr_t)req->a[i].addr;
@@ -1293,6 +1308,15 @@ static DIR *data_opendir(const char *path) {
     if (!rt_data_path(path, host, sizeof host)) { errno = ENAMETOOLONG; return NULL; }
     return opendir(host);
 }
+
+#ifdef __PROSPERO__
+static void report_fd_exhaustion(int error) {
+    static int reported;
+    if (error != EMFILE || __atomic_exchange_n(&reported, 1, __ATOMIC_RELAXED)) return;
+    extern void ps5_fd_census(const char *reason);
+    ps5_fd_census("EMFILE");
+}
+#endif
 
 static uint32_t errno_result(void) {
     if (errno == ENOENT || errno == ENOTDIR) return FS_PATH_NOT_FOUND;
@@ -1489,7 +1513,15 @@ static void filesystem(Service *s, IpcReq *req, IpcResp *resp) {
 #else
         int fd = data_open(p, (mode & 2) ? O_RDWR : O_RDONLY);
 #endif
-        if (fd < 0) { resp->result = errno_result(); break; }
+        if (fd < 0) {
+            int error = errno;
+            resp->result = errno_result();
+            LOG("[fs] open failed: %s (%s)\n", in_path(req, 0), strerror(error));
+#ifdef __PROSPERO__
+            report_fd_exhaustion(error);
+#endif
+            break;
+        }
         HostFile *f = calloc(1, sizeof *f);
         f->fd = fd;
         strlcpy(f->path, p, sizeof f->path);
@@ -1505,17 +1537,29 @@ static void filesystem(Service *s, IpcReq *req, IpcResp *resp) {
                 f->patched = NULL;
             }
         }
-        ipc_return_object(resp, service_new("IFile", file, f));
+        Service *opened = service_new("IFile", file, f);
+        opened->on_close = host_file_close;
+        ipc_return_object(resp, opened);
         break;
     }
     case 9: {  // OpenDirectory(mode)
         DIR *d = data_opendir(p);
-        if (!d) { resp->result = errno_result(); break; }
+        if (!d) {
+            int error = errno;
+            resp->result = errno_result();
+            LOG("[fs] open failed: %s (%s)\n", in_path(req, 0), strerror(error));
+#ifdef __PROSPERO__
+            report_fd_exhaustion(error);
+#endif
+            break;
+        }
         HostDir *hd = calloc(1, sizeof *hd);
         hd->d = d;
         hd->mode = (int)IN(uint32_t, 0);
         snprintf(hd->path, sizeof hd->path, "%s", p);
-        ipc_return_object(resp, service_new("IDirectory", directory, hd));
+        Service *opened = service_new("IDirectory", directory, hd);
+        opened->on_close = host_dir_close;
+        ipc_return_object(resp, opened);
         break;
     }
     case 10: break;  // Commit
