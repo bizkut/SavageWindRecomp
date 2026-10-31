@@ -1,44 +1,47 @@
 #!/usr/bin/env bash
-# Savage Wind PS5 - the FFmpeg the title's movies link (runtime/hle/movie.c, plan D9): pacbrew's ps5-payload-ffmpeg
-# package as installed in the payload SDK's homebrew prefix, used read-only and never built here.
+# Build the title's FFmpeg from pinned upstream source with the pinned payload SDK.
 # SPDX-License-Identifier: GPL-3.0-or-later
-#
-# Refuses a mismatch with ps5/deps.lock: the pacbrew-repo checkout must be at the pinned revision; each package whose
-# archives are linked (FFmpeg and the libraries its archives name: OpenSSL, bzip2, xz, libiconv) must be installed at
-# that revision's recipe version; and the archives must have the pinned digest (pacbrew-ffmpeg: SHA-256 of their
-# sha256sum listing, in the order below). zlib is RADV's (build-game.sh), not pacbrew's.
-# Prints the prefix, then the archives in link order, one per line.
+# Prints the installation prefix and its static archives, one per line.
 set -euo pipefail
-
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 lock="$root/ps5/deps.lock"
-read -r repo_rel revision < <(awk '$1 == "pacbrew-repo" { print $2 " " $NF }' "$lock")
-read -r prefix digest < <(awk '$1 == "pacbrew-ffmpeg" { print $2 " " $NF }' "$lock")
-repo="$root/$repo_rel"
-pacman_db=${PS5_PACMAN_DB:-/var/lib/pacman/local}
-
-head=$(git -C "$repo" rev-parse HEAD 2>/dev/null) || { echo "no pacbrew-repo checkout at $repo" >&2; exit 2; }
-[[ $head == "$revision" ]] || { echo "$repo is at $head, ps5/deps.lock pins $revision" >&2; exit 2; }
-
-# recipe directory:archives it provides
-packages=(ffmpeg:"libavformat.a libavcodec.a libswscale.a libswresample.a libavutil.a"
-    openssl:"libssl.a libcrypto.a" bzip2:libbz2.a xz:liblzma.a libiconv:libiconv.a)
-archives=()
-for entry in "${packages[@]}"; do
-    recipe=${entry%%:*}
-    pkgbuild=$(git -C "$repo" show "$revision:$recipe/PKGBUILD")
-    name=$(sed -n 's/^pkgname=//p' <<<"$pkgbuild")
-    version=$(sed -n 's/^pkgver=//p' <<<"$pkgbuild")-$(sed -n 's/^pkgrel=//p' <<<"$pkgbuild")
-    [[ -f $pacman_db/$name-$version/desc ]] || {
-        echo "pacbrew package $name $version (recipe $recipe/PKGBUILD at $revision) is not installed" >&2
-        exit 2
-    }
-    for archive in ${entry#*:}; do archives+=("$prefix/lib/$archive"); done
-done
-actual=$(cd "$prefix/lib" && sha256sum "${archives[@]##*/}" | sha256sum | cut -d' ' -f1)
-[[ "sha256:$actual" == "$digest" ]] || {
-    echo "FFmpeg archives in $prefix/lib (sha256:$actual) do not match ps5/deps.lock ($digest)" >&2
-    exit 2
+sdk=$(bash "$root/ps5/tools/setup-deps.sh")
+export PS5_PAYLOAD_SDK="$sdk"
+read -r url pin < <(awk '$1 == "ffmpeg-source" { print $2, $3 }' "$lock")
+[[ -n $url && $pin == sha256:* ]] || { echo 'missing FFmpeg source pin' >&2; exit 2; }
+cache="$root/.deps/ps5"
+archive="$cache/downloads/ffmpeg-7.0.1.tar.xz"
+prefix="$cache/ffmpeg"
+build="$cache/ffmpeg-build"
+mkdir -p "$cache"
+exec 9>"$cache/ffmpeg.lock"
+flock 9
+mkdir -p "$(dirname "$archive")"
+if [[ ! -f $archive ]]; then
+    curl -fL --retry 3 -o "$archive.tmp" "$url" >&2
+    mv "$archive.tmp" "$archive"
+fi
+[[ "sha256:$(sha256sum "$archive" | cut -d' ' -f1)" == "$pin" ]] || {
+    echo "FFmpeg source digest mismatch: $archive" >&2; exit 2;
 }
-[[ -f $prefix/include/libavformat/avformat.h ]] || { echo "missing FFmpeg headers in $prefix/include" >&2; exit 2; }
-printf '%s\n' "$prefix" "${archives[@]}"
+# Changing the recipe or SDK revision invalidates the build, including after an interrupted install.
+key=$( { sha256sum "$0"; printf '%s\n' "$pin"; cat "$sdk/.ps5-sdk-revision"; } | sha256sum | cut -d' ' -f1)
+if [[ ! -f $prefix/.build-key || $(<"$prefix/.build-key") != "$key" ]]; then
+    rm -rf -- "$build" "$prefix"
+    mkdir -p "$build/src" "$build/obj" "$prefix"
+    tar -xJf "$archive" --strip-components=1 -C "$build/src"
+    (
+        cd "$build/obj"
+        "$build/src/configure" --prefix="$prefix" --enable-cross-compile --arch=x86_64 --target-os=freebsd \
+            --cc="$sdk/bin/prospero-clang" --cxx="$sdk/bin/prospero-clang++" --nm="$sdk/bin/prospero-nm" \
+            --strip="$sdk/bin/prospero-strip" --ar="$sdk/bin/prospero-ar" --ranlib="$sdk/bin/prospero-ranlib" \
+            --enable-static --disable-shared --enable-version3 --disable-autodetect --disable-network \
+            --disable-programs --disable-doc --disable-debug --disable-avdevice --disable-avfilter \
+            --disable-postproc >&2
+        make -j"${PS5_FFMPEG_JOBS:-4}" >&2
+        make install >&2
+    )
+    printf '%s\n' "$key" > "$prefix/.build-key"
+fi
+printf '%s\n' "$prefix" "$prefix/lib/libavformat.a" "$prefix/lib/libavcodec.a" \
+    "$prefix/lib/libswscale.a" "$prefix/lib/libswresample.a" "$prefix/lib/libavutil.a"

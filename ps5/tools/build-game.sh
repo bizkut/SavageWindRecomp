@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the user's generated 1.9.0 game code into the PS5 title: runtime, NVN renderer on RADV (VideoOut display
 # plane, runtime/ps5/window.c), the input devices (runtime/ps5/input.c), audio on SceAudioOut (runtime/ps5/audio.c),
-# movies on pacbrew's FFmpeg (runtime/hle/movie.c), shaderc, package library, and frame generation on PS5_MihawkGen
+# movies on a source-built FFmpeg (runtime/hle/movie.c), shaderc, package library, and frame generation on PS5_MihawkGen
 # (runtime/nvn/vulkan/mihawk.cpp, GPL-3.0-or-later: plan D7/D10).
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
@@ -49,9 +49,11 @@ mapfile -t hdui < <(bash ps5/tools/setup-hd-ui.sh)
 bc7=${hdui[0]}
 model=${hdui[1]}
 export PS5_NCNN_SRC="$ncnn/src"
-# pacbrew's FFmpeg (pinned in ps5/deps.lock, read-only): the prefix, then its archives (and theirs) in link order
+# Source-built FFmpeg: the prefix, then its archives in link order.
 mapfile -t ffmpeg < <(bash ps5/tools/setup-ffmpeg.sh)
 [[ ${#ffmpeg[@]} -gt 1 ]] || { echo "ps5/tools/setup-ffmpeg.sh failed" >&2; exit 1; }
+# Open Sans is rendered from outlines; FreeType's optional compression and PNG integrations are disabled.
+fonts=$(bash ps5/tools/setup-fontlibs.sh)
 opensans=$(bash ps5/tools/setup-opensans.sh)
 
 # PS5_MihawkGen (pinned in ps5/deps.lock): its framegen/ library, licence and weights, exported from the pinned
@@ -90,7 +92,7 @@ export PS5_RADV_ARCHIVE="$radv/libvulkan_radeon.ps5.a"
 export PS5_CFLAGS="-fexceptions -Iruntime -Iruntime/nvn -Iruntime/ps5/include -Ithird_party -I$radv/include \
 -I$shaderc/include -I$bc7 -I$ns -I$ns/libmbedtls/include \
 -isystem third_party/stb -I$gen/inc -Ithird_party/smaa/Textures -I$zlib -isystem ${ffmpeg[0]}/include \
--isystem ${ffmpeg[0]}/include/freetype2 \
+-isystem $fonts/include -isystem $fonts/include/freetype2 \
 -I$mh -I$mh/framegen/include -I$ffx/sdk/include -I$ffx/sdk/include/FidelityFX/gpu \
 -I$ffx/sdk/src/components -I$ffx/sdk/src/shared -I$ffx/sdk/src/backends/shared -I$ffx/spirv \
 -DSW_FSR3=1 -DROMFS_PACKAGE -DTRANSLATOR_ID=\"$translator_id\" -DSPIRV_ID=\"$spirv_id\" \
@@ -124,7 +126,12 @@ console_libs=
 if [[ $variant == console ]]; then
     console_libs="$root/build/ps5/capstone/libcapstone.a $llvm_target/lib/*.a"
 fi
-export PS5_LINK_INPUTS="--gc-sections --wrap=exit --wrap=_exit --wrap=_Exit --wrap=quick_exit --wrap=abort --wrap=sceSystemServiceLoadExec --wrap=ps5_heap_malloc --wrap=ps5_heap_calloc --wrap=ps5_heap_memalign --wrap=ps5_heap_free --start-group $game $console_libs $package/libsavagewind-package.a $ncnn/build/src/libncnn.a $ns/libpietendo/bin/linux/libpietendo.a $ns/libtoolchain/bin/linux/libtoolchain.a $ns/libfmt/bin/linux/libfmt.a $ns/liblz4/bin/linux/liblz4.a $ns/libmbedtls/bin/linux/libmbedtls.a $shaderc/lib/libshaderc_combined.a ${ffmpeg[*]:1} ${ffmpeg[0]}/lib/libfreetype.a ${ffmpeg[0]}/lib/libpng.a --end-group"
+export PS5_LINK_INPUTS="--gc-sections --wrap=exit --wrap=_exit --wrap=_Exit --wrap=quick_exit --wrap=abort \
+--wrap=sceSystemServiceLoadExec --wrap=ps5_heap_malloc --wrap=ps5_heap_calloc --wrap=ps5_heap_memalign \
+--wrap=ps5_heap_free --start-group $game $console_libs $package/libsavagewind-package.a \
+$ncnn/build/src/libncnn.a $ns/libpietendo/bin/linux/libpietendo.a $ns/libtoolchain/bin/linux/libtoolchain.a \
+$ns/libfmt/bin/linux/libfmt.a $ns/liblz4/bin/linux/liblz4.a $ns/libmbedtls/bin/linux/libmbedtls.a \
+$shaderc/lib/libshaderc_combined.a ${ffmpeg[*]:1} $fonts/lib/libfreetype.a --end-group"
 app=$(bash ps5/tools/build-title.sh "$title_name" \
     "${console_sources[@]}" runtime/platform/main_ps5.c runtime/platform/s7_ps5.c runtime/platform/ps5.c runtime/platform/gamelib_ps5.c \
     runtime/platform/exefs_ps5.c runtime/platform/home_art_ps5.cpp runtime/ps5/sdl_shim.c runtime/ps5/log.c runtime/ps5/unavailable.c runtime/ps5/diagnostics.cpp \
@@ -154,10 +161,8 @@ cp third_party/fonts/FiraSans/OFL.txt "$app/FiraSans-OFL.txt"
 mkdir -p "$app/fonts" "$app/notices"
 cp "$opensans" "$app/fonts/OpenSans.ttf"
 cp ps5/release/notices/OPENSANS.txt "$app/notices/OPENSANS.txt"
-# FreeType 2.13.2 (FTL) and libpng 1.6.43 are linked for the bundled font; their notices (the same upstream
-# versions' Debian copyright files, ps5/release/notices) ship with the title
+# FreeType's upstream licence and required attribution ship with the title.
 cp ps5/release/notices/FREETYPE.txt "$app/notices/FREETYPE.txt"
-cp ps5/release/notices/LIBPNG.txt "$app/notices/LIBPNG.txt"
 # MihawkGen's weights (runtime/nvn/vulkan/mihawk.cpp reads /app0/network.fgw), its licence and third-party notices
 cp "$mh/framegen/models/network.fgw" "$app/network.fgw"
 cp "$mh/LICENSE.md" "$app/MihawkGen-LICENSE.md"

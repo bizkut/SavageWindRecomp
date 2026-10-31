@@ -8,11 +8,12 @@ opensans-font         fonts/variable/OpenSans[wdth,wght].ttf           sha256:36
 nstool2              ../nstool2                                      7e0a49b61ae98b730900709e3ac5ba1945c1906e
 radv-archive          .deps/ps5/radv/libvulkan_radeon.ps5.a           sha256:9d12cff020676c3533f25842827f768b71fea4de4d32d68105523efbc1476929
 # ^ PS5_Mesa f10c4bac9b + ps5-wow patches 0001 HDR10/immediate, 0002 cache DB, 0003 VRR (Forever build cache, 2026-10-23)
-pacbrew-repo          ../forever/pacbrew-repo (ffmpeg/ for M5 movies)  2e3eaf9c5fda03535d0b5e5c3f807a38acdac452
-pacbrew-ffmpeg        /opt/ps5-payload-sdk/target/user/homebrew       sha256:cbd2373f1d2b9457540538bf8529e3fc883783d11bba0ae50fff41102225f41a
-# ^ the installed pacbrew packages (absolute prefix): ps5-payload-ffmpeg 7.0.1-1, openssl 3.5.2-1, bzip2 1.0.8-1, xz 5.4.6-1,
-#   libiconv 1.17-1; SHA-256 of the archives' sha256sum listing (ps5/tools/setup-ffmpeg.sh). This FFmpeg was configured
-#   LGPL-3 (--enable-version3 --enable-openssl), without the recipe's --enable-gpl --enable-libx264 (an encoder only).
+ffmpeg-source         https://ffmpeg.org/releases/ffmpeg-7.0.1.tar.xz  sha256:bce9eeb0f17ef8982390b1f37711a61b4290dc8c2a0c1a37b5857e85bfb0e4ff
+# FFmpeg is built from the unpatched upstream archive by ps5/tools/setup-ffmpeg.sh using the pinned SDK.
+# External FFmpeg integrations and network protocols are disabled; the title reads local movie files.
+freetype-source       https://download.savannah.gnu.org/releases/freetype/freetype-2.13.2.tar.xz
+freetype-sha256       12991c4e55c506dd7f9b765933e62fd2be2e06d421505d7950a132e4f1bb484d
+# FreeType uses its bundled zlib, without external zlib, bzip2, libpng, harfbuzz or brotli.
 mihawkgen             ../PS5_MihawkGen (framegen/, git archive)        c57232a9f16bcb6df5fe07c9bb631518f2b1cc0e
 mihawkgen-network     framegen/models/network.fgw of that revision     sha256:31ecc7d69af1e9defd62b9abad71bc3430cd8a0a4d2f4eafcabaafa48c34bf6b
 # ^ M7 frame generation (runtime/nvn/vulkan/mihawk.cpp, plan D7/D10): GPL-3.0-or-later, linked into the PS5 title only;
