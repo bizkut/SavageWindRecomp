@@ -12,7 +12,8 @@ The PS5 title reads your own Switch game packages and keys on your console, decr
 ## Install and start
 
 1. Install the release's `PPSA90212` folder as `/data/homebrew/PPSA90212/` using your homebrew installation method.
-2. Load `storagebroker.elf` with elfldr once after each console boot, before starting the title. It serves Savage Wind storage over loopback port 9142.
+2. Start elfldr (loopback port 9021). The title starts its bundled storage helper automatically when needed; loading
+   the release's `storagebroker.elf` by hand still works. The helper serves storage over loopback port 9142.
 3. Put your own base package, 1.9.0 update, optional DLC, `prod.keys`, and, if needed, `title.keys` in `/data/savagewind/import/`. Keep these inputs there: the title reads them on subsequent starts too.
 4. Start Savage Wind from the PS5 home screen. The first start builds game code on the console, prepares shaders and generates home art and UI data. A progress screen shows the work. Allow roughly 11 minutes; time varies. Later starts are roughly 20 seconds with a warm cache.
 
@@ -43,12 +44,16 @@ Your imports, saves, settings, generated game code, UI and caches live under `/d
 
 ## Troubleshooting
 
-- **Storage unavailable:** load `storagebroker.elf` after each boot, then restart the title. Ensure ShadowMountPlus is active.
+- **Storage unavailable:** start elfldr on port 9021, or load `storagebroker.elf` manually, then restart the title.
+  Ensure ShadowMountPlus is active.
 - **Missing or unsupported update:** check that the base package and the matching 1.9.0 update NSP are both in `/data/savagewind/import/`.
 - **Keys or package cannot be opened:** check that your own `prod.keys` is present and corresponds to the packages; keys dumped from a Switch on firmware 19.0.0 are recommended. Add your own `title.keys` when required. Do not share keys or packages when asking for help.
 - **First start takes a long time:** compilation and shader preparation are expected on first start or after relevant inputs change. Leave the console on and consult the progress screen.
 
 ## Update or uninstall
 
-To update, replace the installed title folder and `storagebroker.elf` with the new release and load the new broker after a reboot. Keep `/data/savagewind/` to retain imports, saves and caches. To uninstall, remove the homebrew title and broker ELF; remove `/data/savagewind/` only if you also want to delete your imports, saves, settings and generated data.
+To update, replace the installed title folder with the new release. The title starts its bundled helper when needed;
+if you load the helper manually, use the new release's `storagebroker.elf`. Keep `/data/savagewind/` to retain imports,
+saves and caches. To uninstall, remove the homebrew title and any separately installed broker ELF; remove
+`/data/savagewind/` only if you also want to delete your imports, saves, settings and generated data.
 

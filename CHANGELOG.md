@@ -2,6 +2,8 @@
 
 What changed in each Savage Wind release. The `test` branch holds what the next one will contain.
 
+On PS5, the title starts its bundled storage helper through elfldr when necessary; manual loading still works.
+
 On PS5, output now follows the console's Resolution setting by default; Video > Output can override it at the next
 start. 720p, 1080p and 1440p render at the selected size and scale to the 4K VideoOut swapchain.
 

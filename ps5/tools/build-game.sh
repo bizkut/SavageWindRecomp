@@ -9,6 +9,10 @@ root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$root"
 sdk=$(bash ps5/tools/setup-deps.sh)
 export PS5_PAYLOAD_SDK="$sdk"
+broker="$root/build/ps5/storagebroker/storagebroker.elf"
+[[ -f $broker ]] || make -C ps5/storagebroker
+broker_sha=$(sha256sum "$broker" | cut -d' ' -f1)
+echo "storagebroker.elf sha256: $broker_sha" >&2
 variant=${PS5_GAMECODE:-linked}
 [[ $variant == linked || $variant == console ]] || { echo "invalid PS5_GAMECODE: $variant" >&2; exit 1; }
 gamecode_opt=${PS5_GAMECODE_OPT:--O1}
@@ -89,7 +93,8 @@ export PS5_CFLAGS="-fexceptions -Iruntime -Iruntime/nvn -Iruntime/ps5/include -I
 -isystem ${ffmpeg[0]}/include/freetype2 \
 -I$mh -I$mh/framegen/include -I$ffx/sdk/include -I$ffx/sdk/include/FidelityFX/gpu \
 -I$ffx/sdk/src/components -I$ffx/sdk/src/shared -I$ffx/sdk/src/backends/shared -I$ffx/spirv \
--DSW_FSR3=1 -DROMFS_PACKAGE -DTRANSLATOR_ID=\"$translator_id\" -DSPIRV_ID=\"$spirv_id\" -march=x86-64-v3 -Wno-format"
+-DSW_FSR3=1 -DROMFS_PACKAGE -DTRANSLATOR_ID=\"$translator_id\" -DSPIRV_ID=\"$spirv_id\" \
+-DSB_BUNDLED_SHA256=\"$broker_sha\" -march=x86-64-v3 -Wno-format"
 console_sources=()
 title_name=game
 if [[ $variant == console ]]; then
@@ -127,7 +132,7 @@ app=$(bash ps5/tools/build-title.sh "$title_name" \
     build/ps5/game-gen/vk_globals.c \
     runtime/benchmark.c runtime/dispatch.c runtime/fnprof.c runtime/frametime.c runtime/ipc.c runtime/kernel.c runtime/loader.c runtime/imageload.c \
     runtime/platform/paths_ps5.c runtime/settings.c runtime/language.c runtime/storage_ps5.c \
-    runtime/romfs_build.c runtime/romfs_image.c ps5/storagebroker/client.c \
+    runtime/romfs_build.c runtime/romfs_image.c ps5/storagebroker/client.c ps5/storagebroker/startup.c \
     runtime/hle/heaps.c runtime/hle/setjmp.c runtime/hle/pl.c runtime/hle/yaz0.c runtime/hle/vibration.c runtime/hle/vi.c \
     runtime/hle/nvn_boot.c runtime/hle/framepace.c runtime/hle/npad.c runtime/hle/motion.c \
     runtime/hle/input.c runtime/hle/bindings.c runtime/hle/wheel_zoom.c runtime/hle/movie.c \
@@ -142,6 +147,7 @@ app=$(bash ps5/tools/build-title.sh "$title_name" \
     runtime/nvn/vulkan/mihawk.cpp "${mh_sources[@]}" "${ffx_sources[@]}" \
     runtime/services/acc.c runtime/services/am.c runtime/services/audio.c runtime/services/fs.c runtime/services/hid_set.c \
     runtime/services/misc.c runtime/services/time.c runtime/services/test_warp.c | tee /dev/stderr | tail -n 1)
+cp "$broker" "$app/storagebroker.elf"
 # The button prompts' label font (runtime/nvn/glyphs.c: rt_resource, /app0), with its licence
 cp third_party/fonts/FiraSans/FiraSans-SemiBold.ttf "$app/FiraSans-SemiBold.ttf"
 cp third_party/fonts/FiraSans/OFL.txt "$app/FiraSans-OFL.txt"

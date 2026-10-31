@@ -21,6 +21,8 @@ clean:
 HOST_ROOT := /tmp/savagewind-storagebroker-test
 HOST_FLAGS := -D_GNU_SOURCE -DSB_HOST_TEST -DSB_ROOT='"$(HOST_ROOT)"' -DSB_PORT=19142 -Wall -Wextra -Werror -O2 -pthread
 host-test:
+	$${CC:-cc} -D_GNU_SOURCE -Wall -Wextra -Werror -O2 -o /tmp/savagewind-broker-startup-test startup_test.c startup.c
+	/tmp/savagewind-broker-startup-test
 	rm -rf $(HOST_ROOT)
 	mkdir -p $(HOST_ROOT)
 	$${CC:-cc} $(HOST_FLAGS) -o /tmp/savagewind-storagebroker broker.c client.c

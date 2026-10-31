@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "../paths.h"
 #include "../../ps5/storagebroker/client.h"
+#include "../../ps5/storagebroker/startup.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,7 +22,26 @@ bool rt_dev_mode(void) { return false; }
 void rt_paths_init(void) {
     struct sb_client broker = {-1, 0};
     struct sb_repair_stats stats = {0};
-    int repair = sb_connect(&broker);
+    int loader_refused = 0;
+    int repair = sb_startup(&broker, &loader_refused);
+    if (repair && loader_refused) {
+        const char *message = "Storage helper not running and no ELF loader on port 9021. "
+                              "Load storagebroker.elf with your ELF loader, or start elfldr, then restart.";
+        extern void ui_window_init(void);
+        extern void vk_present_progress(float done, const char *const *lines);
+        extern void gpu_lock(void), gpu_unlock(void);
+        const char *lines[] = {"Savage Wind can't start", "Storage helper not running and no ELF loader on port 9021.",
+                               "Load storagebroker.elf with your ELF loader,",
+                               "or start elfldr, then restart."};
+        extern int sceSystemServiceHideSplashScreen(void);
+        fprintf(stderr, "[broker] %s\n", message);
+        ui_window_init();
+        gpu_lock();
+        vk_present_progress(0, lines);
+        sceSystemServiceHideSplashScreen();
+        gpu_unlock();
+        sleep(30);
+    }
     if (!repair) repair = sb_repair(&broker, &stats);
     sb_close(&broker);
     fprintf(stderr, "[paths] permission repair: result=%d scanned=%u changed=%u skipped=%u failed=%u\n",

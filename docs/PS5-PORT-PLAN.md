@@ -293,7 +293,8 @@ NCA; unsupported format. Never show key values.
 **D12. `/data/savagewind` access: direct reads, root payload for writes.** No Lapy dependency and no title credential
 mutation. ShadowMountPlus is a prerequisite: on .41 it lets the title read `/data/savagewind`, and direct `pread`
 measured 111–133 MiB/s sequential and 124–171 MiB/s for four concurrent random 64 KiB streams. Keep the hot RomFS
-path direct. A resident `savagewind-storage-broker.elf`, started once per boot through local elfldr, handles:
+path direct. The title starts its bundled `storagebroker.elf` through local elfldr (port 9021) if the resident helper
+is absent or older; a compatible running helper is retained and manual loading remains supported. The broker handles:
 
 - saves, settings, logs and shader/pipeline-cache writes, so the title never reaches its 20 → 2 MiB/s write budget;
 - only paths beneath a pre-opened `/data/savagewind` directory fd, rejecting `..`, absolute paths, symlinks, hard
@@ -670,6 +671,7 @@ Path-restricted payload, versioned client, direct RomFS reads and brokered atomi
 .41 covers a cumulative 3 GiB write and save/cache-like atomic replacements without a 2 MiB/s collapse; direct reads
 remain unchanged; unavailable/old broker and missing ShadowMountPlus each produce a clear error; path traversal,
 intermediate/final symlinks, hard links and cross-root operations are rejected.
+Automatic broker startup and missing-loader error handling require console qualification.
 
 ### M10 — Game data read from the user's packages (D11)
 Package library (shared with the PC ExeFS tool), direct-read `romfs_image` backend with DLC, TV preflight/error
