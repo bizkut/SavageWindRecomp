@@ -10,7 +10,7 @@ cd "$root"
 sdk=$(bash ps5/tools/setup-deps.sh)
 export PS5_PAYLOAD_SDK="$sdk"
 broker="$root/build/ps5/storagebroker/storagebroker.elf"
-[[ -f $broker ]] || make -C ps5/storagebroker
+make -C ps5/storagebroker >&2  # (incremental; a stale broker from an older checkout must never be bundled)
 broker_sha=$(sha256sum "$broker" | cut -d' ' -f1)
 echo "storagebroker.elf sha256: $broker_sha" >&2
 variant=${PS5_GAMECODE:-linked}
