@@ -13,7 +13,7 @@ all: $(ELF)
 
 $(ELF): broker.c client.c client.h protocol.h
 	mkdir -p $(OUT)
-	$(CC) $(CFLAGS) -o $@ broker.c client.c
+	$(CC) $(CFLAGS) -o $@ broker.c client.c -lSceRegMgr
 
 clean:
 	rm -rf $(OUT)

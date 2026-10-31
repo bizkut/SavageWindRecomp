@@ -77,6 +77,8 @@ int sb_install_home_art(struct sb_client *client, enum sb_home_art_kind kind,
                         const void *data, uint32_t length);
 /* Remove pic0 and pic1 from their fixed destinations; missing files are fine. */
 int sb_remove_home_backgrounds(struct sb_client *client);
+/* Read the fixed VIDEOOUT_mode registry key; mode is unchanged on failure. */
+int sb_get_video_mode(struct sb_client *client, int *mode);
 int sb_quit(struct sb_client *client);
 #ifdef __cplusplus
 }

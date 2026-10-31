@@ -3,7 +3,7 @@
  * PS5 payload write broker and its ps5_writebroker.h; this is a separate,
  * incompatible protocol and does not share its port, token or authority.
  *
- * Local little-endian ABI, version 8. All integers are fixed-width. A hello
+ * Local little-endian ABI, version 9. All integers are fixed-width. A hello
  * precedes requests; requests and replies are synchronous on each connection.
  * Paths are nonempty relative byte strings without NUL, '.' or '..' components,
  * except LIST accepts "." to list the root. WRITE, REPLACE and APPEND carry
@@ -18,7 +18,9 @@
  * connection; PACKAGE_READ has no path and uses that file until disconnect.
  * INSTALL_HOME_ART has no path, uses offset as enum sb_home_art_kind, and
  * carries length bytes. REMOVE_HOME_BACKGROUNDS has no path or payload.
- * Version 5 through 7 clients retain their operations.
+ * GET_VIDEO_MODE has no path or payload and returns the signed 32-bit mode
+ * in the low 32 bits of value; failures return negative errno.
+ * Version 5 through 8 clients retain their operations.
  */
 #ifndef SAVAGE_STORAGE_PROTOCOL_H
 #define SAVAGE_STORAGE_PROTOCOL_H
@@ -28,7 +30,7 @@
 #define SB_PORT 9142
 #endif
 #define SB_MAGIC UINT32_C(0x31574253) /* SBW1 */
-#define SB_VERSION 8u
+#define SB_VERSION 9u /* same-version takeover and fixed-key video mode */
 #define SB_TOKEN_BYTES 32u
 #ifndef SB_ROOT
 #define SB_ROOT "/data/savagewind"
@@ -43,7 +45,7 @@ enum sb_operation {
     SB_CREATE = 1, SB_WRITE, SB_READ, SB_STAT, SB_REPLACE, SB_UNLINK,
     SB_MKDIR, SB_QUIT, SB_APPEND, SB_TRUNCATE, SB_FSYNC, SB_RENAME,
     SB_RMDIR, SB_LIST, SB_REPAIR, SB_CREATE_EXCLUSIVE, SB_PACKAGE_OPEN, SB_PACKAGE_READ,
-    SB_INSTALL_HOME_ART, SB_REMOVE_HOME_BACKGROUNDS
+    SB_INSTALL_HOME_ART, SB_REMOVE_HOME_BACKGROUNDS, SB_GET_VIDEO_MODE
 };
 enum sb_home_art_kind { SB_HOME_ART_ICON0 = 1, SB_HOME_ART_PIC0, SB_HOME_ART_PIC1 };
 #define SB_HOME_ART_DDS_SIZE 8294548u

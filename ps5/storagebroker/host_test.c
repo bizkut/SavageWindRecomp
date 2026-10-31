@@ -8,12 +8,40 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 static int failures;
 static void check(int condition, const char *what) {
     printf("%s: %s\n", condition ? "PASS" : "FAIL", what);
     if (!condition) failures++;
+}
+static void test_video_mode(void)
+{
+    struct sb_client client = {-1, 0};
+    struct sb_request invalid[] = {
+        { SB_MAGIC, SB_GET_VIDEO_MODE, 1, 0, 0 },
+        { SB_MAGIC, SB_GET_VIDEO_MODE, 0, 1, 0 },
+        { SB_MAGIC, SB_GET_VIDEO_MODE, 0, 0, 1 },
+        { SB_MAGIC, SB_GET_VIDEO_MODE + 1, 0, 0, 0 },
+    };
+    int mode = -1;
+    check(sb_connect(&client) == 0 && sb_get_video_mode(&client, &mode) == 0 && mode == 6,
+          "video mode fixed-key read");
+    check(sb_get_video_mode(&client, NULL) == -EINVAL, "video mode rejects null result");
+    sb_close(&client);
+    check(sb_connect_version(&client, 8) == 0 && sb_get_video_mode(&client, &mode) == -EPROTONOSUPPORT &&
+          sb_stat(&client, "missing", &(uint64_t){0}) == -ENOENT,
+          "version 8 rejects video mode without closing connection");
+    sb_close(&client);
+    for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); ++i) {
+        char byte;
+        int connected = sb_connect(&client) == 0;
+        int sent = connected && send(client.fd, &invalid[i], sizeof(invalid[i]), 0) == sizeof(invalid[i]);
+        check(sent && recv(client.fd, &byte, 1, 0) <= 0,
+              i == 3 ? "unknown operation closes connection" : "video mode rejects request fields");
+        sb_close(&client);
+    }
 }
 static int list_has(const unsigned char *buffer, int length, const char *name, uint32_t type)
 {
@@ -210,6 +238,7 @@ int main(void) {
         sb_close(&old);
     }
     if (client.fd < 0) return 1;
+    test_video_mode();
     test_home_art(&client);
     {
         int fd;

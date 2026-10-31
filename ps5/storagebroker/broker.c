@@ -52,6 +52,30 @@ static void say(const char *format, ...)
 #endif
 }
 
+/* Key IDs and getter signature from ps5-payload-dev/linkdev regmgr.h and regmgr.c. */
+#ifdef __PROSPERO__
+int sceRegMgrGetInt(long key, int *value);
+#endif
+
+static int read_video_mode(int *mode)
+{
+#ifdef __PROSPERO__
+    int hdr = -1;
+    int hfr = -1;
+    int rc = sceRegMgrGetInt(167968768, mode);
+    int hdr_rc = sceRegMgrGetInt(169148416, &hdr);
+    int hfr_rc = sceRegMgrGetInt(170131456, &hfr);
+    say("video mode=%d hdr=%d hfr=%d", *mode, hdr, hfr);
+    if (rc || hdr_rc || hfr_rc)
+        say("video registry errors mode=0x%08x hdr=0x%08x hfr=0x%08x",
+            (unsigned)rc, (unsigned)hdr_rc, (unsigned)hfr_rc);
+    return rc ? -EIO : 0;
+#else
+    *mode = 6;
+    return 0;
+#endif
+}
+
 static int io_all(int fd, void *buffer, size_t length, int writing)
 {
     unsigned char *p = buffer;
@@ -533,9 +557,10 @@ static int do_request(struct sb_request *r, char *path, unsigned char *data, uin
 }
 static int valid_request(const struct sb_request *r)
 {
-    if (r->magic != SB_MAGIC || r->operation < SB_CREATE || r->operation > SB_REMOVE_HOME_BACKGROUNDS ||
+    if (r->magic != SB_MAGIC || r->operation < SB_CREATE || r->operation > SB_GET_VIDEO_MODE ||
         r->path_length > SB_MAX_PATH || r->length > SB_MAX_TRANSFER) return 0;
-    if (r->operation == SB_QUIT || r->operation == SB_REPAIR || r->operation == SB_REMOVE_HOME_BACKGROUNDS)
+    if (r->operation == SB_QUIT || r->operation == SB_REPAIR || r->operation == SB_REMOVE_HOME_BACKGROUNDS ||
+        r->operation == SB_GET_VIDEO_MODE)
         return !r->path_length && !r->length && !r->offset;
     if (r->operation == SB_INSTALL_HOME_ART) return !r->path_length;
     if (r->operation == SB_PACKAGE_READ)
@@ -574,8 +599,9 @@ static void *serve(void *arg)
         if ((hello.version < 5 || hello.version > SB_VERSION) && r.operation != SB_QUIT) break;
         if (hello.version == 5 && r.operation == SB_INSTALL_HOME_ART) break;
         if (hello.version < 8 && r.operation == SB_REMOVE_HOME_BACKGROUNDS) break;
+        if (hello.version < 9 && r.operation == SB_GET_VIDEO_MODE) break;
         if (r.operation == SB_QUIT) {
-            rc = hello.version > SB_VERSION ? 0 : -EPERM;
+            rc = hello.version >= SB_VERSION ? 0 : -EPERM;  // (an older client can't stop a newer broker)
             if (reply_to(client, rc, 0)) break;
             if (!rc) exit(0);
             continue;
@@ -586,6 +612,13 @@ static void *serve(void *arg)
             pthread_mutex_unlock(&request_lock);
             if (reply_to(client, rc, 0) ||
                 io_all(client, &repair_stats, sizeof(repair_stats), 1)) break;
+            continue;
+        }
+        if (r.operation == SB_GET_VIDEO_MODE) {
+            int mode = -1;
+            rc = read_video_mode(&mode);
+            if (!rc) value = (uint32_t)mode;
+            if (reply_to(client, rc, value)) break;
             continue;
         }
         if (r.path_length && io_all(client, path, r.path_length, 0)) break;
@@ -733,9 +766,12 @@ int main(void)
     address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     for (attempt = 0; bind(listener, (struct sockaddr *)&address, sizeof(address)); ++attempt) {
         struct sb_client old = { -1, 0 };
-        if (errno != EADDRINUSE || attempt >= 20) return 1;
+        if (errno != EADDRINUSE || attempt >= 20) { say("cannot bind port %d: errno=%d", SB_PORT, errno); return 1; }
+        // A newly loaded broker always takes over: the running one may hold a stale root (the data folder renamed
+        // or recreated since it started), and a silent exit would leave the title on that stale root
         if (!attempt && !sb_connect_version(&old, SB_VERSION)) {
-            if (old.server_version < SB_VERSION) (void)sb_quit(&old);
+            say("replacing the running broker (version %u)", old.server_version);
+            (void)sb_quit(&old);
             sb_close(&old);
         }
         usleep(100000);
@@ -752,6 +788,10 @@ int main(void)
     }
     say("listening on 127.0.0.1:%d for %s version=%u uid=%u euid=%u", SB_PORT, SB_ROOT, SB_VERSION,
         (unsigned)getuid(), (unsigned)geteuid());
+    {
+        int mode = -1;
+        (void)read_video_mode(&mode);
+    }
     for (;;) {
         pthread_t thread;
         int client = accept(listener, NULL, NULL);
