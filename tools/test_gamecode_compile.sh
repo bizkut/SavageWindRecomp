@@ -23,7 +23,8 @@ mkdir -p "$dir/include-root/runtime"
 cp runtime/cpu.h runtime/simd*.h runtime/gamelib.h "$dir/include-root/runtime/"
 ln -s "$include/include" "$dir/include-root/include"
 ln -s "$include/clang-include" "$dir/include-root/clang-include"
-clang++-18 -std=c++20 -O2 -fuse-ld=lld -I"$deps/capstone-5.0.9/src/include" \
+# (-fno-rtti like the LLVM build: the test's vfs::File subclasses need its typeinfo-free vtables)
+clang++-18 -std=c++20 -O2 -fno-rtti -fuse-ld=lld -I"$deps/capstone-5.0.9/src/include" \
     -I"$src/clang/include" -I"$host/tools/clang/include" -I"$src/llvm/include" -I"$host/include" \
     tools/test_gamecode_compile.cpp runtime/gamecode_compile.cpp tools/gen_cpp/patches.cpp \
     "$deps/capstone-build/libcapstone.a" -Wl,--start-group "$host"/lib/libclang*.a "$host"/lib/libLLVM*.a \

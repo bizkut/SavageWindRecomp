@@ -15,6 +15,9 @@ void s9_output_sink(const std::string &, const std::string &);
 #include <llvm/Config/llvm-config.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/MemoryBuffer.h>
+#ifdef __PROSPERO__
+#include "gamecode_vfs.h"
+#endif
 #include <llvm/Support/SHA256.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
@@ -138,6 +141,9 @@ static std::vector<char> compile_object(const Job &job, const std::string &root)
     invocation->getPreprocessorOpts().addRemappedFile("/gamecode/" + job.name,
         llvm::MemoryBuffer::getMemBufferCopy(job.source, "/gamecode/" + job.name).release());
     compiler.setInvocation(invocation);
+#ifdef __PROSPERO__
+    compiler.createFileManager(llvm::makeIntrusiveRefCnt<GameCodeFileSystem>(llvm::vfs::getRealFileSystem()));
+#endif
     llvm::SmallVector<char, 0> data;
     compiler.setOutputStream(std::make_unique<llvm::raw_svector_ostream>(data));
     clang::EmitObjAction action;

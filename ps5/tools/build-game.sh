@@ -97,7 +97,7 @@ if [[ $variant == console ]]; then
     llvm_id=$(cd "$llvm_target/lib" && sha256sum libclang*.a libLLVM*.a | sha256sum | cut -d' ' -f1)
     compile_id=$(
         {
-            cat runtime/gamecode_compile.cpp runtime/cpu.h runtime/gamelib.h runtime/simd*.h
+            cat runtime/gamecode_compile.cpp runtime/gamecode_vfs.h runtime/cpu.h runtime/gamelib.h runtime/simd*.h
             printf '%s\n' "$llvm_id"
             (cd "$sdk/target/include" && find -L . -type f -print0 | sort -z | xargs -0 sha256sum)
             (cd "$(clang-18 -print-resource-dir)/include" && find -L . -type f -print0 | sort -z | xargs -0 sha256sum)

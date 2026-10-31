@@ -834,6 +834,11 @@ start with a progress screen, plays, and on later starts loads the cached code i
 generator's; the benchmark is within 2 % of the PC-built eboot; first-start time and memory are recorded; the
 release ZIP's no-game-content check still passes.
 
+### Console fixes and polish
+
+- Game-code compilation: .39 crashed because an mmap-backed Clang header had a nonzero page tail. The VFS now
+  requests volatile, NUL-terminated buffers. Fresh-start .39 and regression .41 qualification remain open.
+
 ### After M11 (optional) — Community texture packs
 High-resolution texture packs dropped into the existing overlay folder (`runtime/services/fs.c`); never shipped by
 the project. **Done when:** one pack loads, with GPU/flexible memory and load-time cost logged against the M6

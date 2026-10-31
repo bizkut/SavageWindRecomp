@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "../runtime/gamecode_compile.h"
+#include "../runtime/gamecode_vfs.h"
+#include <clang/Frontend/CompilerInstance.h>
+#include <clang/Frontend/FrontendActions.h>
+#include <clang/Lex/PreprocessorOptions.h>
+#include <llvm/Support/MemoryBuffer.h>
+#include <sys/mman.h>
+#include <unistd.h>
 #include <elf.h>
 #include <sys/resource.h>
 #include <chrono>
@@ -145,9 +152,72 @@ static bool equal_except_comment(const void *left, size_t left_size, const void 
     }
     return true;
 }
+// Model the PS5's non-zero mapped page tail, followed by an inaccessible page.
+// The real VFS returns a read-backed copy only for the volatile+terminated request.
+class TailFile final : public llvm::vfs::File {
+    std::unique_ptr<llvm::vfs::File> file;
+    llvm::StringRef bytes;
+    bool &safe;
+public:
+    TailFile(std::unique_ptr<llvm::vfs::File> f, llvm::StringRef b, bool &s)
+        : file(std::move(f)), bytes(b), safe(s) {}
+    llvm::ErrorOr<llvm::vfs::Status> status() override { return file->status(); }
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+    getBuffer(const llvm::Twine &name, int64_t, bool terminated, bool is_volatile) override {
+        safe = terminated && is_volatile;
+        if (safe) return llvm::MemoryBuffer::getMemBufferCopy(bytes, name.str());
+        return llvm::MemoryBuffer::getMemBuffer(bytes, name.str(), false);
+    }
+    std::error_code close() override { return file->close(); }
+};
+class TailFileSystem final : public llvm::vfs::ProxyFileSystem {
+    llvm::StringRef bytes;
+    bool &safe;
+public:
+    TailFileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs, llvm::StringRef b, bool &s)
+        : ProxyFileSystem(std::move(fs)), bytes(b), safe(s) {}
+    llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> openFileForRead(const llvm::Twine &name) override {
+        auto file = ProxyFileSystem::openFileForRead(name);
+        if (!file) return file.getError();
+        return std::unique_ptr<llvm::vfs::File>(new TailFile(std::move(*file), bytes, safe));
+    }
+};
+static void test_guarded_header()
+{
+    size_t page = (size_t)sysconf(_SC_PAGESIZE), mapped = 6 * page, size = 5 * page - 128;
+    char *p = static_cast<char *>(mmap(nullptr, mapped, PROT_READ | PROT_WRITE,
+                                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+    if (p == MAP_FAILED || mprotect(p + 5 * page, page, PROT_NONE))
+        throw std::runtime_error("cannot allocate guarded header");
+    std::memset(p, 'x', size);
+    const char prefix[] = "#define VALUE 42\n/*";
+    std::memcpy(p, prefix, sizeof prefix - 1);
+    std::memcpy(p + size - 3, "*/\n", 3);
+    std::memset(p + size, 0x91, 128);
+    bool safe = false;
+    auto memory = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+    memory->addFile("/test.h", 0, llvm::MemoryBuffer::getMemBufferCopy(llvm::StringRef(p, size)));
+    auto broken = llvm::makeIntrusiveRefCnt<TailFileSystem>(memory, llvm::StringRef(p, size), safe);
+    auto fs = llvm::makeIntrusiveRefCnt<GameCodeFileSystem>(broken);
+    clang::CompilerInstance compiler;
+    compiler.createDiagnostics();
+    auto invocation = std::make_shared<clang::CompilerInvocation>();
+    const char *args[] = {"-fsyntax-only", "-x", "c", "/main.c"};
+    if (!clang::CompilerInvocation::CreateFromArgs(*invocation, args, compiler.getDiagnostics()))
+        throw std::runtime_error("cannot create guarded-header invocation");
+    invocation->getPreprocessorOpts().addRemappedFile("/main.c",
+        llvm::MemoryBuffer::getMemBufferCopy("#include \"/test.h\"\nint value = VALUE;\n", "/main.c").release());
+    compiler.setInvocation(invocation);
+    compiler.createFileManager(fs);
+    clang::SyntaxOnlyAction action;
+    if (!compiler.ExecuteAction(action) || !safe)
+        throw std::runtime_error("guarded header was not read safely");
+    munmap(p, mapped);
+}
 int main(int argc, char **argv) try {
     if (argc != 7)
         throw std::runtime_error("usage: test INPUT INCLUDE_ROOT CACHE REFERENCE_DIR ARCHIVE_LIST LLVM_BUILD_SHA256");
+    test_guarded_header();
     fs::path input = argv[1];
     auto main_nso = read_file(input / "main");
     auto sub = read_file(input / "subsdk0");

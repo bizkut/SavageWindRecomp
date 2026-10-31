@@ -1572,3 +1572,13 @@ With overlap the HD interface generation (GPU upscale, CPU BC7 encode) and the s
 ~105 s, more than they save; sequentially the precompile took 19.1 s (its translations were cached; a cold one is
 ~119 s) and the HD generation continues in the background after the title (complete in 574.6 s in the overlap
 run). Overlap stays off. First start is now 643 s to the title; later starts ~20.6 s.
+
+## 2026-10-30 — M12 compiler file mapping on .39
+
+Fresh-start diagnostic `ps5/evidence/m8/install-39-diag.klog` showed the mapped
+`gamecode-include/include/c++/v1/__config` ending with a nonzero byte (`91`) immediately after its
+70,330-byte file contents. LLVM's mapped `MemoryBuffer` requires a zero there; Clang diagnosed invalid UTF-8
+and then faulted during character-literal recovery. The generated `layout.c` is copied into a terminated
+buffer independently. The console compiler now requests volatile, terminated file buffers through its VFS,
+forcing LLVM's read-backed path rather than relying on mapped page-tail contents. This fix still needs
+fresh-start qualification on .39 and regression qualification on .41.
