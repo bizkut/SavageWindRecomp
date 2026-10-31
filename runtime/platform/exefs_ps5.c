@@ -220,7 +220,10 @@ bool ps5_exefs_init(const char *directory, char *why, size_t why_size) {
     savagewind_package_set_startup_mark(ps5_startup_mark);
     savagewind_package_set_fast_exefs(settings_fast_exefs_enabled());
     DIR *d = opendir(directory);
-    if (!d) { snprintf(why, why_size, "cannot open package directory (load ShadowMountPlus)"); return false; }
+    if (!d) {
+        snprintf(why, why_size, "The folder %s doesn't exist. Create it and put your game files in it.", directory);
+        return false;
+    }
     char **paths = NULL;
     size_t count = 0;
     bool failed = false;
@@ -238,6 +241,26 @@ bool ps5_exefs_init(const char *directory, char *why, size_t why_size) {
         snprintf(paths[count++], n, "%s/%s", directory, e->d_name);
     }
     closedir(d);
+    if (!failed && !count) {
+        // The usual mistake: the packages copied one level up (the data root) instead of into the import folder
+        char misplaced[256] = "";
+        DIR *up = opendir("/data/savagewind");
+        while (up && (e = readdir(up)) && !misplaced[0]) {
+            const char *ext = strrchr(e->d_name, '.');
+            if (ext && (!strcasecmp(ext, ".nsp") || !strcasecmp(ext, ".xci")))
+                snprintf(misplaced, sizeof misplaced, "%s", e->d_name);
+        }
+        if (up) closedir(up);
+        // (package names are long: the TV line names the folders, the log names the file)
+        if (misplaced[0]) {
+            fprintf(stderr, "[ps5] package outside the import folder: /data/savagewind/%s\n", misplaced);
+            snprintf(why, why_size, "Game files are in /data/savagewind/: move them into %s/.", directory);
+        } else {
+            snprintf(why, why_size, "No NSP or XCI files in %s/.", directory);
+        }
+        free(paths);
+        return false;
+    }
     char keys[1200];
     int n = snprintf(keys, sizeof keys, "%s/prod.keys", directory);
     if (n < 0 || (size_t)n >= sizeof keys) failed = true;

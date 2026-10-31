@@ -506,8 +506,8 @@ int main(void) {
 #ifdef GAMECODE_CONSOLE
     extern void ui_window_init(void);
     ui_window_init();
-    bool startup_ok = ps5_exefs_init("/data/savagewind/import", why, sizeof why) &&
-        first_start_gamecode(why, sizeof why) && gamelib_load(NULL, why, sizeof why) &&
+    bool packages_ok = ps5_exefs_init("/data/savagewind/import", why, sizeof why);
+    bool startup_ok = packages_ok && first_start_gamecode(why, sizeof why) && gamelib_load(NULL, why, sizeof why) &&
         ps5_exefs_validate_gamecode(why, sizeof why);
 #else
     bool startup_ok = gamelib_load(NULL, why, sizeof why) && ps5_exefs_init("/data/savagewind/import", why, sizeof why);
@@ -516,11 +516,21 @@ int main(void) {
 #ifdef GAMECODE_CONSOLE
         extern void vk_present_progress(float done, const char *const *lines);
         extern void gpu_lock(void), gpu_unlock(void);
-        const char *lines[] = {"Startup failed", "", why, "Check the log and restart."};
+        // Players read this on the TV without a log: for missing or unusable game files, name the folder and what
+        // goes in it (line 1 is the large one, so it stays short), and leave time to read
+        const char *files[] = {"Savage Wind can't start", "Check your game files", why,
+                               "Put the base NSP or XCI, the 1.9.0 update NSP and prod.keys (and title.keys if needed) "
+                               "in /data/savagewind/import/, then restart."};
+        // Key and ticket errors (package_core.cpp codes): the keys file is the likely culprit, so say which one works
+        const char *keys[] = {"Savage Wind can't start", "Check your keys", why,
+                              "Use prod.keys dumped from a Switch on firmware 19.0.0 (recommended), in "
+                              "/data/savagewind/import/, then restart."};
+        const char *other[] = {"Savage Wind can't start", "", why, "Restart the game. If this repeats, report it."};
+        bool key_error = !strncmp(why, "keys_", 5) || !strncmp(why, "ticket_missing", 14);
         gpu_lock();
-        vk_present_progress(0, lines);
+        vk_present_progress(0, packages_ok ? other : key_error ? keys : files);
         gpu_unlock();
-        sleep(8);
+        sleep(30);
 #endif
         fprintf(stderr, "startup failed: %s\n", why);
         exit_title();
