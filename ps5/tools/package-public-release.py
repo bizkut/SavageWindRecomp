@@ -14,8 +14,9 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 APP = ROOT / 'build/ps5/variants/gamecode-console/PPSA90212'
 SDK = ROOT / '.deps/ps5/ps5-payload-sdk/target/include'
-TAG, COMMIT, candidate = sys.argv[1:]
+TAG, COMMIT, candidate, dirty = sys.argv[1:]
 CANDIDATE = candidate == '1'
+DIRTY = dirty == '1'
 OUT = ROOT / 'build/ps5/releases' / f'SavageWind-PS5-{TAG}.zip'
 
 
@@ -90,8 +91,9 @@ if not CANDIDATE and 'UNRESOLVED' in source:
 source = source.replace('@COMMIT@', COMMIT).replace('@TAG@', TAG)
 if CANDIDATE:
     source = ('UNRELEASED CANDIDATE — not for distribution\n'
-              'This build uses uncommitted changes; the commit below is its base, not corresponding source.\n\n'
-              + source)
+              + ('This build uses uncommitted changes; the commit below is its base, not corresponding source.\n'
+                 if DIRTY else 'This build is from a clean checkout of the commit below.\n')
+              + '\n' + source)
 files['SOURCE.txt'] = source.encode()
 
 # Licence texts are selected by name; a new notice requires an explicit allowlist change.

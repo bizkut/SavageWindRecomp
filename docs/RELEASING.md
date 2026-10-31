@@ -9,18 +9,18 @@ FreeType/libpng notices. Its only PNGs are the neutral title icon and the identi
 
 For a non-distributable local candidate, first run `PS5_GAMECODE=console bash ps5/tools/build-game.sh`, then
 `bash ps5/tools/package-public-release.sh --candidate`. The candidate uses the existing build, permits a dirty
-worktree and unresolved source provenance, and marks the ZIP accordingly; it is not a public release.
+worktree and unresolved source provenance, and marks dirty candidates in the filename; it is not a public release.
 
 ## Runner prerequisites
 
 Register a self-hosted Linux x64 runner for `bizkut/SavageWindRecomp` on the build machine and label it
 `savagewind-ps5`. The existing runner registered to `bizkut/ps5-forever` is not automatically available to the
 fork. Install clang/LLVM 18, CMake, Ninja, Python 3 and its pip, the GitHub CLI, and the title build's other host
-requirements. The workflow fetches pinned SDK, nstool, MihawkGen and zlib sources; it currently copies the pinned
-RADV archive and its headers from `/home/bizkut/workspaces/SavageWindRecomp/.deps/ps5/radv`. The archive is checked
-against `ps5/deps.lock`, as is the sorted list of header paths and content hashes. The runner must not have private game
-files in its workspace. It retains a digest-checked LLVM cache; release runs are serialized. Dispatching on `ps5`
-uploads a non-distributable candidate artifact; a PS5 release tag publishes a release.
+requirements, including Meson, Ninja, rsync and the LLVM 18 development tools required by Mesa. The workflow fetches
+the pinned SDK, nstool, MihawkGen, zlib, Mesa and public RADV build recipe sources. It builds RADV from those sources
+and verifies the archive and headers against `ps5/deps.lock`. The runner must not have private game files in its
+workspace. It retains a digest-checked LLVM cache; release runs are serialized. Dispatching on `ps5` uploads a
+non-distributable candidate artifact from a clean worktree; a PS5 release tag publishes a release.
 
 ## Cut a release
 

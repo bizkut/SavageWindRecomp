@@ -66,13 +66,6 @@ jobs:
         run: |
           set -euo pipefail
           parent=$(dirname "$GITHUB_WORKSPACE")
-          # Remove only links left by the earlier local-sibling workflow; never mutate those shared trees.
-          for name in forever nstool2 PS5_MihawkGen; do
-            if [[ -L "$parent/$name" ]]; then
-              [[ $(readlink "$parent/$name") == "/home/bizkut/workspaces/$name" ]] || exit 1
-              unlink "$parent/$name"
-            fi
-          done
           checkout() {
             local path=$1 url=$2 revision=$3
             if [[ ! -d "$path/.git" ]]; then
@@ -96,20 +89,29 @@ jobs:
           curl -fL --retry 3 "$zlib_url" -o "$zlib/zlib.tar.gz"
           echo "$zlib_sha  $zlib/zlib.tar.gz" | sha256sum --check --strict
           tar -xzf "$zlib/zlib.tar.gz" -C "$zlib"
-          # The RADV binary is a digest-pinned local cache, not a public download.
-          source_root=/home/bizkut/workspaces
-          mkdir -p .deps/ps5/radv
-          if [[ ! -f .deps/ps5/radv/libvulkan_radeon.ps5.a ]]; then
-            cp "$source_root/SavageWindRecomp/.deps/ps5/radv/libvulkan_radeon.ps5.a" .deps/ps5/radv/
-            cp -a "$source_root/SavageWindRecomp/.deps/ps5/radv/include" .deps/ps5/radv/
-          fi
+          bash ps5/tools/setup-deps.sh
+          sandbox="$GITHUB_WORKSPACE/.deps/ps5/radv-source/forever"
+          checkout "$sandbox/ps5-proton/ps5-wow" https://github.com/bizkut/ps5-forever.git \
+            "$(awk '$1 == "radv-recipe" { print $3 }' ps5/deps.lock)"
+          checkout "$sandbox/PS5_Vulkan" https://github.com/bizkut/ps5-forever-vulkan.git \
+            "$(awk '$1 == "radv-vulkan" { print $3 }' ps5/deps.lock)"
+          checkout "$sandbox/PS5_Mesa" https://github.com/bizkut/ps5-forever-mesa.git \
+            "$(awk '$1 == "radv-mesa" { print $3 }' ps5/deps.lock)"
+          mkdir -p "$sandbox/PS5_Vulkan/.deps/native" .deps/ps5/radv
+          ln -sfn "$GITHUB_WORKSPACE/.deps/ps5/ps5-payload-sdk" "$sandbox/PS5_Vulkan/.deps/native/ps5-payload-sdk"
+          PS5_RADV_REVISION="$(awk '$1 == "radv-mesa" { print $3 }' ps5/deps.lock)" \
+            PS5_RADV_INSTALL="$GITHUB_WORKSPACE/.deps/ps5/radv-source/install" \
+            LLVM_CONFIG="$(command -v llvm-config-18)" JOBS=8 \
+            python3 "$sandbox/ps5-proton/ps5-wow/ps5/radv/build-radv.py"
+          cp "$sandbox/../install/lib/libvulkan_radeon.ps5.a" .deps/ps5/radv/
+          cp -a "$sandbox/../install/include" .deps/ps5/radv/
+          sha256sum .deps/ps5/radv/libvulkan_radeon.ps5.a
           pin=$(awk '$1 == "radv-archive" { sub(/^sha256:/, "", $3); print $3 }' ps5/deps.lock)
           echo "$pin  .deps/ps5/radv/libvulkan_radeon.ps5.a" | sha256sum --check --strict
           headers_pin=$(awk '$1 == "radv-headers" { sub(/^sha256:/, "", $3); print $3 }' ps5/deps.lock)
           headers_hash=$(find .deps/ps5/radv/include -type f -printf '%P\n' | LC_ALL=C sort |
             (cd .deps/ps5/radv/include && xargs -d '\n' sha256sum) | sha256sum | cut -d' ' -f1)
           [[ "$headers_hash" == "$headers_pin" ]] || { echo 'RADV header cache mismatch' >&2; exit 1; }
-          bash ps5/tools/setup-deps.sh
       - name: Build or reuse pinned LLVM
         run: |
           set -euo pipefail
@@ -155,6 +157,10 @@ jobs:
         run: |
           PS5_GAMECODE=console PYTHON=python3 bash ps5/tools/build-game.sh
           make -C ps5/storagebroker
+          git status --porcelain --untracked-files=normal
+          [[ -z $(git status --porcelain --untracked-files=normal) ]] || {
+            echo 'Build modified the checkout' >&2; exit 1;
+          }
       - name: Package public release
         env:
           REF_TYPE: ${{ github.ref_type }}
@@ -165,7 +171,7 @@ jobs:
             archive="SavageWind-PS5-${REF_NAME}.zip"
           else
             bash ps5/tools/package-public-release.sh --candidate
-            archive="SavageWind-PS5-candidate-$(git rev-parse --short=12 HEAD)-dirty.zip"
+            archive="SavageWind-PS5-candidate-$(git rev-parse --short=12 HEAD).zip"
           fi
           cd build/ps5/releases
           sha256sum "$archive" > SHA256SUMS

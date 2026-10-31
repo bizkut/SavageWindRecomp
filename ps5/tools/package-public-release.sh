@@ -11,11 +11,16 @@ elif (( $# )); then
     echo "usage: $0 [--candidate]" >&2; exit 2
 fi
 commit=$(git rev-parse HEAD)
+dirty=0
+if [[ -n $(git status --porcelain --untracked-files=normal) ]]; then
+    dirty=1
+fi
 if (( candidate )); then
-    tag="candidate-$(git rev-parse --short=12 HEAD)-dirty"
+    tag="candidate-$(git rev-parse --short=12 HEAD)"
+    (( dirty == 0 )) || tag+="-dirty"
 else
-    [[ -z $(git status --porcelain --untracked-files=normal) ]] || {
-        echo 'Release requires a clean worktree, including untracked files.' >&2; exit 1;
+    (( dirty == 0 )) || {
+        echo 'Release requires a clean worktree, including untracked files.' >&2; exit 1
     }
     mapfile -t tags < <(git tag --points-at HEAD --list 'ps5-v*')
     [[ ${#tags[@]} == 1 && ${tags[0]} =~ ^ps5-v[0-9A-Za-z][0-9A-Za-z._-]*$ ]] || {
@@ -34,4 +39,4 @@ if (( ! candidate )); then
     PS5_GAMECODE=console bash ps5/tools/build-game.sh
 fi
 mkdir -p build/ps5/releases
-python3 ps5/tools/package-public-release.py "$tag" "$commit" "$candidate"
+python3 ps5/tools/package-public-release.py "$tag" "$commit" "$candidate" "$dirty"
