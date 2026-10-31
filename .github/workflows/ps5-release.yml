@@ -20,13 +20,13 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Require a PS5 release tag
+      - name: Validate release tag
+        if: github.ref_type == 'tag'
         env:
-          REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
         run: |
-          [[ "$REF_TYPE" == tag && "$REF_NAME" =~ ^ps5-v[0-9][A-Za-z0-9._+-]*$ ]] || {
-            echo 'Select a ps5-v* tag when dispatching this workflow.' >&2; exit 1;
+          [[ "$REF_NAME" =~ ^ps5-v[0-9][A-Za-z0-9._+-]*$ ]] || {
+            echo 'Invalid PS5 release tag.' >&2; exit 1;
           }
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -131,12 +131,30 @@ jobs:
           make -C ps5/storagebroker
       - name: Package public release
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          bash ps5/tools/package-public-release.sh
+          if [[ "$REF_TYPE" == tag ]]; then
+            bash ps5/tools/package-public-release.sh
+            archive="SavageWind-PS5-${REF_NAME}.zip"
+          else
+            bash ps5/tools/package-public-release.sh --candidate
+            archive="SavageWind-PS5-candidate-$(git rev-parse --short=12 HEAD)-dirty.zip"
+          fi
           cd build/ps5/releases
-          sha256sum "SavageWind-PS5-${RELEASE_TAG}.zip" > SHA256SUMS
+          sha256sum "$archive" > SHA256SUMS
+          echo "RELEASE_ARCHIVE=$archive" >> "$GITHUB_ENV"
+      - name: Upload candidate
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: savagewind-ps5-candidate
+          path: |
+            build/ps5/releases/${{ env.RELEASE_ARCHIVE }}
+            build/ps5/releases/SHA256SUMS
+          if-no-files-found: error
       - name: Publish release assets
+        if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
