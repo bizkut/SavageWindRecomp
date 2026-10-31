@@ -7,6 +7,7 @@ opensans-revision     googlefonts/opensans                            bd7e376322
 opensans-font         fonts/variable/OpenSans[wdth,wght].ttf           sha256:36643644f318a812aab2d2ed3bb98f8cf0872527f835fe9398d95fe6b9adb878
 nstool2              ../nstool2                                      7e0a49b61ae98b730900709e3ac5ba1945c1906e
 radv-archive          .deps/ps5/radv/libvulkan_radeon.ps5.a           sha256:9d12cff020676c3533f25842827f768b71fea4de4d32d68105523efbc1476929
+radv-headers          .deps/ps5/radv/include                          sha256:8c682b9101d6c1b229db184822411dfeaf54079d694d993f1fbd3a5896e299a7
 # ^ PS5_Mesa f10c4bac9b + ps5-wow patches 0001 HDR10/immediate, 0002 cache DB, 0003 VRR (Forever build cache, 2026-10-23)
 zlib-source           https://zlib.net/zlib-1.3.2.tar.gz              sha256:bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16
 ffmpeg-source         https://ffmpeg.org/releases/ffmpeg-7.0.1.tar.xz  sha256:bce9eeb0f17ef8982390b1f37711a61b4290dc8c2a0c1a37b5857e85bfb0e4ff

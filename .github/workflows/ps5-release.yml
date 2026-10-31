@@ -105,6 +105,10 @@ jobs:
           fi
           pin=$(awk '$1 == "radv-archive" { sub(/^sha256:/, "", $3); print $3 }' ps5/deps.lock)
           echo "$pin  .deps/ps5/radv/libvulkan_radeon.ps5.a" | sha256sum --check --strict
+          headers_pin=$(awk '$1 == "radv-headers" { sub(/^sha256:/, "", $3); print $3 }' ps5/deps.lock)
+          headers_hash=$(find .deps/ps5/radv/include -type f -printf '%P\n' | LC_ALL=C sort |
+            (cd .deps/ps5/radv/include && xargs -d '\n' sha256sum) | sha256sum | cut -d' ' -f1)
+          [[ "$headers_hash" == "$headers_pin" ]] || { echo 'RADV header cache mismatch' >&2; exit 1; }
           bash ps5/tools/setup-deps.sh
       - name: Build or reuse pinned LLVM
         run: |

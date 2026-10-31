@@ -18,7 +18,7 @@ Register a self-hosted Linux x64 runner for `bizkut/SavageWindRecomp` on the bui
 fork. Install clang/LLVM 18, CMake, Ninja, Python 3 and its pip, the GitHub CLI, and the title build's other host
 requirements. The workflow fetches pinned SDK, nstool, MihawkGen and zlib sources; it currently copies the pinned
 RADV archive and its headers from `/home/bizkut/workspaces/SavageWindRecomp/.deps/ps5/radv`. The archive is checked
-against `ps5/deps.lock`; the copied headers are not independently pinned. The runner must not have private game
+against `ps5/deps.lock`, as is the sorted list of header paths and content hashes. The runner must not have private game
 files in its workspace. It retains a digest-checked LLVM cache; release runs are serialized. Dispatching on `ps5`
 uploads a non-distributable candidate artifact; a PS5 release tag publishes a release.
 
