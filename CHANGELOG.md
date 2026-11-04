@@ -2,6 +2,13 @@
 
 What changed in each Savage Wind release. The `test` branch holds what the next one will contain.
 
+## Unreleased
+
+- PS5 game-requested text entry uses the inline system keyboard instead of the common dialog. Enter confirms; closing
+  or aborting cancels and preserves the existing text. Gameplay stick bindings are unchanged. Console qualification
+  is pending.
+- Disable Vulkan view format lists by default on PS5 to address the observed floor and rainbow foliage corruption.
+
 ## PS5 ps5-v0.2.0
 
 - The home-screen title is **Breath of the Wild**. This release incorporates the upstream merge and the PS5

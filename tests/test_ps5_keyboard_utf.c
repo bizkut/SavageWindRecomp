@@ -17,6 +17,9 @@ int main(void) {
     assert(wide[3] == 0);
     assert(keyboard_utf8_to_utf16(text, wide, 16, 3) == 3);
     assert(wide[3] == 0);
+    // A supplementary code point must never be split at a UTF-16 limit.
+    assert(keyboard_utf8_to_utf16("\xf0\x9f\x90\x8e", wide, 2, 1) == 0 && wide[0] == 0);
+    assert(keyboard_utf8_to_utf16("\xf0\x9f\x90\x8e", wide, 3, 1) == 2);
     assert(keyboard_utf16_to_utf8(expected, 6, utf8, 9, 16) == 6);
     assert(strcmp(utf8, "A\xc3\xa9\xe9\xa6\xac") == 0);
     assert(keyboard_utf16_to_utf8(expected, 6, utf8, sizeof utf8, 2) == 3);

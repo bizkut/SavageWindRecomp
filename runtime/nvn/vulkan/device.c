@@ -209,12 +209,12 @@ static void pick_device(void) {
     LOG("[vk] using %s\n", g_vk.props.deviceName);
     // Colour images with a list of their view formats (textures.c create_image), on integrated GPUs by default: there
     // the memory traffic it saves pays (Radeon 660M; LAS Recomp 03ee802f measured an Intel UHD 770 faster and an
-    // RTX 3080 Ti slightly slower). Not on Linux AMD (RADV: the Steam Deck): there the game showed small purple specks
-    // flickering on the ground with them and none without (Great Plateau, user play test 2026-10-29).
+    // RTX 3080 Ti slightly slower). Disabled on Linux AMD and PS5 RADV: view-format lists produced ground speckles.
+    // PS5 .39 A/B: lists off removed rainbow foliage corruption; the lists-on keyboard probe brought it back.
     // SAVAGEWIND_VK_LEAN_USAGE=0 / =1 overrides.
     const char *lean = getenv("SAVAGEWIND_VK_LEAN_USAGE");
     bool lean_default = g_vk.props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
-#ifdef __linux__
+#if defined(__linux__) || defined(__PROSPERO__)
     if (g_vk.props.vendorID == 0x1002) lean_default = false;
 #endif
     g_vk.lean_usage = lean && *lean ? atoi(lean) != 0 : lean_default;

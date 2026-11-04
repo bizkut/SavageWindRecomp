@@ -31,6 +31,10 @@ The home-screen icon and backgrounds are generated from your own game files and 
 
 The game's Options menu has a PS5 Video page. Settings are stored in `/data/savagewind/savagewind.ini`; useful keys include `frame_rate` (e.g. `30`, `60`, or `off`), `vsync` (`on`, `fast`, `adaptive`, `off`), `hdr` (`auto`, `on`, `off`), `home_art` (0/1), `precompile_shaders` (0/1), `async_shaders` (0/1), and `gamecode_threads`. Changing settings can affect performance or start-up time.
 
+When the game requests text entry, the PS5 inline keyboard opens with the existing text. Enter confirms the edited
+text; closing the keyboard cancels and keeps the existing text. There is no global L3+R3 keyboard shortcut, so the
+sticks retain their game bindings.
+
 Video includes draw distance (Original, Medium, High) and haze; higher draw distances cost CPU and GPU time, and haze
 changes apply at the next start. Their defaults are Original and 100% respectively. Colour offers grading presets,
 exposure, contrast, saturation, temperature and LUTs. Gameplay includes HUD size, and Accessibility offers gameplay
