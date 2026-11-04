@@ -360,6 +360,8 @@ Fresh PS5 guest allocations are explicitly zeroed before publication: direct mem
 backing retains 1 MiB direct-memory mappings (the SDK's allocation alignment is 64 KiB). Decommit zeros complete
 4 KiB guest pages and tracks them per chunk, releasing its direct memory once all pages are decommitted and keeping
 the address reserved; partially decommitted chunks remain physically allocated. Explicit recommit clears those bits.
+Checked control-memory copies hold the same guest-access lock as reservation, commit (including fault-time commit),
+decommit and protection changes. Fault-watch protection changes may reenter it on the same thread.
 `tools/test_ps5_guest_commit.sh` covers partial decommit, release, reservation and zeroed recommit. Console
 qualification must also check direct-memory free/largest-range and `[mem]` / memory-stage logs across reloads.
 PS5 write watch reports unknown, disabling the unnecessary video-memory heap copy on unified memory.

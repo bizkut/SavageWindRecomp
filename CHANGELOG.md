@@ -2,11 +2,27 @@
 
 What changed in each Savage Wind release. The `test` branch holds what the next one will contain.
 
-On PS5 (ps5-v0.1.1), the home-screen name is now "Breath of the Wild".
+## PS5 ps5-v0.2.0
 
-On PS5 (ps5-v0.1.1), the storage helper keeps working when `/data/savagewind` is deleted or replaced while it runs
-(it recreates or follows the folder), and any helper problem at start is shown on screen instead of closing the game.
-The new title replaces a running older helper.
+- The home-screen title is **Breath of the Wild**. This release incorporates the upstream merge and the PS5
+  storage-broker fixes that were previously described as ps5-v0.1.1; no ps5-v0.1.1 was published.
+- The storage helper follows or recreates `/data/savagewind` if it is replaced or removed while running, reports
+  startup problems on screen, and replaces an older running helper.
+- Generated game code keeps frequently used guest registers and flags in locals. Memory freed on reload returns to
+  the system, and finished threads, timers and closed files are released.
+- Upstream gameplay and rendering fixes include high-frame-rate moving platforms and shield-surf jumps, Master
+  Kohga's entrance at high frame rates, and DLC-merged game data fixes.
+- PS5 options include draw distance and haze, Colour grading controls, HUD size and Accessibility gameplay assists.
+- The updated game-code generator and runtime require a one-time on-console rebuild (about 9 minutes, plus shader
+  preparation). Keep your own game packages and keys in `/data/savagewind/import/`; see [PS5 setup](README-PS5.md).
+- In a limited 1080p native, frame-generation-off PS5 benchmark, two merged-build runs achieved 99.3% on-time
+  frames and 17.086/17.336 ms p99 frame time versus 98.0–98.2% and 18.758–19.315 ms in three ps5-v0.1.0 runs.
+  Hitches were 0/1 versus 4/1/1; average render time rose from 8.61–8.63 to 9.28 ms. This is not proof of a
+  particular CPU cause or a guarantee for other scenes or settings.
+- Console IME, gyro axes and authenticated developer control remain untested. An exit abort was already present
+  before this release.
+
+## Other changes
 
 On PS5, the title starts its bundled storage helper through elfldr when necessary; manual loading still works.
 

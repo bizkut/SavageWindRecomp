@@ -45,7 +45,7 @@ agc_driver="$root/objects/libSceAgcDriver.so"
 python3 "$root/ps5/tools/check-title-imports.py" "$build/llvm-pie.elf" \
     "$native/runtime/api-surface.txt" "$agc" "$agc_driver" "${link_stubs[@]}"
 "$root/bin/ps5-native-tool" link --in "$build/llvm-pie.elf" --out "$build/eboot.elf" \
-    --stub-dir "$sdk/target/lib" --stub "$agc" --stub "$agc_driver" \
+    --stub-dir "$sdk/target/lib" --stub "$agc" --stub "$agc_driver" --stub "$build/stubs/libSceCommonDialog.so" \
     --module-sdk 0x02000009 --companion-sdk 0x08050001 --file-name eboot.elf
 mkdir -p "$root/title/PPSA90212"
 "$root/bin/ps5-native-tool" self --sign --in "$build/eboot.elf" --out "$root/title/PPSA90212/eboot.bin" --magic 0x1D3D154F

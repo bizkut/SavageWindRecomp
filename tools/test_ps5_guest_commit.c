@@ -41,6 +41,17 @@ int32_t sceKernelReserveVirtualRange(void **address, size_t length, int flags, s
     reservations++;
     return 0;
 }
+int32_t sceKernelMprotect(const void *address, size_t length, int protection) {
+    (void)address; (void)length; (void)protection;
+    return 0;
+}
+static _Atomic int worker_started, worker_done;
+static void *decommit_worker(void *arg) {
+    atomic_store(&worker_started, 1);
+    plat_decommit((uintptr_t)arg, CHUNK);
+    atomic_store(&worker_done, 1);
+    return NULL;
+}
 int main(void) {
     void *raw = mmap(NULL, CHUNK * 5, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (raw == MAP_FAILED) return 1;
@@ -77,6 +88,16 @@ int main(void) {
     if (releases != 5 || !plat_guest_is_committed(base + CHUNK * 3, 1)) return 13;
     plat_decommit(base + CHUNK * 3 + 4096, 4096);
     if (releases != 6 || plat_guest_is_committed(base + CHUNK * 3, 1)) return 14;
+    // A checked copy holds this same lock while another thread tries to decommit its backing.
+    plat_commit(base, CHUNK);
+    plat_guest_access_lock();
+    if (plat_protect(base, 4096, PLAT_PROT_RW)) return 15;  // Synchronous fault-watch reentry.
+    pthread_t worker;
+    if (pthread_create(&worker, NULL, decommit_worker, (void *)(uintptr_t)base)) return 16;
+    while (!atomic_load(&worker_started)) {}
+    if (atomic_load(&worker_done) || !plat_guest_is_committed(base, CHUNK)) return 17;
+    plat_guest_access_unlock();
+    if (pthread_join(worker, NULL) || !atomic_load(&worker_done) || plat_guest_is_committed(base, 1)) return 18;
     munmap(raw, CHUNK * 5);
     puts("PS5 guest decommit and recommit passed");
     return 0;

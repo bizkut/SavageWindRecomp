@@ -195,6 +195,23 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$RELEASE_TAG" --verify-tag --title "Savage Wind PS5 $RELEASE_TAG" \
-            --generate-notes "build/ps5/releases/SavageWind-PS5-${RELEASE_TAG}.zip" \
-            build/ps5/releases/SHA256SUMS
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          tag = os.environ['RELEASE_TAG']
+          text = Path('docs/RELEASING.md').read_text(encoding='utf-8')
+          start = f'<!-- release-notes:{tag}:start -->'
+          end = f'<!-- release-notes:{tag}:end -->'
+          if text.count(start) != 1 or text.count(end) != 1:
+              raise SystemExit(f'Missing or duplicate release notes markers for {tag}')
+          before, rest = text.split(start)
+          body, after = rest.split(end)
+          if end in before or start in after or not body.strip():
+              raise SystemExit(f'Invalid or empty release notes for {tag}')
+          Path(os.environ['RUNNER_TEMP'], 'ps5-release-notes.md').write_text(
+              body.strip() + '\n', encoding='utf-8')
+          PY
+          gh release create "$RELEASE_TAG" --verify-tag --title "Breath of the Wild PS5 $RELEASE_TAG" \
+            --notes-file "$RUNNER_TEMP/ps5-release-notes.md" \
+            "build/ps5/releases/SavageWind-PS5-${RELEASE_TAG}.zip" build/ps5/releases/SHA256SUMS

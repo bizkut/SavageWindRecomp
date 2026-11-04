@@ -27,7 +27,7 @@ bool ps5_startup_romfs_wait(char *why, size_t why_size);
 bool ps5_startup_romfs_enabled(void);
 // Snapshot only: a concurrent guest decommit may invalidate the answer immediately.
 bool plat_guest_is_committed(uint64_t addr, size_t size);
-// Protects a checked guest copy from plat_decommit and plat_protect. Fault-driven commits do not take this lock.
+// Serializes checked guest copies with reservation, commits, decommits and protection changes.
 void plat_guest_access_lock(void);
 void plat_guest_access_unlock(void);
 int ps5_startup_romfs_addons(void);

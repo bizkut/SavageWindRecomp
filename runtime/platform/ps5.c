@@ -48,8 +48,17 @@ static StackRange stacks[MAX_STACKS];
 static _Atomic unsigned stack_count;
 static pthread_mutex_t stack_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t guest_access_lock = PTHREAD_MUTEX_INITIALIZER;
-void plat_guest_access_lock(void) { pthread_mutex_lock(&guest_access_lock); }
-void plat_guest_access_unlock(void) { pthread_mutex_unlock(&guest_access_lock); }
+// Fault-watch handling can call plat_protect from a synchronous signal raised while this thread holds the lock.
+// Permit that same thread to reenter; other threads still serialize guest mapping and protection changes.
+static _Thread_local unsigned guest_access_depth;
+void plat_guest_access_lock(void) {
+    if (guest_access_depth) { guest_access_depth++; return; }
+    pthread_mutex_lock(&guest_access_lock);
+    guest_access_depth = 1;
+}
+void plat_guest_access_unlock(void) {
+    if (--guest_access_depth == 0) pthread_mutex_unlock(&guest_access_lock);
+}
 
 // The state serializes a fault, explicit commit and decommit of the same allocation.
 static bool map_chunk(uint64_t address, uint64_t size, DirectUnit *unit) {
@@ -81,11 +90,16 @@ static bool map_chunk(uint64_t address, uint64_t size, DirectUnit *unit) {
 bool plat_reserve_guest(uint64_t lo, uint64_t hi) {
     if (lo >= hi || (lo & (CHUNK - 1)) || (hi & (CHUNK - 1)) ||
         (hi - lo) / CHUNK > MAX_GUEST_CHUNKS) return false;
+    plat_guest_access_lock();
     void *p = (void *)(uintptr_t)lo;
     int rc = sceKernelReserveVirtualRange(&p, hi - lo, PS5_KERNEL_MAP_FIXED, 0);
-    if (rc || p != (void *)(uintptr_t)lo) return false;
+    if (rc || p != (void *)(uintptr_t)lo) {
+        plat_guest_access_unlock();
+        return false;
+    }
     guest_lo = lo;
     guest_hi = hi;
+    plat_guest_access_unlock();
     char line[160];
     snprintf(line, sizeof line, "savagewind: guest reserved %#llx-%#llx\n",
              (unsigned long long)lo, (unsigned long long)hi);
@@ -235,7 +249,14 @@ static void crash_handler(int sig, siginfo_t *si, void *context) {
     if ((sig == SIGSEGV || sig == SIGBUS) && a >= guest_lo && a < guest_hi) {
         uint64_t base = a & ~(GUEST_UNIT - 1);
         DirectUnit *unit = &guest_units[(base - guest_lo) / GUEST_UNIT];
-        if (atomic_load(&unit->state) != 2 && map_chunk(base, GUEST_UNIT, unit)) return;
+        if (atomic_load(&unit->state) != 2) {
+            plat_guest_access_lock();
+            unsigned char state = atomic_load(&unit->state);
+            // State 1 here means this signal interrupted this thread's own mutation; let the watch handler run.
+            bool mapped = state == 0 ? map_chunk(base, GUEST_UNIT, unit) : state == 2;
+            plat_guest_access_unlock();
+            if (mapped) return;
+        }
     }
     unsigned count = atomic_load(&stack_count);
     for (unsigned i = 0; i < count; i++) {

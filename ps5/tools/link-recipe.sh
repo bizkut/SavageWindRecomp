@@ -27,6 +27,16 @@ link_recipe() {
         --end-group)
 
     link_stubs=("$lib/libkernel.so" "$lib/libkernel_sys.so")
+    # The payload SDK omits this import facade; never link its body into the title.
+    local recipe_root
+    recipe_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
+    mkdir -p "$build/stubs"
+    PS5_PAYLOAD_SDK="$sdk_root" sh "$recipe_root/ps5/tooling/prospero-clang18" \
+        -std=c11 -O2 -fPIC -c "$recipe_root/ps5/tooling/ps5-stubs/common_dialog_link_stub.c" \
+        -o "$build/stubs/common_dialog.o" || return
+    "$sdk_root/bin/prospero-lld" --shared -soname libSceCommonDialog.sprx \
+        -o "$build/stubs/libSceCommonDialog.so" "$build/stubs/common_dialog.o" || return
+    link_stubs+=("$build/stubs/libSceCommonDialog.so")
     local stub
     for stub in "$lib"/*.so; do
         case ${stub##*/} in

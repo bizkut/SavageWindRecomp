@@ -35,6 +35,7 @@ _Static_assert(sizeof(ImeDialogResult) == 0x10, "IME dialog result ABI");
 
 int32_t sceSysmoduleLoadModule(uint16_t id);
 int32_t sceUserServiceGetInitialUser(int32_t *user_id);
+int32_t sceCommonDialogInitialize(void);
 int32_t sceImeDialogInit(const ImeDialogParam *param, const void *extended);
 int32_t sceImeDialogGetStatus(void);
 int32_t sceImeDialogGetResult(ImeDialogResult *result);
@@ -45,6 +46,7 @@ void input_reset(void);
 
 enum { IME_DIALOG_MODULE = 0x0096, IME_MAX_TEXT = 2048, IME_FINISHED = 2, IME_OK = 0 };
 static int keyboard_open;
+static int common_dialog_initialized;
 
 int ps5_keyboard_is_open(void) {
     return __atomic_load_n(&keyboard_open, __ATOMIC_ACQUIRE);
@@ -64,6 +66,14 @@ int menu_keyboard_run(const char *initial, int max_len, char *out, int cap) {
     if (rc < 0 || user < 0 || !out || cap <= 0) {
         LOG("[swkbd] initial user unavailable %#x\n", (unsigned)rc);
         return 0;
+    }
+    if (!common_dialog_initialized) {
+        rc = sceCommonDialogInitialize();
+        if (rc < 0 && (uint32_t)rc != 0x80b80002u) {
+            LOG("[swkbd] common dialog init failed %#x\n", (unsigned)rc);
+            return 0;
+        }
+        common_dialog_initialized = 1;
     }
     int limit = max_len > 0 ? max_len : 8;
     if (limit > IME_MAX_TEXT) limit = IME_MAX_TEXT;

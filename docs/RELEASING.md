@@ -11,6 +11,44 @@ For a non-distributable local candidate, first run `PS5_GAMECODE=console bash ps
 `bash ps5/tools/package-public-release.sh --candidate`. The candidate uses the existing build, permits a dirty
 worktree and unresolved source provenance, and marks dirty candidates in the filename; it is not a public release.
 
+## Published release notes
+
+The tag workflow publishes the text between the matching tag's markers below. For each future release, add a
+new uniquely marked section before tagging; a missing, duplicated or empty section fails publication.
+
+<!-- release-notes:ps5-v0.2.0:start -->
+## Breath of the Wild on PS5 — ps5-v0.2.0
+
+This release merges upstream changes and fixes the storage helper, including recovery when
+`/data/savagewind` is deleted or replaced, visible startup errors, and replacement of an older running helper.
+The PS5 home-screen name is **Breath of the Wild**. There was no published ps5-v0.1.1.
+
+**Highlights**
+
+- Generated game code keeps frequently used guest registers and flags in locals. Memory freed on reload returns to
+  the system, and finished threads, timers and closed files are released.
+- Upstream fixes address high-frame-rate moving platforms and shield-surf jumps, Master Kohga's entrance at high
+  frame rates, and DLC-merged game data.
+- PS5 settings include draw distance and haze, Colour grading controls, HUD size and Accessibility gameplay assists.
+
+**Your own game files are required.** Put your base NSP or XCI, matching 1.9.0 update NSP and `prod.keys` in
+`/data/savagewind/import/`; optional DLC NSPs and, when needed, `title.keys` go there too. Keep them there for
+subsequent starts. The release does not include game files or keys. See the
+[PS5 installation guide](https://github.com/bizkut/SavageWindRecomp/blob/ps5-v0.2.0/README-PS5.md) for console
+requirements and setup.
+
+**Updating requires a one-time game-code rebuild** on the console, approximately 9 minutes plus shader
+preparation; actual time varies. Leave the console on while the progress screen is displayed.
+
+**Stutter measurement:** in a limited PS5 benchmark at native 1080p with frame generation off, two merged-build
+runs had 99.3% on-time frames, 17.086/17.336 ms p99 frame time and 0/1 hitches. Three ps5-v0.1.0 runs had
+98.0/98.2/98.2% on-time, 19.315/19.220/18.758 ms p99 and 4/1/1 hitches. Average render time increased from
+8.61–8.63 ms to 9.28 ms. These results do not establish a specific CPU cause or predict every scene and setting.
+
+**Limits:** Console IME, gyro axes and authenticated developer control have not been tested. An exit abort
+predates this release.
+<!-- release-notes:ps5-v0.2.0:end -->
+
 ## Runner prerequisites
 
 Register a self-hosted Linux x64 runner for `bizkut/SavageWindRecomp` on the build machine and label it
