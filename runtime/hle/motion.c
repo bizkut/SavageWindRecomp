@@ -378,16 +378,6 @@ static void update(uint64_t now) {
         fill(st, m, gyro, lin);
     }
     s.yaw = wrap(yaw1), s.pitch = pitch1, s.roll = wrap(s.roll + droll);
-    if (ENV("SAVAGEWIND_MOTION_LOG") && now - s.logged > 1000000000ull) {
-        s.logged = now;
-        const SixAxisState *st = &s.ring[s.head];
-        LOG("[motion] %s: yaw %.1f pitch %.1f roll %.1f deg | gyro %.3f %.3f %.3f turns/s | acc %.2f %.2f %.2f G | "
-            "bias %.2f %.2f %.2f deg/s (spread %.4f rad/s, %.4f G) | sample %lld\n",
-            kind ? "sensors" : g.tilt_held || g.tilt_pitch || g.tilt_roll ? "mouse tilt" : "still/script",
-            s.yaw * 180 / PI, s.pitch * 180 / PI, s.roll * 180 / PI, st->gyro[0], st->gyro[1], st->gyro[2], st->acc[0],
-            st->acc[1], st->acc[2], g.bias[0] * 180 / PI, g.bias[1] * 180 / PI, g.bias[2] * 180 / PI, g.gyro_sd,
-            sqrt(g.acc_var), (long long)st->sampling_number);
-    }
 }
 
 // ---- nn::hid
@@ -404,8 +394,6 @@ HLE_FUNC("_ZN2nn3hid23GetSixAxisSensorHandlesEPNS0_19SixAxisSensorHandleEiRKjNS_
     int n = type == 5 ? 2 : 1;
     if (n > count) n = count < 0 ? 0 : count;
     for (int i = 0; i < n; i++) out[i] = (uint32_t)type | (id & 0xff) << 8 | dev[i] << 16;
-    static int nlog;
-    if (nlog++ < 4) LOG("[motion] six-axis sensor handles for npad %#x (style %#x): %d\n", id, style, n);
     c->x[0] = (uint64_t)n;
 }
 

@@ -2457,19 +2457,6 @@ presented:
     if (prev_present > 0 && now - prev_present > max_gap) max_gap = now - prev_present;
     prev_present = now;
     if (now - last_fps_time >= fps_iv) {
-        if (last_fps_time > 0) {
-            char ft[1024];
-            ft_window(ft, sizeof ft);
-#ifdef __PROSPERO__
-            unsigned iw, ih;
-            dynamic_resolution_size(&iw, &ih);
-            LOG("[vk] t=%.1f frame %llu %.1f fps max %.0fms internal=%ux%u (%s) | %s\n", now,
-                (unsigned long long)total_frames, frames / (now - last_fps_time), max_gap * 1000.0, iw, ih, renderer_stats(), ft);
-#else
-            LOG("[vk] t=%.1f frame %llu %.1f fps max %.0fms (%s) | %s\n", now, (unsigned long long)total_frames,
-                frames / (now - last_fps_time), max_gap * 1000.0, renderer_stats(), ft);
-#endif
-        }
         if ((gen_frames || gen_twice || gen_dropped) && last_fps_time > 0) {
             // (one klog write each: a render-thread LOG costs ~1.4 ms on the PS5)
             double s = now - last_fps_time;

@@ -199,11 +199,6 @@ void rprof_frame(void) {
 #endif
     uint64_t now = plat_now_ns();
     if (now - win_t0 >= 10000000000ull) {
-        static char line[2048];  // (one LOG, one klog write)
-        size_t at = (size_t)snprintf(line, sizeof line, "[rprof] %.1f s%s: ", (now - win_t0) / 1e9,
-                                     seg < 0 ? "" : seg ? " (benchmark: camera turning)" : " (benchmark: still)");
-        format(&bk[B_WIN], line + at, sizeof line - at - 1);
-        LOG("%s\n", line);
         clear(&bk[B_WIN]);
         win_t0 = now;
     }

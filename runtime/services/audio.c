@@ -1093,7 +1093,7 @@ static _Atomic uint32_t g_sdk_short;  // device requests the stream couldn't fil
 // The renderer's 10 s line: SAVAGEWIND_AUDIO_LOG; always on the PS5 (a title has no environment).
 static bool sdk_audio_log(void) {
 #ifdef __PROSPERO__
-    return true;
+    return false;  // Keep periodic renderer statistics out of the PS5 kernel log.
 #else
     return ENV("SAVAGEWIND_AUDIO_LOG") != NULL;
 #endif

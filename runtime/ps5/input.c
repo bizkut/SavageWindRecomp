@@ -23,10 +23,7 @@
 // events; a poll's motion and wheel, summed over every record of every mouse, go out as one motion and one wheel event.
 // A disconnected or intercepted record holds nothing. A key or button is down while any device holds it.
 //
-// The klog proves each control: one line per change of the buttons, stick directions or triggers, per key or mouse
-// button change (at most LOG_PER_SECOND such lines a second; the count of the lines left out follows), naming the
-// DualSense controls held and the Switch buttons they drive through the bindings; a line per keyboard or mouse
-// connected or disconnected; the mouse's summed motion and wheel once a second while it moves.
+// The klog records device lifecycle and read errors, not every controller state transition or motion sample.
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <SDL3/SDL.h>
 #include <stddef.h>
@@ -95,8 +92,8 @@ enum {
     PAD_SQUARE = 1u << 15, PAD_TOUCHPAD = 1u << 20, PAD_INTERCEPTED = 1u << 31,
 };
 #define PAD_RECORDS 64
-#define USER_SERVICE_NO_EVENT 0x80960007u  // sceUserServiceGetEvent: nothing new
 #define LOG_PER_SECOND 30
+#define USER_SERVICE_NO_EVENT 0x80960007u  // sceUserServiceGetEvent: nothing new
 
 // ---- keyboards and mice (declarations and records as ../ps5-native-gamepad-input-research include/ps5_keyboard.hpp
 // and ps5_mouse.hpp have them)
@@ -168,18 +165,12 @@ static struct {
     uint8_t generation;       // its connection generation (connected_count)
     uint32_t sdl_buttons;     // SDL buttons held (bit per SDL_GamepadButton)
     Sint16 axis[SDL_GAMEPAD_AXIS_COUNT];
-    uint32_t raw_buttons;     // the DualSense buttons of the published record (the log)
     uint32_t read_errors;
     bool motion;              // its motion sensors are on (scePadSetMotionSensorState took it)
     bool sensor_on[3];        // input.c turned them on (by SDL_SensorType)
-    uint32_t motion_samples;  // records since motion_log_ns (the measured sample rate)
-    uint32_t polls, empty_reads, max_batch;  // ... and how they came: reads, reads with no record, the largest batch
-    uint64_t last_ts_us;      // the previous record's time, and the shortest / longest gap between records since
-    uint64_t min_gap_us, max_gap_us;
-    PadRecord newest;         // the newest usable record (the [motion] line)
+    uint32_t motion_samples;  // sensor records in the current rate-measurement window
+    uint64_t motion_rate_start_us;
     float motion_hz;
-    uint64_t motion_log_ns;   // the next [motion] line
-    int motion_lines;
     uint8_t rumble[2];        // the motors' speeds now (large, small)
     uint64_t rumble_until_ns; // SDL's duration: the motors stop then unless asked again
     char rumble_error[96];
@@ -221,13 +212,13 @@ static Sint16 trigger_axis(uint8_t v) { return (Sint16)((int)v * 257 / 2); }
 // ---- the gamepad's state
 static void pad_clear_state(void) {
     g_pad.sdl_buttons = 0;
-    g_pad.raw_buttons = 0;
     memset(g_pad.axis, 0, sizeof g_pad.axis);
 }
 
 // ---- rumble: SDL's two motors are the DualSense's (low frequency: the large one), each speed's high byte as SDL's own
 // DualSense driver sends it
 static bool rumble_send(uint8_t large, uint8_t small, const char *why) {
+    (void)why;
     PadVibration v = {large, small};
     int32_t r = scePadSetVibration(g_pad.handle, &v);
     if (r < 0) {
@@ -235,7 +226,6 @@ static bool rumble_send(uint8_t large, uint8_t small, const char *why) {
         ps5_sdl_error(g_pad.rumble_error);
         return false;
     }
-    if (log_allowed()) LOG("[input] DualSense rumble: large %u small %u%s\n", large, small, why);
     g_pad.rumble[0] = large, g_pad.rumble[1] = small;
     return true;
 }
@@ -250,22 +240,24 @@ static void pad_configure_motion(void) {
     int32_t rm = scePadSetMotionSensorState(g_pad.handle, true);
     // (tilt correction only shapes the pad's orientation, which is unused; the deadband would swallow a slow aim,
     // and motion.c learns the gyroscope's bias at rest itself)
-    int32_t rt = scePadSetTiltCorrectionState(g_pad.handle, false);
-    int32_t rd = scePadSetAngularVelocityDeadbandState(g_pad.handle, false);
-    int32_t ro = scePadResetOrientation(g_pad.handle);
+    (void)scePadSetTiltCorrectionState(g_pad.handle, false);
+    (void)scePadSetAngularVelocityDeadbandState(g_pad.handle, false);
+    (void)scePadResetOrientation(g_pad.handle);
     g_pad.motion = rm >= 0;
     memset(g_pad.sensor_on, 0, sizeof g_pad.sensor_on);
-    g_pad.motion_samples = 0, g_pad.motion_hz = 0, g_pad.motion_lines = 0;
-    g_pad.polls = g_pad.empty_reads = g_pad.max_batch = 0;
-    g_pad.last_ts_us = 0, g_pad.min_gap_us = UINT64_MAX, g_pad.max_gap_us = 0;
-    g_pad.motion_log_ns = plat_now_ns() + 1000000000ull;
-    LOG("[motion] DualSense sensors on %#x, tilt correction off %#x, angular-velocity deadband off %#x, orientation "
-        "reset %#x: %s\n", (unsigned)rm, (unsigned)rt, (unsigned)rd, (unsigned)ro,
-        g_pad.motion ? "accelerometer and gyroscope to motion controls" : "no motion controls");
+    g_pad.motion_samples = 0, g_pad.motion_hz = 0;
+    g_pad.motion_rate_start_us = 0;
 }
 
 static void pad_motion(const PadRecord *r) {
+    if (!g_pad.motion_rate_start_us) g_pad.motion_rate_start_us = r->timestamp_us;
     g_pad.motion_samples++;
+    uint64_t span = r->timestamp_us - g_pad.motion_rate_start_us;
+    if (span >= 1000000) {
+        g_pad.motion_hz = (float)(g_pad.motion_samples * 1000000.0 / (double)span);
+        g_pad.motion_samples = 0;
+        g_pad.motion_rate_start_us = r->timestamp_us;
+    }
     SDL_Event e;
     for (int s = SDL_SENSOR_ACCEL; s <= SDL_SENSOR_GYRO; s++) {
         if (!g_pad.motion || !g_pad.sensor_on[s]) continue;
@@ -278,33 +270,6 @@ static void pad_motion(const PadRecord *r) {
         e.gsensor.sensor_timestamp = r->timestamp_us * 1000ull;
         push(&e);
     }
-}
-
-// The readings, the measured sample rate and how the records came (the reads since the last line, those that returned
-// nothing, the largest batch, the shortest and longest time between records): each second for the first five seconds
-// of a connection, then every ten
-// (Diagnostic: once per line, scePadReadState's latest record is compared with scePadRead's newest one: how much newer
-// it is, and its gyroscope. Input itself is read from scePadRead's records only.)
-static void motion_log(void) {
-    uint64_t now = plat_now_ns();
-    if (now < g_pad.motion_log_ns) return;
-    uint64_t span = now - g_pad.motion_log_ns + (g_pad.motion_lines < 5 ? 1000000000ull : 10000000000ull);
-    g_pad.motion_hz = (float)(g_pad.motion_samples * 1e9 / (double)span);
-    g_pad.motion_log_ns = now + (++g_pad.motion_lines < 5 ? 1000000000ull : 10000000000ull);
-    const PadRecord *r = &g_pad.newest;
-    PadRecord st;
-    memset(&st, 0, sizeof st);
-    int32_t rs = scePadReadState(g_pad.handle, &st);
-    LOG("[motion] DualSense: accelerometer %.4f %.4f %.4f G, gyroscope %.4f %.4f %.4f rad/s, pad orientation %.3f %.3f "
-        "%.3f %.3f, %.0f samples/s (%u reads, %u empty, largest batch %u, %.1f-%.1f ms apart)%s; latest state %#x: "
-        "%.1f ms newer, gyroscope %.4f %.4f %.4f\n", r->accel[0],
-        r->accel[1], r->accel[2], r->gyro[0], r->gyro[1], r->gyro[2], r->orientation[0], r->orientation[1],
-        r->orientation[2], r->orientation[3], g_pad.motion_hz, g_pad.polls, g_pad.empty_reads, g_pad.max_batch,
-        g_pad.min_gap_us == UINT64_MAX ? 0 : g_pad.min_gap_us / 1000.0, g_pad.max_gap_us / 1000.0,
-        g_pad.motion ? "" : " (motion off)", (unsigned)rs, ((double)st.timestamp_us - (double)r->timestamp_us) / 1000.0,
-        st.gyro[0], st.gyro[1], st.gyro[2]);
-    g_pad.motion_samples = g_pad.polls = g_pad.empty_reads = g_pad.max_batch = 0;
-    g_pad.min_gap_us = UINT64_MAX, g_pad.max_gap_us = 0;
 }
 
 static void pad_remove(const char *why) {
@@ -335,39 +300,8 @@ static void pad_add(const PadRecord *r) {
     push_device(SDL_EVENT_GAMEPAD_ADDED);
 }
 
-// One line naming what is held: DualSense buttons, stick directions (past half tilt), triggers (past half travel),
-// and the Switch buttons they drive through the bindings (runtime/hle/bindings.c)
-static int zone(Sint16 v) { return v > 16384 ? 1 : v < -16384 ? -1 : 0; }
-static uint32_t log_signature(void) {
-    uint32_t s = g_pad.raw_buttons & ~(uint32_t)(PAD_L2 | PAD_R2);
-    for (int a = 0; a < 4; a++) s ^= (uint32_t)(zone(g_pad.axis[a]) + 1) << (21 + 2 * a);
-    s ^= (uint32_t)(g_pad.axis[SDL_GAMEPAD_AXIS_LEFT_TRIGGER] > 16000) << 16;
-    s ^= (uint32_t)(g_pad.axis[SDL_GAMEPAD_AXIS_RIGHT_TRIGGER] > 16000) << 17;
-    return s;
-}
-static void log_state(void) {
-    static const char *const k_switch[BIND_PAD_COUNT] = {"A", "B", "X", "Y", "LStick", "RStick", "L", "R", "ZL", "ZR",
-                                                         "Plus", "Minus", "Left", "Up", "Right", "Down"};
-    char held[256] = "", sw[128] = "";
-    size_t n = 0, m = 0;
-    for (int i = 0; i < NBUTTONS; i++)
-        if (g_pad.raw_buttons & k_buttons[i].bit) n += (size_t)snprintf(held + n, sizeof held - n, " %s", k_buttons[i].name);
-    uint32_t host = g_pad.sdl_buttons;
-    if (g_pad.axis[SDL_GAMEPAD_AXIS_LEFT_TRIGGER] > 16000) host |= 1u << PADB_LTRIGGER;
-    if (g_pad.axis[SDL_GAMEPAD_AXIS_RIGHT_TRIGGER] > 16000) host |= 1u << PADB_RTRIGGER;
-    for (int i = 0; i < BIND_PAD_COUNT; i++)
-        if (g_bind_pad[i] >= 0 && g_bind_pad[i] < PADB_HOST_COUNT && (host >> g_bind_pad[i] & 1))
-            m += (size_t)snprintf(sw + m, sizeof sw - m, " %s", k_switch[i]);
-    static const char dir[3] = {'-', '0', '+'};
-    LOG("[input] DualSense:%s | L stick %c%c R stick %c%c (%d,%d %d,%d) | L2 %d R2 %d | Switch:%s\n",
-        n ? held : " (no button)", dir[zone(g_pad.axis[0]) + 1], dir[-zone(g_pad.axis[1]) + 1],
-        dir[zone(g_pad.axis[2]) + 1], dir[-zone(g_pad.axis[3]) + 1], g_pad.axis[0], g_pad.axis[1], g_pad.axis[2],
-        g_pad.axis[3], g_pad.axis[4], g_pad.axis[5], m ? sw : " (none)");
-}
-
 // The newest usable record as the current state; each change an SDL event
 static void pad_publish(const PadRecord *r) {
-    uint32_t before = log_signature();
     uint32_t sdl = 0;
     for (int i = 0; i < NBUTTONS; i++)
         if (r->buttons & k_buttons[i].bit) sdl |= 1u << k_buttons[i].sdl;
@@ -375,7 +309,6 @@ static void pad_publish(const PadRecord *r) {
                                            trigger_axis(r->l2), trigger_axis(r->r2)};
     uint32_t changed = sdl ^ g_pad.sdl_buttons;
     g_pad.sdl_buttons = sdl;
-    g_pad.raw_buttons = r->buttons;
     SDL_Event e;
     for (int a = 0; a < SDL_GAMEPAD_AXIS_COUNT; a++) {
         if (axis[a] == g_pad.axis[a]) continue;
@@ -392,16 +325,12 @@ static void pad_publish(const PadRecord *r) {
         e.gbutton.which = g_pad.id, e.gbutton.button = (Uint8)b, e.gbutton.down = sdl >> b & 1;
         push(&e);
     }
-    if (log_signature() != before && log_allowed()) log_state();
 }
 
 static void pad_read(void) {
     PadRecord rec[PAD_RECORDS];
     int32_t n = scePadRead(g_pad.handle, rec, PAD_RECORDS);
-    g_pad.polls++;
-    if (n == 0) g_pad.empty_reads++;
     if (n == 0) return;  // nothing new: the current state stands
-    if (n > 0 && (uint32_t)n > g_pad.max_batch) g_pad.max_batch = (uint32_t)n;
     if (n < 0 || n > PAD_RECORDS) {
         if (g_pad.read_errors++ % 1000 == 0)
             LOG("[input] scePadRead(handle %d) failed: %#x (%u failures)\n", g_pad.handle, (unsigned)n, g_pad.read_errors);
@@ -418,14 +347,8 @@ static void pad_read(void) {
             pad_remove("a new connection");
         if (!g_pad.present && usable) pad_add(r);
         if (g_pad.present) newest = r, pad_motion(r);
-        if (g_pad.last_ts_us && r->timestamp_us > g_pad.last_ts_us) {
-            uint64_t gap = r->timestamp_us - g_pad.last_ts_us;
-            if (gap < g_pad.min_gap_us) g_pad.min_gap_us = gap;
-            if (gap > g_pad.max_gap_us) g_pad.max_gap_us = gap;
-        }
-        g_pad.last_ts_us = r->timestamp_us;
     }
-    if (newest) pad_publish(newest), g_pad.newest = *newest;
+    if (newest) pad_publish(newest);
 }
 
 // ---- keyboards and mice
@@ -748,7 +671,6 @@ void ps5_input_poll(void) {
     open_devices();
     if (g_pad.handle >= 0) pad_read();
     hid_poll();
-    if (g_pad.present) motion_log();
     if ((g_pad.rumble[0] || g_pad.rumble[1]) && g_pad.rumble_until_ns && now >= g_pad.rumble_until_ns)
         rumble_send(0, 0, " (its duration ended)");
 }

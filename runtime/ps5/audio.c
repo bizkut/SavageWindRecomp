@@ -140,14 +140,6 @@ static void audio_window(uint64_t now) {
         resumed++;
         if (gain < 0 || s->gain < gain) gain = s->gain;
     }
-    double rms = g.level_samples ? sqrt(g.level_sumsq / (double)g.level_samples) : 0;
-    ps5_logf("[audio] AudioOut %.1f s: %llu periods, %u underruns (%u frames short), %u errors (last %#x), "
-             "%u frames dropped, %d streams (%d resumed, lowest gain %.2f), queue peak %u frames; in %u puts, %llu "
-             "frames, peak %.1f dBFS; ring read peak %.1f dBFS; level peak %.1f dBFS rms %.1f dBFS\n",
-             (now - g.window_start) / 1e9, (unsigned long long)g.periods, g.underruns, g.short_frames, g.errors,
-             (unsigned)g.last_error, g.dropped, streams, resumed, gain, g.queue_peak, g.puts,
-             (unsigned long long)g.in_frames, dbfs(g.in_peak, 1), dbfs(g.ring_peak, 1), dbfs(g.level_peak, 32767),
-             dbfs(rms, 32767));
     g.window_start = now;
     g.periods = 0;
     g.underruns = g.short_frames = g.errors = g.dropped = g.queue_peak = 0;

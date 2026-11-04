@@ -273,27 +273,6 @@ uint64_t renderer_fence_seq(void) {
 // Wait until submission `seq` has completed (0 = nothing to wait for).
 void renderer_wait_seq(uint64_t seq) {
     if (!seq) return;
-    if (ENV("SAVAGEWIND_LOG_FENCES")) {  // (debug) how far behind the newest submission the waited fence is
-        extern uint64_t renderer_present_count(void);
-        static uint64_t f0, hist[6], frames_seen;
-        uint64_t f = renderer_present_count();
-        uint64_t pend = submit_seq + (cmdbuf ? 1 : 0);
-        uint64_t age = pend > seq ? pend - seq : 0;
-        bool done_already = false;
-        pthread_mutex_lock(&cb_lock);
-        if (seq <= submit_seq && submit_seq - seq < CB_HIST && cb_hist[seq % CB_HIST])
-            done_already = cb_hist[seq % CB_HIST].status >= MTLCommandBufferStatusCompleted;
-        pthread_mutex_unlock(&cb_lock);
-        hist[age > 4 ? 4 : age]++;
-        if (done_already) hist[5]++;
-        if (f - f0 >= 300) {
-            frames_seen = f - f0;
-            LOG("[fences] per %llu frames: waits by age (submissions behind newest) 0:%llu 1:%llu 2:%llu 3:%llu 4+:%llu, already done %llu; submissions now %llu\n",
-                (unsigned long long)frames_seen, hist[0], hist[1], hist[2], hist[3], hist[4], hist[5], (unsigned long long)submit_seq);
-            memset(hist, 0, sizeof hist);
-            f0 = f;
-        }
-    }
     pthread_mutex_lock(&cb_lock);
     id<MTLCommandBuffer> c = nil;
     if (seq > submit_seq) c = last_cb;  // not committed yet (other thread): wait for everything committed so far

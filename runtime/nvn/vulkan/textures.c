@@ -1160,15 +1160,6 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
             }
             if (wait && !pending) pending = wait;
             if (!high[layer]) ready = false;
-            if (!b->font_logged)
-                LOG("[font] array %ux%u layer=%u/%u output_height=%d scale=%d target=%u levels=%u samples=%u state=%s\n",
-                    l.w, l.h, layer, layers,
-#ifdef __PROSPERO__
-                    winsize_effective(true).h,
-#else
-                    (int)g_vk.sc_extent.height,
-#endif
-                    scale, t->target, t->levels, t->samples, high[layer] ? "cached" : wait ? "pending" : "original");
         }
         free(lin);
         if (all) {
@@ -1183,8 +1174,6 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
                         .imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, layer, 1},
                         .imageExtent = {l.w * scale, l.h * scale, 1}};
                     rec_CmdCopyBufferToImage(cb, hs.buf, b->image, VK_IMAGE_LAYOUT_GENERAL, 1, &rg);
-                    LOG("[font] array layer=%u addr=%llx live_frame=%llu (%dx)\n", layer,
-                        (unsigned long long)(t->addr + layer * layer_size), (unsigned long long)framepace_game_frame(), scale);
                 }
                 return;
             }
@@ -1232,22 +1221,11 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
             bool layout = !original_only && lv == 0 && layer == 0 && t->format == 0x01 && !linear;
             bool font_like = !original_only && t->target != 4 && lv == 0 && layer == 0 && !linear && t->pool && l.d == 1 &&
                              (t->format == 0x49 || t->format == 0x01) && l.w >= 128 && l.h >= 128;
-            uint64_t font_start = font_like && !b->font_logged ? SDL_GetTicksNS() : 0;
             int pending = 0;
             bool text = font_like &&
                         glyphs_sharp_text(t->addr, t->pool->storage, t->pool->storage + t->pool->size,
                                           t->format, l.w, l.h, lin, g_settings.sharp_text ? gs : 1,
                                           !b->font_logged, &high, &pending);
-            if (text && font_start)
-                LOG("[font] %ux%u replacement=%s dispatch %.2f ms output_height=%d scale=%d target=%u levels=%u samples=%u layers=%u\n",
-                    l.w, l.h, high ? "cached" : pending ? "pending" : "original",
-                    (SDL_GetTicksNS() - font_start) / 1000000.0,
-#ifdef __PROSPERO__
-                    winsize_effective(true).h,
-#else
-                    (int)g_vk.sc_extent.height,
-#endif
-                    gs, t->target, t->levels, t->samples, layers);
             if (t->target != 4) b->font_pending = pending;
             if (font_like) b->font_logged = true;
             bool glyph = text || (sheet ? glyphs_apply(t->addr, t->pool->storage, t->pool->storage + t->pool->size,
@@ -1274,8 +1252,6 @@ static void upload_levels_now(NvnTexture *t, TexBackend *b, uint32_t level_mask)
                         .imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
                         .imageExtent = {l.w * gs, l.h * gs, 1}};
                     rec_CmdCopyBufferToImage(cb, hs.buf, b->image, VK_IMAGE_LAYOUT_GENERAL, 1, &rg);
-                    if (text) LOG("[font] %ux%u addr=%llx live_frame=%llu (%dx)\n", l.w, l.h,
-                                  (unsigned long long)t->addr, (unsigned long long)framepace_game_frame(), gs);
                     continue;
                 }
             } else if (b->glyph_scale) {

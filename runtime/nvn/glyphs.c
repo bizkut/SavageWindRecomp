@@ -196,7 +196,6 @@ void glyphs_register_font(const uint8_t *b, uint64_t n) {
     uint64_t data = font_u64(bt + offsets);
     uint64_t bytes = (uint64_t)w * h / (format == FMT_BC4 ? 2 : 1);
     if (data > bn || bytes * count > bn - data) return;
-    size_t before = text_sheet_count;
     for (uint32_t i = 0; i < count && text_sheet_count < sizeof text_sheets / sizeof *text_sheets; i++) {
         uint64_t hash = fnv1a(bt + data + i * bytes, bytes);
         size_t j;
@@ -212,9 +211,6 @@ void glyphs_register_font(const uint8_t *b, uint64_t n) {
             text_sheets[text_sheet_count++] = sheet;
         }
     }
-    if (text_sheet_count != before)
-        LOG("[font] indexed %u new %ux%u sheets (cells %ux%u, grid %ux%u)\n",
-            (unsigned)(text_sheet_count - before), w, h, cw, ch, cols, rows);
 }
 
 // The render thread owns slot creation; workers publish their immutable results with release/acquire.
@@ -308,11 +304,6 @@ static void text_bundled_font(TextCache *c, const uint8_t *src, uint8_t *dst) {
         }
     }
     free(packed);
-    LOG("[font] bundled font active: sheet %s, %u glyphs from the font, %u missing, %u condensed, "
-        "%u non-ASCII scaled (min %.4f), sheet scale factor %.4f, baseline shift %.2f, %.2f ms (%s)\n",
-        c->name, hdr.fit.fitted, hdr.fit.fallback, hdr.fit.condensed, hdr.fit.scaled, hdr.fit.min_glyph_factor,
-        hdr.fit.scale_factor, hdr.fit.baseline_shift, (SDL_GetTicksNS() - started) / 1000000.0,
-        cached ? "cached" : "fitted");
 }
 #endif
 
@@ -352,9 +343,6 @@ static void *text_worker(void *arg) {
     free(src);
     c->output = dst;
     __atomic_store_n(&c->state, 2, __ATOMIC_RELEASE);
-    LOG("[font] %ux%u hash=%016llx %dx method=cubic worker %.2f ms finished_frame=%llu\n",
-        w, h, (unsigned long long)c->hash, scale, (SDL_GetTicksNS() - started) / 1000000.0,
-        (unsigned long long)framepace_game_frame());
     return NULL;
 }
 
@@ -379,8 +367,6 @@ bool glyphs_sharp_text(uint64_t addr, uint64_t pool_lo, uint64_t pool_hi, uint32
         if (text_sheets[i].hash == hash && text_sheets[i].w == w &&
             text_sheets[i].h == h && text_sheets[i].format == format) break;
     bool hit = i != text_sheet_count;
-    if (log_upload) LOG("[font] %ux%u format %#x hash %016llx %s\n",
-                        w, h, format, (unsigned long long)hash, hit ? "hit" : "miss");
     if (!hit) return false;
     if (scale != 2 && scale != 4) return true;
     size_t slot;
