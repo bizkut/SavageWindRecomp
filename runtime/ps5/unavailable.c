@@ -16,13 +16,9 @@ bool game_options_input_hold(void);           // runtime/ui/game_options.mm
 // ---- the overlay menu (runtime/ui/menu.mm, ImGui; opened with keys): none, and the display plane takes no requests.
 // A binding capture (the game's Options screen) still takes the press first, as the menu's event handler does, and
 // the game gets no input while it runs.
-bool menu_handle_event(const SDL_Event *e) { return bind_capture_event(e); }
 bool menu_is_open(void) { return false; }
-bool menu_input_captured(void) { return game_options_input_hold(); }
 bool menu_cursor_free(void) { return false; }  // (no Esc to free a cursor: the mouse always turns the camera)
 void menu_apply_window_requests(void *window) { (void)window; }
-void menu_render(void *cmd, uint32_t target_w, uint32_t target_h) { (void)cmd; (void)target_w; (void)target_h; }
-bool menu_render_needed(void) { return false; }
 void menu_test_open(void) {}
 // Window size's list: the PS5 Video page has no Window size row (runtime/ps5/video_page.cpp)
 void menu_size_list_open(void) { LOG("[options] no window size list on the PS5\n"); }

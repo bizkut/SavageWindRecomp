@@ -83,13 +83,17 @@ for crt in app_crt app_cpp_runtime; do
         -c "$native/$crt.cpp" -o "$build/obj/$crt.o"
 done
 
-stub() {  # AGC lives in system modules: tiny link stubs record the imports
-    cc -std=c11 -O2 -fPIC -c "$tooling/ps5-stubs/$2" -o "$build/obj/$1.o"
-    "$sdk/bin/prospero-lld" --shared -soname "$1.prx" -o "$build/stubs/$1.so" "$build/obj/$1.o"
-    printf '%s\n' "$build/stubs/$1.so"
+stub() {  # Host-link stubs record imports from PS5 system modules.
+    local name=$1
+    local source=$2
+    local soname=${3:-"$1.prx"}
+    cc -std=c11 -O2 -fPIC -c "$tooling/ps5-stubs/$source" -o "$build/obj/$name.o"
+    "$sdk/bin/prospero-lld" --shared -soname "$soname" -o "$build/stubs/$name.so" "$build/obj/$name.o"
+    printf '%s\n' "$build/stubs/$name.so"
 }
 agc=$(stub libSceAgc agc_link_stub.c)
 agc_driver=$(stub libSceAgcDriver agc_driver_link_stub.c)
+common_dialog=$(stub libSceCommonDialog common_dialog_link_stub.c libSceCommonDialog.sprx)
 
 # shellcheck source=ps5/tools/link-recipe.sh
 source "$root/ps5/tools/link-recipe.sh"
@@ -122,11 +126,11 @@ fi
     --Map="$build/title.map" --version-script "$native/app-symbols.map" --exclude-libs=ALL \
     "${link_flags[@]}" -e _start -o "$build/llvm-pie.elf" \
     "$build/obj/app_crt.o" "$build/obj/app_cpp_runtime.o" "${objects[@]}" ${PS5_LINK_INPUTS:-} \
-    "${link_inputs[@]}" "$agc" "$agc_driver" --as-needed "${link_stubs[@]}"
+    "${link_inputs[@]}" "$agc" "$agc_driver" "$common_dialog" --as-needed "${link_stubs[@]}"
 python3 "$root/ps5/tools/check-title-imports.py" "$build/llvm-pie.elf" \
-    "$native/runtime/api-surface.txt" "$agc" "$agc_driver" "${link_stubs[@]}"
+    "$native/runtime/api-surface.txt" "$agc" "$agc_driver" "$common_dialog" "${link_stubs[@]}"
 "$tool" link --in "$build/llvm-pie.elf" --out "$build/eboot.elf" \
-    --stub-dir "$sdk/target/lib" --stub "$agc" --stub "$agc_driver" \
+    --stub-dir "$sdk/target/lib" --stub "$agc" --stub "$agc_driver" --stub "$common_dialog" \
     --module-sdk 0x02000009 --companion-sdk 0x08050001 --file-name eboot.elf
 
 rm -rf -- "$app"

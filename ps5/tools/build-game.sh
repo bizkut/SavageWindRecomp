@@ -142,8 +142,8 @@ app=$(bash ps5/tools/build-title.sh "$title_name" \
     runtime/romfs_build.c runtime/romfs_image.c ps5/storagebroker/client.c ps5/storagebroker/startup.c \
     runtime/hle/heaps.c runtime/hle/setjmp.c runtime/hle/pl.c runtime/hle/yaz0.c runtime/hle/vibration.c runtime/hle/vi.c \
     runtime/hle/nvn_boot.c runtime/hle/framepace.c runtime/hle/npad.c runtime/hle/motion.c \
-    runtime/hle/input.c runtime/hle/bindings.c runtime/hle/wheel_zoom.c runtime/hle/movie.c \
-    runtime/ui/game_options.mm runtime/ui/i18n.mm runtime/ps5/video_page.cpp runtime/nvn/glyphs.c runtime/nvn/player_font.c runtime/nvn/sharp_ui.c \
+    runtime/hle/input.c runtime/hle/bindings.c runtime/hle/wheel_zoom.c runtime/hle/movie.c runtime/hle/swkbd.c \
+    runtime/ui/game_options.mm runtime/ui/i18n.mm runtime/ps5/keyboard.mm runtime/ps5/video_page.cpp runtime/nvn/glyphs.c runtime/nvn/player_font.c runtime/nvn/sharp_ui.c \
     runtime/nvn/hd_ui_policy.c runtime/nvn/hd_ui_extract.c runtime/nvn/hd_ui_ncnn.cpp runtime/nvn/hd_ui_dds.cpp runtime/nvn/hd_ui_generate.cpp \
     "${bc7#$root/}/bc7enc.cpp" "${bc7#$root/}/bc7decomp.cpp" \
     runtime/nvn/astc.c runtime/nvn/cmdbuf.c runtime/nvn/formats.c runtime/nvn/objects.c runtime/nvn/output_scale.c \
