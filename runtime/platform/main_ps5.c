@@ -466,10 +466,14 @@ static bool first_start_gamecode(char *why, size_t why_size) {
         else if (hd_active && hd_total) snprintf(hd, sizeof hd, "HD interface: %d of %d", hd_done, hd_total);
         else if (hd_active || shader_state == SP_IDLE) snprintf(hd, sizeof hd, "HD interface: preparing");
         else snprintf(hd, sizeof hd, "HD interface: complete or unavailable");
-        const char *lines[] = {"Building game code (first start only)", step, shader, hd};
-        gpu_lock();
-        vk_present_progress(fraction, lines);
-        gpu_unlock();
+        // A valid linked game-code cache has no progress callbacks. Keep the screen black while it loads;
+        // only show this UI for actual game-code work or first-start shader/HD precompilation.
+        if (stage > 0 || g_overlap_started) {
+            const char *lines[] = {"Building game code (first start only)", step, shader, hd};
+            gpu_lock();
+            vk_present_progress(fraction, lines);
+            gpu_unlock();
+        }
         usleep(100000);
     }
     pthread_join(thread, NULL);
