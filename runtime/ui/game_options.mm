@@ -1,9 +1,10 @@
 // Savage Wind's settings as pages of the game's own Options screen (pause menu > System > Options): the game draws
 // them, with its font, sounds and cursor. The first page has one button per section (Gameplay: the game's own
-// options; Video, Audio, Controls: the game's camera options and the mouse; Keyboard, Controller, Language) and a
-// Quit button; A on a section shows its page, B goes back. The screen opens from the pause menu (System > Options) and
-// from the title screen menu (Options); this replaces the overlay menu in game (menu.mm). Quit (here, and in place of
-// the title menu's amiibo settings) asks with the game's own dialog: desktop or the Savage Wind start screen.
+// options; Video, Audio, Controls: the game's camera options and the mouse; Keyboard, Controller, Language;
+// Accessibility: assists) and a Quit button; A on a section shows its page, B goes back. The screen opens from the
+// pause menu (System > Options) and from the title screen menu (Options); this replaces the overlay menu in game
+// (menu.mm). Quit (here, and in place of the title menu's amiibo settings) asks with the game's own dialog: desktop or
+// the Savage Wind start screen.
 //
 // The game side (tools/patches.py): the screen builds one row per entry of a static option table each time it opens
 // (g_site.opt_table: its count, entries, row count and row order; 1.8.2 0x7001cccd98..0x7001cccdb0). The
@@ -35,6 +36,8 @@ extern "C" {
 #include "../game_sites.h"
 #include "../nvn/output_scale.h"
 #include "../settings.h"
+#include "../color_grade.h"
+#include "../pc_cursor.h"
 #include "../window_size.h"
 void rt_request_reboot(int kind);           // runtime/main.c (1: start the game again)
 void menu_size_list_open(void);             // menu.mm (Window size's list, over the screen)
@@ -106,14 +109,17 @@ std::unordered_map<uint32_t, std::u16string> g_text;
 // the page opens again. So are the upscaler's modes until the game renders below the window's size (output_scale.c).
 std::vector<int> g_shown;   // per item: the value shown instead of get(), one that can't be picked yet (-1: none)
 const char16_t GREY = 3;    // (the game's message colour for greyed values)
-const char *const k_modes[] = {"Ultra Quality", "Quality", "Balanced", "Performance"};
+const char *const k_modes[] = {"Ultra Quality", "Quality", "Balanced", "Performance", "Ultra Performance"};
 #ifdef __APPLE__
 const char *const k_aa[] = {"Off", "SMAA"};
 #else
 const char *const k_aa[] = {"Off", "SMAA", "TAA"};  // (settings.h AA_*)
 #endif
 const char *const k_aniso[] = {"Off", "2x", "4x", "8x", "16x"};  // (settings anisotropy 0..4)
+const char *const k_drawdist[] = {"Original", "Medium", "High"};  // (settings.h DRAWDIST_*)
+constexpr int k_haze[] = HAZE_CHOICES;  // percent (Video > Haze)
 const char *const k_shadow[] = {"Console (896)", "High (2048)", "Ultra (4096)", "Extreme (8192)"};  // (SHADOW_*)
+const char *const k_text[] = {"Off", "2x", "4x"};  // (sharper_text / 2)
 const char *const k_icons[] = {"Automatic", "Keyboard", "Xbox", "PlayStation", "Nintendo"};  // (ICONS_*)
 constexpr int k_sens[] = {10, 25, 50, 75, 100, 125, 150, 200, 250, 300, 400, 500, 600, 800, 1000};  // mouse sensitivity, %
 constexpr int SENS_DEFAULT = 9;  // (300%: MOUSE_SENS_DEFAULT)
@@ -124,14 +130,21 @@ static_assert(k_sens_y[SENS_Y_DEFAULT] == 100);
 constexpr int k_motion_sens[] = {25, 50, 75, 100, 125, 150, 200, 250, 300, 400};  // motion sensitivity, %
 constexpr int MOTION_SENS_DEFAULT = 3;
 static_assert(k_motion_sens[MOTION_SENS_DEFAULT] == 100);
+constexpr int k_damage[] = DAMAGE_CHOICES;  // Accessibility's damage multipliers, %
+constexpr int DAMAGE_DEFAULT = 3;
+static_assert(k_damage[DAMAGE_DEFAULT] == 100);
 constexpr int k_fov[] = FOV_CHOICES;  // field of view, % of the game's own
 constexpr int FOV_DEFAULT_INDEX = 3;
 static_assert(k_fov[FOV_DEFAULT_INDEX] == 100);
+constexpr int k_hud_size[] = HUD_SIZE_CHOICES;  // the HUD's size, % of the game's own
+constexpr int HUD_SIZE_DEFAULT_INDEX = 10;
+static_assert(k_hud_size[HUD_SIZE_DEFAULT_INDEX] == 100);
 constexpr int k_deadzone[] = {0, 3, 5, 8, 10, 12, 15, 20, 25, 30, 40};  // stick dead zone, % of full tilt
 constexpr int DEADZONE_DEFAULT = 4;
 static_assert(k_deadzone[DEADZONE_DEFAULT] == (int)(STICK_DEADZONE_DEFAULT * 100 + 0.5f));
 const char *const k_invert[] = {"Off", "Up and down", "Left and right", "Both"};  // (MOTION_INVERT_* bits)
 #define N(a) (int)(sizeof(a) / sizeof((a)[0]))
+int g_nluts = 1;  // Colour > LUT's values (color_lut_list: None, the shipped ones, the player's), listed per opening
 
 // KIND_CHOICE: the values the game's row has. A wrapping choice has two more, 0 and count + 1, one past each end:
 // stepping onto one stores the value at the other end (value v is the game's v + 1)
@@ -155,6 +168,9 @@ void build_items(void) {
     // first page: the sections (the game's own options are on Gameplay and Controls)
     v.push_back(button(P_MAIN, "Gameplay", "Mini-map, HUD, jump button and more.", "Open", A_PAGE, P_GAMEPLAY));
     v.push_back(button(P_MAIN, "Video", "Screen, resolution and image quality.", "Open", A_PAGE, P_VIDEO));
+#ifndef __APPLE__
+    v.push_back(button(P_MAIN, "Colour", "Presets, exposure, contrast, saturation and LUTs.", "Open", A_PAGE, P_COLOUR));
+#endif
     v.push_back(button(P_MAIN, "Audio", "Volume and sound effects.", "Open", A_PAGE, P_AUDIO));
     v.push_back(button(P_MAIN, "Controls", "Camera, motion, d-pad, mouse and button icons.", "Open", A_PAGE, P_CONTROLS));
     v.push_back(button(P_MAIN, "Keyboard (buttons)", "Which key does each button.", "Open", A_PAGE, P_KEYS));
@@ -163,8 +179,92 @@ void build_items(void) {
     v.push_back(button(P_MAIN, "Language", "Language of the texts and of the voices.", "Open", A_PAGE, P_LANGUAGE));
     v.push_back(button(P_MAIN, "Quit game", k_quit_texts.button_desc, "Quit", A_QUIT, 0));
 
+    v.push_back(button(P_MAIN, "Accessibility", "Assists that make the game easier.", "Open", A_PAGE, P_ACCESS));
     // Video: the platform's page (runtime/ui/video_page.mm; the PS5's runtime/ps5/video_page.cpp)
     video_page(v);
+    v.push_back(choice(P_GAMEPLAY, "HUD size", "How big the hearts, stamina, minimap and the rest of the HUD are. Each part stays in its corner.",
+                       [](const Item &) { return N(k_hud_size); },
+                       [](const Item &, int x) {
+                           static std::string str;
+                           str = pct(k_hud_size[x]);
+                           return str.c_str();
+                       },
+                       [](const Item &) { return nearest(k_hud_size, N(k_hud_size), (float)g_settings.hud_size); },
+                       [](const Item &, int x) { g_settings.hud_size = k_hud_size[x]; }, HUD_SIZE_DEFAULT_INDEX));
+    // the game's font sheets enlarged (runtime/nvn/text_upscale.c): read when the game starts
+    v.push_back(choice(P_GAMEPLAY, "Sharper text", "Upscales the game's letters for 1440p and 4K, after a restart. Not the original art.",
+                       [](const Item &) { return N(k_text); }, [](const Item &, int x) { return tr(k_text[x]); },
+                       [](const Item &) { return g_settings.sharper_text / 2; },
+                       [](const Item &, int x) { g_settings.sharper_text = x * 2; }, 0));
+
+#ifndef __APPLE__
+    // Colour (runtime/color_grade.h; vulkan/exec.c scene_post): the 3D image only, the HUD keeps its colours. The preset
+    // sets the sliders below it; "Custom" (sliders matching no preset) is shown, never picked.
+    Item preset = choice(P_COLOUR, "Colour preset", "Ready-made looks. Natural: the game's own colours.",
+                         [](const Item &) { return g_color_preset_count + 1; },
+                         [](const Item &, int x) { return tr(x < g_color_preset_count ? g_color_presets[x].name : "Custom"); },
+                         [](const Item &) {
+                             int p = color_preset_current();
+                             return p < 0 ? g_color_preset_count : p;
+                         },
+                         [](const Item &, int x) { color_preset_apply(x); }, 0);
+    preset.value_off = [](const Item &, int x) { return x >= g_color_preset_count; };
+    preset.reset = [](const Item &) {
+        color_preset_apply(0);
+        g_settings.color_lut[0] = 0;
+        g_settings.color_lut_strength = 100;
+    };
+    v.push_back(preset);
+    v.push_back(choice(P_COLOUR, "Exposure", "Brighter or darker 3D image, in stops (EV).",
+                       [](const Item &) { return 41; },
+                       [](const Item &, int x) {
+                           static char buf[32];
+                           snprintf(buf, sizeof buf, "%+.1f EV", (x - 20) / 10.0);
+                           return (const char *)buf;
+                       },
+                       [](const Item &) { return g_settings.color_exposure + 20; },
+                       [](const Item &, int x) { g_settings.color_exposure = x - 20; }, 20));
+    // contrast -50..50, the others -100..100, in steps of 5
+    auto signed_pct = [](const Item &it, int x) {
+        static char buf[32];
+        int v = (x - (it.count(it) - 1) / 2) * 5;
+        snprintf(buf, sizeof buf, v ? "%+d" : "%d", v);
+        return (const char *)buf;
+    };
+    v.push_back(choice(P_COLOUR, "Contrast", "More or less difference between dark and bright areas.",
+                       [](const Item &) { return 21; }, signed_pct,
+                       [](const Item &) { return g_settings.color_contrast / 5 + 10; },
+                       [](const Item &, int x) { g_settings.color_contrast = (x - 10) * 5; }, 10));
+    v.push_back(choice(P_COLOUR, "Saturation", "How strong the colours are. -100: black and white.",
+                       [](const Item &) { return 41; }, signed_pct,
+                       [](const Item &) { return g_settings.color_saturation / 5 + 20; },
+                       [](const Item &, int x) { g_settings.color_saturation = (x - 20) * 5; }, 20));
+    v.push_back(choice(P_COLOUR, "Temperature", "Cooler (blue) or warmer (orange) light.",
+                       [](const Item &) { return 41; }, signed_pct,
+                       [](const Item &) { return g_settings.color_temperature / 5 + 20; },
+                       [](const Item &, int x) { g_settings.color_temperature = (x - 20) * 5; }, 20));
+    v.push_back(choice(P_COLOUR, "Tint", "Toward green, or toward magenta.",
+                       [](const Item &) { return 41; }, signed_pct,
+                       [](const Item &) { return g_settings.color_tint / 5 + 20; },
+                       [](const Item &, int x) { g_settings.color_tint = (x - 20) * 5; }, 20));
+    Item lut = choice(P_COLOUR, "LUT", "A colour look. Yours: .cube or .png files in the luts folder.",
+                      [](const Item &) { return g_nluts; },
+                      [](const Item &, int x) { return x ? color_lut_name(x) : tr("None"); },
+                      [](const Item &) { return color_lut_index(g_settings.color_lut); },
+                      [](const Item &, int x) {
+                          snprintf(g_settings.color_lut, sizeof g_settings.color_lut, "%s", color_lut_id(x));
+                      }, 0);
+    v.push_back(lut);
+    v.push_back(choice(P_COLOUR, "LUT intensity", "How much of the LUT's look is used.",
+                       [](const Item &) { return 11; },
+                       [](const Item &, int x) {
+                           static std::string str;
+                           str = pct(x * 10);
+                           return str.c_str();
+                       },
+                       [](const Item &) { return (g_settings.color_lut_strength + 5) / 10; },
+                       [](const Item &, int x) { g_settings.color_lut_strength = x * 10; }, 10));
+#endif
 
     // Audio
     v.push_back(choice(P_AUDIO, "Volume", "The game's volume. 100% is its own level.",
@@ -184,6 +284,9 @@ void build_items(void) {
                        [](const Item &, int x) { g_settings.movie_audio = x; }, 1));
 
     // Controls
+    v.push_back(toggle(P_CONTROLS, "Controller rumble", "Vibrate the controller during play.",
+                       [](const Item &) { return (int)g_settings.rumble; },
+                       [](const Item &, int x) { g_settings.rumble = x; }, 1));
     v.push_back(toggle(P_CONTROLS, "D-pad as left stick", "The d-pad also moves like the left stick.",
                        [](const Item &) { return (int)g_settings.dpad_move; },
                        [](const Item &, int x) { g_settings.dpad_move = x; }, 0));
@@ -201,7 +304,10 @@ void build_items(void) {
                            s ? [](const Item &, int x) { g_settings.stick_deadzone[1] = k_deadzone[x] / 100.0f; }
                              : [](const Item &, int x) { g_settings.stick_deadzone[0] = k_deadzone[x] / 100.0f; },
                            DEADZONE_DEFAULT));
-    v.push_back(toggle(P_CONTROLS, "Mouse camera", "The mouse turns the camera. Esc frees the cursor.",
+    v.push_back(toggle(P_CONTROLS, "PC mouse pointer", "Point and click in menus and map. Esc pauses/goes back; F2 frees the cursor.",
+                       [](const Item &) { return (int)g_settings.pc_cursor; },
+                       [](const Item &, int x) { g_settings.pc_cursor = x; }, 1));
+    v.push_back(toggle(P_CONTROLS, "Mouse camera", "The mouse turns the camera. Pointer off: Esc frees it; pointer on: F2 frees it.",
                        [](const Item &) { return (int)g_settings.mouse_camera; },
                        [](const Item &, int x) { g_settings.mouse_camera = x; }, 1));
     v.push_back(choice(P_CONTROLS, "Mouse sensitivity", "How fast the mouse turns the camera.",
@@ -230,6 +336,14 @@ void build_items(void) {
                        "Each notch zooms the scope or the map in or out. Elsewhere the wheel does nothing.",
                        [](const Item &) { return (int)g_settings.wheel_zoom; },
                        [](const Item &, int x) { g_settings.wheel_zoom = x; }, 1));
+    v.push_back(toggle(P_CONTROLS, "Shrine keyboard gyro",
+                       "Only while controlling a shrine apparatus. Remap on Keyboard (sticks). Outside it, camera keys keep working.",
+                       [](const Item &) { return (int)g_settings.pc_gyro; },
+                       [](const Item &, int x) { g_settings.pc_gyro = x; }, 1));
+    v.push_back(toggle(P_CONTROLS, "Shrine mouse drag",
+                       "At a shrine apparatus, hold left click and drag to rotate. Release to keep its orientation and re-grip.",
+                       [](const Item &) { return (int)g_settings.gyro_scene; },
+                       [](const Item &, int x) { g_settings.gyro_scene = x; }, 1));
     // motion controls (runtime/hle/motion.c; the game's own Motion Controls option turns motion aiming on and off)
     v.push_back(choice(P_CONTROLS, "Motion sensitivity", "How far turning the controller turns the aim.",
                        [](const Item &) { return N(k_motion_sens); },
@@ -284,12 +398,25 @@ void build_items(void) {
 #endif
         Item it = button(page, bind_input_name(slot), help, nullptr, action, slot);
         it.label = bind_label;
+        if (action == A_BIND_KEY) it.desc_fn = [](const Item &) {
+            static std::string desc;
+            desc = std::string(tr("Press A, then the new key. Esc cancels.")) + " " +
+                   tr("In the title, pause and map menus, unbound arrow keys act as the left stick and Enter selects.");
+            return desc.c_str();
+        };
         v.push_back(it);
     };
     for (int s = 0; s < BIND_PAD_COUNT; s++) bind(P_KEYS, A_BIND_KEY, s);
     bind(P_KEYS, A_BIND_KEY, BIND_WALK);
     v.push_back(button(P_KEYS, "Reset keyboard to defaults", "Every key back to its default.", "Reset", A_RESET_KEYS, 0));
     for (int s = BIND_LS_UP; s <= BIND_RS_RIGHT; s++) bind(P_STICKS, A_BIND_KEY, s);
+    static const char *const gyro_help[] = {"Tilt upward.", "Tilt downward.", "Tilt left.", "Tilt right.",
+                                            "Rotate left on the third axis.", "Rotate right on the third axis.",
+                                            "Reset orientation and stop pending rotation."};
+    for (int s = BIND_GYRO_UP; s <= BIND_GYRO_CENTER; s++) {  // (the virtual gyro at a shrine apparatus)
+        bind(P_STICKS, A_BIND_KEY, s);
+        v.back().desc = gyro_help[s - BIND_GYRO_UP];
+    }
     v.push_back(button(P_STICKS, "Reset keyboard to defaults", "Every key back to its default.", "Reset", A_RESET_KEYS, 0));
     for (int s = 0; s < BIND_PAD_COUNT; s++) bind(P_PAD, A_BIND_PAD, s);
     v.push_back(button(P_PAD, "Reset controller to defaults", "Every button back to its default.", "Reset", A_RESET_PAD, 0));
@@ -307,6 +434,41 @@ void build_items(void) {
                        [](const Item &, int x) { g_settings.voice_language = x; }, 0));
     v.push_back(button(P_LANGUAGE, "Restart now",
                        "Starts the game again with these languages. Unsaved progress is lost.", "Restart", A_RESTART, 0));
+
+    // Accessibility (runtime/assists.c): applied at once, while playing
+    v.push_back(toggle(P_ACCESS, "God mode", "Link takes no damage.",
+                       [](const Item &) { return (int)g_settings.god_mode; },
+                       [](const Item &, int x) { g_settings.god_mode = x; }, 0));
+    v.push_back(toggle(P_ACCESS, "One-hit kill", "Enemies go down in one hit.",
+                       [](const Item &) { return (int)g_settings.one_hit_kill; },
+                       [](const Item &, int x) { g_settings.one_hit_kill = x; }, 0));
+    for (int dealt = 0; dealt < 2; dealt++) {
+        Item it = choice(P_ACCESS, dealt ? "Damage dealt" : "Damage taken",
+                         dealt ? "How much damage enemies take. 100% is the game's own."
+                               : "How much damage Link takes. 100% is the game's own.",
+                         [](const Item &) { return N(k_damage); },
+                         [](const Item &, int x) {
+                             static std::string s;
+                             s = pct(k_damage[x]);
+                             return s.c_str();
+                         },
+                         nullptr, nullptr, DAMAGE_DEFAULT);
+        it.arg = dealt;
+        it.get = [](const Item &i) {
+            return nearest(k_damage, N(k_damage), i.arg ? g_settings.damage_dealt : g_settings.damage_taken);
+        };
+        it.set = [](const Item &i, int x) { (i.arg ? g_settings.damage_dealt : g_settings.damage_taken) = k_damage[x]; };
+        v.push_back(it);
+    }
+    v.push_back(toggle(P_ACCESS, "Unbreakable weapons", "Weapons, bows and shields lose no durability and never break.",
+                       [](const Item &) { return (int)g_settings.no_weapon_wear; },
+                       [](const Item &, int x) { g_settings.no_weapon_wear = x; }, 0));
+    v.push_back(toggle(P_ACCESS, "Infinite arrows", "Shooting a bow uses up no arrows. You still need one to shoot.",
+                       [](const Item &) { return (int)g_settings.infinite_arrows; },
+                       [](const Item &, int x) { g_settings.infinite_arrows = x; }, 0));
+    v.push_back(toggle(P_ACCESS, "Infinite stamina", "The stamina wheel never runs out.",
+                       [](const Item &) { return (int)g_settings.infinite_stamina; },
+                       [](const Item &, int x) { g_settings.infinite_stamina = x; }, 0));
 }
 
 // The game's table, extended (first opening, and again after a reboot reloads the game's own)
@@ -459,18 +621,27 @@ extern "C" void rt_opt_rows(void) {
     g_switching = false;
     std::vector<uint32_t> &o = g_order[page];
     g_shown.assign(g_items.size(), -1);
+    if (page == P_COLOUR) g_nluts = color_lut_list();  // (files the player added since the last opening)
     for (size_t i = 0; i < g_items.size(); i++) {  // (how many window sizes there are depends on the display)
         Entry &e = g_entries[GAME_ENTRIES + i];
         if (g_items[i].kind == KIND_CHOICE) e.last_value = e.first_value + game_count(g_items[i]) - 1;
     }
     wr64(OPT_ORDER, (uint64_t)(uintptr_t)o.data());
     wr32(OPT_ROWS, (uint32_t)o.size());
+    pc_cursor_options_page_changed();
     g_cur_page = page;
     g_reopen = false;
     g_dirty.clear();
 }
 
 // Row init: the flag type of an entry (0 bool, 1 s32); -1: the game's own entry
+// The installed entries are a host vector, not guest-heap pointers.
+extern "C" int rt_opt_pointer_kind(uint64_t row) {
+    if(!g_installed||rd64(OPT_ENTRIES)!=g_installed||!row||game_options_input_hold())return -1;
+    uint32_t index=rd32(row+0x50);
+    return index<g_entries.size()?(int)g_entries[index].kind:-1;
+}
+
 extern "C" int rt_opt_flag_type(uint64_t entry) {
     if (!g_installed || entry < g_installed) return -1;
     const Item *it = item_of_index((uint32_t)((entry - g_installed) / sizeof(Entry)));
@@ -515,7 +686,20 @@ extern "C" int rt_opt_store(uint64_t row) {
                 off ? ", can't be picked yet: not stored" : "", SDL_GetTicksNS() / 1e9);
     }
     if (it->kind != KIND_BUTTON) settings_save();
-    if (it->page == P_VIDEO) mark_all_rows(rd64(row));  // (the sizes offered follow Fullscreen, texts the upscaler)
+    // (the sizes offered follow Fullscreen, texts and Upscaler mode's values the upscaler; Colour: the preset sets the
+    // sliders, they the preset). A value kept on show because it couldn't be picked goes once it can (Upscaler mode
+    // after Off: the mode stored, not the Off shown).
+    if (it->page == P_VIDEO || it->page == P_COLOUR) {
+        for (size_t i = 0; i < g_items.size() && i < g_shown.size(); i++) {
+            const Item &o = g_items[i];
+            if (g_shown[i] >= 0 && (!o.value_off || !o.value_off(o, g_shown[i]))) g_shown[i] = -1;
+            if (o.kind == KIND_CHOICE) {
+                Entry &e = g_entries[GAME_ENTRIES + i];
+                e.last_value = e.first_value + game_count(o) - 1;
+            }
+        }
+        mark_all_rows(rd64(row));
+    }
     if (past_end) g_dirty.push_back(row);                // (first: the row shows the value at the other end)
     return 1;
 }
@@ -609,9 +793,16 @@ extern "C" uint64_t rt_opt_tick(uint64_t screen) {
         mark_all_rows(screen);
     }
     if (g_size_redraw.exchange(false) && g_size_row) g_dirty.push_back(g_size_row);
+    if (!game_options_input_hold()) pc_cursor_options_tick(screen);
     if (g_dirty.empty()) return 0;
     uint64_t r = g_dirty.back();
     g_dirty.pop_back();
+    // (the redraw shows the row's own value: read it again, for values set from another row - Colour's preset)
+    if (const Item *it = item_of_row(r); it && it->kind != KIND_BUTTON) rt_opt_read(r);
+    if (getenv("SAVAGEWIND_LOG_OPTIONS")) {
+        const Item *it = item_of_row(r);
+        fprintf(stderr, "[options] redraw %s value %u (%zu left)\n", it ? it->title : "?", rd32(r + 0x58), g_dirty.size());
+    }
     return r;
 }
 
@@ -641,10 +832,17 @@ extern "C" void rt_opt_back(void) {
 //    the title screen; the animation's handle is at the Options state field - 0x24 in 1.8.2 and 1.9.0, its pai1 block
 //    at handle + 0x18).
 // It was the menu's last button, so there is no gap.
+// With downloadable content set up the button opens the game's own list of the packs (no eShop): once the game mounts
+// an add-on content (rt_title_menu_dlc, from runtime/services/fs.c) the lists get it back and the pane is left alone.
 const uint32_t TITLE_DLC_BUTTON = 0x6d;
+static uint64_t g_dlc_lists[8];
+static int g_ndlc_lists;
+static bool g_dlc_button;
 
 extern "C" void rt_title_menu_prepare(void) {
     int n = 0;
+    g_ndlc_lists = 0;
+    g_dlc_button = false;
     for (uint64_t p = g_site.main_data; p + 0x10 <= g_site.main_end; p += 8) {
         uint32_t count = rd32(p);
         uint64_t ids = rd64(p + 8);
@@ -657,12 +855,22 @@ extern "C" void rt_title_menu_prepare(void) {
         }
         if (!menu || rd32(ids + 4 * (count - 1)) != TITLE_DLC_BUTTON) continue;
         wr32(p, count - 1);
+        if (g_ndlc_lists < 8) g_dlc_lists[g_ndlc_lists++] = p;
         n++;
     }
     fprintf(stderr, "[options] title menu: Downloadable Content left out of %d button lists\n", n);
 }
 
+extern "C" void rt_title_menu_dlc(void) {
+    if (g_dlc_button) return;
+    g_dlc_button = true;
+    for (int i = 0; i < g_ndlc_lists; i++) wr32(g_dlc_lists[i], rd32(g_dlc_lists[i]) + 1);
+    fprintf(stderr, "[options] title menu: Downloadable Content back in %d button lists (add-on content mounted)\n",
+            g_ndlc_lists);
+}
+
 static void title_hide_dlc(uint64_t menu) {
+    if (g_dlc_button) return;
     uint64_t anim = rd64(menu + g_site.title_options_state - 0x24);
     uint64_t pai = anim ? rd64(anim + 0x18) : 0;
     if (!pai || memcmp((const void *)(uintptr_t)pai, "pai1", 4)) return;
@@ -806,7 +1014,8 @@ static int values_default(const int *values, int n, int value) {
 }
 
 Item video_wide_view() {
-    return toggle(P_VIDEO, "Fill wide screens", "Shows more to the sides on screens wider than 16:9, instead of bars.",
+    return toggle(P_VIDEO, "Fill wide screens",
+                  "Shows more of the world on screens that aren't 16:9 (wider or taller), instead of bars.",
                   [](const Item &) { return (int)g_settings.wide_view; },
                   [](const Item &, int x) { g_settings.wide_view = x; }, 1);
 }
@@ -878,8 +1087,9 @@ Item video_upscaler_mode() {
     mode.value_off = [](const Item &, int) { return !upscale_modes_available(); };
     mode.desc_fn = [](const Item &) {
         // (one line: the game's description pane is one English line wide)
-        return upscale_modes_available() ? tr("Ultra Quality is the sharpest, Performance the fastest.")
-                                         : tr("Renders smaller, then upscales. Coming in a later version.");
+        return !upscale_modes_available() ? tr("Renders smaller, then upscales. Coming in a later version.")
+               : g_settings.upscaler == UPSCALE_OFF ? tr("Only with an upscaler: choose one above first.")
+               : tr("Ultra Quality is the sharpest, Ultra Performance the fastest.");
     };
     return mode;
 }

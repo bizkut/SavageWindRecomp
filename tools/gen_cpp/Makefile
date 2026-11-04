@@ -17,7 +17,7 @@ $(OUT)/discover: discover.cpp dump.cpp jump_interpreter.h $(wildcard lift_*.h) $
 	$(CXX) $(CXXFLAGS) -I$(OUT)/deps/capstone-5.0.9/src/include $< $(OUT)/deps/capstone-build/libcapstone.a -o $@
 
 $(OUT)/gen: emit.cpp discover.cpp dump.cpp jump_interpreter.h sites.h sites_data.h patches.h patches.cpp \
-		patches_generated.h $(wildcard lift_*.h) $(OUT)/deps/capstone-build/libcapstone.a
+		patches_generated.h $(wildcard lift_*.h *_local.h) $(OUT)/deps/capstone-build/libcapstone.a
 	$(CXX) $(CXXFLAGS) -I$(OUT)/deps/capstone-5.0.9/src/include emit.cpp patches.cpp \
 		$(OUT)/deps/capstone-build/libcapstone.a -o $@
 

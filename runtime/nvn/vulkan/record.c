@@ -59,8 +59,9 @@ static pthread_cond_t cv_work = PTHREAD_COND_INITIALIZER, cv_done = PTHREAD_COND
 static _Atomic int asleep;
 static _Atomic uint64_t submitted;
 static int on = -1;  // 1: the thread records, 0: calls at once, -1: not started
-static RecStats st_t;  // T's counters
-static _Atomic uint64_t r_busy_ticks, r_wakeups;
+static bool prof, prof_enq;
+static RecStats st_t;
+static _Atomic uint64_t r_busy_ticks, r_busy_ns, r_wakeups, r_submit_ns;
 static _Atomic uint64_t a_seq_waits, a_seq_wait_ns;  // (waits from any thread)
 
 bool rec_on(void) { return on > 0; }
@@ -136,6 +137,8 @@ static inline void *after(const void *args, size_t args_size) { return (uint8_t 
 // ---- the thread
 static void *run(void *arg) {
     (void)arg;
+    extern void control_prof_thread(const char *name);  // runtime/control_prof.c (`threads`)
+    control_prof_thread("recorder");
     uint64_t t = 0;
     for (;;) {
         uint64_t h = atomic_load_explicit(&head, memory_order_acquire);
@@ -147,14 +150,16 @@ static void *run(void *arg) {
             pthread_mutex_unlock(&mu);
             ADD(r_wakeups, 1);
         }
-        uint64_t t0 = g_rprof ? rp_now() : 0;
+        uint64_t t0 = prof ? NOW() : 0;
+        uint64_t tick0 = g_rprof ? rp_now() : 0;
         while (t != h) {
             const PktHdr *p = (const PktHdr *)(ring + (t & (ring_cap - 1)));
             if (p->fn) p->fn(p + 1);
             t += p->size;
             atomic_store_explicit(&tail, t, memory_order_release);
         }
-        if (g_rprof) ADD(r_busy_ticks, rp_now() - t0);
+        if (prof) ADD(r_busy_ns, NOW() - t0);
+        if (g_rprof) ADD(r_busy_ticks, rp_now() - tick0);
         pthread_mutex_lock(&mu);  // caught up: drains and waiters
         pthread_cond_broadcast(&cv_done);
         pthread_mutex_unlock(&mu);
@@ -164,6 +169,8 @@ static void *run(void *arg) {
 
 void rec_init(void) {
     if (on >= 0) return;
+    prof = getenv("SAVAGEWIND_VK_PROF") != NULL;
+    prof_enq = prof && atoi(getenv("SAVAGEWIND_VK_PROF")) != 2;
     const char *e = getenv("SAVAGEWIND_VK_RECORDER");
     int want = e ? atoi(e) != 0 : g_settings.vk_recorder;
     // ARM's Mali drivers: LAS Recomp lost the GPU a few seconds into its title screen with the recorder thread on
@@ -181,8 +188,16 @@ void rec_init(void) {
         pthread_attr_init(&attr);
         pthread_attr_setstacksize(&attr, 1 << 20);
         ring_cap = cap;  // (before the thread exists)
-        if (!ring || pthread_create(&th, &attr, run, NULL) != 0) {
-            LOG("[vk] recorder thread: could not start (%s): Vulkan calls on the queue thread\n", ring ? "thread" : "memory");
+        int rc = ring ? pthread_create(&th, &attr, run, NULL) : 0;
+        if (rc) {
+            // glibc takes the static TLS of every thread out of its stack and fails with EINVAL when a requested
+            // size leaves no room for it; the default stack (8 MB on Linux) does
+            LOG("[vk] recorder thread: a 1 MB stack failed (%s), trying the default stack\n", strerror(rc));
+            rc = pthread_create(&th, NULL, run, NULL);
+        }
+        if (!ring || rc) {
+            LOG("[vk] recorder thread: could not start (%s, error %d): Vulkan calls on the queue thread\n",
+                ring ? strerror(rc) : "out of memory", rc);
             free(ring);
             ring = NULL;
             ring_cap = 0;
@@ -237,14 +252,29 @@ void rec_drain(void) {
 void rec_stats(RecStats *o) {
     *o = st_t;
     o->busy_ticks = atomic_load_explicit(&r_busy_ticks, memory_order_relaxed);
+    o->busy_ns = atomic_load_explicit(&r_busy_ns, memory_order_relaxed);
     o->wakeups = atomic_load_explicit(&r_wakeups, memory_order_relaxed);
+    o->submit_ns = atomic_load_explicit(&r_submit_ns, memory_order_relaxed);
     o->seq_waits = atomic_load_explicit(&a_seq_waits, memory_order_relaxed);
     o->seq_wait_ns = atomic_load_explicit(&a_seq_wait_ns, memory_order_relaxed);
 }
 
-// (T) time spent queuing: around every rec_* that queues, while the render profile is on
-#define ENQ_T0() uint64_t enq_t0_ = g_rprof ? rp_now() : 0
-#define ENQ_END() do { if (g_rprof) st_t.enqueue_ticks += rp_now() - enq_t0_; } while (0)
+void rec_stats_take(RecStats *o) {
+    static RecStats last;
+    RecStats now;
+    rec_stats(&now);
+#define DELTA(field) o->field = now.field - last.field
+    DELTA(packets); DELTA(bytes); DELTA(enqueue_ticks); DELTA(enqueue_ns);
+    DELTA(busy_ticks); DELTA(busy_ns); DELTA(wakeups); DELTA(submit_ns);
+    DELTA(drains); DELTA(drain_ns); DELTA(seq_waits); DELTA(seq_wait_ns); DELTA(full_waits); DELTA(full_ns);
+#undef DELTA
+    last = now;
+}
+#define ENQ_T0() uint64_t enq_t0_ = prof_enq ? NOW() : 0, enq_tick_ = g_rprof ? rp_now() : 0
+#define ENQ_END() do { \
+    if (prof_enq) st_t.enqueue_ns += NOW() - enq_t0_; \
+    if (g_rprof) st_t.enqueue_ticks += rp_now() - enq_tick_; \
+} while (0)
 
 // ================================================================== descriptor writes
 static bool write_is_image(const VkWriteDescriptorSet *w) {
@@ -318,11 +348,12 @@ static void submit_run(const void *p) {
     VkSubmitInfo2 si = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2, .commandBufferInfoCount = a->ncb, .pCommandBufferInfos = a->cbs,
                         .signalSemaphoreInfoCount = a->nsig, .pSignalSemaphoreInfos = a->sig,
                         .waitSemaphoreInfoCount = a->nwait, .pWaitSemaphoreInfos = &a->wait};
-    uint64_t t0 = on > 0 ? NOW() : 0;
-    vk_queue_lock();  // (the present thread may present on this queue: device.c)
+    uint64_t t0 = NOW();
+    vk_queue_lock();
     VkResult r = vkQueueSubmit2(g_vk.queue, 1, &si, VK_NULL_HANDLE);
     vk_queue_unlock();
-    uint64_t dt = on > 0 ? NOW() - t0 : 0;
+    uint64_t dt = NOW() - t0;
+    if (prof) ADD(r_submit_ns, dt);
     if (dt > 50000000) {  // (a driver stall: a slow wait on the recorder shows where it was)
         static int n;
         if (n++ < 20) LOG("[vk] vkQueueSubmit2 of submission %llu took %llu ms\n", (unsigned long long)a->seq, (unsigned long long)(dt / 1000000));
@@ -442,6 +473,22 @@ void rec_CmdWriteTimestamp2(VkCommandBuffer cb, VkPipelineStageFlags2 stage, VkQ
     CMD_QUEUE(CmdWriteTimestamp2, cb, stage, pool, query);
 }
 
+// (an extension's command: through its pointer, which the loader's own exports don't have)
+static void set_checkpoint(VkCommandBuffer cb, const void *marker) {
+    static PFN_vkCmdSetCheckpointNV set;
+    if (!set) set = (PFN_vkCmdSetCheckpointNV)vkGetDeviceProcAddr(g_vk.dev, "vkCmdSetCheckpointNV");
+    if (set) set(cb, marker);
+}
+CMD_ARGS(CmdSetCheckpointNV, const void *marker;)
+static void CmdSetCheckpointNV_run(const void *p) { const CmdSetCheckpointNVArgs *a = p; set_checkpoint(a->cb, a->marker); }
+void rec_CmdSetCheckpointNV(VkCommandBuffer cb, const void *marker) {
+    if (on <= 0) { set_checkpoint(cb, marker); return; }
+    ENQ_T0();
+    CmdSetCheckpointNVArgs *a_ = push(CmdSetCheckpointNV_run, sizeof *a_, 0);
+    *a_ = (CmdSetCheckpointNVArgs){cb, marker};
+    commit();
+    ENQ_END();
+}
 CMD_ARGS(CmdBeginQuery, VkQueryPool pool; uint32_t query; VkQueryControlFlags flags;)
 static void CmdBeginQuery_run(const void *p) { const CmdBeginQueryArgs *a = p; vkCmdBeginQuery(a->cb, a->pool, a->query, a->flags); }
 void rec_CmdBeginQuery(VkCommandBuffer cb, VkQueryPool pool, uint32_t query, VkQueryControlFlags flags) {
@@ -686,12 +733,29 @@ void rec_CmdPipelineBarrier2(VkCommandBuffer cb, const VkDependencyInfo *di) {
     ENQ_END();
 }
 
-// ---- rendering: the info, its colour attachments, then the depth and stencil ones (nothing chained)
-CMD_ARGS(CmdBeginRendering, VkRenderingInfo ri; VkRenderingAttachmentInfo depth, stencil; uint8_t has_depth, has_stencil;)  // then colour[]
+// ---- rendering: the info, its colour attachments, then the depth and stencil ones. Chained: only a colour
+// attachment's VkAttachmentFeedbackLoopInfoEXT (exec.c begin_pass, VK_KHR_unified_image_layouts), carried as a mask
+CMD_ARGS(CmdBeginRendering, VkRenderingInfo ri; VkRenderingAttachmentInfo depth, stencil; uint8_t has_depth, has_stencil; uint16_t fbl;)  // then colour[]
 static void CmdBeginRendering_run(const void *p) {
     const CmdBeginRenderingArgs *a = p;
     VkRenderingInfo ri = a->ri;
+    VkRenderingAttachmentInfo ca[16];
+#ifdef VK_KHR_unified_image_layouts
+    VkAttachmentFeedbackLoopInfoEXT fb[16];
+#endif
     ri.pColorAttachments = ri.colorAttachmentCount ? after(a, sizeof *a) : NULL;
+    if (a->fbl) {
+        memcpy(ca, ri.pColorAttachments, ri.colorAttachmentCount * sizeof *ca);
+#ifdef VK_KHR_unified_image_layouts
+        for (uint32_t i = 0; i < ri.colorAttachmentCount; i++)
+            if (a->fbl & (1u << i)) {
+                fb[i] = (VkAttachmentFeedbackLoopInfoEXT){.sType = VK_STRUCTURE_TYPE_ATTACHMENT_FEEDBACK_LOOP_INFO_EXT,
+                                                         .feedbackLoopEnable = VK_TRUE};
+                ca[i].pNext = &fb[i];
+            }
+#endif
+        ri.pColorAttachments = ca;
+    }
     ri.pDepthAttachment = a->has_depth ? &a->depth : NULL;
     ri.pStencilAttachment = a->has_stencil ? &a->stencil : NULL;
     vkCmdBeginRendering(a->cb, &ri);
@@ -699,7 +763,17 @@ static void CmdBeginRendering_run(const void *p) {
 void rec_CmdBeginRendering(VkCommandBuffer cb, const VkRenderingInfo *ri) {
     if (on <= 0) { vkCmdBeginRendering(cb, ri); return; }
     if (ri->pNext) FATAL("[vk] recorder: a chained rendering info\n");
-    for (uint32_t i = 0; i < ri->colorAttachmentCount; i++) if (ri->pColorAttachments[i].pNext) FATAL("[vk] recorder: a chained attachment\n");
+    if (ri->colorAttachmentCount > 16) FATAL("[vk] recorder: %u colour attachments\n", ri->colorAttachmentCount);
+    uint16_t fbl = 0;
+    for (uint32_t i = 0; i < ri->colorAttachmentCount; i++) {
+        const VkBaseInStructure *n = ri->pColorAttachments[i].pNext;
+        if (!n) continue;
+#ifdef VK_KHR_unified_image_layouts
+        if (n->sType == VK_STRUCTURE_TYPE_ATTACHMENT_FEEDBACK_LOOP_INFO_EXT && !n->pNext &&
+            ((const VkAttachmentFeedbackLoopInfoEXT *)n)->feedbackLoopEnable) { fbl |= (uint16_t)(1u << i); continue; }
+#endif
+        FATAL("[vk] recorder: a chained attachment\n");
+    }
     if ((ri->pDepthAttachment && ri->pDepthAttachment->pNext) || (ri->pStencilAttachment && ri->pStencilAttachment->pNext))
         FATAL("[vk] recorder: a chained attachment\n");
     ENQ_T0();
@@ -712,7 +786,9 @@ void rec_CmdBeginRendering(VkCommandBuffer cb, const VkRenderingInfo *ri) {
     a->has_stencil = ri->pStencilAttachment != NULL;
     if (a->has_depth) a->depth = *ri->pDepthAttachment;
     if (a->has_stencil) a->stencil = *ri->pStencilAttachment;
+    a->fbl = fbl;
     if (sc) memcpy(after(a, sizeof *a), ri->pColorAttachments, sc);
+    if (fbl) for (uint32_t i = 0; i < ri->colorAttachmentCount; i++) ((VkRenderingAttachmentInfo *)after(a, sizeof *a))[i].pNext = NULL;
     commit();
     ENQ_END();
 }

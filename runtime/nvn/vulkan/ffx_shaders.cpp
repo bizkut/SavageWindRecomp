@@ -11,6 +11,9 @@
 #include "ffx_shaders_vk.h"
 #endif
 
+enum { FU_PERM_FP16 = 1 << 7 };
+extern "C" bool vk_shader_fp16(void);
+
 extern "C" FfxErrorCode ffxGetPermutationBlobByIndex(FfxEffect effect, FfxPass pass, FfxBindStage, uint32_t options,
                                                      FfxShaderBlob *out) {
 #ifdef SW_FFX_INTERPOLATION
@@ -22,11 +25,10 @@ extern "C" FfxErrorCode ffxGetPermutationBlobByIndex(FfxEffect effect, FfxPass p
         memcpy(out, &ffx_of_blobs[pass], sizeof *out);
         return FFX_OK;
     }
-#else
-    (void)options;
 #endif
-    if (effect == FFX_EFFECT_FSR3UPSCALER && pass < FFX_FSR3UPSCALER_PASS_COUNT && ffx_fu_blobs[pass].data) {
-        memcpy(out, &ffx_fu_blobs[pass], sizeof *out);
+    if (effect == FFX_EFFECT_FSR3UPSCALER && pass < FFX_FSR3UPSCALER_PASS_COUNT && ffx_fu_blobs[0][pass].data) {
+        int half = (options & FU_PERM_FP16) && vk_shader_fp16();
+        memcpy(out, &ffx_fu_blobs[half][pass], sizeof *out);
         return FFX_OK;
     }
     fprintf(stderr, "[ffx] ffxGetPermutationBlobByIndex: no shader for effect %d pass %d options 0x%x\n",

@@ -12,13 +12,14 @@ const char *rt_version(void) { return "0.3.1-alpha.3"; }
 // button prompts runtime/nvn/glyphs.c; Savage Wind's Options pages runtime/ui/game_options.mm
 bool bind_capture_event(const SDL_Event *e);  // runtime/hle/bindings.c
 bool game_options_input_hold(void);           // runtime/ui/game_options.mm
+int ps5_keyboard_is_open(void);               // runtime/ps5/keyboard.c
 
 // ---- the overlay menu (runtime/ui/menu.mm, ImGui; opened with keys): none, and the display plane takes no requests.
 // A binding capture (the game's Options screen) still takes the press first, as the menu's event handler does, and
 // the game gets no input while it runs.
 bool menu_handle_event(const SDL_Event *e) { return bind_capture_event(e); }
 bool menu_is_open(void) { return false; }
-bool menu_input_captured(void) { return game_options_input_hold(); }
+bool menu_input_captured(void) { return ps5_keyboard_is_open() || game_options_input_hold(); }
 bool menu_cursor_free(void) { return false; }  // (no Esc to free a cursor: the mouse always turns the camera)
 void menu_apply_window_requests(void *window) { (void)window; }
 void menu_render(void *cmd, uint32_t target_w, uint32_t target_h) { (void)cmd; (void)target_w; (void)target_h; }

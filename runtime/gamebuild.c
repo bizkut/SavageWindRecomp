@@ -24,6 +24,9 @@
 #ifndef GAMELIB_SHARED
 #define GAMELIB_SHARED "-shared"
 #endif
+#ifndef GAMELIB_GENARGS  // the generator's options that change the game code (RECOMP_LOCALS=1: --locals)
+#define GAMELIB_GENARGS ""
+#endif
 
 #ifdef _WIN32
 #define SEP "\\"
@@ -164,6 +167,17 @@ bool gamebuild_available(void) {
 static void compiler(Args *a, const Tools *t) {
     add(a, t->cc);
     if (t->zig) add(a, "cc");
+#ifdef __linux__
+    // zig's own glibc headers and stubs (lib/libc, tools/fetch_zig.sh keeps them), as old as the oldest glibc the
+    // release runs on (docs/linux.md). Without a target it builds for the native libc and wants the system's headers,
+    // which SteamOS and other read-only systems don't have: "failed to find libc installation:
+    // LibCStdLibHeaderNotFound" (#191). The game code only takes memcpy / math / fenv from it.
+#if defined(__aarch64__)
+    if (t->zig) { add(a, "-target"); add(a, "aarch64-linux-gnu.2.35"); }
+#else
+    if (t->zig) { add(a, "-target"); add(a, "x86_64-linux-gnu.2.35"); }
+#endif
+#endif
 }
 
 // ------------------------------------------------------------------ generator progress (its log)
@@ -416,6 +430,7 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
         add(&a, layout);
         add(&a, g->out);
         if (strcmp(g->name, "main")) { add(&a, "--hle"); add(&a, t.hle); }
+        add_split(&a, GAMELIB_GENARGS);
         g->p = spawn(a.v, g->log);
         args_free(&a);
         if (!g->p) { snprintf(why, why_size, "the game code builder didn't start"); ok = false; }

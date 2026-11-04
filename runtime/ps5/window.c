@@ -171,6 +171,13 @@ SDL_Window *SDL_CreateWindow(const char *title, int w, int h, SDL_WindowFlags fl
     return &g_window;
 }
 
+bool SDL_GetWindowSize(SDL_Window *window, int *w, int *h) {
+    if (!window) return false;
+    if (w) *w = window->w;
+    if (h) *h = window->h;
+    return true;
+}
+
 bool SDL_GetWindowSizeInPixels(SDL_Window *window, int *w, int *h) {
     if (!window) return false;
     *w = window->w;
@@ -178,7 +185,7 @@ bool SDL_GetWindowSizeInPixels(SDL_Window *window, int *w, int *h) {
     return true;
 }
 SDL_WindowFlags SDL_GetWindowFlags(SDL_Window *window) {
-    return window ? SDL_WINDOW_VULKAN | SDL_WINDOW_FULLSCREEN : 0;
+    return window ? SDL_WINDOW_VULKAN | SDL_WINDOW_FULLSCREEN | SDL_WINDOW_INPUT_FOCUS : 0;
 }
 // the display plane has its own mode: "exclusive fullscreen" in device.c's swapchain line
 const SDL_DisplayMode *SDL_GetWindowFullscreenMode(SDL_Window *window) { return window ? &g_mode : NULL; }

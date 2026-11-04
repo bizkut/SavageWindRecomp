@@ -31,12 +31,16 @@ def symbols(nm, paths):
 
 def emitted_names():
     files = list((ROOT / 'tools/gen_cpp').glob('lift*.h'))
-    files += [ROOT / 'tools/gen_cpp/emit.cpp', ROOT / 'tools/patches.py']
+    files += list((ROOT / 'tools/gen_cpp').glob('*_local.h'))
+    files += [ROOT / 'tools/gen_cpp/emit.cpp', ROOT / 'tools/gen_cpp/patches_generated.h']
     names = set()
     for path in files:
-        names.update(re.findall(r'\brt_[A-Za-z0-9_]+', path.read_text()))
-    # This helper is static inline in simd.h, never an external relocation.
-    names.discard('rt_fpcr_write')
+        text = path.read_text()
+        # The generated C++ splits adjacent string literals at arbitrary columns, including inside identifiers.
+        text = re.sub(r'"\s*"', '', text)
+        names.update(re.findall(r'\brt_[A-Za-z0-9_]+', text))
+    # These helpers are static inline in the game code headers, never external relocations.
+    names.difference_update(('rt_fpcr_write', 'rt_fsub_s'))
     for line in (ROOT / 'runtime/hle/hle_symbols.txt').read_text().splitlines():
         name = line.strip()
         if name and not name.startswith('#'):

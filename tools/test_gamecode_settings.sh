@@ -3,9 +3,9 @@ set -eu
 
 mkdir -p build
 ${CC:-clang-18} -std=gnu11 -D_GNU_SOURCE -DGAMECODE_CONSOLE -O2 -Wall -Wextra \
-    tools/test_gamecode_settings.c runtime/settings.c -o build/gamecode-settings-test
+    tools/test_gamecode_settings.c runtime/settings.c -lm -o build/gamecode-settings-test
 ${CC:-clang-18} -std=gnu11 -D_GNU_SOURCE -O2 -Wall -Wextra \
-    tools/test_gamecode_settings.c runtime/settings.c -o build/gamecode-settings-default-test
+    tools/test_gamecode_settings.c runtime/settings.c -lm -o build/gamecode-settings-default-test
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT HUP INT TERM

@@ -19,8 +19,8 @@
 // its mouse on the other); an index that does not open is tried again each second. An open handle stays open across
 // unplugging: its records say whether a device is connected, and a replugged one reports on the same handle. Every
 // record is processed oldest-first, so a tap between two polls still goes out as a press and a release: a keyboard's
-// held usages (its modifier bits as Left Control..Right GUI) become key down / up events, a mouse's buttons button
-// events; a poll's motion and wheel, summed over every record of every mouse, go out as one motion and one wheel event.
+// held usages (its modifier bits as Left Control..Right GUI) become key down / up events; each mouse record updates
+// the pointer and button changes, while motion and wheel deltas are summed into one event each per poll.
 // A disconnected or intercepted record holds nothing. A key or button is down while any device holds it.
 //
 // The klog proves each control: one line per change of the buttons, stick directions or triggers, per key or mouse
@@ -36,6 +36,7 @@
 
 #include "../input_bind.h"
 #include "../rt.h"
+#include "motion_sensor.h"
 
 // ---- the console's libraries (no SDK headers: declarations as ../ps5-native-gamepad-input-research has them)
 typedef struct { int32_t event_type; int32_t user_id; } UserServiceEvent;  // event_type: 0 login, 1 logout
@@ -245,7 +246,7 @@ static bool rumble_send(uint8_t large, uint8_t small, const char *why) {
 // right, Y up out of the face, Z toward the player), as SDL's DualSense driver passes the controller's axes through;
 // accelerations come in G and go out in m/s^2, angular velocities in rad/s. That convention is not yet validated on a
 // held controller: the [motion] lines show the readings (flat on a table: accelerometer about 0, +1, 0 G).
-#define STANDARD_GRAVITY 9.80665f
+// Conversion to SDL's units and timestamp lives in motion_sensor.h.
 static void pad_configure_motion(void) {
     int32_t rm = scePadSetMotionSensorState(g_pad.handle, true);
     // (tilt correction only shapes the pad's orientation, which is unused; the deadband would swallow a slow aim,
@@ -266,16 +267,10 @@ static void pad_configure_motion(void) {
 
 static void pad_motion(const PadRecord *r) {
     g_pad.motion_samples++;
-    SDL_Event e;
     for (int s = SDL_SENSOR_ACCEL; s <= SDL_SENSOR_GYRO; s++) {
         if (!g_pad.motion || !g_pad.sensor_on[s]) continue;
         const float *d = s == SDL_SENSOR_ACCEL ? r->accel : r->gyro;
-        float k = s == SDL_SENSOR_ACCEL ? STANDARD_GRAVITY : 1.0f;
-        memset(&e, 0, sizeof e);
-        e.type = SDL_EVENT_GAMEPAD_SENSOR_UPDATE;
-        e.gsensor.which = g_pad.id, e.gsensor.sensor = s;
-        e.gsensor.data[0] = d[0] * k, e.gsensor.data[1] = d[1] * k, e.gsensor.data[2] = d[2] * k;
-        e.gsensor.sensor_timestamp = r->timestamp_us * 1000ull;
+        SDL_Event e = ps5_motion_sensor_event(g_pad.id, (SDL_SensorType)s, d, r->timestamp_us);
         push(&e);
     }
 }
@@ -449,6 +444,62 @@ static struct {
     uint64_t moved_log_ns;
 } g_hid = {.dev = {{{.handle = -1}, {.handle = -1}}, {{.handle = -1}, {.handle = -1}}}};
 
+// SDL's window-relative pointer, confined to the output and optionally the window's mouse rectangle.
+static float g_mouse_x, g_mouse_y;
+// No system cursor is drawn on the display plane; retain SDL's requested visibility state.
+static bool g_cursor_visible = true;
+bool SDL_CursorVisible(void) { return g_cursor_visible; }
+bool SDL_HideCursor(void) { g_cursor_visible = false; return true; }
+bool SDL_ShowCursor(void) { g_cursor_visible = true; return true; }
+static bool g_mouse_initialized, g_mouse_confined;
+static SDL_Rect g_mouse_rect;
+extern void ps5_output_extent(int *width, int *height);
+
+static void mouse_clamp(void) {
+    int w, h;
+    ps5_output_extent(&w, &h);
+    if (w <= 0 || h <= 0) return;
+    if (!g_mouse_initialized) {
+        g_mouse_x = w * 0.5f;
+        g_mouse_y = h * 0.5f;
+        g_mouse_initialized = true;
+    }
+    float left = 0, top = 0, right = (float)(w - 1), bottom = (float)(h - 1);
+    if (g_mouse_confined) {
+        if (g_mouse_rect.x > left) left = (float)g_mouse_rect.x;
+        if (g_mouse_rect.y > top) top = (float)g_mouse_rect.y;
+        int64_t r = (int64_t)g_mouse_rect.x + g_mouse_rect.w - 1;
+        int64_t b = (int64_t)g_mouse_rect.y + g_mouse_rect.h - 1;
+        if (r < right) right = (float)r;
+        if (b < bottom) bottom = (float)b;
+        if (left > right) left = right < 0 ? 0 : (float)(w - 1), right = left;
+        if (top > bottom) top = bottom < 0 ? 0 : (float)(h - 1), bottom = top;
+    }
+    if (g_mouse_x < left) g_mouse_x = left;
+    if (g_mouse_x > right) g_mouse_x = right;
+    if (g_mouse_y < top) g_mouse_y = top;
+    if (g_mouse_y > bottom) g_mouse_y = bottom;
+}
+
+SDL_MouseButtonFlags SDL_GetMouseState(float *x, float *y) {
+    mouse_clamp();
+    if (x) *x = g_mouse_x;
+    if (y) *y = g_mouse_y;
+    return g_hid.buttons >> 1;  // internal bits use 1 << SDL button; SDL uses 1 << (button - 1)
+}
+
+bool SDL_SetWindowMouseRect(SDL_Window *window, const SDL_Rect *rect) {
+    if (!window || (rect && (rect->w <= 0 || rect->h <= 0))) return false;
+    g_mouse_confined = rect != NULL;
+    if (rect) g_mouse_rect = *rect;
+    mouse_clamp();
+    return true;
+}
+
+const SDL_Rect *SDL_GetWindowMouseRect(SDL_Window *window) {
+    return window && g_mouse_confined ? &g_mouse_rect : NULL;
+}
+
 static bool usage_held(const uint8_t *set, unsigned u) { return set[u >> 3] >> (u & 7) & 1; }
 
 // The usages a record holds: its key array and its modifier bits (as Left Control..Right GUI, 0xe0..0xe7; SDL's
@@ -538,6 +589,8 @@ static void mouse_publish(void) {
         memset(&e, 0, sizeof e);
         e.type = down ? SDL_EVENT_MOUSE_BUTTON_DOWN : SDL_EVENT_MOUSE_BUTTON_UP;
         e.button.button = k_mouse_sdl[b];
+        mouse_clamp();
+        e.button.x = g_mouse_x, e.button.y = g_mouse_y;
         e.button.down = down;
         push(&e);
         if (!log_allowed()) continue;
@@ -592,6 +645,11 @@ static void mouse_read(int index, int64_t sum[4]) {
         const MouseRecord *r = &rec[i];
         hid_connection(HID_MOUSE, index, r->connected != 0);
         bool usable = r->connected && !(r->buttons & MOUSE_INTERCEPTED);
+        if (usable && (r->x || r->y)) {
+            mouse_clamp();
+            g_mouse_x += (float)r->x, g_mouse_y += (float)r->y;
+            mouse_clamp();
+        }
         d->buttons = usable ? r->buttons & 0x1fu : 0;
         mouse_publish();
         if (!usable) continue;
@@ -599,7 +657,7 @@ static void mouse_read(int index, int64_t sum[4]) {
     }
 }
 
-// Every open keyboard's and mouse's new records; the mice's motion and wheel summed into one event each
+// Every open keyboard's and mouse's new records; motion and wheel are summed into one event each.
 static void hid_poll(void) {
     for (int i = 0; i < HID_INDEXES; i++)
         if (g_hid.dev[HID_KEYBOARD][i].handle >= 0) keyboard_read(i);
@@ -608,8 +666,10 @@ static void hid_poll(void) {
         if (g_hid.dev[HID_MOUSE][i].handle >= 0) mouse_read(i, sum);
     SDL_Event e;
     if (sum[0] || sum[1]) {
+        mouse_clamp();
         memset(&e, 0, sizeof e);
         e.type = SDL_EVENT_MOUSE_MOTION;
+        e.motion.x = g_mouse_x, e.motion.y = g_mouse_y;
         e.motion.xrel = (float)sum[0], e.motion.yrel = (float)sum[1];
         push(&e);
     }

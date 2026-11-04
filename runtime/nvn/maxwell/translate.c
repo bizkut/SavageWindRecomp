@@ -21,6 +21,9 @@
 #include <string.h>
 
 #include "shader.h"
+// fragment output kinds (ShaderKey rt_kind): 1 / 2 signed / unsigned integer; 5 / 6 unsigned 16 / 8-bit, 7 / 8 signed
+#define RT_SINT(k) ((k) == 1 || (k) == 7 || (k) == 8)
+#define RT_UINT(k) ((k) == 2 || (k) == 5 || (k) == 6)
 
 uint64_t maxwell_gmem_base, maxwell_gmem_size;
 const uint8_t *maxwell_dbg_code;
@@ -149,6 +152,10 @@ static const char *cbuf_ref(Ctx *c, int idx, int64_t off, const char *dyn, char 
     if (!dyn && idx < 18 && off + 16 > (int64_t)c->cbuf_fixed[idx]) c->cbuf_fixed[idx] = (uint32_t)((off + 16 + 255) & ~255);
     if (dyn) c->info->cbuf_dynamic |= 1u << idx;
     if (!dyn && idx < 18 && off >= 0 && (uint32_t)(off >> 4) + 1 > c->cbuf_need[idx]) c->cbuf_need[idx] = (uint32_t)(off >> 4) + 1;
+    if (idx < 18) {
+        if (dyn || off < 0 || (off >> 4) >= 256) c->info->cbuf_rows_all |= 1u << idx;
+        else c->info->cbuf_rows[idx][off >> 10] |= 1ull << ((off >> 4) & 63);
+    }
     if (dyn) sprintf(buf, "cbr(cb%d, (%s) + %lldu)", idx, dyn, (long long)off);
     else sprintf(buf, "cb%d[%lld][%lld]", idx, (long long)(off >> 4), (long long)((off >> 2) & 3));
     return buf;
@@ -1917,10 +1924,10 @@ static void emit_insn(Ctx *c, uint64_t w, uint32_t pc) {
         int nw = size == 5 ? 2 : size >= 6 ? 4 : 1;
         if (c->glsl) {  // gmem_.w[]: 32-bit words; sub-word accesses within the containing word
             static const char *const gl_small[] = {
-                "(gmem_.w[uint(ga >> 2)] >> (uint(ga & 3ul) * 8u)) & 0xFFu",
-                "uint(sx8(gmem_.w[uint(ga >> 2)] >> (uint(ga & 3ul) * 8u)))",
-                "(gmem_.w[uint(ga >> 2)] >> (uint(ga & 2ul) * 8u)) & 0xFFFFu",
-                "uint(sx16(gmem_.w[uint(ga >> 2)] >> (uint(ga & 2ul) * 8u)))"};
+                "(GLD(uint(ga >> 2)) >> (uint(ga & 3ul) * 8u)) & 0xFFu",
+                "uint(sx8(GLD(uint(ga >> 2)) >> (uint(ga & 3ul) * 8u)))",
+                "(GLD(uint(ga >> 2)) >> (uint(ga & 2ul) * 8u)) & 0xFFFFu",
+                "uint(sx16(GLD(uint(ga >> 2)) >> (uint(ga & 2ul) * 8u)))"};
             if (!store) {
                 if (size < 4) {
                     if (d != RZ) { c->reg_used[d] = 1; sp(&c->body, "      if (ok) r%d = %s; else r%d = 0u;\n", d, gl_small[size], d); }
@@ -1928,18 +1935,21 @@ static void emit_insn(Ctx *c, uint64_t w, uint32_t pc) {
                     for (int k = 0; k < nw; k++)
                         if (d != RZ && d + k < RZ) {
                             c->reg_used[d + k] = 1;
-                            sp(&c->body, "      if (ok) r%d = gmem_.w[uint(ga >> 2) + %du]; else r%d = 0u;\n", d + k, k, d + k);
+                            sp(&c->body, "      if (ok) r%d = GLD(uint(ga >> 2) + %du); else r%d = 0u;\n", d + k, k, d + k);
                         }
                 }
             } else {
                 c->uses_gmem_store = true;
                 if (size < 4)
-                    sp(&c->body, "      if (ok) { uint wi = uint(ga >> 2); uint sh = uint(ga & %s) * 8u; atomicAnd(gmem_.w[wi], ~(0x%xu << sh)); "
-                       "atomicOr(gmem_.w[wi], (%s & 0x%xu) << sh); }\n", size < 2 ? "3ul" : "2ul", size < 2 ? 0xFFu : 0xFFFFu, R(d),
-                       size < 2 ? 0xFFu : 0xFFFFu);
+                    sp(&c->body, "      if (ok) { uint wi = uint(ga >> 2); uint sh = uint(ga & %s) * 8u; uint gm = ~(0x%xu << sh), gv = (%s & 0x%xu) << sh; "
+                       "%s }\n", size < 2 ? "3ul" : "2ul", size < 2 ? 0xFFu : 0xFFFFu, R(d),
+                       size < 2 ? 0xFFu : 0xFFFFu,
+                       maxwell_gmem_split ? "if (wi < GSPLIT) { atomicAnd(gmem_.w[wi], gm); atomicOr(gmem_.w[wi], gv); } "
+                                            "else { atomicAnd(gmem2_.w[wi - GSPLIT], gm); atomicOr(gmem2_.w[wi - GSPLIT], gv); }"
+                                          : "atomicAnd(gmem_.w[wi], gm); atomicOr(gmem_.w[wi], gv);");
                 else
                     for (int k = 0; k < nw; k++)
-                        sp(&c->body, "      if (ok) gmem_.w[uint(ga >> 2) + %du] = %s;\n", k, R(d == RZ ? RZ : d + k));
+                        sp(&c->body, "      if (ok) GST(uint(ga >> 2) + %du, %s);\n", k, R(d == RZ ? RZ : d + k));
             }
         } else if (!store) {
             if (size < 4) {
@@ -2366,7 +2376,6 @@ static void glsl_image_decl(Str *s, int set, int i, const ShaderTexture *t) {
     sp(s, "layout(set = %d, binding = %d, %s) uniform %simage%s t%d;\n", set, 32 + i, fmt[t->image_format],
        t->image_format == IMGFMT_R32I ? "i" : "u", dim, i);
 }
-
 // A rewritten body with the state it runs in: registers, predicates, flags, local memory and the control flow's
 // variables (glsl_finish: main's, or a block of its own for the previous frame's copy, key->mvec)
 static void glsl_body(Ctx *c, Str *s, const char *body, bool any_branch, bool dbg) {
@@ -2400,15 +2409,16 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
     glsl_rewrite(c, &body, c->body.buf ? c->body.buf : "");
     // motion vectors (key->mvec, key->mvec_rt): see shader.h
     bool mvec = stage == STAGE_VERTEX && key && key->mvec && !dbg;
-    int mvec_rt = stage == STAGE_FRAGMENT && key && !dbg ? (key->mvec_rt & 0x7F) - 1 : -1;
+    int mvec_rt = stage == STAGE_FRAGMENT && key && !dbg ? (key->mvec_rt & 0x3F) - 1 : -1;
     bool mvec_mask = mvec_rt >= 0 && (key->mvec_rt & 0x80);  // (the reactive mask: no vector, no mv_cur / mv_prev)
+    bool mvec_still = mvec_rt >= 0 && !mvec_mask && (key->mvec_rt & 0x40);  // (zero: no mv_cur / mv_prev either)
     if (mvec) {
         if (c->out_attr_mask >> 30) fail(c, "mvec: varyings 30 / 31 in use");
         c->rw_prev = true;
         glsl_rewrite(c, &pbody, c->body.buf ? c->body.buf : "");
         c->rw_prev = false;
     }
-    if (mvec_rt >= 0 && ((!mvec_mask && (c->in_attr_mask >> 30)) || ((c->omap_target >> (mvec_rt * 4)) & 0xF)))
+    if (mvec_rt >= 0 && ((!mvec_mask && !mvec_still && (c->in_attr_mask >> 30)) || ((c->omap_target >> (mvec_rt * 4)) & 0xF)))
         fail(c, "mvec: input 30 / 31 or color %d in use", mvec_rt);
     if (info->uses_gmem && (info->cbuf_mask & (1u << GMEM_BUFFER_INDEX))) fail(c, "cbuf %d clashes with gmem", GMEM_BUFFER_INDEX);
     if (info->cbuf_mask >> 18) fail(c, "cbuf index out of range");
@@ -2431,9 +2441,35 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
         sp(&s, "layout(std140, set = %d, binding = %d) uniform CB%d { uvec4 cb%d[%u]; };\n", set, i, i, i, n);
     }
     info->writes_gmem = info->uses_gmem && c->uses_gmem_store;
-    if (info->uses_gmem)
+    if (info->uses_gmem) {
+        // The heap in one storage buffer, or (maxwell_gmem_split: the device's maxStorageBufferRange is below the heap,
+        // Mali-G610's 2 GB against 3 GB) in two, split at GMEM_SPLIT. GLD / GST read and write a word of it.
+        bool split = maxwell_gmem_split;
         sp(&s, "layout(std430, set = %d, binding = %d) %sbuffer GMem { uint w[]; } gmem_;\n", set, GMEM_BUFFER_INDEX,
            c->uses_gmem_store ? "" : "readonly ");
+        if (split)
+            sp(&s, "layout(std430, set = %d, binding = %d) %sbuffer GMem2 { uint w[]; } gmem2_;\n", set, GMEM2_BUFFER_INDEX,
+               c->uses_gmem_store ? "" : "readonly ");
+        if (split) sp(&s, "#define GSPLIT 0x%xu\n#define GLD0(i) ((i) < GSPLIT ? gmem_.w[(i)] : gmem2_.w[(i) - GSPLIT])\n", (unsigned)(GMEM_SPLIT >> 2));
+        else sp(&s, "#define GLD0(i) gmem_.w[(i)]\n");
+        if (c->uses_gmem_store || !maxwell_gmem_snap) {
+            sp(&s, "#define GLD(i) GLD0(i)\n");
+            if (split)
+                sp(&s, "#define GST(i, v) { uint gi_ = (i); if (gi_ < GSPLIT) gmem_.w[gi_] = (v); else gmem2_.w[gi_ - GSPLIT] = (v); }\n");
+            else
+                sp(&s, "#define GST(i, v) { gmem_.w[(i)] = (v); }\n");
+        } else {
+            // Read-only, maxwell_gmem_snap: up to 4 ranges of the heap copied at translation (exec.c gsnap: what the HUD's
+            // shaders read, which the game may rewrite while the GPU is still on the frame), r = (first word, words, word in
+            // w[]; gs_r[0].w: how many); the rest in place.
+            sp(&s, "layout(std430, set = %d, binding = %d) readonly buffer GSnap { uvec4 gs_r[4]; uint w[]; } gsnap_;\n", set,
+               GSNAP_BUFFER_INDEX);
+            sp(&s, "uint GLD(uint i) {\n"
+                   "  uint n_ = min(gsnap_.gs_r[0].w, 4u);\n"
+                   "  for (uint k_ = 0u; k_ < n_; k_++) { uvec4 q_ = gsnap_.gs_r[k_]; if (i - q_.x < q_.y) return gsnap_.w[q_.z + (i - q_.x)]; }\n"
+                   "  return GLD0(i);\n}\n");
+        }
+    }
     if (c->uses_rscale) {  // (vertex shaders too: texel fetches from scaled targets, e.g. depth under the sun's flare)
         sp(&s, "layout(std140, set = %d, binding = 18) uniform RScale { vec4 rscale[65]; };\n", set);
         info->uses_rscale = true;
@@ -2500,10 +2536,10 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
         for (int rt = 0; rt < 8; rt++) {
             if (!((c->omap_target >> (rt * 4)) & 0xF)) continue;
             int kind = key ? key->rt_kind[rt] : 0;
-            sp(&s, "layout(location = %d) out %s c%d;\n", rt, kind == 1 ? "ivec4" : kind == 2 ? "uvec4" : "vec4", rt);
+            sp(&s, "layout(location = %d) out %s c%d;\n", rt, RT_SINT(kind) ? "ivec4" : RT_UINT(kind) ? "uvec4" : "vec4", rt);
         }
         if (c->omap_depth) info->writes_depth = true;
-        if (mvec_rt >= 0 && !mvec_mask) sp(&s, "layout(location = 30) in vec4 mv_cur;\nlayout(location = 31) in vec4 mv_prev;\n");
+        if (mvec_rt >= 0 && !mvec_mask && !mvec_still) sp(&s, "layout(location = 30) in vec4 mv_cur;\nlayout(location = 31) in vec4 mv_prev;\n");
         if (mvec_rt >= 0) sp(&s, "layout(location = %d) out vec4 mv_out;\n", mvec_rt);
     } else {
         sp(&s, "layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;\n");
@@ -2515,6 +2551,14 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
         for (int i = 0; i < 32; i++)
             if (c->out_attr_mask & (1u << i)) sp(&s, "  v%d = vec4(0, 0, 0, 1);\n", i);
         if (info->writes_point_size) sp(&s, "  gl_PointSize = 0.0f;\n");
+        // A point list whose shader writes no size: NVN's 1.0. Without maintenance5 (AMD's and Intel's Windows drivers
+        // in 0.3.1, every GPU in Alpha 2) Vulkan leaves that size undefined, and the validation layer flags it: BOTW
+        // draws 64 such points into an 8x8 RGBA32F linear target the CPU reads back. NVIDIA draws 1.0 anyway; what
+        // AMD's driver draws is unknown (#59). SAVAGEWIND_DEBUG_POINT_SIZE=<px>: that size instead (testing).
+        else if (key && key->point_size) {
+            const char *e = getenv("SAVAGEWIND_DEBUG_POINT_SIZE");
+            sp(&s, "  gl_PointSize = %.1ff;\n", e && atof(e) > 0 ? atof(e) : 1.0);
+        }
     }
     if (mvec) {  // the previous frame's position first, in a block of its own (its registers start at 0 as well)
         sp(&s, "  vec4 ppos = vec4(0, 0, 0, 1); vec4 pvd = vec4(0); float pps = 0.0f;\n  {\n");
@@ -2538,7 +2582,7 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
             uint32_t m = (c->omap_target >> (rt * 4)) & 0xF;
             if (!m) continue;
             int kind = key ? key->rt_kind[rt] : 0;
-            const char *cv = kind == 1 ? "int" : kind == 2 ? "uint" : "";
+            const char *cv = RT_SINT(kind) ? "int" : RT_UINT(kind) ? "uint" : "";
             for (int comp = 0; comp < 4; comp++) {
                 if (!(m & (1u << comp))) continue;
                 if (dbg) {
@@ -2546,6 +2590,12 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
                     else sp(&s, "  c%d[%d] = %s(dbgv);\n", rt, comp, cv);
                 } else if (r < 256 && c->reg_used[r]) {
                     if (kind == 0) sp(&s, "  c%d[%d] = as_f(r%d);\n", rt, comp, r);
+                    // (narrow integer targets: the register's low bits, as NVIDIA's hardware stores them; Mali saturates
+                    // wider values - BOTW's NPC speech bubbles pack BC4 indices into RGBA16 UINT with high bits left over)
+                    else if (kind == 5) sp(&s, "  c%d[%d] = r%d & 0xFFFFu;\n", rt, comp, r);
+                    else if (kind == 6) sp(&s, "  c%d[%d] = r%d & 0xFFu;\n", rt, comp, r);
+                    else if (kind == 7) sp(&s, "  c%d[%d] = int(r%d << 16) >> 16;\n", rt, comp, r);
+                    else if (kind == 8) sp(&s, "  c%d[%d] = int(r%d << 24) >> 24;\n", rt, comp, r);
                     else sp(&s, "  c%d[%d] = %s(r%d);\n", rt, comp, cv, r);
                 } else {
                     sp(&s, "  c%d[%d] = 0;\n", rt, comp);
@@ -2563,6 +2613,8 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
         if (mvec_mask) {  // the reactive mask: the effect's coverage (its alpha, when it writes one as a float)
             bool alpha = (c->omap_target & 0x8) && (!key || key->rt_kind[0] == 0);
             sp(&s, "  mv_out = vec4(0.0f, 0.0f, %s, 0.0f);\n", alpha ? "clamp(c0.a, 0.0f, 1.0f)" : "1.0f");
+        } else if (mvec_still) {
+            sp(&s, "  mv_out = vec4(0.0f);\n");
         } else if (mvec_rt >= 0) {  // NDC from the previous frame's position to this one's (both after the y flip)
             sp(&s, "  mv_out = vec4(mv_cur.xy / mv_cur.w - mv_prev.xy / mv_prev.w, 0.0f, 1.0f);\n");
         }
@@ -2570,8 +2622,9 @@ static ShaderInfo *glsl_finish(Ctx *c, bool any_branch, bool dbg) {
     sp(&s, "}\n");
     info->msl = glsl_with_prelude(s.buf);
     free(s.buf);
-    info->mvec = mvec || (mvec_rt >= 0 && !mvec_mask);
+    info->mvec = mvec || (mvec_rt >= 0 && !mvec_mask && !mvec_still);
     info->mvec_mask = mvec_mask;
+    info->mvec_still = mvec_still;
     info->attr_mask = c->in_attr_mask;
     info->out_mask = stage == STAGE_FRAGMENT ? c->omap_target : c->out_attr_mask;
     free(c->body.buf);
@@ -2599,9 +2652,9 @@ size_t maxwell_binary_size(const uint8_t *blob, size_t max_size, int stage) {
     return head + code_end(blob + head, (max_size - head) / 8) * 8;
 }
 
-// What the translations are made from: a hash of this file and shader.h (TRANSLATOR_ID, from the Makefile). The caches
-// of translated shaders (runtime/nvn/vulkan/shaders.c) are kept while it stays the same. Built some other way (the
-// test tools), the build time: those caches then start over with every build.
+// What the translations are made from: a hash of this file and shader.h (TRANSLATOR_ID, from the Makefile's generated
+// shader_ids.h). The caches of translated shaders (runtime/nvn/vulkan/shaders.c) are kept while it stays the same.
+// Built some other way (the test tools), the build time: those caches then start over with every build.
 #ifndef TRANSLATOR_ID
 #define TRANSLATOR_ID __DATE__ " " __TIME__
 #endif
@@ -2611,10 +2664,24 @@ const char *maxwell_translator_id(void) { return TRANSLATOR_ID "-drs"; }
 const char *maxwell_translator_id(void) { return TRANSLATOR_ID; }
 #endif
 
+// What a translation depends on besides the binary, the key and the translator: the switches the Vulkan backend sets
+// for the device (global memory in two bindings, read-only global memory through copies) and the heap window, which
+// only reach the translations of shaders that read global memory (ShaderInfo.uses_gmem). A cached translation records
+// the variant it was made under; one of a global memory shader made under another is translated again
+// (shaders.c xlate_load), the rest are kept: a change of these switches (a device, a driver, a new default in exec.c)
+// no longer throws every cache away, as it did when they were part of the translator's id.
+bool maxwell_gmem_split, maxwell_gmem_snap;
+const char *maxwell_translation_variant(void) {
+    static __thread char v[64];  // (per thread: the precompile's workers ask for it at once)
+    snprintf(v, sizeof v, "%s%s %llx+%llx", maxwell_gmem_split ? "s" : "-", maxwell_gmem_snap ? "n" : "-",
+             (unsigned long long)maxwell_gmem_base, (unsigned long long)maxwell_gmem_size);
+    return v;
+}
+
 // Whether a translation depends on more than the binary and the key (debugging switches): not to be cached.
 bool maxwell_translation_uncacheable(void) {
     return maxwell_dbg_code || maxwell_dbg_vs || getenv("SAVAGEWIND_SAVE_MSL") || getenv("SAVAGEWIND_NO_DISCARD") ||
-           getenv("SAVAGEWIND_XLATE_NO_STRUCTURE");
+           getenv("SAVAGEWIND_XLATE_NO_STRUCTURE") || getenv("SAVAGEWIND_DEBUG_POINT_SIZE");
 }
 
 // ---- structured control flow (GLSL). Shaders whose branches nest become if / else and do / while in address order
@@ -3272,7 +3339,7 @@ ShaderInfo *maxwell_translate(const uint8_t *blob, size_t max_size, int stage, c
         for (int rt = 0; rt < 8; rt++) {
             if (!((c->omap_target >> (rt * 4)) & 0xF)) continue;
             int kind = key ? key->rt_kind[rt] : 0;
-            sp(&s, "  %s4 c%d [[color(%d)]];\n", kind == 1 ? "int" : kind == 2 ? "uint" : "float", rt, rt);
+            sp(&s, "  %s4 c%d [[color(%d)]];\n", RT_SINT(kind) ? "int" : RT_UINT(kind) ? "uint" : "float", rt, rt);
         }
         if (c->omap_depth) { sp(&s, "  float depth [[depth(any)]];\n"); info->writes_depth = true; }
         sp(&s, "};\n");

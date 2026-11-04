@@ -20,7 +20,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 // ---- start / mode (exec.c vk_exec_init, before any command)
 void rec_init(void);
 bool rec_on(void);  // commands go through the recorder thread
@@ -41,14 +40,13 @@ void rec_wait_submitted(uint64_t seq);  // until the driver has submission seq (
 // recording into a command buffer directly (ImGui, frame generation), before using the queue outside it.
 void rec_drain(void);
 
-// ---- counters since the start (vulkan/rprof.c): the recorder's own time is time stamp counter ticks, counted only
-// while the render profile is on
 typedef struct {
-    uint64_t packets, bytes, enqueue_ticks;  // packets queued, their bytes, the render thread's time queuing (profile)
-    uint64_t busy_ticks, wakeups;            // the recorder's time making calls (render profile), times it woke
-    uint64_t drains, drain_ns, seq_waits, seq_wait_ns, full_waits, full_ns;  // waits on it: drains, submissions, ring full
+    uint64_t packets, bytes, enqueue_ticks, enqueue_ns;
+    uint64_t busy_ticks, busy_ns, wakeups, submit_ns;
+    uint64_t drains, drain_ns, seq_waits, seq_wait_ns, full_waits, full_ns;
 } RecStats;
 void rec_stats(RecStats *o);
+void rec_stats_take(RecStats *o);
 
 // ---- commands: as vkCmd*, the same arguments (arrays and structures copied; nothing chained through pNext)
 void rec_CmdBeginRendering(VkCommandBuffer cb, const VkRenderingInfo *ri);
@@ -85,6 +83,7 @@ void rec_CmdSetStencilOp(VkCommandBuffer cb, VkStencilFaceFlags face, VkStencilO
                          VkCompareOp cmp);
 void rec_CmdResetQueryPool(VkCommandBuffer cb, VkQueryPool pool, uint32_t first, uint32_t n);
 void rec_CmdWriteTimestamp2(VkCommandBuffer cb, VkPipelineStageFlags2 stage, VkQueryPool pool, uint32_t query);
+void rec_CmdSetCheckpointNV(VkCommandBuffer cb, const void *marker);
 void rec_CmdBeginQuery(VkCommandBuffer cb, VkQueryPool pool, uint32_t query, VkQueryControlFlags flags);
 void rec_CmdEndQuery(VkCommandBuffer cb, VkQueryPool pool, uint32_t query);
 void rec_CmdClearAttachments(VkCommandBuffer cb, uint32_t na, const VkClearAttachment *at, uint32_t nr, const VkClearRect *r);

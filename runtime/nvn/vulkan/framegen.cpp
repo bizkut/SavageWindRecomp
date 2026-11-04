@@ -18,9 +18,11 @@
 #include <FidelityFX/host/ffx_frameinterpolation.h>
 #include <FidelityFX/host/ffx_opticalflow.h>
 
+
 #include "framegen.h"
 
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
+
 
 
 // ---- contexts
@@ -158,7 +160,8 @@ static bool fg_dispatch(VkCommandBuffer cb, const FgConfig *c, const FgFrame *f)
     FfxFrameInterpolationPrepareDescription pd = {};
     pd.commandList = cl;
     pd.renderSize = {c->render_w, c->render_h};
-    pd.motionVectorScale = {(float)c->render_w, (float)c->render_h};  // (the vectors are in uv units)
+    pd.motionVectorScale = f->motion_scale[0] || f->motion_scale[1] ? FfxFloatCoords2D{f->motion_scale[0], f->motion_scale[1]}
+                                                                    : FfxFloatCoords2D{(float)c->render_w, (float)c->render_h};
     pd.frameTimeDelta = f->frame_ms;
     pd.cameraNear = f->near_;
     pd.cameraFar = f->far_;

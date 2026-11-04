@@ -4,6 +4,8 @@
 #include "sites.h"
 #include "patches.h"
 #include <regex>
+#include "regs_local.h"
+#include "flags_local.h"
 
 static std::string hx(U a)
 {
@@ -94,6 +96,9 @@ struct Emitter {
     std::map<U, std::string> hle;
     PatchContext patch_context;
     std::map<U, std::string> patches;
+    bool locals = false, trust = true;
+    size_t reg_locals = 6;
+    std::map<std::tuple<U, bool, int>, bool> entry_flags_cache;
 
     explicit Emitter(Discovery &dis, const std::string &hle_path, const std::map<std::string, U> &sites,
                      const std::string *hle_text = nullptr)
@@ -142,10 +147,38 @@ struct Emitter {
             }
         }
     }
+    bool entry_flags(U a, bool unknown, int depth = 4)
+    {
+        auto key = std::make_tuple(a, unknown, depth);
+        auto found = entry_flags_cache.find(key);
+        if (found != entry_flags_cache.end()) return found->second;
+        auto result = [&]() {
+            for (int n = 0; n < 32; ++n) {
+                if (!d.in_text(a) || patches.count(a)) return unknown;
+                auto ins = instruction(d.word(a), a);
+                const auto &text = ins.kind == "bcond" ? ins.cond : ins.kind == "op" ? ins.code : std::string();
+                static const std::regex flag_read(
+                    R"(\b(?:COND_|FLAG_)|\b(?:adc|sbc|adcs|sbcs)\d+\(|c->nzcv(?! =))");
+                if (std::regex_search(text, flag_read)) return true;
+                if (ins.kind == "op" && sets_flags(ins.code)) return false;
+                if (ins.kind == "bl" || ins.kind == "blr" || ins.kind == "ret" || ins.kind == "trap") return false;
+                if (ins.kind == "br") return unknown;
+                if (ins.kind == "b") { a = ins.target; continue; }
+                if (ins.kind == "bcond" && (!depth || entry_flags(ins.target, unknown, depth - 1)))
+                    return depth ? true : unknown;
+                a += 4;
+            }
+            return unknown;
+        }();
+        entry_flags_cache[key] = result;
+        return result;
+    }
+#include "emit_local.h"
     std::vector<std::string> body(U entry, U end, const Scan &scan, std::set<U> &refs, const std::string &mode)
     {
         std::vector<std::string> out;
         bool all = mode == "resume" || (mode == "plain" && (!scan.tables.empty() || !scan.all.empty()));
+        if (locals && !all) return local_body(entry, end, scan, refs, mode);
         if (mode == "resume") {
             out.push_back("__attribute__((cold, noinline, optnone)) static void " + fn(entry) + "_r(Cpu *c) {");
             out.push_back("    goto L_dispatch;");
@@ -271,6 +304,8 @@ struct Options {
     size_t limit = 0;
     bool any_version = false;
     bool no_sites = false;
+    bool locals = true, trust = true;
+    size_t reg_locals = 6;
 };
 
 static void generate(const std::string &name, const fs::path &input, U base, const fs::path &outdir,
@@ -287,6 +322,9 @@ static void generate(const std::string &name, const fs::path &input, U base, con
     }
     Discovery d(n, base);
     Emitter e(d, opts.hlepath, sites, hle_text);
+    e.locals = opts.locals;
+    e.trust = opts.trust;
+    e.reg_locals = opts.reg_locals;
     auto order = d.run(false);
     auto full_order = order;
     if (opts.limit && opts.limit < order.size())
@@ -428,9 +466,14 @@ int main(int argc, char **argv) try {
     fs::path input = argv[2];
     std::vector<std::string> paths;
     Options opts;
+    opts.locals = false;
     for (int i = 3; i < argc; ++i) {
         std::string arg = argv[i];
-        if (arg == "--no-sites") {
+        if (arg == "--locals") {
+            opts.locals = true;
+        } else if (arg == "--no-callee-saved-trust") {
+            opts.trust = false;
+        } else if (arg == "--no-sites") {
             opts.no_sites = true;
         } else if (arg == "--any-version") {
             opts.any_version = true;
@@ -449,6 +492,8 @@ int main(int argc, char **argv) try {
                 opts.big = std::stoull(val);
             else if (arg == "--limit")
                 opts.limit = std::stoull(val);
+            else if (arg == "--reg-locals")
+                opts.reg_locals = std::stoull(val);
             else
                 throw std::runtime_error("unknown option: " + arg);
         } else {

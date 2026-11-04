@@ -66,7 +66,13 @@ extern "C" void fsr3_destroy(void) {
 // The backend's device functions: an extension's KHR name that this device was not made with is the core function
 // it was promoted to (the backend calls vkGetBufferMemoryRequirements2KHR without checking it), and its debug labels
 // do nothing without VK_EXT_debug_utils (as framegen.cpp's)
-static VKAPI_ATTR void VKAPI_CALL no_label(VkCommandBuffer, const VkDebugUtilsLabelEXT *) {}
+// (its job labels become SAVAGEWIND_GPUPROF_AT marks: the time of each of FSR 3's passes)
+extern "C" void vk_gpuprof_mark(VkCommandBuffer cb, const char *what);
+static VKAPI_ATTR void VKAPI_CALL no_label(VkCommandBuffer cb, const VkDebugUtilsLabelEXT *l) {
+    char buf[96];
+    snprintf(buf, sizeof buf, "FSR 3: %s", l && l->pLabelName ? l->pLabelName : "?");
+    vk_gpuprof_mark(cb, buf);
+}
 static VKAPI_ATTR void VKAPI_CALL no_label_end(VkCommandBuffer) {}
 static PFN_vkVoidFunction VKAPI_PTR device_proc(VkDevice dev, const char *name) {
     PFN_vkVoidFunction f = vkGetDeviceProcAddr(dev, name);

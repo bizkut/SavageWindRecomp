@@ -17,6 +17,10 @@ The PS5 title reads your own Switch game packages and keys on your console, decr
 3. Put your own base package, 1.9.0 update, optional DLC, `prod.keys`, and, if needed, `title.keys` in `/data/savagewind/import/`. Keep these inputs there: the title reads them on subsequent starts too.
 4. Start Savage Wind from the PS5 home screen. The first start builds game code on the console, prepares shaders and generates home art and UI data. A progress screen shows the work. Allow roughly 11 minutes; time varies. Later starts are roughly 20 seconds with a warm cache.
 
+The console generator keeps frequently used guest registers and flags in local variables by default, as the Alpha 5
+desktop generator does. Updating the generator or its runtime headers invalidates the affected game-code cache, so the
+next start rebuilds it on the console.
+
 Output follows **Settings > Screen and Video > Video Output > Resolution** by default. Automatic and 2160p use 4K;
 720p, 1080p and 1440p use their corresponding output sizes. Video > Output overrides this for the next start.
 In `savagewind.ini`, `output` may be `auto`, `720p`, `1080p`, `1440p` or `4k`.
@@ -26,6 +30,11 @@ The home-screen icon and backgrounds are generated from your own game files and 
 ## Settings and storage
 
 The game's Options menu has a PS5 Video page. Settings are stored in `/data/savagewind/savagewind.ini`; useful keys include `frame_rate` (e.g. `30`, `60`, or `off`), `vsync` (`on`, `fast`, `adaptive`, `off`), `hdr` (`auto`, `on`, `off`), `home_art` (0/1), `precompile_shaders` (0/1), `async_shaders` (0/1), and `gamecode_threads`. Changing settings can affect performance or start-up time.
+
+Video includes draw distance (Original, Medium, High) and haze; higher draw distances cost CPU and GPU time, and haze
+changes apply at the next start. Their defaults are Original and 100% respectively. Colour offers grading presets,
+exposure, contrast, saturation, temperature and LUTs. Gameplay includes HUD size, and Accessibility offers gameplay
+assists including damage multipliers, invulnerability, unbreakable equipment, infinite arrows and infinite stamina.
 
 Asynchronous shaders are on by default on PS5: the game doesn't pause while a new shader compiles, so there is no
 stutter the first time an effect appears, but that effect is skipped until its shader is ready (it pops in late) and a
@@ -41,6 +50,17 @@ bound; an old Create binding falls back to its default. Changing Confirm in Cont
 immediately.
 
 Your imports, saves, settings, generated game code, UI and caches live under `/data/savagewind/`. Generated files are derived from your own game and must not be shared. Back up your saves before removing data.
+
+## Developer control
+
+The developer control socket is off by default. To enable it, set `control = 1` in
+`/data/savagewind/savagewind.ini` and restart. It listens on all interfaces on TCP port 7777, with one client at a time.
+Fetch `/data/savagewind/control-token` over FTP after each start, then run
+`python tools/swctl.py --host <PS5-address> --token-file control-token state` from a PC.
+The token authenticates clients but traffic is **not encrypted**; local homebrew and FTP users can read the token.
+Commands can modify game memory and saves, control input and exit the title; commands and arguments are logged.
+Use only a trusted network, and set `control = 0` and restart when finished. The F12 in-game console UI is not
+available on PS5; see [control commands](docs/CONTROL.md).
 
 ## Troubleshooting
 

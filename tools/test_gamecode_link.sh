@@ -1,6 +1,17 @@
 #!/bin/sh
 set -eu
 
+python3 - <<'PY'
+import importlib.util
+
+spec = importlib.util.spec_from_file_location("exports", "ps5/tools/gen-gamecode-exports.py")
+exports = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(exports)
+names = exports.emitted_names()
+assert {"rt_pc_button_group", "rt_infinite_arrows"} <= names
+assert not {"rt_pc_button_g", "rt_infinite_", "rt_fsub_s"} & names
+PY
+
 # Run from the repository root. --real and --cache extract the private PC-built archive.
 if [ "${1:-}" = "--cache" ] || [ "${1:-}" = "--real" ]; then
     crypto=build/ps5/importer/host/source/deps/libmbedtls

@@ -55,13 +55,19 @@ typedef enum {
     SDL_SCANCODE_UNKNOWN = 0,
     SDL_SCANCODE_A = 4, SDL_SCANCODE_C = 6, SDL_SCANCODE_D = 7, SDL_SCANCODE_E = 8, SDL_SCANCODE_F = 9,
     SDL_SCANCODE_I = 12, SDL_SCANCODE_J = 13, SDL_SCANCODE_K = 14, SDL_SCANCODE_L = 15, SDL_SCANCODE_M = 16,
-    SDL_SCANCODE_Q = 20, SDL_SCANCODE_R = 21, SDL_SCANCODE_S = 22, SDL_SCANCODE_T = 23, SDL_SCANCODE_W = 26,
+    SDL_SCANCODE_O = 18, SDL_SCANCODE_P = 19, SDL_SCANCODE_Q = 20, SDL_SCANCODE_R = 21, SDL_SCANCODE_S = 22,
+    SDL_SCANCODE_T = 23, SDL_SCANCODE_U = 24, SDL_SCANCODE_W = 26,
+    SDL_SCANCODE_1 = 30, SDL_SCANCODE_2 = 31, SDL_SCANCODE_3 = 32, SDL_SCANCODE_4 = 33, SDL_SCANCODE_5 = 34,
+    SDL_SCANCODE_6 = 35, SDL_SCANCODE_7 = 36, SDL_SCANCODE_8 = 37, SDL_SCANCODE_9 = 38, SDL_SCANCODE_0 = 39,
     SDL_SCANCODE_RETURN = 40, SDL_SCANCODE_ESCAPE = 41, SDL_SCANCODE_BACKSPACE = 42, SDL_SCANCODE_TAB = 43,
-    SDL_SCANCODE_SPACE = 44, SDL_SCANCODE_CAPSLOCK = 57,
-    SDL_SCANCODE_F1 = 58, SDL_SCANCODE_F8 = 65, SDL_SCANCODE_F9 = 66, SDL_SCANCODE_F11 = 68, SDL_SCANCODE_F12 = 69,
+    SDL_SCANCODE_SPACE = 44, SDL_SCANCODE_GRAVE = 53, SDL_SCANCODE_CAPSLOCK = 57,
+    SDL_SCANCODE_F1 = 58, SDL_SCANCODE_F7 = 64, SDL_SCANCODE_F8 = 65, SDL_SCANCODE_F9 = 66,
+    SDL_SCANCODE_F11 = 68, SDL_SCANCODE_F12 = 69,
     SDL_SCANCODE_INSERT = 73, SDL_SCANCODE_PAGEUP = 75, SDL_SCANCODE_DELETE = 76, SDL_SCANCODE_PAGEDOWN = 78,
     SDL_SCANCODE_RIGHT = 79, SDL_SCANCODE_LEFT = 80, SDL_SCANCODE_DOWN = 81, SDL_SCANCODE_UP = 82,
-    SDL_SCANCODE_KP_ENTER = 88,
+    SDL_SCANCODE_KP_ENTER = 88, SDL_SCANCODE_KP_1 = 89, SDL_SCANCODE_KP_2 = 90, SDL_SCANCODE_KP_3 = 91,
+    SDL_SCANCODE_KP_4 = 92, SDL_SCANCODE_KP_5 = 93, SDL_SCANCODE_KP_6 = 94, SDL_SCANCODE_KP_7 = 95,
+    SDL_SCANCODE_KP_8 = 96, SDL_SCANCODE_KP_9 = 97, SDL_SCANCODE_KP_0 = 98,
     SDL_SCANCODE_LCTRL = 224, SDL_SCANCODE_LSHIFT = 225, SDL_SCANCODE_LALT = 226, SDL_SCANCODE_LGUI = 227,
     SDL_SCANCODE_RCTRL = 228, SDL_SCANCODE_RSHIFT = 229, SDL_SCANCODE_RALT = 230, SDL_SCANCODE_RGUI = 231,
     SDL_SCANCODE_COUNT = 512
@@ -75,6 +81,16 @@ SDL_Scancode SDL_GetScancodeFromKey(SDL_Keycode key, SDL_Keymod *modstate);
 #define SDL_BUTTON_RIGHT 3
 #define SDL_BUTTON_X1 4
 #define SDL_BUTTON_X2 5
+#define SDL_BUTTON_X1MASK (1u << (SDL_BUTTON_X1 - 1))
+#define SDL_BUTTON_X2MASK (1u << (SDL_BUTTON_X2 - 1))
+typedef struct { int x, y, w, h; } SDL_Rect;
+typedef uint32_t SDL_MouseButtonFlags;
+SDL_MouseButtonFlags SDL_GetMouseState(float *x, float *y);
+bool SDL_SetWindowMouseRect(SDL_Window *window, const SDL_Rect *rect);
+const SDL_Rect *SDL_GetWindowMouseRect(SDL_Window *window);
+bool SDL_CursorVisible(void);
+bool SDL_HideCursor(void);
+bool SDL_ShowCursor(void);
 bool SDL_SetWindowRelativeMouseMode(SDL_Window *window, bool enabled);
 
 typedef struct SDL_Gamepad SDL_Gamepad;
@@ -96,6 +112,7 @@ typedef enum {
     SDL_GAMEPAD_AXIS_LEFTX, SDL_GAMEPAD_AXIS_LEFTY, SDL_GAMEPAD_AXIS_RIGHTX, SDL_GAMEPAD_AXIS_RIGHTY,
     SDL_GAMEPAD_AXIS_LEFT_TRIGGER, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, SDL_GAMEPAD_AXIS_COUNT
 } SDL_GamepadAxis;
+#define SDL_STANDARD_GRAVITY 9.80665f
 typedef enum { SDL_SENSOR_ACCEL = 1, SDL_SENSOR_GYRO = 2 } SDL_SensorType;
 SDL_JoystickID *SDL_GetGamepads(int *count);  // (SDL_free the list)
 void SDL_free(void *mem);
@@ -123,6 +140,7 @@ typedef uint64_t SDL_WindowFlags;
 #define SDL_WINDOW_FULLSCREEN 0x0000000000000001ull
 #define SDL_WINDOW_HIDDEN 0x0000000000000008ull
 #define SDL_WINDOW_MINIMIZED 0x0000000000000040ull
+#define SDL_WINDOW_INPUT_FOCUS 0x0000000000000200ull
 #define SDL_WINDOW_RESIZABLE 0x0000000000000020ull
 #define SDL_WINDOW_HIGH_PIXEL_DENSITY 0x0000000000002000ull
 #define SDL_WINDOW_VULKAN 0x0000000010000000ull
@@ -143,6 +161,7 @@ bool SDL_SetHint(const char *name, const char *value);
 SDL_DisplayID SDL_GetPrimaryDisplay(void);
 const SDL_DisplayMode *SDL_GetDesktopDisplayMode(SDL_DisplayID display);
 SDL_Window *SDL_CreateWindow(const char *title, int w, int h, SDL_WindowFlags flags);
+bool SDL_GetWindowSize(SDL_Window *window, int *w, int *h);
 bool SDL_GetWindowSizeInPixels(SDL_Window *window, int *w, int *h);
 SDL_WindowFlags SDL_GetWindowFlags(SDL_Window *window);
 const SDL_DisplayMode *SDL_GetWindowFullscreenMode(SDL_Window *window);
@@ -166,9 +185,10 @@ enum {
 typedef struct { SDL_EVENT_HEAD; uint32_t windowID; uint32_t which; SDL_Scancode scancode; SDL_Keycode key;
                  SDL_Keymod mod; bool down, repeat; } SDL_KeyboardEvent;
 typedef struct { SDL_EVENT_HEAD; uint32_t windowID; const char *text; } SDL_TextInputEvent;
-typedef struct { SDL_EVENT_HEAD; float xrel, yrel; } SDL_MouseMotionEvent;
-typedef struct { SDL_EVENT_HEAD; Uint8 button; bool down; } SDL_MouseButtonEvent;
-typedef struct { SDL_EVENT_HEAD; float x, y; } SDL_MouseWheelEvent;  // (y > 0: away from the player; x > 0: right)
+typedef struct { SDL_EVENT_HEAD; float x, y, xrel, yrel; } SDL_MouseMotionEvent;
+typedef struct { SDL_EVENT_HEAD; Uint8 button; bool down; float x, y; } SDL_MouseButtonEvent;
+typedef enum { SDL_MOUSEWHEEL_NORMAL, SDL_MOUSEWHEEL_FLIPPED } SDL_MouseWheelDirection;
+typedef struct { SDL_EVENT_HEAD; float x, y; SDL_MouseWheelDirection direction; } SDL_MouseWheelEvent;
 typedef struct { SDL_EVENT_HEAD; SDL_JoystickID which; } SDL_GamepadDeviceEvent;
 typedef struct { SDL_EVENT_HEAD; SDL_JoystickID which; Uint8 axis; Sint16 value; } SDL_GamepadAxisEvent;
 typedef struct { SDL_EVENT_HEAD; SDL_JoystickID which; Uint8 button; bool down; } SDL_GamepadButtonEvent;

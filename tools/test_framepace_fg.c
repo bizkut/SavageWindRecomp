@@ -10,6 +10,7 @@ GameSites g_site;
 Settings g_settings;
 volatile int g_movie_playing, g_movie_fps;
 uint64_t g_fs_vfr;
+int16_t g_bind_pad[BIND_KEY_COUNT];
 static float g_hz;
 float winsize_refresh_rate(void) { return g_hz; }
 bool movie_paced(void) { return true; }
@@ -17,8 +18,13 @@ bool nvn_timeline(void) { return false; }
 void input_cam_frame(float ratio) { (void)ratio; }
 uint32_t kernel_current_thread_handle(void) { return 0; }
 uint64_t plat_now_ns(void) { return 0; }
+uint64_t kernel_heap_size(void) { return 0; }
+int input_pad_family(void) { return 0; }
+int input_last_device(void) { return DEVICE_KEYBOARD; }
+uint64_t renderer_present_count(void) { return 0; }
 
 static uint32_t pause_state;  // (g_site.pause_state points here: playing)
+static uint64_t event_mgr;  // no active event
 static int failed;
 
 static void expect_ms(const char *what, uint64_t ns, double ms) {
@@ -34,6 +40,7 @@ static void set(int fps, int vsync, float hz, int active, int counts_game) {
 
 int main(void) {
     g_site.pause_state = (uint64_t)(uintptr_t)&pause_state;
+    g_site.event_mgr = (uint64_t)(uintptr_t)&event_mgr;
     setenv("SAVAGEWIND_MOVIE_FPS", "0", 1);  // (no movie playing anyway)
     // frame generation off: one present per game frame, as in M6
     set(60, VSYNC_ON, 119.88f, 0, 0);

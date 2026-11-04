@@ -30,7 +30,8 @@ typedef struct {
     MvecStream stream[16];
     uint32_t vs_streams;  // streams the vertex shader's attributes read
     int ncb;
-    struct { uint8_t slot; uint64_t addr, size; } cb[MVEC_CB];
+    // rows: the vec4s the vertex shader reads of it (ShaderInfo cbuf_rows; NULL: any)
+    struct { uint8_t slot; uint64_t addr, size; const uint64_t *rows; } cb[MVEC_CB];
 } MvecDrawIn;
 
 // One recorded draw: its identity, its match in the previous frame and its copied inputs (offsets in its frame's
@@ -48,9 +49,11 @@ typedef struct {
     uint32_t cb_off[MVEC_CB], cb_size[MVEC_CB];
     uint8_t inst_stream[MVEC_INST];
     uint32_t inst_off[MVEC_INST], inst_size[MVEC_INST];
+    uint64_t hash;  // of its inputs: the constants its vertex shader reads (but the camera block's matrices) and instanced streams
 } MvecRec;
 
 bool mvec_enabled(void);  // Video > Anti-aliasing TAA, or SAVAGEWIND_MVEC=1
+bool mvec_for_framegen(void);  // frame generation takes them: SAVAGEWIND_FG_OBJECT_VECTORS=1 (default: the camera's)
 // Records a scene draw of the current frame: its index among the frame's records, -1 when not recorded (off, or the
 // history buffer is full: grown for the next frame).
 int mvec_record(const MvecDrawIn *d);
@@ -78,6 +81,10 @@ const MvecRec *mvec_records(bool previous, int *n, VkBuffer *history);
 // The push constants of the current frame's record `rec` (mvec_record's index): its match's constant buffer copies in
 // the previous frame's history. false: no match, or the match lacks a buffer this draw reads (no motion program).
 bool mvec_push(int rec, uint32_t pc[MVEC_PUSH / 4]);
+// Whether the current frame's record `rec` read the same inputs as its match (its hash): it stood still, and the
+// camera's motion is its vector (exec.c draws it with the still variant, ShaderKey mvec_rt 0x40, not its motion
+// program: most of the world stands still, and the motion programs, their vertex shaders run twice, cost ~5% fps)
+bool mvec_still(int rec);
 void mvec_drawn(void);
 void mvec_masked(void);  // a blended effect was drawn with its reactive mask program (statistics)  // a recorded draw was drawn with its motion program (statistics)
 // The previous frame's history buffer, for MVEC_HISTORY_BINDING (any valid buffer before there is one)

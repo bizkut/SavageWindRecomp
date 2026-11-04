@@ -1,5 +1,6 @@
 // PS5 game entry: the game on its guest thread, the VideoOut window and renderer on the main thread (ui_run).
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "../control.h"
 #include "../gamelib.h"
 #include "../hle.h"
 #include "../kernel.h"
@@ -547,7 +548,9 @@ int main(void) {
     settings_load();
     ps5_startup_mark("settings loaded");
     ps5_log_init(g_settings.log_sync);
+    control_init();
     language_booted();
+    plat_cpu_placement();
     kernel_init();
     dispatch_init();
     size_t size = 0;

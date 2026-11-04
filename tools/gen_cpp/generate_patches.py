@@ -26,6 +26,8 @@ def expr(n):
     if isinstance(n, ast.Constant):
         if isinstance(n.value, str):
             return string_expr(n.value)
+        if isinstance(n.value, bool):
+            return str(n.value).lower()
         return str(n.value)
     if isinstance(n, ast.Name):
         return n.id
@@ -37,6 +39,8 @@ def expr(n):
         raise ValueError(ast.dump(n))
     if isinstance(n, ast.Call):
         name = n.func.id
+        if name == 'int':
+            return 'static_cast<int>(' + expr(n.args[0]) + ')'
         if name == 'next':
             expected = ('next((_word(gen, a - 4 * i) for i in range(1, 5) '
                         'if _word(gen, a - 4 * i) & 4290774015 == 4181721704))')
@@ -77,7 +81,8 @@ def expr(n):
                             isinstance(item.value, ast.Subscript)):
                         parts.append(value)
                     elif isinstance(item.value, ast.Name) and item.value.id in ('req', 'op', 'owner', 'fn',
-                                                                                'close', 'redraw'):
+                                                                                'close', 'redraw', 'whose',
+                                                                                'prologue'):
                         parts.append(value)
                     else:
                         parts.append('std::to_string(' + value + ')')
@@ -85,14 +90,24 @@ def expr(n):
                     raise ValueError(spec)
         return '(' + ' +\n        '.join(parts) + ')'
     if isinstance(n, ast.BinOp):
-        ops = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*', ast.BitAnd: '&', ast.BitOr: '|', ast.LShift: '<<',
-               ast.RShift: '>>'}
+        ops = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*', ast.FloorDiv: '/', ast.BitAnd: '&', ast.BitOr: '|',
+               ast.LShift: '<<', ast.RShift: '>>'}
         return '(' + expr(n.left) + ' ' + ops[type(n.op)] + ' ' + expr(n.right) + ')'
     if isinstance(n, ast.UnaryOp) and isinstance(n.op, ast.USub):
         return '(-' + expr(n.operand) + ')'
     if isinstance(n, ast.Compare):
-        ops = {ast.Eq: '==', ast.NotEq: '!='}
-        return '(' + expr(n.left) + ' ' + ops[type(n.ops[0])] + ' ' + expr(n.comparators[0]) + ')'
+        if len(n.ops) == 1 and isinstance(n.ops[0], ast.In):
+            if isinstance(n.comparators[0], ast.Tuple):
+                return '(' + ' || '.join(expr(n.left) + ' == ' + expr(x) for x in n.comparators[0].elts) + ')'
+            return '(ctx.sites.count(' + expr(n.left) + ') != 0)'
+        ops = {ast.Eq: '==', ast.NotEq: '!=', ast.Lt: '<', ast.LtE: '<=', ast.Gt: '>', ast.GtE: '>='}
+        values = [n.left] + n.comparators
+        def comparison_value(value):
+            if isinstance(value, ast.BinOp) and isinstance(value.op, ast.Sub):
+                return '(static_cast<int64_t>(' + expr(value.left) + ') - static_cast<int64_t>(' + expr(value.right) + '))'
+            return expr(value)
+        return '(' + ' && '.join(comparison_value(values[i]) + ' ' + ops[type(op)] +
+                                  ' ' + comparison_value(values[i + 1]) for i, op in enumerate(n.ops)) + ')'
     if isinstance(n, ast.BoolOp):
         op = ' && ' if isinstance(n.op, ast.And) else ' || '
         return '(' + op.join(expr(x) for x in n.values) + ')'
@@ -101,22 +116,39 @@ def expr(n):
     raise ValueError(ast.dump(n))
 
 
-def statements(body):
+def statements(body, indent='    ', assigned=None):
     lines = []
+    assigned = set() if assigned is None else assigned
     for n in body:
         if isinstance(n, ast.Assert):
-            lines.append('    validate(' + expr(n.test) + ', a, word(ctx, a));')
+            lines.append(indent + 'validate(' + expr(n.test) + ', a, word(ctx, a));')
         elif isinstance(n, ast.Assign):
             target = n.targets[0]
             if isinstance(target, ast.Tuple):
                 if isinstance(n.value, ast.Name) and n.value.id == 'regs':
                     continue
                 for t, v in zip(target.elts, n.value.elts):
-                    lines.append('    auto ' + t.id + ' = ' + expr(v) + ';')
+                    lines.append(indent + 'auto ' + t.id + ' = ' + expr(v) + ';')
             else:
-                lines.append('    auto ' + target.id + ' = ' + expr(n.value) + ';')
+                prefix = '' if target.id in assigned else 'auto '
+                lines.append(indent + prefix + target.id + ' = ' + expr(n.value) + ';')
+                assigned.add(target.id)
+        elif isinstance(n, ast.If):
+            common = {x.targets[0].id for x in n.body if isinstance(x, ast.Assign)
+                      and isinstance(x.targets[0], ast.Name)} & {
+                          x.targets[0].id for x in n.orelse if isinstance(x, ast.Assign)
+                          and isinstance(x.targets[0], ast.Name)}
+            for name in sorted(common - assigned):
+                lines.append(indent + 'std::string ' + name + ';')
+            assigned |= common
+            lines.append(indent + 'if (' + expr(n.test) + ') {')
+            lines.extend(statements(n.body, indent + '    ', assigned.copy()))
+            if n.orelse:
+                lines.append(indent + '} else {')
+                lines.extend(statements(n.orelse, indent + '    ', assigned.copy()))
+            lines.append(indent + '}')
         elif isinstance(n, ast.Return):
-            lines.append('    return ' + expr(n.value) + ';')
+            lines.append(indent + 'return ' + expr(n.value) + ';')
         elif isinstance(n, ast.Expr) and isinstance(n.value, ast.Constant):
             continue
         else:
@@ -128,21 +160,28 @@ def generate():
     out = ['// Generated by generate_patches.py from ../patches.py; do not edit.', 'namespace generated_patches {']
     out.extend(['static uint64_t _sub_sp(uint64_t n)', '{',
                 '    return ' + expr(functions['_sub_sp'].body[0].value) + ';', '}'])
-    skip = {'_word', '_fn', '_sub_sp', '_frustum_load', '_cam_reverse', 'table'}
+    skip = {'_word', '_fn', '_sub_sp', '_frustum_load', '_cam_reverse', '_pc_map_focus', '_grass_fade', 'table'}
     for name, node in functions.items():
         if name in skip:
             continue
         args = ['const PatchContext &ctx']
+        defaults = dict(zip((a.arg for a in node.args.args[-len(node.args.defaults):]), node.args.defaults))
         for arg in node.args.args:
             if arg.arg == 'gen':
                 continue
-            args.append(('const std::string & ' if arg.arg == 'owner' else 'uint64_t ') + arg.arg)
+            default = defaults.get(arg.arg)
+            string_arg = arg.arg == 'owner' or isinstance(default, ast.Constant) and isinstance(default.value, str)
+            decl = ('const std::string & ' if string_arg else 'uint64_t ') + arg.arg
+            if default is not None:
+                decl += ' = ' + expr(default)
+            args.append(decl)
         out.append('static std::string ' + name + '(' + ', '.join(args) + ')')
         out.append('{')
         out.extend(statements(node.body))
         out.append('}')
     for outer, args in (('_frustum_load', 'uint64_t expected, uint64_t r0, uint64_t r1, const std::string &what'),
-                        ('_cam_reverse', 'uint64_t axis')):
+                        ('_cam_reverse', 'uint64_t axis'), ('_pc_map_focus', 'bool position'),
+                        ('_grass_fade', 'uint64_t base, uint64_t off')):
         node = functions[outer].body[0]
         out.append('static std::string ' + outer + '(const PatchContext &ctx, uint64_t a,')
         out.append('                                 ' + args + ')')
@@ -162,7 +201,7 @@ def generate():
                 values = [expr(word), *(expr(x) for x in regs.elts), expr(what)]
                 call = '_frustum_load(ctx, a, ' + ', '.join(values) + ')'
             else:
-                call = '_cam_reverse(ctx, a, ' + expr(val.args[0]) + ')'
+                call = val.func.id + '(ctx, a, ' + ', '.join(expr(x) for x in val.args) + ')'
         out.append('    if (name == ' + quote(name) + ')')
         out.append('        return ' + call + ';')
     out.append('    throw std::runtime_error("unknown patch: " + name);')

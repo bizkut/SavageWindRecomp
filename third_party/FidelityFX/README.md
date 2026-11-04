@@ -19,7 +19,12 @@ What is here:
   Regenerate after changing the GLSL:
   `python3 tools/ffx_shaders.py third_party/FidelityFX/sdk third_party/FidelityFX/spirv/ffx_shaders_vk.h`.
 - `spirv/ffx_fsr3upscaler_vk.h`: the same for the FSR 3 upscaler, one permutation per pass (SDR input,
-  low-resolution motion vectors without jitter, depth not inverted):
+  low-resolution motion vectors without jitter, depth not inverted), in 32-bit and 16-bit floats (FFX_HALF, used where
+  the SDK allows it and the device was made with shaderFloat16 and 16-bit storage: device.c `vk_shader_fp16`), and the
+  history reprojected with a Catmull-Rom filter from 5 bilinear samples instead of Lanczos on 16 loads
+  (`FFX_FSR3UPSCALER_OPTION_REPROJECT_CATMULL_ROM_5`, a Savage Wind addition to `ffx_fsr3upscaler_reproject.h`; the
+  history texture is the upscale size). Together they took its passes from 3.47 to ~2.4 ms at 3840x2160 (RTX 3060;
+  the accumulation 1.8 to 1.42 ms):
   `python3 tools/ffx_shaders.py third_party/FidelityFX/sdk third_party/FidelityFX/spirv/ffx_fsr3upscaler_vk.h
   glslangValidator --effects fu`.
 - `ffx_compat.h`: force-included into the SDK's sources so they build with clang and gcc (MinGW-w64, Linux).

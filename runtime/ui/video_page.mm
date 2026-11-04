@@ -26,6 +26,9 @@ const int k_ups_value[] = {UPSCALE_OFF, UPSCALE_FSR1, UPSCALE_FSR3, UPSCALE_DLSS
 constexpr int k_fps[] = FPS_CHOICES;  // frame rate (0: Off, no limit)
 const char *const k_vsync[VSYNC_COUNT] = {"On", "Fast", "Adaptive", "Off"};  // (settings.h VSYNC_*)
 const char *const k_hdr[HDR_COUNT] = {"Automatic", "On", "Off"};               // (settings.h HDR_*)
+const char *const k_fsmode[FSMODE_COUNT] = {"Automatic", "Borderless", "Exclusive"};
+const char *const k_drawdist[] = {"Original", "Medium", "High"};
+constexpr int k_haze[] = HAZE_CHOICES;
 
 // Window size: the sizes offered now (runtime/window_size.c; fullscreen can offer more)
 int winsize_items(WinSize *list) { return winsize_list(list, g_settings.fullscreen); }
@@ -44,6 +47,33 @@ void video_page(std::vector<Item> &v) {
     v.push_back(toggle(P_VIDEO, "Fullscreen", "Fills the screen. Also F11 or Alt+Enter.",
                        [](const Item &) { return (int)g_settings.fullscreen; },
                        [](const Item &, int x) { g_settings.fullscreen = x; menu_request_window_apply(); }, 0));
+    v.push_back(choice(P_VIDEO, "Fullscreen mode", "Borderless never switches the display. Exclusive always does.",
+                       [](const Item &) { return (int)FSMODE_COUNT; },
+                       [](const Item &, int x) { return tr(k_fsmode[x]); },
+                       [](const Item &) { return g_settings.fullscreen_mode; },
+                       [](const Item &, int x) {
+                           g_settings.fullscreen_mode = x;
+                           if (g_settings.fullscreen) menu_request_window_apply();
+                       }, FSMODE_AUTO));
+    Item disp = choice(P_VIDEO, "Monitor", "The monitor the game is shown on. Automatic: where the window is.",
+                       [](const Item &) {
+                           WinDisplay ds[WINDISPLAY_MAX];
+                           return windisplay_list(ds) + 1;
+                       },
+                       [](const Item &, int x) {
+                           static char buf[4][96];
+                           static int k;
+                           char *b = buf[k++ & 3];
+                           WinDisplay ds[WINDISPLAY_MAX];
+                           int n = windisplay_list(ds);
+                           if (x < 1 || x > n) return tr("Automatic");
+                           snprintf(b, sizeof buf[0], "%d: %s", x, ds[x - 1].name);
+                           return (const char *)b;
+                       },
+                       [](const Item &) { return windisplay_target(); },
+                       [](const Item &, int x) { windisplay_set(x); menu_request_window_apply(); }, 0);
+    disp.wrap = true;
+    v.push_back(disp);
     // Window size: a button showing the size; A drops the sizes down as a list over it (menu.mm size_list_draw)
     Item ws = button(P_VIDEO, "Window size", "", nullptr, A_SIZE_LIST, 0);
     ws.label = [](const Item &, int) {
@@ -67,6 +97,21 @@ void video_page(std::vector<Item> &v) {
     v.push_back(ws);
     v.push_back(video_wide_view());
     v.push_back(video_field_of_view());
+    v.push_back(choice(P_VIDEO, "Draw distance",
+                       "How far out grass, trees, rocks, buildings and enemies appear. Higher costs more CPU and GPU time.",
+                       [](const Item &) { return (int)DRAWDIST_COUNT; },
+                       [](const Item &, int x) { return tr(k_drawdist[x]); },
+                       [](const Item &) { return g_settings.draw_distance; },
+                       [](const Item &, int x) { g_settings.draw_distance = x; }, DRAWDIST_ORIGINAL));
+    v.push_back(choice(P_VIDEO, "Haze", "How hazy the air is. Lower: clearer distances. From the next start.",
+                       [](const Item &) { return N(k_haze); },
+                       [](const Item &, int x) {
+                           static std::string s;
+                           s = pct(k_haze[x]);
+                           return s.c_str();
+                       },
+                       [](const Item &) { return nearest(k_haze, N(k_haze), (float)g_settings.haze); },
+                       [](const Item &, int x) { g_settings.haze = k_haze[x]; }, N(k_haze) - 1));
     v.push_back(video_frame_rate(k_fps, N(k_fps)));
     // VSync (settings.h VSYNC_*; the present mode: runtime/nvn/vulkan/device.c), next to the frame rate it caps. (One
     // line for all its values: the game reads a row's description when the cursor comes to it, not when it changes.)

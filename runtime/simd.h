@@ -412,6 +412,9 @@ SI float simd_h2s(Cpu *c, uint16_t h) {
 #define FP_SETS(d, x) (c->v[d] = fb_s(x))
 #define FP_SETD(d, x) (c->v[d] = fb_d(x))
 SI void fp_op_s(Cpu *c, int op, int d, int n, int m) { FP_SETS(d, op_s(c, op, VSF32(n), VSF32(m), 0)); }
+#if !defined(__cplusplus) && !defined(__aarch64__)
+SI void rt_fsub_s(Cpu *c, int d, int n, int m) { fp_op_s(c, FOP_SUB, d, n, m); }
+#endif
 SI void fp_op_d(Cpu *c, int op, int d, int n, int m) { FP_SETD(d, op_d(c, op, VSF64(n), VSF64(m), 0)); }
 // FMADD family: neg_a / neg_n negate the addend / first factor before the fused op
 SI void fp_fma_s(Cpu *c, int na, int nn, int d, int n, int m, int a) {

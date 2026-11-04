@@ -18,6 +18,8 @@
 
 
 #define CHUNK (1ull << 20)
+// Guest and stack backing retain the original 1 MiB direct-memory mapping granularity.
+#define GUEST_UNIT CHUNK
 #define STACK_BYTES (256ull << 20)
 #define MAX_STACKS 256
 // Guest stacks are reserved at fixed addresses in [STACK_AREA, STACK_AREA + MAX_STACKS * STACK_BYTES): 64 GiB below
@@ -29,38 +31,50 @@
 #define MAX_GUEST_CHUNKS (16 * 1024)
 
 typedef struct {
+    _Atomic unsigned char state;  // 0 reserved, 1 changing, 2 mapped
+    int64_t physical;
+} DirectUnit;
+
+typedef struct {
     uint64_t lo;
-    _Atomic unsigned char chunks[STACK_BYTES / CHUNK];
+    DirectUnit chunks[STACK_BYTES / CHUNK];
 } StackRange;
 
 static uint64_t guest_lo, guest_hi;
-static _Atomic unsigned char guest_chunks[MAX_GUEST_CHUNKS];
+static DirectUnit guest_units[MAX_GUEST_CHUNKS];
+// Bits set by decommit, cleared on explicit recommit; protected by guest_access_lock.
+static uint64_t guest_freed[MAX_GUEST_CHUNKS][CHUNK / 4096 / 64];
 static StackRange stacks[MAX_STACKS];
 static _Atomic unsigned stack_count;
 static pthread_mutex_t stack_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t guest_access_lock = PTHREAD_MUTEX_INITIALIZER;
+void plat_guest_access_lock(void) { pthread_mutex_lock(&guest_access_lock); }
+void plat_guest_access_unlock(void) { pthread_mutex_unlock(&guest_access_lock); }
 
-// Each state is 0 (unmapped), 1 (mapping), or 2 (mapped). This also prevents
-// concurrent faults or explicit commits from replacing an existing mapping.
-static bool map_chunk(uint64_t address, _Atomic unsigned char *state) {
+// The state serializes a fault, explicit commit and decommit of the same allocation.
+static bool map_chunk(uint64_t address, uint64_t size, DirectUnit *unit) {
     unsigned char expected = 0;
-    if (!atomic_compare_exchange_strong(state, &expected, 1)) {
-        while (atomic_load(state) == 1) {}
-        return atomic_load(state) == 2;
+    while (!atomic_compare_exchange_weak(&unit->state, &expected, 1)) {
+        if (expected == 2) return true;
+        expected = 0;
     }
     int64_t physical = 0;
-    int rc = sceKernelAllocateDirectMemory(0, sceKernelGetDirectMemorySize(), CHUNK,
+    int rc = sceKernelAllocateDirectMemory(0, sceKernelGetDirectMemorySize(), size,
                                            PS5_KERNEL_DIRECT_ALIGNMENT, PS5_KERNEL_DIRECT_TYPE_CPU, &physical);
     if (!rc) {
         void *p = (void *)(uintptr_t)address;
-        rc = sceKernelMapDirectMemory(&p, CHUNK, PS5_KERNEL_PROT_CPU_READ | PS5_KERNEL_PROT_CPU_WRITE,
+        rc = sceKernelMapDirectMemory(&p, size, PS5_KERNEL_PROT_CPU_READ | PS5_KERNEL_PROT_CPU_WRITE,
                                       PS5_KERNEL_MAP_FIXED, physical, 0);
         if (rc || p != (void *)(uintptr_t)address) {
-            sceKernelReleaseDirectMemory(physical, CHUNK);
+            sceKernelReleaseDirectMemory(physical, size);
             rc = rc ? rc : -1;
         }
-        if (!rc) memset(p, 0, CHUNK);  // Direct memory can contain data from a released allocation.
+        if (!rc) {
+            memset(p, 0, size);  // Direct memory can contain data from a released allocation.
+            unit->physical = physical;
+        }
     }
-    atomic_store(state, rc ? 0 : 2);
+    atomic_store(&unit->state, rc ? 0 : 2);
     return rc == 0;
 }
 
@@ -85,14 +99,85 @@ void plat_commit(uint64_t addr, uint64_t size) {
         fprintf(stderr, "PS5: invalid guest commit\n");
         abort();
     }
-    uint64_t end = (addr + size + CHUNK - 1) & ~(CHUNK - 1);
-    for (uint64_t p = addr & ~(CHUNK - 1); p < end; p += CHUNK) {
-        if (!map_chunk(p, &guest_chunks[(p - guest_lo) / CHUNK])) {
+    plat_guest_access_lock();
+    uint64_t end = (addr + size + GUEST_UNIT - 1) & ~(GUEST_UNIT - 1);
+    for (uint64_t p = addr & ~(GUEST_UNIT - 1); p < end; p += GUEST_UNIT) {
+        if (!map_chunk(p, GUEST_UNIT, &guest_units[(p - guest_lo) / GUEST_UNIT])) {
             fprintf(stderr, "PS5: guest direct-memory allocation failed at %llx\n", (unsigned long long)p);
             abort();
         }
+        uint64_t start = addr > p ? addr : p;
+        uint64_t stop = addr + size < p + GUEST_UNIT ? addr + size : p + GUEST_UNIT;
+        uint64_t *freed = guest_freed[(p - guest_lo) / GUEST_UNIT];
+        unsigned first = (unsigned)((start - p) / 4096);
+        unsigned last = (unsigned)((stop - p + 4095) / 4096);
+        for (unsigned i = first; i < last; i++) freed[i / 64] &= ~(1ull << (i % 64));
     }
+    plat_guest_access_unlock();
 }
+
+// The upstream contract rounds inward to 4 KiB pages. Keep a bitmap of decommitted pages in each 1 MiB mapping;
+// release its direct memory once every page has been decommitted. Partial chunks are zeroed and stay backed.
+void plat_decommit(uint64_t addr, uint64_t size) {
+    if (!size) return;
+    if (addr < guest_lo || addr >= guest_hi || size > guest_hi - addr) {
+        fprintf(stderr, "PS5: invalid guest decommit\n");
+        abort();
+    }
+    uint64_t a = (addr + 0xfff) & ~0xfffull, end = (addr + size) & ~0xfffull;
+    plat_guest_access_lock();
+    while (a < end) {
+        uint64_t base = a & ~(GUEST_UNIT - 1);
+        uint64_t stop = base + GUEST_UNIT < end ? base + GUEST_UNIT : end;
+        DirectUnit *u = &guest_units[(base - guest_lo) / GUEST_UNIT];
+        uint64_t *freed = guest_freed[(base - guest_lo) / GUEST_UNIT];
+        unsigned char state;
+        do {
+            state = atomic_load(&u->state);
+            if (state == 0) break;
+        } while (state == 1 || !atomic_compare_exchange_weak(&u->state, &state, 1));
+        if (state == 2) {
+            unsigned first = (unsigned)((a - base) / 4096), last = (unsigned)((stop - base) / 4096);
+            for (unsigned i = first; i < last; i++) freed[i / 64] |= 1ull << (i % 64);
+            bool all_freed = true;
+            for (unsigned i = 0; i < CHUNK / 4096 / 64; i++)
+                if (freed[i] != UINT64_MAX) { all_freed = false; break; }
+            if (all_freed) {
+                void *p = (void *)(uintptr_t)base;
+                int rc = sceKernelMunmap(p, GUEST_UNIT);
+                if (!rc) rc = sceKernelReleaseDirectMemory(u->physical, GUEST_UNIT);
+                if (!rc) rc = sceKernelReserveVirtualRange(&p, GUEST_UNIT, PS5_KERNEL_MAP_FIXED, 0);
+                if (rc || p != (void *)(uintptr_t)base) {
+                    fprintf(stderr, "PS5: guest decommit failed at %llx (%#x)\n", (unsigned long long)base, rc);
+                    abort();
+                }
+                memset(freed, 0, sizeof guest_freed[0]);
+                atomic_store(&u->state, 0);
+            } else {
+                memset((void *)(uintptr_t)a, 0, stop - a);
+                atomic_store(&u->state, 2);
+            }
+        }
+        a = stop;
+    }
+    plat_guest_access_unlock();
+}
+
+bool plat_guest_is_committed(uint64_t addr, size_t size) {
+    if (addr < guest_lo || addr > guest_hi || size > guest_hi - addr) return false;
+    if (!size) return true;
+    uint64_t end = addr + size;
+    for (uint64_t p = addr & ~(GUEST_UNIT - 1); p < end; p += GUEST_UNIT)
+        if (atomic_load(&guest_units[(p - guest_lo) / GUEST_UNIT].state) != 2) return false;
+    return true;
+}
+
+// Unsupported write watch disables the Vulkan heap copy, which is unnecessary on PS5 unified memory.
+long plat_written_pages(uint64_t addr, uint64_t size, uint64_t *pages, size_t max) {
+    (void)addr; (void)size; (void)pages; (void)max;
+    return -1;
+}
+int plat_any_written(uint64_t addr, uint64_t size) { (void)addr; (void)size; return -1; }
 
 bool plat_reset_guest(uint64_t lo, uint64_t hi) {
     // In-process reboot is not implemented in the M2 title.
@@ -104,7 +189,10 @@ bool plat_reset_guest(uint64_t lo, uint64_t hi) {
 int plat_protect(uint64_t addr, uint64_t size, int prot) {
     int p = prot == PLAT_PROT_NONE ? 0 : prot == PLAT_PROT_READ ? PS5_KERNEL_PROT_CPU_READ :
             PS5_KERNEL_PROT_CPU_READ | PS5_KERNEL_PROT_CPU_WRITE;
-    return sceKernelMprotect((void *)(uintptr_t)addr, size, p);
+    plat_guest_access_lock();
+    int rc = sceKernelMprotect((void *)(uintptr_t)addr, size, p);
+    plat_guest_access_unlock();
+    return rc;
 }
 
 int plat_guest_thread_create(pthread_t *thread, void *(*entry)(void *), void *arg) {
@@ -121,7 +209,7 @@ int plat_guest_thread_create(pthread_t *thread, void *(*entry)(void *), void *ar
     }
     StackRange *s = &stacks[n];
     s->lo = (uintptr_t)base;
-    if (!map_chunk(s->lo + STACK_BYTES - CHUNK, &s->chunks[STACK_BYTES / CHUNK - 1])) {
+    if (!map_chunk(s->lo + STACK_BYTES - CHUNK, CHUNK, &s->chunks[STACK_BYTES / CHUNK - 1])) {
         sceKernelMunmap(base, STACK_BYTES);
         s->lo = 0;
         pthread_mutex_unlock(&stack_lock);
@@ -145,15 +233,16 @@ static void crash_handler(int sig, siginfo_t *si, void *context) {
     uint64_t a = (uintptr_t)si->si_addr;
     uint64_t chunk = a & ~(CHUNK - 1);
     if ((sig == SIGSEGV || sig == SIGBUS) && a >= guest_lo && a < guest_hi) {
-        _Atomic unsigned char *state = &guest_chunks[(chunk - guest_lo) / CHUNK];
-        if (atomic_load(state) != 2 && map_chunk(chunk, state)) return;
+        uint64_t base = a & ~(GUEST_UNIT - 1);
+        DirectUnit *unit = &guest_units[(base - guest_lo) / GUEST_UNIT];
+        if (atomic_load(&unit->state) != 2 && map_chunk(base, GUEST_UNIT, unit)) return;
     }
     unsigned count = atomic_load(&stack_count);
     for (unsigned i = 0; i < count; i++) {
         StackRange *s = &stacks[i];
         if ((sig == SIGSEGV || sig == SIGBUS) && a >= s->lo && a < s->lo + STACK_BYTES) {
-            _Atomic unsigned char *state = &s->chunks[(chunk - s->lo) / CHUNK];
-            if (atomic_load(state) != 2 && map_chunk(chunk, state)) return;
+            DirectUnit *unit = &s->chunks[(chunk - s->lo) / CHUNK];
+            if (atomic_load(&unit->state) != 2 && map_chunk(chunk, CHUNK, unit)) return;
             break;
         }
     }
@@ -187,6 +276,23 @@ uint64_t plat_now_ns(void) {
 void plat_sleep_until_ns(uint64_t t) {
     struct timespec ts = {.tv_sec = t / 1000000000ull, .tv_nsec = t % 1000000000ull};
     while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &ts, NULL) == EINTR) {}
+}
+void plat_wait_until_ns(uint64_t t) { plat_sleep_until_ns(t); }  // Absolute OS wait, no spin.
+
+int plat_cpu_count(void) {
+    uint64_t mask = 0;
+    if (!scePthreadGetaffinity(pthread_self(), &mask)) {
+        int n = __builtin_popcountll(mask);
+        if (n) return n;
+    }
+    // Observed title affinity is 0x1fff (13 logical CPUs), but do not claim that if the query failed.
+    return 1;
+}
+void plat_cpu_placement(void) {
+    // Preserve the title's kernel-provided affinity; physical-core topology is not exposed here.
+    const char *one = getenv("SAVAGEWIND_ONE_PER_CORE");
+    if (one && atoi(one))
+        fprintf(stderr, "[cpu] one-per-core placement unavailable on PS5; keeping the title affinity\n");
 }
 void plat_thread_realtime(uint64_t period_ns) { (void)period_ns; }
 uint64_t plat_thread_cpu_ns(void) {

@@ -270,6 +270,63 @@ static std::string _arrow_gravity(const PatchContext &ctx, uint64_t a)
         hex(a) +
         std::string(": ldr s1, [x20, #0x108] (arrow gravity) */"));
 }
+static std::string _surf_contact(const PatchContext &ctx, uint64_t a)
+{
+    validate((word(ctx, a) == 960615080), a, word(ctx, a));
+    return std::string("{ extern void rt_surf_contact(uint64_t, unsigned); c->x"
+            "[8] = LD8(c->x[21] + 0x74); rt_surf_contact(c->x[21], ("
+            "unsigned)c->x[8]); }");
+}
+static std::string _surf_boost_remove(const PatchContext &ctx, uint64_t a)
+{
+    validate((word(ctx, a) == 505428000), a, word(ctx, a));
+    return std::string("{ extern int rt_surf_takeoff_pending(uint64_t); if (rt_"
+            "surf_takeoff_pending(c->x[21])) c->v[0] = (uint32_t)c->"
+            "v[1]; else rt_fsub_s(c, 0, 1, 0); }");
+}
+static std::string _surf_jump_request(const PatchContext &ctx, uint64_t a)
+{
+    auto w = word(ctx, a);
+    validate(((w & 4294443039) == 905969664), a, word(ctx, a));
+    auto target = (a + (sext(((w >> 5) & 16383), 14) * 4));
+    return (std::string("{ extern int rt_surf_jump_request(uint64_t); if (!(c->x"
+            "[0] & 1) || !rt_surf_jump_request(c->x[19])) goto L_") +
+        hex(target).substr(2) +
+        std::string("; }"));
+}
+static std::string _solver_steps(const PatchContext &ctx, uint64_t a)
+{
+    validate((word(ctx, a) == 505546786), a, word(ctx, a));
+    return (std::string("{ extern float rt_solver_steps(float, float); union { u"
+            "int32_t u; float f; } d = { .u = (uint32_t)c->v[1] }, k"
+            " = { .u = (uint32_t)c->v[2] }; k.f = rt_solver_steps(d."
+            "f, k.f); c->v[2] = k.u; }  /* ") +
+        hex(a) +
+        std::string(": fmul s2, s1, s2 (solver microsteps: delta frame x 6) "
+            "*/"));
+}
+static std::string _kf_angle(const PatchContext &ctx, uint64_t a)
+{
+    validate(((word(ctx, a) >> 26) == 37), a, word(ctx, a));
+    auto target = ((sext((word(ctx, a) & 67108863), 26) * 4) + a);
+    return (std::string("{ extern float rt_kf_angle(uint64_t); union { float f; "
+            "uint32_t u; } r = { rt_kf_angle(c->x[0]) }; c->v[0] = r"
+            ".u; }  /* ") +
+        hex(a) +
+        std::string(": bl ") +
+        hex(target) +
+        std::string(" (keyframed body: angle of the turn left) */"));
+}
+static std::string _snd_frame_floor(const PatchContext &ctx, uint64_t a)
+{
+    validate((word(ctx, a) == 506204161), a, word(ctx, a));
+    return (std::string("{ extern float rt_snd_frame_floor(void); union { uint32"
+            "_t u; float f; } m = { .f = rt_snd_frame_floor() }; c->"
+            "v[1] = m.u; }  /* ") +
+        hex(a) +
+        std::string(": fmov s1, #0.5 (sound frame: floor of the delta frame)"
+            " */"));
+}
 static std::string _gui_speed(const PatchContext &ctx, uint64_t a)
 {
     validate((word(ctx, a) == 3171623168), a, word(ctx, a));
@@ -278,6 +335,20 @@ static std::string _gui_speed(const PatchContext &ctx, uint64_t a)
             "i_speed(s.f); ST32(c->x[8] + 0xb20, s.u); }  /* ") +
         hex(a) +
         std::string(": str s0, [x8, #0xb20] (GUI speed) */"));
+}
+static std::string _quick_menu_capture_alpha(const PatchContext &ctx, uint64_t a)
+{
+    auto w = word(ctx, a);
+    validate(((w & 4278190111) == 1409286145), a, word(ctx, a));
+    validate(((word(ctx, (a - 4)) == 505487360) && (word(ctx, (a - 8)) == 506335233)), a, word(ctx, a));
+    auto target = (a + (sext(((w >> 5) & 524287), 19) * 4));
+    return (std::string("{ union { uint32_t u; float f; } frame = { .u = (uint32"
+            "_t)c->v[0] }; if (!(frame.f > 0.0f)) goto L_") +
+        hex(target).substr(2) +
+        std::string("; } /* ") +
+        hex(a) +
+        std::string(": b.ne (quick-menu capture alpha after animation starts"
+            ") */"));
 }
 static std::string _persp_matrix(const PatchContext &ctx, uint64_t a)
 {
@@ -363,6 +434,206 @@ static std::string _cam_pitch_aim(const PatchContext &ctx, uint64_t a)
         hex(a) +
         std::string(": ldr s1, [x8] (camera: latStickScale) */"));
 }
+static std::string _pc_button_group(const PatchContext &ctx, uint64_t a)
+{
+    validate((word(ctx, a) == _sub_sp(96)), a, word(ctx, a));
+    return (std::string("{ extern void rt_pc_button_group(Cpu *); rt_pc_button_g"
+            "roup(c); c->sp -= 0x60; } /* ") +
+        hex(a) +
+        std::string(": native mouse pointer arguments */"));
+}
+static std::string _pc_cursor_manager(const PatchContext &ctx, uint64_t a)
+{
+    validate((word(ctx, a) == _sub_sp(80)), a, word(ctx, a));
+    return (std::string("{ extern void rt_pc_cursor_manager(Cpu *, uint64_t, uin"
+            "t64_t); rt_pc_cursor_manager(c, ") +
+        hex(ctx.sites.at(std::string("pc_cursor_activate"))) +
+        std::string("ull, ") +
+        hex(ctx.sites.at(std::string("pc_pane_bounds"))) +
+        std::string("ull); c->sp -= 0x50; }"));
+}
+static std::string _traverse_scale(const PatchContext &ctx, uint64_t a)
+{
+    validate((word(ctx, a) == 3175289089), a, word(ctx, a));
+    return (std::string("{ extern uint32_t rt_traverse_scale(uint32_t, uint32_t)"
+            "; c->v[1] = rt_traverse_scale(LD32(c->x[8] + 0x310), (u"
+            "int32_t)c->v[0]); }  /* ") +
+        hex(a) +
+        std::string(": ldr s1, [x8, #0x310] (placement: traverse distance sc"
+            "ale) */"));
+}
+static std::string _traverse_scale_default(const PatchContext &ctx, uint64_t a)
+{
+    validate((word(ctx, a) == 506335233), a, word(ctx, a));
+    return (std::string("{ extern uint32_t rt_traverse_scale(uint32_t, uint32_t)"
+            "; c->v[1] = rt_traverse_scale(0x3f800000u, (uint32_t)c-"
+            ">v[0]); }  /* ") +
+        hex(a) +
+        std::string(": fmov s1, #1.0 (placement: traverse distance scale, no"
+            " debug manager) */"));
+}
+static std::string _grass_range(const PatchContext &ctx, uint64_t a)
+{
+    validate((word(ctx, a) == 3175088164), a, word(ctx, a));
+    return (std::string("{ extern int rt_grass_range(uint64_t, uint32_t, uint32_"
+            "t *, uint32_t *, uint32_t *); uint32_t s0 = (uint32_t)c"
+            "->v[0], s1 = (uint32_t)c->v[1], s2 = (uint32_t)c->v[2];"
+            " if (rt_grass_range(c->x[2], (uint32_t)c->v[3], &s0, &s"
+            "1, &s2)) { c->v[0] = s0; c->v[1] = s1; c->v[2] = s2; } "
+            "c->v[4] = LD32(c->x[1]); }  /* ") +
+        hex(a) +
+        std::string(": ldr s4, [x1] (grass view context: its screen-size lim"
+            "its) */"));
+}
+static std::string _grass_blade_slots(const PatchContext &ctx, uint64_t a)
+{
+    validate((word(ctx, a) == 1384128513), a, word(ctx, a));
+    return (std::string("{ extern uint32_t rt_grass_blade_slots(uint32_t); c->x["
+            "1] = rt_grass_blade_slots(0x100); }  /* ") +
+        hex(a) +
+        std::string(": mov w1, #0x100 (grass blades: draw slots) */"));
+}
+static std::string _grass_blade_cap(const PatchContext &ctx, uint64_t a, const std::string & fn = std::string("rt_grass_blade_cap"))
+{
+    auto w = word(ctx, a);
+    validate(((w & 4294966303) == 1896086559), a, word(ctx, a));
+    auto n = ((w >> 5) & 31);
+    return (std::string("{ extern uint32_t ") +
+        fn +
+        std::string("(void); (void)(subs32(c, (uint32_t)c->x[") +
+        std::to_string(n) +
+        std::string("], ") +
+        fn +
+        std::string("())); }  /* ") +
+        hex(a) +
+        std::string(": cmp w") +
+        std::to_string(n) +
+        std::string(", #0xff (grass blades: the last draw slot) */"));
+}
+static std::string _grass_blade_cap_swap(const PatchContext &ctx, uint64_t a)
+{
+    return _grass_blade_cap(ctx, a, std::string("rt_grass_blade_swap_cap"));
+}
+static std::string _grass_blade_cap_max(const PatchContext &ctx, uint64_t a)
+{
+    auto w = word(ctx, a);
+    validate(((w & 4294967264) == 1384128480), a, word(ctx, a));
+    auto n = (w & 31);
+    return (std::string("{ extern uint32_t rt_grass_blade_swap_cap(void); c->x[") +
+        std::to_string(n) +
+        std::string("] = rt_grass_blade_swap_cap(); }  /* ") +
+        hex(a) +
+        std::string(": mov w") +
+        std::to_string(n) +
+        std::string(", #0xff (grass blades: the last draw slot) */"));
+}
+static std::string _grass_blade_lateral(const PatchContext &ctx, uint64_t a)
+{
+    auto w = word(ctx, a);
+    validate((w == 505815040 || w == 505880576), a, word(ctx, a));
+    auto n = ((w >> 16) & 31);
+    return (std::string("{ extern float rt_grass_blade_lateral(int, float, float"
+            ", float, float, uint32_t, uint32_t); c->nzcv = cmp_s(c,"
+            " VSF32(0), rt_grass_blade_lateral(") +
+        std::to_string((n - 6)) +
+        std::string(", VSF32(") +
+        std::to_string(n) +
+        std::string("), VSF32(9), VSF32(13), VSF32(21), LD32(c->sp + 0x204),"
+            " LD32(c->sp + 0x208))); }  /* ") +
+        hex(a) +
+        std::string(": fcmp s0, s") +
+        std::to_string(n) +
+        std::string(" (grass blades: a cell inside the region's width) */"));
+}
+static std::string _tree_ranges(const PatchContext &ctx, uint64_t a)
+{
+    auto w = word(ctx, a);
+    validate(((w & 2667577375) == 2415919112), a, word(ctx, a));
+    auto page = adrp_page(w, a);
+    return (std::string("{ extern void rt_tree_ranges(uint64_t); rt_tree_ranges("
+            "c->x[0]); c->x[8] = ") +
+        hex(page) +
+        std::string("ull; }  /* ") +
+        hex(a) +
+        std::string(": adrp x8, ") +
+        hex(page) +
+        std::string(" (distant trees: their ranges) */"));
+}
+static std::string _remove_arrows(const PatchContext &ctx, uint64_t a)
+{
+    validate((word(ctx, a) == _sub_sp(112)), a, word(ctx, a));
+    return (std::string("{ extern int rt_infinite_arrows(void); if (rt_infinite_"
+            "arrows()) return; c->sp -= 0x70; }  /* ") +
+        hex(a) +
+        std::string(": sub sp, sp, #0x70 (remove arrows: none with Infinite "
+            "arrows) */"));
+}
+static std::string _no_wear(const PatchContext &ctx, uint64_t a)
+{
+    validate((word(ctx, a) == 3103793524), a, word(ctx, a));
+    return (std::string("{ extern int rt_keep_wear(uint32_t, int32_t, int32_t); "
+            "if (!rt_keep_wear((uint32_t)c->x[22], (int32_t)c->x[20]"
+            ", (int32_t)LD32(c->x[11] + 0x20))) ST32(c->x[11] + 0x20"
+            ", c->x[20]); }  /* ") +
+        hex(a) +
+        std::string(": str w20, [x11, #0x20] (equipped item value: no wear) "
+            "*/"));
+}
+static std::string _no_wear_hit(const PatchContext &ctx, uint64_t a)
+{
+    validate((word(ctx, a) == 1258881288), a, word(ctx, a));
+    auto wret = ctx.sites.at(std::string("no_wear_ret"));
+    std::string whose;
+    if ((ctx.sites.count(std::string("link_life_store")) != 0)) {
+        auto s = ctx.sites.at(std::string("link_life_store"));
+        auto bl = word(ctx, (s - 32));
+        validate((((bl >> 26) == 37) && (0 <= (static_cast<int64_t>(a) - static_cast<int64_t>(((s - 32) + (sext((bl & 67108863), 26) * 4)))) && (static_cast<int64_t>(a) - static_cast<int64_t>(((s - 32) + (sext((bl & 67108863), 26) * 4)))) < 1024)), a, word(ctx, a));
+        whose = (std::string("r == ") +
+        hex(wret) +
+        std::string("ull ? 1 : r == ") +
+        hex((s - 28)) +
+        std::string("ull ? 2 : 0"));
+    } else {
+        whose = (std::string("r == ") +
+        hex(wret) +
+        std::string("ull ? 1 : 2"));
+    }
+    return (std::string("{ extern uint32_t rt_life_cost(uint32_t, int32_t, int);"
+            " uint64_t r = LD64(c->sp + 0x28); c->x[8] = (uint32_t)("
+            "(uint32_t)c->x[8] - rt_life_cost((uint32_t)c->x[9], (in"
+            "t32_t)c->x[8], ") +
+        whose +
+        std::string(")); }  /* ") +
+        hex(a) +
+        std::string(": sub w8, w8, w9 (a life's hit: Accessibility) */"));
+}
+static std::string _link_life(const PatchContext &ctx, uint64_t a)
+{
+    auto w = word(ctx, a);
+    if ((w == 3103785657)) {
+        return (std::string("{ extern int32_t rt_link_life(int32_t, int32_t); int32_"
+            "t v = rt_link_life((int32_t)LD32(c->x[21]), (int32_t)c-"
+            ">x[25]); c->x[25] = (uint32_t)v; ST32(c->sp + 0xc, (uin"
+            "t32_t)v); ST32(c->x[21], (uint32_t)v); }  /* ") +
+        hex(a) +
+        std::string(": str w25, [x21] (Link's life: Accessibility) */"));
+    }
+    validate((w == 3103785640), a, word(ctx, a));
+    return (std::string("{ extern int32_t rt_link_life(int32_t, int32_t); c->x[8"
+            "] = (uint32_t)rt_link_life((int32_t)LD32(c->x[21]), (in"
+            "t32_t)c->x[8]); ST32(c->x[21], c->x[8]); }  /* ") +
+        hex(a) +
+        std::string(": str w8, [x21] (Link's life: Accessibility) */"));
+}
+static std::string _stamina(const PatchContext &ctx, uint64_t a)
+{
+    validate((word(ctx, a) == 3170936424), a, word(ctx, a));
+    return (std::string("{ extern uint32_t rt_stamina(uint32_t, uint32_t); ST32("
+            "c->x[19] + 0xa4, rt_stamina(LD32(c->x[19] + 0xa4), (uin"
+            "t32_t)c->v[8])); }  /* ") +
+        hex(a) +
+        std::string(": str s8, [x19, #0xa4] (stamina: Accessibility) */"));
+}
 static std::string _yaz0_stream(const PatchContext &ctx, uint64_t a)
 {
     validate((word(ctx, a) == 2847767549), a, word(ctx, a));
@@ -379,6 +650,22 @@ static std::string _yaz0_stream_ret(const PatchContext &ctx, uint64_t a)
             "urn; }") + (std::string("  /* ") +
         hex(a) +
         std::string(": ret (Yaz0 stream decoder) */")));
+}
+static std::string _gyro_scene_actor(const PatchContext &ctx, uint64_t a)
+{
+    auto w = word(ctx, a);
+    validate(((w >> 26) == 37), a, word(ctx, a));
+    auto t = (a + (sext((w & 67108863), 26) * 4));
+    return (std::string("{ extern void f_") +
+        hex(t).substr(2) +
+        std::string("(Cpu *); extern void rt_gyro_scene_actor(Cpu *, uint64_"
+            "t, uint64_t); c->x[30] = ") +
+        hex((a + 4)) +
+        std::string("ull; f_") +
+        hex(t).substr(2) +
+        std::string("(c); rt_gyro_scene_actor(c, c->x[19], c->x[0]); }  /* ") +
+        hex(a) +
+        std::string(": bl (shrine apparatus input) */"));
 }
 static std::string _frustum_load(const PatchContext &ctx, uint64_t a,
                                  uint64_t expected, uint64_t r0, uint64_t r1, const std::string &what)
@@ -428,8 +715,62 @@ static std::string _cam_reverse(const PatchContext &ctx, uint64_t a,
         std::string(1, "XY"[axis]) +
         std::string("-axis inverted) */"));
 }
+static std::string _pc_map_focus(const PatchContext &ctx, uint64_t a,
+                                 bool position)
+{
+    auto expected = (position ? _sub_sp(48) : 2847833085);
+    validate((word(ctx, a) == expected), a, word(ctx, a));
+    auto prologue = (position ? std::string("c->sp -= 0x30;") : std::string("c->sp -= 0x20; ST64(c->sp, c->x[29]); ST64(c->sp + 8, c"
+            "->x[30]);"));
+    return (std::string("{ extern int rt_pc_map_focus(Cpu *, int); if (rt_pc_map"
+            "_focus(c, ") +
+        std::to_string(static_cast<int>(position)) +
+        std::string(")) return; ") +
+        prologue +
+        std::string(" }"));
+}
+static std::string _grass_fade(const PatchContext &ctx, uint64_t a,
+                                 uint64_t base, uint64_t off)
+{
+    auto want = ((3170893824 | ((off / 4) << 10)) | (base << 5));
+    validate((word(ctx, a) == want), a, word(ctx, a));
+    auto fn = ((off == 576) ? std::string("rt_grass_fade_blades") : std::string("rt_grass_fade_quads"));
+    return (std::string("{ extern uint32_t ") +
+        fn +
+        std::string("(uint64_t, uint32_t); ST32(c->x[") +
+        std::to_string(base) +
+        std::string("] + ") +
+        hex(off) +
+        std::string(", ") +
+        fn +
+        std::string("(c->x[") +
+        std::to_string(base) +
+        std::string("] + ") +
+        hex(off) +
+        std::string(" - ") +
+        hex(((off == 576) ? 226280 : 327096)) +
+        std::string(", (uint32_t)c->v[0])); }  /* ") +
+        hex(a) +
+        std::string(": str s0, [x") +
+        std::to_string(base) +
+        std::string(", #") +
+        hex(off) +
+        std::string("] (grass: its fades' camera scale) */"));
+}
 static std::string apply(const PatchContext &ctx, const std::string &name, uint64_t a)
 {
+    if (name == "pc_map_focus")
+        return _pc_map_focus(ctx, a, false);
+    if (name == "pc_map_focus_target")
+        return _pc_map_focus(ctx, a, true);
+    if (name == "pc_map_focus_now")
+        return _pc_map_focus(ctx, a, true);
+    if (name == "pc_button_group")
+        return _pc_button_group(ctx, a);
+    if (name == "pc_cursor_manager")
+        return _pc_cursor_manager(ctx, a);
+    if (name == "gyro_scene_actor")
+        return _gyro_scene_actor(ctx, a);
     if (name == "pause_options_update")
         return _pause_option_state(ctx, a);
     if (name == "opt_create_rows")
@@ -470,8 +811,22 @@ static std::string apply(const PatchContext &ctx, const std::string &name, uint6
         return _vfr_ratio(ctx, a);
     if (name == "gui_speed")
         return _gui_speed(ctx, a);
+    if (name == "quick_menu_capture_alpha")
+        return _quick_menu_capture_alpha(ctx, a);
     if (name == "arrow_fall_gravity")
         return _arrow_gravity(ctx, a);
+    if (name == "surf_contact")
+        return _surf_contact(ctx, a);
+    if (name == "surf_boost_remove")
+        return _surf_boost_remove(ctx, a);
+    if (name == "surf_jump_request")
+        return _surf_jump_request(ctx, a);
+    if (name == "phys_solver_steps")
+        return _solver_steps(ctx, a);
+    if (name == "kf_angle")
+        return _kf_angle(ctx, a);
+    if (name == "snd_frame_floor")
+        return _snd_frame_floor(ctx, a);
     if (name == "persp_matrix")
         return _persp_matrix(ctx, a);
     if (name == "persp_matrix_offset")
@@ -506,9 +861,53 @@ static std::string apply(const PatchContext &ctx, const std::string &name, uint6
         return _cam_reverse(ctx, a, 0);
     if (name == "cam_reverse_y")
         return _cam_reverse(ctx, a, 1);
+    if (name == "traverse_scale")
+        return _traverse_scale(ctx, a);
+    if (name == "traverse_scale_default")
+        return _traverse_scale_default(ctx, a);
+    if (name == "grass_range")
+        return _grass_range(ctx, a);
+    if (name == "grass_fade_blades")
+        return _grass_fade(ctx, a, 27, 576);
+    if (name == "grass_fade_quads")
+        return _grass_fade(ctx, a, 24, 4);
+    if (name == "grass_blade_slots")
+        return _grass_blade_slots(ctx, a);
+    if (name == "grass_blade_cap_a")
+        return _grass_blade_cap(ctx, a);
+    if (name == "grass_blade_cap_b")
+        return _grass_blade_cap(ctx, a);
+    if (name == "grass_blade_cap_c")
+        return _grass_blade_cap_swap(ctx, a);
+    if (name == "grass_blade_cap_c_max")
+        return _grass_blade_cap_max(ctx, a);
+    if (name == "grass_blade_lateral_near")
+        return _grass_blade_lateral(ctx, a);
+    if (name == "grass_blade_lateral_far")
+        return _grass_blade_lateral(ctx, a);
+    if (name == "tree_ranges")
+        return _tree_ranges(ctx, a);
+    if (name == "pouch_remove_arrows")
+        return _remove_arrows(ctx, a);
+    if (name == "no_wear_store")
+        return _no_wear(ctx, a);
+    if (name == "no_wear_hit")
+        return _no_wear_hit(ctx, a);
+    if (name == "link_life_store")
+        return _link_life(ctx, a);
+    if (name == "link_life_tick")
+        return _link_life(ctx, a);
+    if (name == "stamina_store")
+        return _stamina(ctx, a);
     throw std::runtime_error("unknown patch: " + name);
 }
 static const char *const names[] = {
+    "pc_map_focus",
+    "pc_map_focus_target",
+    "pc_map_focus_now",
+    "pc_button_group",
+    "pc_cursor_manager",
+    "gyro_scene_actor",
     "pause_options_update",
     "opt_create_rows",
     "opt_row_init_flag_type",
@@ -529,7 +928,14 @@ static const char *const names[] = {
     "yaz0_stream_ret",
     "vfr_ratio",
     "gui_speed",
+    "quick_menu_capture_alpha",
     "arrow_fall_gravity",
+    "surf_contact",
+    "surf_boost_remove",
+    "surf_jump_request",
+    "phys_solver_steps",
+    "kf_angle",
+    "snd_frame_floor",
     "persp_matrix",
     "persp_matrix_offset",
     "persp_unproject_y",
@@ -547,5 +953,24 @@ static const char *const names[] = {
     "cam_pitch_item",
     "cam_reverse_x",
     "cam_reverse_y",
+    "traverse_scale",
+    "traverse_scale_default",
+    "grass_range",
+    "grass_fade_blades",
+    "grass_fade_quads",
+    "grass_blade_slots",
+    "grass_blade_cap_a",
+    "grass_blade_cap_b",
+    "grass_blade_cap_c",
+    "grass_blade_cap_c_max",
+    "grass_blade_lateral_near",
+    "grass_blade_lateral_far",
+    "tree_ranges",
+    "pouch_remove_arrows",
+    "no_wear_store",
+    "no_wear_hit",
+    "link_life_store",
+    "link_life_tick",
+    "stamina_store",
 };
 }

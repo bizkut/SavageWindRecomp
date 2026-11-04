@@ -29,6 +29,9 @@ Savage Wind as a native PS5 homebrew title, built from the user's own game files
 Non-goals: store/retail packaging, shipping any game file or generated game code, a software-rendered fallback,
 DLSS, the Metal backend, game version 1.8.2.
 
+The desktop F12/ImGui console UI is not present on PS5. Its command core and memory scanner are available through the
+opt-in LAN control socket; the benchmark retains its save override. See `README-PS5.md` for the security warning.
+
 ## Sources and baseline
 
 | What | Where | State used by this plan |
@@ -353,9 +356,13 @@ frame dumps) are never committed: they stay in `~/savagewind-private-evidence/` 
 Status 2026-10-27 (`ps5/FINDINGS.md`, console runs 3–11): **S1 go** — `mmap` refuses the window (flexible budget),
 `sceKernelReserveVirtualRange` + fixed direct-memory commits work at the exact addresses, 16 KiB pages. **S2 go** —
 256 MiB stacks as reserved addresses with fault-time 1 MiB direct-memory commits, 48 threads. **S3 go** — static link.
-Fresh PS5 guest chunks are explicitly zeroed before publication: direct memory may retain bytes from an earlier
-allocation. `tools/test_ps5_guest_commit.sh` checks dirty recycled chunks and repeated commits on the host; console
-qualification of this fix is still required.
+Fresh PS5 guest allocations are explicitly zeroed before publication: direct memory may retain old bytes. Guest
+backing retains 1 MiB direct-memory mappings (the SDK's allocation alignment is 64 KiB). Decommit zeros complete
+4 KiB guest pages and tracks them per chunk, releasing its direct memory once all pages are decommitted and keeping
+the address reserved; partially decommitted chunks remain physically allocated. Explicit recommit clears those bits.
+`tools/test_ps5_guest_commit.sh` covers partial decommit, release, reservation and zeroed recommit. Console
+qualification must also check direct-memory free/largest-range and `[mem]` / memory-stage logs across reloads.
+PS5 write watch reports unknown, disabling the unnecessary video-memory heap copy on unified memory.
 
 **S6 measured** on the console (micro-loops); with the game on the title screen the render thread takes 1.1 ms and
 the GPU 1.8 ms of a 16.68 ms frame (M6 measure1); the guest threads' share and in-game numbers await the M6

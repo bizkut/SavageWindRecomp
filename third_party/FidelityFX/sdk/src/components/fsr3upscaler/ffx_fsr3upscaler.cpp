@@ -333,7 +333,6 @@ static void logUnknownBinding(const FfxPipelineState* pipeline, const char* kind
     binding[i] = 0;
     fprintf(stderr, "[fsr3] patchResourceBindings %s: unknown %s binding '%s'\n", pass, kind, binding);
 }
-
 static FfxErrorCode patchResourceBindings(FfxPipelineState* inoutPipeline)
 {
     for (uint32_t srvIndex = 0; srvIndex < inoutPipeline->srvTextureCount; ++srvIndex)

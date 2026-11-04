@@ -25,6 +25,11 @@ void ps5_startup_mark(const char *step);
 struct RomfsImage;
 bool ps5_startup_romfs_wait(char *why, size_t why_size);
 bool ps5_startup_romfs_enabled(void);
+// Snapshot only: a concurrent guest decommit may invalidate the answer immediately.
+bool plat_guest_is_committed(uint64_t addr, size_t size);
+// Protects a checked guest copy from plat_decommit and plat_protect. Fault-driven commits do not take this lock.
+void plat_guest_access_lock(void);
+void plat_guest_access_unlock(void);
 int ps5_startup_romfs_addons(void);
 struct RomfsImage *ps5_startup_romfs_take(char *why, size_t why_size);
 void ps5_exefs_read_summary(void);
@@ -38,11 +43,21 @@ bool plat_reserve_guest(uint64_t lo, uint64_t hi);
 // Make sure [addr, addr+size) inside the guest window is backed (before the OS itself writes there, e.g.
 // file reads); a no-op where the whole window is backed from the start.
 void plat_commit(uint64_t addr, uint64_t size);
+// Give the backing of [addr, addr+size) inside the guest window back to the OS (the guest unmapped it): the pages
+// read as zero if anything touches them again (Windows: committed again on the first access). The window stays claimed.
+void plat_decommit(uint64_t addr, uint64_t size);
 // In-place reboot: every page of [lo, hi) back to zero (and unbacked), the window still claimed.
 bool plat_reset_guest(uint64_t lo, uint64_t hi);
 enum { PLAT_PROT_NONE = 0, PLAT_PROT_READ = 1, PLAT_PROT_RW = 3 };
 int plat_protect(uint64_t addr, uint64_t size, int prot);  // 0 on success
 #define PLAT_PAGE 0x4000ull  // largest page size we deal with (macOS 16K; multiple of Windows' 4K)
+// The 4K pages of [addr, addr + size) (in the guest window) written since the last call for them, which the call
+// resets: their addresses into pages (ascending, at most max). -1: not known here (only Windows tracks them: the
+// window is reserved with MEM_WRITE_WATCH), or more than max were written (then any page may have been).
+long plat_written_pages(uint64_t addr, uint64_t size, uint64_t *pages, size_t max);
+// Whether any 4K page of [addr, addr + size) was written since plat_written_pages last reset it (1 / 0), without
+// resetting anything. -1: not known here.
+int plat_any_written(uint64_t addr, uint64_t size);
 
 // Guest threads need a large host stack for translated guest recursion.
 #ifdef __PROSPERO__
@@ -52,7 +67,9 @@ static inline int plat_guest_thread_create(pthread_t *thread, void *(*entry)(voi
     pthread_attr_t attr;
     int rc = pthread_attr_init(&attr);
     if (rc) return rc;
+#ifndef _WIN32
     rc = pthread_attr_setstacksize(&attr, 256ull << 20);
+#endif
     if (!rc) rc = pthread_create(thread, &attr, entry, arg);
     pthread_attr_destroy(&attr);
     return rc;
@@ -62,6 +79,7 @@ static inline int plat_guest_thread_create(pthread_t *thread, void *(*entry)(voi
 // ---- time
 uint64_t plat_now_ns(void);                // monotonic
 void plat_sleep_until_ns(uint64_t t);      // precise wait for plat_now_ns() >= t
+void plat_wait_until_ns(uint64_t t);       // wait for plat_now_ns() >= t without spinning (the OS timer's precision)
 void plat_thread_realtime(uint64_t period_ns);  // periodic timing thread (vsync): don't coalesce its timers
 // The calling thread's CPU time (user + system), ns; 0 where the OS gives none. Only the thread's own: the PS5's
 // pthread_getcpuclockid hands every thread the same "calling thread" clock (ps5/evidence/m6/measure1.klog).
@@ -69,6 +87,21 @@ uint64_t plat_thread_cpu_ns(void);
 // The calling thread allocates from a heap arena of its own from now on (the PS5 title heap: runtime/ps5/heap_arenas.c,
 // for threads that allocate heavily at the same time); nothing elsewhere (the system allocators have their own).
 void plat_thread_heap_own(void);
+int plat_cpu_count(void);       // logical processors this process may run on (its affinity, after plat_cpu_placement)
+void plat_cpu_placement(void);  // (game start) one logical processor per core where plat_one_per_core_default says
+// Whether the game runs on one logical processor per core when SAVAGEWIND_ONE_PER_CORE doesn't say (cores: physical
+// cores the process may use, logical: its logical processors). Measured on Windows with a Ryzen 5 5600X: against all
+// logical processors it was 6% faster on 6 cores and 18% on 4, and 24% slower on 2 (half the 1% lows: too few
+// processors for the game's busy threads). On Linux the Steam Deck (4 cores, 8 threads) lost 3% and a quarter of its
+// 1% lows with it, so Linux keeps every logical processor.
+static inline bool plat_one_per_core_default(int cores, int logical) {
+#ifdef _WIN32
+    return logical > cores && cores >= 4;
+#else
+    (void)cores, (void)logical;
+    return false;
+#endif
+}
 
 // ---- process
 void plat_init(void);                                // first thing in main()

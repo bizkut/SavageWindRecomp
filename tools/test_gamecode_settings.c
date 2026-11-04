@@ -14,6 +14,7 @@ const int g_nvoice_languages = 1;
 const char *rt_data_root(void) { return ""; }
 bool bind_settings_load(const char *key, const char *value) { (void)key; (void)value; return false; }
 void bind_settings_save(FILE *file) { (void)file; }
+bool fsr3_upscaler_enabled(void) { return false; }
 
 int main(int argc, char **argv) {
     assert(argc == 5);

@@ -32,6 +32,9 @@ const int k_fps[] = {30, 60, 0};                      // frame rate (0: Off, no 
 const int k_ups_value[] = {UPSCALE_OFF, UPSCALE_FSR1, UPSCALE_FSR3};
 const WinSize k_sizes[] = {{1920, 1080}, {3840, 2160}};
 const char *const k_size_names[] = {"1080p", "4K"};
+const char *const k_drawdist[] = {"Original", "Medium", "High"};
+constexpr int k_haze[] = HAZE_CHOICES;
+constexpr int k_haze_count = (int)(sizeof k_haze / sizeof k_haze[0]);
 
 // Resolution's choices: Auto, then 1080p and 4K where the display reports them
 int sizes_offered(WinSize *out, const char **names) {
@@ -123,6 +126,21 @@ void video_page(std::vector<Item> &v) {
                            }, 0));
     v.push_back(video_wide_view());
     v.push_back(video_field_of_view());
+    v.push_back(choice(P_VIDEO, "Draw distance",
+                       "How far out grass, trees, rocks, buildings and enemies appear. Higher costs more CPU and GPU time.",
+                       [](const Item &) { return (int)DRAWDIST_COUNT; },
+                       [](const Item &, int x) { return tr(k_drawdist[x]); },
+                       [](const Item &) { return g_settings.draw_distance; },
+                       [](const Item &, int x) { g_settings.draw_distance = x; }, DRAWDIST_ORIGINAL));
+    v.push_back(choice(P_VIDEO, "Haze", "How hazy the air is. Lower: clearer distances. From the next start.",
+                       [](const Item &) { return k_haze_count; },
+                       [](const Item &, int x) {
+                           static std::string s;
+                           s = pct(k_haze[x]);
+                           return s.c_str();
+                       },
+                       [](const Item &) { return nearest(k_haze, k_haze_count, (float)g_settings.haze); },
+                       [](const Item &, int x) { g_settings.haze = k_haze[x]; }, k_haze_count - 1));
     v.push_back(video_upscaler(k_ups_value, (int)(sizeof k_ups_value / sizeof k_ups_value[0])));
     Item mode = video_upscaler_mode();
     static auto mode_name = mode.label;

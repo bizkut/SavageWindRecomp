@@ -278,11 +278,56 @@ static const Site definitions[] = {
             "94000000/fc000000 36000000/fff8001f f9404288 2d400500"
             , 0},
     }},
+    {"surf_contact", "code", {
+        {
+            "3941d2a8 36080008/fff8001f bd4066a0 1e202008 "
+            "5400000d/ff00001f bd403261 1e202028 5400000d/ff00001f"
+            , 0},
+    }},
+    {"surf_boost_remove", "code", {
+        {
+            "1e203820 2f00e401 aa1403e1 1e216800 "
+            "bd003260 0f016680 f94006a0 94000000/fc000000"
+            , 0},
+    }},
+    {"surf_jump_request", "code", {
+        {
+            "36000000/fff8001f 52a82608 b9006668 b9008288 "
+            "52800028 3900a288 2d488680 52800141"
+            , 0},
+    }},
+    {"phys_solver_steps", "code", {
+        {
+            "1e231002 1e3c1004 f9401a68 1e2c1009 "
+            "1e220822 f9400108 1e202048 f9400514"
+            , 4},
+    }},
+    {"kf_angle", "code", {
+        {
+            "0e612800 0e0e3c08 0e040d00 0f3f5400 "
+            "0ea0a800 6e180400 4e221c00 6e211c00 "
+            "3c9983a0 94000000/fc000000 3cd883a6 1e2008c0"
+            , 9},
+    }},
+    {"snd_frame_floor", "code", {
+        {
+            "1e2c1001 1e212000 1e204c28 94000000/fc000000 "
+            "b4000000/ff00001f bd415660 aa0003f4 7e21d800"
+            , 0},
+    }},
     {"gui_speed", "code", {
         {
             "bd0b2100 94000000/fc000000 f9400260 94000000/fc000000 "
             "52800020 94000000/fc000000 a9414ff4 a8c27bfd"
             , 0},
+    }},
+    {"quick_menu_capture_alpha", "code", {
+        {
+            "f9400268/ffc003ff bd405100 1e202008 54000000/ff00001f "
+            "bd402100 1e2e1001 1e212000 54000001/ff00001f "
+            "90000001/9f00001f 91000021/ffc003ff aa1303e0 94000000/fc000000 "
+            "52801fe8 39016408"
+            , 7},
     }},
     {"pause_state", "ref", {
         {
@@ -362,16 +407,216 @@ static const Site definitions[] = {
             "bd013660 a9424ff4 a9417bfd 9100c3ff"
             , 0},
     }},
+    {"pc_button_group", "code", {
+        {
+            "d10183ff a9017bfd a90267fa a9035ff8 "
+            "a90457f6 a9054ff4 910043fd aa0003f3 "
+            "f90003e0 f9401800 2a0403f8 2a0303f5 "
+            "2a0203f6 aa0103f4 b9000bff"
+            , 0},
+    }},
+    {"pc_cursor_manager", "code", {
+        {
+            "d10143ff a9017bfd a9025ff8 a90357f6 "
+            "a9044ff4 910043fd b9000be1 91006008"
+            , 0},
+    }},
+    {"pc_cursor_activate", "code", {
+        {
+            "a9bd7bfd f9000bf5 a9024ff4 910003fd "
+            "f9402415 aa0103f3 aa0003f4 f9002401"
+            , 0},
+    }},
+    {"pc_pane_bounds", "code", {
+        {
+            "bd407020 2d4a0821 1e200824 bd408423 "
+            "1e208825 1e230841 1e238842 1e2c1003"
+            , 0},
+    }},
+    {"pc_map_focus", "code", {
+        {
+            "a9be7bfd f9000bf3 910003fd bd786800 "
+            "aa0003f3 910063a1 bd786c01 91214000"
+            , 0},
+    }},
+    {"pc_map_focus_target", "code", {
+        {
+            "d100c3ff a9017bfd a9024ff4 910043fd "
+            "aa0103f3 aa0003f4 97ffffdc aa1403e0"
+            , 0},
+    }},
+    {"pc_map_focus_now", "code", {
+        {
+            "d100c3ff a9017bfd a9024ff4 910043fd "
+            "aa0103f3 aa0003f4 97ffffb3 aa1403e0"
+            , 0},
+    }},
+    {"traverse_scale", "code", {
+        {
+            "b9400028 2f00e400 36600008/fff8001f d65f03c0 "
+            "a9bf7bfd 910003fd 12000042 12000083 "
+            "94000000/fc000000 90000008/9f00001f 91000108/ffc003ff f9400108 "
+            "b4000008/ff00001f bd431101 52a85908 1e202008 "
+            "1e270102 1e22cc00 1e210800 a8c17bfd "
+            "14000000/fc000000 1e2e1001"
+            , 13},
+    }},
+    {"traverse_scale_default", "code", {
+        {
+            "b9400028 2f00e400 36600008/fff8001f d65f03c0 "
+            "a9bf7bfd 910003fd 12000042 12000083 "
+            "94000000/fc000000 90000008/9f00001f 91000108/ffc003ff f9400108 "
+            "b4000008/ff00001f bd431101 52a85908 1e202008 "
+            "1e270102 1e22cc00 1e210800 a8c17bfd "
+            "14000000/fc000000 1e2e1001"
+            , 21},
+    }},
+    {"grass_range", "code", {
+        {
+            "bd400024 bd000004 bd400425 bd000405 "
+            "bd400825 2d011005 bd001005"
+            , 0},
+    }},
+    {"grass_fade_blades", "code", {
+        {
+            "bd417349 aa1a03e0 94000000/fc000000 1e202120 "
+            "a91ceffa 90000008/9f00001f 1e20cd20 bd024360"
+            , 7},
+    }},
+    {"grass_fade_quads", "code", {
+        {
+            "bd4172e9 aa1703e0 94000000/fc000000 1e202120 "
+            "90000008/9f00001f 1e20cd20 bd000700"
+            , 6},
+    }},
+    {"grass_blade_slots", "code", {
+        {
+            "a9416ffc 52802001 52800103 aa1c03e0 "
+            "aa1b03e2 94000000/fc000000"
+            , 1},
+    }},
+    {"grass_blade_cap_a", "code", {
+        {
+            "7100013f 7a401940 54000000/ff00001f 7103fe7f "
+            "54000008/ff00001f 71001d9f"
+            , 3},
+    }},
+    {"grass_blade_cap_b", "code", {
+        {
+            "79402509 34000009/ff00001f 79402908 34000008/ff00001f "
+            "7103ff7f 54000008/ff00001f 7d4032c0"
+            , 4},
+    }},
+    {"grass_blade_cap_c", "code", {
+        {
+            "910e0135 b85fc3a9 7103fd1f 52800f18 "
+            "12001d36 52801fe9 1a893108"
+            , 2},
+    }},
+    {"grass_blade_cap_c_max", "code", {
+        {
+            "910e0135 b85fc3a9 7103fd1f 52800f18 "
+            "12001d36 52801fe9 1a893108"
+            , 5},
+    }},
+    {"grass_blade_lateral_near", "code", {
+        {
+            "bd4207e0 bd420be1 1e298821 1f0d0402 "
+            "1f2d0400 1e202048 1e20cc40 bd000720 "
+            "1e262000 bd4213e1 1e35d428 54000005/ff00001f "
+            "bd4217e1 1e272000"
+            , 8},
+    }},
+    {"grass_blade_lateral_far", "code", {
+        {
+            "bd4207e0 bd420be1 1e298821 1f0d0402 "
+            "1f2d0400 1e202048 1e20cc40 bd000720 "
+            "1e262000 bd4213e1 1e35d428 54000005/ff00001f "
+            "bd4217e1 1e272000"
+            , 13},
+    }},
+    {"tree_ranges", "code", {
+        {
+            "90000008/9f00001f 91000108/ffc003ff f9400108 b4000008/ff00001f "
+            "f9452908 b4000008/ff00001f 39406108 37280008/fff8001f "
+            "39402008 36000008/fff8001f d10143ff"
+            , 0},
+    }},
+    {"gyro_scene_actor", "code", {
+        {
+            "2d59b28f 2d5ab689 94000000/fc000000 b5000000/ff00001f "
+            "9101d280 9101a281"
+            , 2},
+    }},
+    {"no_wear_store", "code", {
+        {
+            "b9002174 5288fb08 72a00088 38686aa8 "
+            "35000008/ff00001f 2a1403e0 2a1f03e2 94000000/fc000000"
+            , 0},
+    }},
+    {"no_wear_hit", "code", {
+        {
+            "4b090108 0aa87d08 1e220101 b9000268 "
+            "1e212000 1a9f07e0 14000000/fc000000 f9400288"
+            , 0},
+    }},
+    {"no_wear_ret", "code", {
+        {
+            "f9400288 2a0003f5 aa1403e0 f9415d08 "
+            "d63f0100 b5000000/ff00001f 52800036 14000000/fc000000"
+            , 0},
+    }},
+    {"link_life_store", "code", {
+        {
+            "b90002b9 f9400300 94000000/fc000000 6b00033f "
+            "5400000d/ff00001f f9400300 b9400ff5 94000000/fc000000"
+            , 0},
+    }},
+    {"link_life_tick", "code", {
+        {
+            "b90002a8 1e212000 1a9f07e0 14000000/fc000000 "
+            "2a1f03fa 39715288 36080008/fff8001f bd42e660"
+            , 0},
+    }},
+    {"stamina_store", "code", {
+        {
+            "1e204008 94000000/fc000000 bd00a668 f9400ff3 "
+            "a940fbfd fc4207e8 d65f03c0"
+            , 2},
+    }},
+    {"pouch_remove_arrows", "code", {
+        {
+            "d101c3ff a9017bfd a9026ffc a90367fa "
+            "a9045ff8 a90557f6 a9064ff4 910043fd "
+            "90000008/9f00001f aa0003f3 f9400108/ffc003ff aa0103e0"
+            , 0},
+    }},
     {"main_data", "data", {
     }},
     {"main_end", "end", {
     }},
 };
 static const std::vector<std::vector<std::string>> optional_groups = {
+    {"gyro_scene_actor"},
+    {"surf_contact", "surf_boost_remove", "surf_jump_request"},
+    {"quick_menu_capture_alpha"},
+    {"kf_angle"},
     {"yaz0_stream", "yaz0_stream_ret"},
+    {"pc_map_focus", "pc_map_focus_target", "pc_map_focus_now"},
+    {"pc_button_group"},
+    {"pc_cursor_manager", "pc_cursor_activate", "pc_pane_bounds"},
     {"cam_stick", "cam_pitch_chase", "cam_pitch_surf", "cam_pitch_wakeboard", "cam_pitch_aim", "cam_pitch_item"},
     {"cam_reverse_x", "cam_reverse_y"},
     {"screen_state"},
+    {"traverse_scale", "traverse_scale_default"},
+    {"grass_range", "grass_fade_blades", "grass_fade_quads"},
+    {"grass_blade_slots", "grass_blade_cap_a", "grass_blade_cap_b", "grass_blade_cap_c", "grass_blade_cap_c_max", "grass_blade_lateral_near", "grass_blade_lateral_far"},
+    {"tree_ranges"},
+    {"pouch_remove_arrows"},
+    {"no_wear_store"},
+    {"no_wear_hit", "no_wear_ret"},
+    {"link_life_store", "link_life_tick"},
+    {"stamina_store"},
 };
 static const std::map<std::string, std::map<std::string, U>> known = {
     {"1.8.2", {
@@ -408,6 +653,8 @@ static const std::map<std::string, std::map<std::string, U>> known = {
         {"vfr_ratio", 0x70014092f4ULL},
         {"gui_speed", 0x700116d0e8ULL},
         {"arrow_fall_gravity", 0x70004db204ULL},
+        {"phys_solver_steps", 0x700145b790ULL},
+        {"snd_frame_floor", 0x700143ce64ULL},
         {"persp_matrix", 0x7000da1400ULL},
         {"persp_matrix_offset", 0x7000da1408ULL},
         {"persp_unproject_y", 0x7000da14d8ULL},
@@ -422,6 +669,12 @@ static const std::map<std::string, std::map<std::string, U>> known = {
         {"controller_step", 0x7001c4ba40ULL},
         {"player_info", 0x7001cb2658ULL},
         {"world_mgr", 0x7001cf5d00ULL},
+        {"traverse_scale", 0x7000f908e4ULL},
+        {"traverse_scale_default", 0x7000f90904ULL},
+        {"grass_range", 0x70012999d0ULL},
+        {"grass_fade_blades", 0x70012946f0ULL},
+        {"grass_fade_quads", 0x70012a6b7cULL},
+        {"tree_ranges", 0x70012b55ccULL},
         {"main_data", 0x7001a1f000ULL},
         {"main_end", 0x7001d37000ULL},
     }},
@@ -460,7 +713,14 @@ static const std::map<std::string, std::map<std::string, U>> known = {
         {"frame_loop_interval_ret", 0x70011267c4ULL},
         {"vfr_ratio", 0x700151d494ULL},
         {"gui_speed", 0x7001280ee8ULL},
+        {"quick_menu_capture_alpha", 0x7000e26a38ULL},
         {"arrow_fall_gravity", 0x70005ee734ULL},
+        {"surf_contact", 0x70011e9e74ULL},
+        {"surf_boost_remove", 0x70011e9e94ULL},
+        {"surf_jump_request", 0x70011ea3d4ULL},
+        {"phys_solver_steps", 0x700156f930ULL},
+        {"kf_angle", 0x70012d57fcULL},
+        {"snd_frame_floor", 0x7001551004ULL},
         {"persp_matrix", 0x7000eb4a50ULL},
         {"persp_matrix_offset", 0x7000eb4a58ULL},
         {"persp_unproject_y", 0x7000eb4b28ULL},
@@ -484,6 +744,26 @@ static const std::map<std::string, std::map<std::string, U>> known = {
         {"cam_pitch_item", 0x7000bf2c0cULL},
         {"cam_reverse_x", 0x7000d17024ULL},
         {"cam_reverse_y", 0x7000d1703cULL},
+        {"traverse_scale", 0x70010a4674ULL},
+        {"traverse_scale_default", 0x70010a4694ULL},
+        {"grass_range", 0x70013ad8b0ULL},
+        {"grass_fade_blades", 0x70013a85d0ULL},
+        {"grass_fade_quads", 0x70013baa5cULL},
+        {"grass_blade_slots", 0x70013a7230ULL},
+        {"grass_blade_cap_a", 0x70013b32e0ULL},
+        {"grass_blade_cap_b", 0x7001496c40ULL},
+        {"grass_blade_cap_c", 0x70013ae960ULL},
+        {"grass_blade_cap_c_max", 0x70013ae96cULL},
+        {"grass_blade_lateral_near", 0x70013a8f0cULL},
+        {"grass_blade_lateral_far", 0x70013a8f20ULL},
+        {"tree_ranges", 0x70013c94acULL},
+        {"pouch_remove_arrows", 0x7000d93814ULL},
+        {"no_wear_store", 0x7000d93d50ULL},
+        {"no_wear_hit", 0x7000b9542cULL},
+        {"no_wear_ret", 0x70007b09f4ULL},
+        {"link_life_store", 0x7000cc4e70ULL},
+        {"link_life_tick", 0x7000cc4da4ULL},
+        {"stamina_store", 0x7000cc7430ULL},
         {"main_data", 0x7001b7a000ULL},
         {"main_end", 0x7001e98000ULL},
     }},

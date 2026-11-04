@@ -13,6 +13,7 @@ uint64_t SDL_GetTicks(void) { return now_ns / 1000000ull; }
 static const char *last_error;
 void ps5_sdl_error(const char *text) { last_error = text; }
 int input_pad_family(void) { return 0; }  // (bindings.c's labels; runtime/hle/input.c is not linked here)
+void ps5_output_extent(int *width, int *height) { *width = 1920; *height = 1080; }
 
 static SDL_Event events[512];
 static int nevents;

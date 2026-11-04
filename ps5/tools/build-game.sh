@@ -135,24 +135,34 @@ $shaderc/lib/libshaderc_combined.a ${ffmpeg[*]:1} $fonts/lib/libfreetype.a --end
 app=$(bash ps5/tools/build-title.sh "$title_name" \
     "${console_sources[@]}" runtime/platform/main_ps5.c runtime/platform/s7_ps5.c runtime/platform/ps5.c runtime/platform/gamelib_ps5.c \
     runtime/platform/exefs_ps5.c runtime/platform/home_art_ps5.cpp runtime/ps5/sdl_shim.c runtime/ps5/log.c runtime/ps5/unavailable.c runtime/ps5/diagnostics.cpp \
-    runtime/ps5/window.c runtime/ps5/input.c runtime/ps5/audio.c runtime/ps5/heap_arenas.c runtime/ps5/dynamic_resolution.c runtime/ps5/libc_aliases.S \
+    runtime/ps5/window.c runtime/ps5/input.c runtime/ps5/audio.c runtime/ps5/keyboard.c \
+    runtime/ps5/heap_arenas.c runtime/ps5/dynamic_resolution.c runtime/ps5/control_memory.c \
+    runtime/ps5/libc_aliases.S \
     build/ps5/game-gen/vk_globals.c \
-    runtime/benchmark.c runtime/dispatch.c runtime/fnprof.c runtime/frametime.c runtime/ipc.c runtime/kernel.c runtime/loader.c runtime/imageload.c \
-    runtime/platform/paths_ps5.c runtime/settings.c runtime/language.c runtime/storage_ps5.c \
+    runtime/assists.c runtime/color_grade.c runtime/console_core.c runtime/control.c runtime/control_cells.c \
+    runtime/control_fly.c runtime/control_game.c runtime/control_input.c runtime/control_mem.c runtime/control_prof.c \
+    runtime/control_settings.c runtime/control_tp.c runtime/draw_distance.c runtime/memscan.c runtime/memscan_os.c \
+    runtime/pc_cursor.c runtime/pc_gyro_scene.c \
+    runtime/benchmark.c runtime/dispatch.c runtime/fnprof.c runtime/frametime.c runtime/ipc.c runtime/kernel.c \
+    runtime/loader.c runtime/imageload.c \
+    runtime/platform/paths_ps5.c runtime/settings.c runtime/language.c runtime/sampler.c runtime/storage_ps5.c \
     runtime/romfs_build.c runtime/romfs_image.c ps5/storagebroker/client.c ps5/storagebroker/startup.c \
     runtime/hle/heaps.c runtime/hle/setjmp.c runtime/hle/pl.c runtime/hle/yaz0.c runtime/hle/vibration.c runtime/hle/vi.c \
-    runtime/hle/nvn_boot.c runtime/hle/framepace.c runtime/hle/npad.c runtime/hle/motion.c \
+    runtime/hle/nvn_boot.c runtime/hle/framepace.c runtime/hle/npad.c runtime/hle/motion.c runtime/hle/swkbd.c \
     runtime/hle/input.c runtime/hle/bindings.c runtime/hle/wheel_zoom.c runtime/hle/movie.c \
     runtime/ui/game_options.mm runtime/ui/i18n.mm runtime/ps5/video_page.cpp runtime/nvn/glyphs.c runtime/nvn/player_font.c runtime/nvn/sharp_ui.c \
     runtime/nvn/hd_ui_policy.c runtime/nvn/hd_ui_extract.c runtime/nvn/hd_ui_ncnn.cpp runtime/nvn/hd_ui_dds.cpp runtime/nvn/hd_ui_generate.cpp \
     "${bc7#$root/}/bc7enc.cpp" "${bc7#$root/}/bc7decomp.cpp" \
     runtime/nvn/astc.c runtime/nvn/cmdbuf.c runtime/nvn/formats.c runtime/nvn/objects.c runtime/nvn/output_scale.c \
+    runtime/nvn/text_upscale.c \
     runtime/nvn/shader_archive.c runtime/nvn/smaa_data.c runtime/nvn/tegra.c runtime/nvn/maxwell/translate.c \
     runtime/nvn/vulkan/benchmark_load.c runtime/nvn/vulkan/cache_pack.c runtime/nvn/vulkan/device.c runtime/nvn/vulkan/exec.c runtime/nvn/vulkan/textures.c \
-    runtime/nvn/vulkan/shaders.c runtime/nvn/vulkan/spirv.c runtime/nvn/vulkan/precompile.c runtime/nvn/vulkan/rprof.c \
+    runtime/nvn/vulkan/shaders.c runtime/nvn/vulkan/spirv.c runtime/nvn/vulkan/precompile.c \
+    runtime/nvn/vulkan/rprof.c runtime/nvn/vulkan/vram.c \
     runtime/nvn/vulkan/record.c runtime/nvn/vulkan/vma.cpp runtime/nvn/vulkan/mvec.c runtime/nvn/vulkan/fsr3.cpp runtime/nvn/vulkan/ffx_shaders.cpp \
     runtime/nvn/vulkan/mihawk.cpp "${mh_sources[@]}" "${ffx_sources[@]}" \
-    runtime/services/acc.c runtime/services/am.c runtime/services/audio.c runtime/services/fs.c runtime/services/hid_set.c \
+    runtime/services/acc.c runtime/services/am.c runtime/services/archive.c runtime/services/audio.c \
+    runtime/services/fs.c runtime/services/hid_set.c \
     runtime/services/misc.c runtime/services/time.c runtime/services/test_warp.c | tee /dev/stderr | tail -n 1)
 cp "$broker" "$app/storagebroker.elf"
 # The button prompts' label font (runtime/nvn/glyphs.c: rt_resource, /app0), with its licence

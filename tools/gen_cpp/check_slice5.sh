@@ -6,6 +6,8 @@ python3 tools/gen_cpp/generate_patches.py --check
 make -C tools/gen_cpp ../../build/s9-cpp/gen
 root=$(mktemp -d build/s9-cpp/slice5.XXXXXXXX)
 exefs=${1:-build/exefs-1.9.0}
+python=${PYTHON:-tools/venv/bin/python}
+layout=${LAYOUT:-generated-ps5/layout.txt}
 py="$root/python"
 cpp="$root/cpp"
 mkdir -p "$py/main" "$cpp/main" "$py/all" "$cpp/all"
@@ -34,13 +36,13 @@ for f in sorted(af):
 print(f'{name}: identical ({len(af)} files)')
 PY
 }
-/usr/bin/time -f 'main Python: %e s, peak RSS %M KiB' tools/venv/bin/python tools/gen.py \
-    main "$exefs/main" generated-ps5/layout.txt "$py/main" --hle runtime/hle/hle_symbols.txt --simd c
+/usr/bin/time -f 'main Python: %e s, peak RSS %M KiB' "$python" tools/gen.py \
+    main "$exefs/main" "$layout" "$py/main" --hle runtime/hle/hle_symbols.txt --simd c --locals
 /usr/bin/time -f 'main C++: %e s, peak RSS %M KiB' build/s9-cpp/gen \
-    main "$exefs/main" generated-ps5/layout.txt "$cpp/main" --hle runtime/hle/hle_symbols.txt --simd c
+    main "$exefs/main" "$layout" "$cpp/main" --hle runtime/hle/hle_symbols.txt --simd c --locals
 compare main "$py/main" "$cpp/main"
-/usr/bin/time -f 'all Python: %e s, peak RSS %M KiB' tools/venv/bin/python tools/gen.py \
-    all "$exefs" "$py/all" --hle runtime/hle/hle_symbols.txt --simd c
+/usr/bin/time -f 'all Python: %e s, peak RSS %M KiB' "$python" tools/gen.py \
+    all "$exefs" "$py/all" --hle runtime/hle/hle_symbols.txt --simd c --locals
 /usr/bin/time -f 'all C++: %e s, peak RSS %M KiB' build/s9-cpp/gen \
-    all "$exefs" "$cpp/all" --hle runtime/hle/hle_symbols.txt --simd c
+    all "$exefs" "$cpp/all" --hle runtime/hle/hle_symbols.txt --simd c --locals
 compare all "$py/all" "$cpp/all"

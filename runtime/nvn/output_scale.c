@@ -5,7 +5,7 @@
 // (vx, vy, vw, vh) of the window. Video page "Upscaler" (g_settings.upscaler):
 //   Off            the 3D scene renders at the window's own pixel size (its 16:9 part: the game keeps its framing)
 //   AMD FSR 1      the 3D scene renders smaller by the quality mode's factor per axis (AMD's: Ultra Quality 1.3,
-//                  Quality 1.5, Balanced 1.7, Performance 2.0); FSR 1 brings it to its size in the final image at the
+//                  Quality 1.5, Balanced 1.7, Performance 2.0, Ultra Performance 3.0); FSR 1 brings it to its size in the final image at the
 //                  game's composite (vulkan/exec.c scene_upscale)
 //   MetalFX        (macOS) metal.m has no scene / final split yet: the modes stay greyed there, and MetalFX scales the
 //                  game's image to a bigger window
@@ -32,11 +32,21 @@
 #ifndef __APPLE__
 bool fsr3_available(void);  // (vulkan/fsr3.h: built in)
 #endif
+// FSR 3 remains available on PS5; on other platforms it is opt-in while motion vector cost is reduced.
+bool fsr3_upscaler_enabled(void) {
+#ifdef __PROSPERO__
+    return true;
+#else
+    static int on = -1;
+    if (on < 0) on = getenv("SAVAGEWIND_FSR3") && atoi(getenv("SAVAGEWIND_FSR3")) != 0;
+    return on;
+#endif
+}
 bool upscaler_available(int u) {
 #ifdef __APPLE__
     return u == UPSCALE_OFF || u == UPSCALE_METALFX;
 #else
-    return u == UPSCALE_OFF || u == UPSCALE_FSR1 || (u == UPSCALE_FSR3 && fsr3_available());
+    return u == UPSCALE_OFF || u == UPSCALE_FSR1 || (u == UPSCALE_FSR3 && fsr3_available() && fsr3_upscaler_enabled());
 #endif
 }
 
@@ -45,7 +55,7 @@ bool rt_fsr3(void) { return g_settings.upscaler == UPSCALE_FSR3 && upscaler_avai
 bool rt_temporal(void) { return rt_antialias() == AA_TAA || rt_fsr3(); }
 
 double upscale_mode_factor(int q) {
-    static const double f[UPQ_COUNT] = {1.3, 1.5, 1.7, 2.0};
+    static const double f[UPQ_COUNT] = {1.3, 1.5, 1.7, 2.0, 3.0};
     return q == UPQ_COUNT ? 1.0 : q >= 0 && q < UPQ_COUNT ? f[q] : 1.5;  // (UPQ_COUNT: SAVAGEWIND_UPSCALE_AT fsr3-native)
 }
 
@@ -78,11 +88,11 @@ void output_scale(double dw, double dh, bool reshape_allowed, OutScale *o) {
     if (forced < 0) forced = getenv("SAVAGEWIND_SCALE") ? atof(getenv("SAVAGEWIND_SCALE")) : 0;
     if (wide_test < 0) wide_test = getenv("SAVAGEWIND_WIDE_TEST") ? atof(getenv("SAVAGEWIND_WIDE_TEST")) : 0;
     double shape = wide_test > 0 ? wide_test : (dw / dh) / (16.0 / 9.0);
-    // Wider windows only (a narrower one, 16:10 or 4:3, keeps the 16:9 picture with bars above and below: the HUD's
-    // texture generation doesn't follow a taller view). The start screen and its menus, a 16:9 layout over 16:9
-    // pictures with no world to show more of, keep it too, and so does the loading screen (#98: widened, its tip went
-    // to the window's edges and its logo stayed in the 16:9 middle).
-    bool reshape = reshape_allowed && shape > 1.005 && !framepace_title_ui() && !framepace_loading_ui();
+    // A wider window (21:9, 32:9) sees more to the sides, a taller one (16:10, 4:3: shape < 1) more above and below
+    // (#125); the HUD keeps its 16:9 layout in the middle either way. The start screen and its menus, a 16:9 layout
+    // over 16:9 pictures with no world to show more of, keep the 16:9 picture with bars, and so does the loading screen
+    // (#98: widened, its tip went to the window's edges and its logo stayed in the 16:9 middle).
+    bool reshape = reshape_allowed && fabs(shape - 1.0) > 0.005 && !framepace_title_ui() && !framepace_loading_ui();
     if (!reshape) shape = 1.0;
     // render height in units of the Switch's 1080 lines: the window's (Metal: divided by the upscaler's factor)
 #ifdef __APPLE__
@@ -111,13 +121,16 @@ void output_scale(double dw, double dh, bool reshape_allowed, OutScale *o) {
     }
     o->vx = (dw - o->vw) / 2; o->vy = (dh - o->vh) / 2;
     o->crop[0] = o->crop[1] = 0, o->crop[2] = o->crop[3] = 1;
-    // The pause menu's pages and the map are 16:9 layouts over the whole picture, their frames drawn for a 16:9 screen:
-    // while one is up the picture's 16:9 middle is shown, with bars, exactly as on a 16:9 screen (the views stay
-    // widened, so nothing is made again; vulkan/exec.c hud_patch stretches their full-width backgrounds to match).
-    if (reshape && wide_test <= 0 && framepace_menu_ui()) {
-        o->crop[0] = (1 - 1 / shape) / 2, o->crop[2] = 1 / shape, o->vw = dw / shape;
-        o->vx = (dw - o->vw) / 2;
+    // The map's frame stays 16:9, but its scrollable background can draw beyond the frame on taller windows
+    // (#303). Present only that centered 16:9 region, without resizing its targets or changing cursor coordinates.
+    if (reshape && shape < 1 && framepace_map_ui()) {
+        double map_h = o->vh * shape;
+        o->vy += (o->vh - map_h) / 2;
+        o->vh = map_h;
+        o->crop[1] = (1 - shape) / 2;
+        o->crop[3] = shape;
     }
+    // Pause pages keep their 16:9 layout centered while the wider or taller image remains visible around them.
     g_view_shape = (float)o->shape;
     // Video > Field of view: in play only (cutscenes and talks keep the game's framing), eased over about 1/4 s so
     // that a talk's start and end don't jump
@@ -143,7 +156,8 @@ float output_view_shape(void) { return g_view_shape; }
 // The game's perspective views, as each one's matrix is built (tools/patches.py _persp_matrix: sead's
 // PerspectiveProjection; tan_fovy = tan(fovy / 2) at +0xac, aspect at +0xb0, as float bits; near at +0x98). Every 16:9
 // view is widened to the window's shape, as every 16:9 render target is (vulkan/textures.c): a wider window sees more
-// to the sides, the vertical view kept. The HUD's and menus' layers are 16:9 views too, so they keep their shape in
+// to the sides, the vertical view kept; a taller one (16:10, 4:3) more above and below, the horizontal view kept
+// (tan(fovy / 2) / shape, #125). The HUD's and menus' layers are 16:9 views too, so they keep their shape in
 // the middle. The field of view scales the world's
 // camera only: its far plane is 25000 (its near plane moves with the camera's distance), the HUD's layers', the
 // menus' 3D models' and the start screen's are 10000. SAVAGEWIND_LOG_PROJ=1: each kind of view the first time.
@@ -155,6 +169,11 @@ float output_view_shape(void) { return g_view_shape; }
 // turned (issue #103). What the game set is kept per projection (wide_cam), so the next build, a change of the window
 // or of the field of view, and the screen-to-camera loads (tools/patches.py _persp_unproject) start from it again
 // instead of widening twice. SAVAGEWIND_NO_WIDE_CAMERA_FIX=1: the matrix only, as before.
+// The field of view also writes fovy and the sine and cosine of its half (+0xa0 / +0xa4 / +0xa8): the game copies the
+// camera's projection with getFovy and setFovy (which makes tan from the angle), and the cascades are fitted to that
+// copy; with tan alone a band of the far ground went dark and shadows were missing at the screen's edges above 100%
+// (#162, #203). The game sets fovy again every frame, so it doesn't build up. SAVAGEWIND_NO_FOV_CAMERA_FIX=1: tan and
+// aspect only.
 static WorldProj g_world;
 static pthread_mutex_t world_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -180,6 +199,8 @@ void rt_persp(uint64_t proj, uint32_t *tan_fovy, uint32_t *aspect) {
     memcpy(nf, (const void *)(uintptr_t)(proj + 0x98), 8);
     static int wide_fix = -1;
     if (wide_fix < 0) wide_fix = getenv("SAVAGEWIND_NO_WIDE_CAMERA_FIX") == NULL;
+    static int wide_fov = -1;
+    if (wide_fov < 0) wide_fov = getenv("SAVAGEWIND_NO_FOV_CAMERA_FIX") == NULL;
     bool world = nf[1] > 10001;
     if (world) {  // (values this wrote back: the game's own instead)
         pthread_mutex_lock(&wide_cam_lock);
@@ -210,10 +231,15 @@ void rt_persp(uint64_t proj, uint32_t *tan_fovy, uint32_t *aspect) {
     float fov = g_fov, shape = g_view_shape;
     if (fov != 1 && nf[1] > 10001) t = tanf(fminf(atanf(t) * fov, 1.4f));  // (under 160 degrees)
     a *= shape;
+    if (shape < 1) t /= shape;  // (a taller window: the horizontal view kept, more above and below)
     memcpy(tan_fovy, &t, 4), memcpy(aspect, &a, 4);
     if (world) output_world_proj_set(t, a, nf[0], nf[1]);
     if (world && wide_fix && (*tan_fovy != set_t || *aspect != set_a)) {  // (the world's camera: written back)
         memcpy((void *)(uintptr_t)(proj + 0xac), tan_fovy, 4), memcpy((void *)(uintptr_t)(proj + 0xb0), aspect, 4);
+        if (*tan_fovy != set_t && wide_fov) {  // fovy, sin and cos of its half too
+            float h = atanf(t), fsc[3] = {2 * h, sinf(h), cosf(h)};
+            memcpy((void *)(uintptr_t)(proj + 0xa0), fsc, 12);
+        }
         pthread_mutex_lock(&wide_cam_lock);
         unsigned k = 16;
         for (unsigned i = 0; i < 16 && k == 16; i++)
@@ -247,8 +273,13 @@ void rt_frustum(uint64_t proj, float *f) {
     f[0] = lr[0], f[1] = lr[1], f[2] = tb[0], f[3] = tb[1];
     float w = lr[1] - lr[0], h = tb[0] - tb[1], shape = g_view_shape;
     if (shape == 1 || h == 0 || fabsf(fabsf(w / h) - 16.0f / 9.0f) >= 0.01f) return;
-    float c = (lr[0] + lr[1]) / 2;
-    f[0] = c + (lr[0] - c) * shape, f[1] = c + (lr[1] - c) * shape;
+    if (shape > 1) {
+        float c = (lr[0] + lr[1]) / 2;
+        f[0] = c + (lr[0] - c) * shape, f[1] = c + (lr[1] - c) * shape;
+    } else {  // (a taller window: top and bottom moved out)
+        float c = (tb[0] + tb[1]) / 2;
+        f[2] = c + (tb[0] - c) / shape, f[3] = c + (tb[1] - c) / shape;
+    }
 }
 
 // Temporal anti-aliasing / upscaling jitter (Video > Anti-aliasing TAA, Upscaler FSR 3; SAVAGEWIND_JITTER=1 / 0 whatever
@@ -304,14 +335,18 @@ static float halton(uint32_t i, uint32_t b) {
 }
 
 // A perspective view's offset (x, y: fractions of its width and height, as float bits; tools/patches.py
-// _persp_matrix_offset), for a view rt_persp widens: the same distance in its 16:9 part (x / shape), so what the game
-// moves to a side lines up with the 16:9 layout around it. The world camera's also gets the jitter.
+// _persp_matrix_offset), for a view rt_persp widens: the same distance in its 16:9 part (x / shape; on a taller window
+// y x shape), so what the game moves to a side lines up with the 16:9 layout around it. The world camera's also gets
+// the jitter.
 void rt_persp_offset(uint64_t proj, uint32_t *x, uint32_t *y) {
     float a, ox, oy, shape = g_view_shape, nf[2];
     memcpy(&a, (const void *)(uintptr_t)(proj + 0xb0), 4);
     memcpy(nf, (const void *)(uintptr_t)(proj + 0x98), 8);
     memcpy(&ox, x, 4), memcpy(&oy, y, 4);
-    if (shape != 1 && fabsf(a - 16.0f / 9.0f) < 0.01f) ox /= shape;
+    if (shape != 1 && fabsf(a - 16.0f / 9.0f) < 0.01f) {
+        if (shape > 1) ox /= shape;
+        else oy *= shape;  // (a taller window: the vertical one, a fraction of the taller height)
+    }
     uint32_t w = __atomic_load_n(&jitter_size[0], __ATOMIC_RELAXED), h = __atomic_load_n(&jitter_size[1], __ATOMIC_RELAXED);
     if (nf[1] > 10001 && rt_jitter_on() && w && h) {
         uint32_t n = __atomic_load_n(&jitter_phases, __ATOMIC_RELAXED);
