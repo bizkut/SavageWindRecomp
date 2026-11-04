@@ -156,6 +156,10 @@ jobs:
           cc -std=c11 -O2 tools/test_dynamic_resolution.c runtime/ps5/dynamic_resolution.c -lm \
             -o build/test_dynamic_resolution
           build/test_dynamic_resolution
+          clang -std=c11 -Wall -Wextra tests/test_ps5_keyboard_utf.c -o build/test_ps5_keyboard_utf
+          build/test_ps5_keyboard_utf
+          clang -std=c11 -Wall -Wextra tests/test_ps5_keyboard.c -o build/test_ps5_keyboard
+          build/test_ps5_keyboard
       - name: Build console title and storage broker
         run: |
           PS5_GAMECODE=console PYTHON=python3 bash ps5/tools/build-game.sh

@@ -2,14 +2,26 @@
 
 What changed in each Savage Wind release. The `test` branch holds what the next one will contain.
 
-## Unreleased
+## PS5 ps5-v0.2.1
 
-- PS5 game-requested text entry uses the inline system keyboard instead of the common dialog. Enter confirms; closing
-  or aborting cancels and preserves the existing text. Gameplay stick bindings are unchanged. Console qualification
-  is pending.
-- Disable Vulkan view format lists by default on PS5 to address the observed floor and rainbow foliage corruption.
+- Includes the upstream merge and PS5 changes since ps5-v0.1.0; ps5-v0.2.0 was withdrawn. The home-screen title is
+  **Breath of the Wild**. Storage-helper recovery and startup reporting, upstream gameplay fixes and new PS5
+  graphics and accessibility settings are included.
+- Disable Vulkan view format lists on PS5 to fix the observed ground and rainbow foliage corruption.
+- Game-requested text entry uses the inline PS5 keyboard. Enter confirms; closing or aborting cancels and preserves
+  existing text. There is no manual L3+R3 shortcut. Guest-thread confirm and cancel probes completed without a
+  freeze; actual horse registration remains unverified.
+- Updating requires a one-time on-console game-code rebuild of approximately 9 minutes plus shader preparation.
+  Supply your own base NSP or XCI, matching 1.9.0 update NSP and `prod.keys`, with optional DLC and `title.keys`
+  when needed. Game content and keys are not included; see [PS5 setup](README-PS5.md).
+- In a limited native 1080p benchmark with frame generation off, the merged build achieved 99.3% on-time frames
+  versus 98.0–98.2% for ps5-v0.1.0, while average render time regressed from 8.61–8.63 to 9.28 ms. This does
+  not establish a CPU cause or predict performance in every scene.
+- Rumble output is unverified, videos are untested, and gyro axes are not qualified. These fixes do not imply
+  that all gameplay issues are resolved.
 
-## PS5 ps5-v0.2.0
+
+## PS5 ps5-v0.2.0 (withdrawn)
 
 - The home-screen title is **Breath of the Wild**. This release incorporates the upstream merge and the PS5
   storage-broker fixes that were previously described as ps5-v0.1.1; no ps5-v0.1.1 was published.

@@ -16,6 +16,37 @@ worktree and unresolved source provenance, and marks dirty candidates in the fil
 The tag workflow publishes the text between the matching tag's markers below. For each future release, add a
 new uniquely marked section before tagging; a missing, duplicated or empty section fails publication.
 
+<!-- release-notes:ps5-v0.2.1:start -->
+## Breath of the Wild on PS5 — ps5-v0.2.1
+
+This update includes the upstream merge and PS5 improvements since ps5-v0.1.0. ps5-v0.2.0 was withdrawn;
+upgraders can install this release directly over ps5-v0.1.0.
+
+- Fixes the observed ground and rainbow foliage corruption by disabling Vulkan view format lists on PS5.
+- Game-requested naming opens the inline PS5 keyboard; Enter confirms and closing it cancels without changing the
+  existing text. There is no manual L3+R3 shortcut. Confirm and cancel were exercised in a guest-thread probe
+  without a freeze; actual horse registration has not yet been verified.
+- Includes upstream game-code and runtime changes, gameplay fixes, and PS5 settings for draw distance, haze,
+  colour grading, HUD size and accessibility assists. The storage helper also recovers from a replaced or removed
+  data directory and reports startup errors.
+
+**Updating requires a one-time on-console game-code rebuild**, approximately 9 minutes plus shader preparation;
+actual time varies. Leave the console on while the progress screen is displayed.
+
+**Performance:** in a limited PS5 benchmark at native 1080p with frame generation off, the merged build reached
+99.3% on-time frames versus 98.0–98.2% for ps5-v0.1.0. Average render time regressed from 8.61–8.63 ms to
+9.28 ms. This measurement does not establish a specific CPU cause or predict every scene and setting.
+
+**Requirements:** supply your own base NSP or XCI, matching 1.9.0 update NSP and `prod.keys`; optional DLC NSPs
+and, when needed, `title.keys` go in `/data/savagewind/import/` too. Keep your inputs there for subsequent starts.
+No game content or keys are included. See the
+[PS5 installation guide](https://github.com/bizkut/SavageWindRecomp/blob/ps5-v0.2.1/README-PS5.md).
+
+**Limits:** horse registration and rumble output remain unverified; videos have not been tested and gyro axes
+are not qualified. The keyboard probe is not end-to-end horse registration, and these fixes do not establish that
+all gameplay issues are resolved.
+<!-- release-notes:ps5-v0.2.1:end -->
+
 <!-- release-notes:ps5-v0.2.0:start -->
 ## Breath of the Wild on PS5 — ps5-v0.2.0
 
